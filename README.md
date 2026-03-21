@@ -1,11 +1,11 @@
 <div align="center">
 
-# 🔧 DIY Welding Positioner ESP32-P4
-**Precision Multi-Mode Rotator Controller for Welding**
+# 🔧 DIY Welding Positioner Controller (ESP32-P4)
+**Precision Multi-Mode Welding Rotator for TIG, MIG, and Pipe Welding**
 
-<img src="docs/images/ui_mockup.png?v=2" width="600" alt="UI Design Mockup">
+<img src="docs/images/ui_mockup.png?v=2" width="600" alt="DIY Welding Positioner UI Design">
 
-*Built on the ESP32-P4 with a 4.3" MIPI-DSI ST7701S touch display, featuring a modern, glove-safe industrial dark UI.*
+**Open-source ESP32-P4 based welding positioner controller designed for rotary welding tables, pipe welding rotators, and automated fabrication systems.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PlatformIO](https://img.shields.io/badge/PlatformIO-Compatible-orange.svg)](https://platformio.org/)
@@ -16,6 +16,28 @@
 
 ---
 
+## 🔎 What Is This Project?
+
+This project is a **DIY welding positioner controller** built using the powerful **ESP32-P4 microcontroller**.
+
+It is designed to control:
+- Rotary welding tables  
+- Welding turntables  
+- Pipe welding rotators  
+- Fabrication positioning systems  
+- Automated TIG and MIG welding rigs  
+
+The system drives a **NEMA 23 stepper motor** using a **TB6600 stepper driver**, combined with a **60:1 worm gear** for ultra-smooth low-RPM welding rotation.
+
+This makes it ideal for:
+- Pipe welding  
+- Tube welding  
+- Circular weld seams  
+- Rotary welding automation  
+- DIY industrial welding setups  
+
+---
+
 ## ✨ Features
 
 - **Pioneering Hardware:** Runs on the cutting-edge dual-core RISC-V **ESP32-P4** (400 MHz).
@@ -23,6 +45,37 @@
 - **Precision Motor Control:** Drives a NEMA 23 stepper via a TB6600 driver (0.1–5.0 RPM range) linked to a 60:1 worm gear reduction for ultra-smooth, high-torque rotation.
 - **Industrial Safety:** Hardware E-STOP interrupt (NC contact), software watchdog timer, and fail-safe active-low motor enabling.
 - **Multiple Welding Modes:** Continuous, Jog, Pulse, Step, Timer, and Programmable sequences.
+
+---
+
+## 🛠 Typical Use Cases
+
+This welding positioner controller can be used for:
+
+- TIG welding positioners  
+- MIG welding automation  
+- Pipe welding rotators  
+- Tube welding fixtures  
+- Rotary welding tables  
+- Welding turntables  
+- Robotics positioning systems  
+- DIY industrial automation  
+
+It is especially useful when precise, repeatable rotation is required during welding operations.
+
+---
+
+## 🧠 System Overview
+
+The system consists of:
+
+- **ESP32-P4 Controller** → Generates precision step pulses
+- **TB6600 Driver** → Controls motor current and microstepping
+- **NEMA 23 Stepper Motor** → Provides torque
+- **60:1 Worm Gear** → Reduces speed and increases torque
+- **Rotary Welding Table** → Rotates workpiece smoothly
+- **User Interface** → Touch display using LVGL
+- **Safety System** → Hardware E-STOP + watchdog
 
 ---
 
@@ -130,6 +183,21 @@ The UI presents several distinct welding modes designed to handle different type
 - [ ] Over-The-Air (OTA) firmware updates.
 - [ ] Export/Import welding programs to an SD Card.
 - [ ] Support for external Bluetooth foot pedals.
+
+---
+
+## 🔎 Keywords
+
+DIY welding positioner  
+ESP32 welding controller  
+Rotary welding table  
+Welding rotator controller  
+Pipe welding turntable  
+TB6600 stepper driver  
+NEMA 23 welding motor  
+Welding automation controller  
+Industrial DIY welding  
+ESP32-P4 LVGL controller  
 
 ---
 

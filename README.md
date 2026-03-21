@@ -19,19 +19,18 @@
 
 ## ⚡ Quick Start
 
-1. **Clone repository**
+1. **Clone the repository:**
 ```bash
 git clone https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4.git
 cd DIY-Welding-Positioner-ESP32-P4
 ```
-2. **Open in VS Code** with the PlatformIO extension installed.
+2. **Open in VS Code** with the **PlatformIO** extension installed.
 3. **Select board environment:** `esp32p4-touch-43`
-4. **Build and flash:**
-   Click the PlatformIO "Upload" button (➔), or run:
+4. **Build and flash:** Click the PlatformIO "Upload" button (➔), or run:
 ```bash
 pio run -t upload -e esp32p4-touch-43
 ```
-5. **Connect:** Wire the TB6600 driver, NEMA 23 stepper motor, and power supply according to the pinout.
+5. **Connect hardware:** Wire the TB6600 driver, NEMA 23 stepper motor, and power supply according to the pinout.
 
 ---
 
@@ -44,9 +43,15 @@ Watch the system in action (UI walkthrough and motor rotation):
 
 ## 🔎 What Is This Project?
 
-This project is a **DIY welding positioner controller** built using the powerful **ESP32-P4 microcontroller**. It is designed to control Rotary welding tables, Welding turntables, Pipe welding rotators, and Automated fabrication systems. 
+This project is a **DIY welding positioner controller** built using the powerful **ESP32-P4 microcontroller**. It is designed to control rotary welding tables, welding turntables, pipe welding rotators, and automated fabrication systems. 
 
 Driven by a NEMA 23 stepper motor and a 60:1 worm gear, it ensures ultra-smooth low-RPM rotation ideal for circular weld seams and continuous TIG/MIG passes.
+
+### 🎯 Project Goals
+- Build a reliable, industrial-grade DIY welding positioner.
+- Provide accessible open-source firmware.
+- Create a beautiful, glove-safe industrial user interface.
+- Enable massive customization for different fabrication setups.
 
 ---
 
@@ -64,8 +69,37 @@ Driven by a NEMA 23 stepper motor and a 60:1 worm gear, it ensures ultra-smooth 
 - **Multi-mode rotation:** Continuous, Jog, Pulse, Step, and Timer modes.
 - **Speed control:** Precise on-the-fly RPM adjustment.
 - **LVGL touch interface:** Glove-safe, high-contrast industrial dark UI.
-- **Hardware safety:** Dedicated E-STOP interrupt and software watchdog.
+- **Hardware safety:** Dedicated NC E-STOP interrupt and software watchdog.
 - **Smooth motion:** Utilizing RMT hardware pulses for micro-stepping control.
+
+---
+
+## 📊 Performance Specifications
+
+| Parameter | Value |
+|-----------|-------|
+| **Output RPM Range** | 0.1 – 12 RPM (Configurable) |
+| **Gear Ratio** | 60:1 Worm Gear |
+| **Microstepping** | 8x (Adjustable on driver) |
+| **Motor Torque** | 3.0 Nm (NEMA 23) |
+| **Control Resolution**| 0.01 RPM |
+| **Max Table Load** | Depends on bearing & frame design |
+
+---
+
+## 🧩 Requirements
+
+### Software Dependencies
+- **PlatformIO:** Core 6.x or newer
+- **ESP-IDF:** v5.2+ (via `pioarduino` core)
+- **LVGL:** 8.x
+- **FastAccelStepper:** Latest release
+
+### Hardware Check
+- Waveshare / Guition ESP32-P4 4.3" Touch Display
+- TB6600 stepper driver
+- NEMA 23 motor
+- 24–36V power supply
 
 ---
 
@@ -73,11 +107,11 @@ Driven by a NEMA 23 stepper motor and a 60:1 worm gear, it ensures ultra-smooth 
 
 | Component | Model / Specs | Qty |
 |-----------|---------------|-----|
-| **MCU Board** | Waveshare ESP32-P4 4.3" Touch Display | 1 |
+| **MCU Board** | Waveshare ESP32-P4 4.3" Display | 1 |
 | **Stepper Driver** | TB6600 (Set to 8 microsteps) | 1 |
 | **Stepper Motor** | NEMA 23 (3 Nm torque) | 1 |
 | **Gearbox** | RV30 60:1 Worm Gear Reducer | 1 |
-| **Power Supply** | 24V DC (For stepper driver) | 1 |
+| **Power Supply** | 24V DC (Size to match stepper draw) | 1 |
 | **Controls** | 10k Potentiometer (Speed) & NC E-STOP Button | 1 |
 
 ---
@@ -138,12 +172,17 @@ ESP32-P4 Firmware
 
 ---
 
-## ⚠️ Safety Notice
+## ⚙️ Configuration
 
-- **E-STOP:** The E-STOP uses an external hardware interrupt. Breaking the NC circuit instantly sets the motor speed and acceleration to 0 and cuts the enable pin.
-- **Power Sequencing:** Never power the motor without the TB6600 driver properly connected to the coils.
-- **Voltage Verification:** Always verify your 24V-36V power supply output before connecting it to the system.
-- **Testing:** Always test new configurations with low motor current settings first to prevent mechanical damage.
+Key physical parameters can be adjusted right at the top of the header files to perfectly match your specific mechanical build. 
+
+Open `src/config.h` to tweak:
+```cpp
+#define MOTOR_MICROSTEPS 8      // Must match dip-switches on your TB6600
+#define MOTOR_GEAR_RATIO 60     // e.g., 60:1 Worm Gear
+#define MAX_RPM 12.0            // Upper limit of the UI gauge
+#define ACCELERATION 500        // Stepper acceleration curve
+```
 
 ---
 
@@ -159,15 +198,56 @@ ESP32-P4 Firmware
 
 ---
 
+## ⚠️ Safety Notice
+
+- **E-STOP:** The E-STOP uses an external hardware interrupt. Breaking the NC circuit instantly sets the motor speed and acceleration to 0 and cuts the enable pin.
+- **Power Sequencing:** Never power the motor without the TB6600 driver properly connected to the coils.
+- **Voltage Verification:** Always verify your 24V-36V power supply output before connecting it to the system.
+- **Testing:** Always test new configurations with low motor current settings first to prevent mechanical damage.
+
+---
+
+## 🛠️ Troubleshooting
+
+### Motor does not move
+- Check STEP/DIR wiring continuity.
+- Verify `ENABLE` pin logic (try tying it directly to LOW/GND if motor lacks holding torque).
+- Confirm driver power supply is active and outputs 24V+.
+
+### Wrong rotation direction
+- Swap the DIR pin polarity in firmware, OR physically reverse one motor coil wiring pair (A+ and A-).
+
+### No display on boot
+- Verify ESP32-P4 drivers installed correctly via ESP-IDF.
+- If flashing from VS Code, ensure you are not missing the PSRAM init settings in `platformio.ini`.
+
+---
+
+## ⚠️ Known Limitations
+
+- Single-axis control only.
+- Requires manual configuration of your specific gear ratio in `config.h`.
+- Encoder feedback loop (Closed-Loop) is planned but not currently implemented.
+- Not tested with external servo motors (pure step/dir steppers only).
+
+---
+
 ## 🛣️ Roadmap
 
 - [x] Basic rotation and UI setup
 - [x] Speed control and Acceleration
 - [x] Pulse and Step modes
-- [ ] Welding HF sync mode integration
+- [ ] Welding HF interference sync mode isolation
 - [ ] Wi-Fi / Web panel remote control (ESP32-C6)
 - [ ] Preset storage to memory
 - [ ] OTA firmware updates
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.
+See the `LICENSE` file in the root directory for more details.
 
 ---
 

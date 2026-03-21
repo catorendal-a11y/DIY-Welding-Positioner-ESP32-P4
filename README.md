@@ -36,6 +36,16 @@ The system is designed for the **Waveshare / Guition ESP32-P4 4.3" Touch Display
 - **Display:** 4.3" IPS 800×480 MIPI-DSI (ST7701S Controller)
 - **Touch:** Capacitive 5-point touch (GT911 Controller via I2C on GPIO 7/8)
 
+### Motor System
+
+<p align="center">
+  <img src="docs/images/stepper_setup.png" width="400" alt="Motor Setup" />
+</p>
+
+- **Motor:** NEMA 23 stepper motor (High torque, 3 Nm output).
+- **Driver:** TB6600 microstep driver (Set to 8 microsteps for high precision).
+- **Gearbox:** 60:1 Worm Gear reduction. This ensures the workpiece cannot back-drive the motor and provides ultra-smooth, low-RPM rotation.
+
 ---
 
 ## 🔌 Wiring & Pinout
@@ -86,15 +96,18 @@ pio device monitor -b 115200
 
 ---
 
-## 📝 Modus Operandi
+## 📝 Menu Functions & Welding Modes
+
+The UI presents several distinct welding modes designed to handle different types of pipe fabrication jobs.
 
 | Mode | Description |
 |------|-------------|
-| **Continuous** | Constant speed rotation, adjustable dynamically via UI +/- buttons or ADC pot. |
-| **Jog** | Press-and-hold for manual positioning. Starts immediately upon press. |
-| **Pulse** | Fixed angle increments followed by pauses (e.g., for tack spacing). |
-| **Step** | Single-step mode for highly precise workpiece alignment. |
-| **Timer** | Rotate for a set exact duration, then auto-stop. |
+| **Continuous** | The standard operating mode. Starts spinning continuously at the set RPM when you press "ON", and stops when you hit "STOP". The RPM can be accurately nudged up or down using the `[ + ]` and `[ - ]` buttons right under the gauge while it is running. |
+| **Jog** | A manual override mode for positioning the piece. You simply press and hold the "JOG" button on the screen. The motor spins as long as your finger is touching the screen, and stops instantly the millisecond you lift it. Perfect for perfectly aligning your weld start point. |
+| **Pulse** | Specialized for tack-welding or segmented passes. The positioner will rotate a highly specific distance (e.g., 5 degrees), pause for a set amount of time so you can fuse the tack, and then automatically rotate another 5 degrees. |
+| **Step** | A strictly measured rotation. Input exactly how many degrees you want to rotate (e.g., 90° for a quarter-turn), and the positioner will execute exactly that movement and wait. |
+| **Timer** | Rotate at a set speed for an exact duration (e.g., 30 seconds). Excellent for creating perfectly timed, uniform cover passes on repetitive pipe sizes. |
+| **Programs** | The memory bank. Allows you to save your favorite RPM speeds, pulse timings, and step degrees into custom slots (like "2-inch Tube" or "6-inch Schedule 40") so you don't have to dial in the settings perfectly every single time. |
 
 ---
 

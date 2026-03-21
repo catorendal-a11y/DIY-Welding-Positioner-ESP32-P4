@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🔧 TIG Welding Rotator Controller
+# 🔧 DIY Welding Positioner ESP
 **Precision Multi-Mode Rotator Controller for TIG Pipe Welding**
 
 <img src="docs/images/ui_mockup.png" width="600" alt="UI Design Mockup">

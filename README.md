@@ -27,9 +27,9 @@
 ### Motor System
 | Component | Specification |
 |-----------|--------------|
-| Motor | NEMA 23 (1–2 Nm) |
+| Motor | NEMA 23 (3 Nm) |
 | Driver | TB6600 (8 microsteps) |
-| Gearbox | 20:1 worm gear |
+| Gearbox | 60:1 worm gear |
 | Workpiece | ⌀300 mm max |
 | Rollers | ⌀80 mm |
 

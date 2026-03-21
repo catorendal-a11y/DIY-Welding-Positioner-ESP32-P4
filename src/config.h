@@ -44,12 +44,12 @@
 #define MICROSTEPS      8      // 1/8 microstepping (matches TB6600 DIP)
 #define STEPS_PER_REV   (200 * MICROSTEPS)   // 1600 steps/rev motor
 
-#define GEAR_RATIO      20.0f   // 20:1 gearbox
+#define GEAR_RATIO      60.0f   // 60:1 worm gear
 #define D_EMNE          0.300f  // Workpiece diameter: 300mm
 #define D_RULLE         0.080f  // Roller diameter: 80mm
 
-// Required motor torque: 0.30 Nm (safety factor 2.0 included)
-// NEMA 23 (1–2 Nm) is sufficient
+// Motor: NEMA 23 (3 Nm)
+// 60:1 worm gear provides excellent holding torque and self-locking
 
 // ───────────────────────────────────────────────────────────────────────────────
 // BUILD CONFIGURATION

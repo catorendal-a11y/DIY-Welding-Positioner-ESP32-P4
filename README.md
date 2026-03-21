@@ -7,6 +7,11 @@
 
 *Built on the ESP32-P4 with a 4.3" MIPI-DSI ST7701S touch display, featuring a modern, glove-safe industrial dark UI.*
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PlatformIO](https://img.shields.io/badge/PlatformIO-Compatible-orange.svg)](https://platformio.org/)
+[![ESP-IDF](https://img.shields.io/badge/ESP--IDF-v5.3+-red.svg)](https://docs.espressif.com/)
+[![LVGL](https://img.shields.io/badge/LVGL-8.x-blue.svg)](https://lvgl.io/)
+
 </div>
 
 ---
@@ -116,6 +121,15 @@ The UI presents several distinct welding modes designed to handle different type
 - **E-STOP First:** The E-STOP uses an external hardware interrupt. Breaking the NC circuit instantly sets the motor speed and acceleration to 0 and cuts the enable pin.
 - **Fail-safe Start:** The motor always boots into a disabled (`STATE_IDLE`) state. It requires explicit user intent via the touch UI to start rotation.
 - **Watchdog:** Inherits the ESP32 hardware watchdog to prevent software deadlocks.
+
+---
+
+## 🔮 Future Roadmap
+
+- [ ] Wi-Fi / Web panel integration using the ESP32-C6 co-processor.
+- [ ] Over-The-Air (OTA) firmware updates.
+- [ ] Export/Import welding programs to an SD Card.
+- [ ] Support for external Bluetooth foot pedals.
 
 ---
 

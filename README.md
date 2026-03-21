@@ -7,6 +7,7 @@
 
 **Open-source ESP32-P4 based welding positioner controller designed for rotary welding tables, pipe welding rotators, and automated fabrication systems.**
 
+[![Status](https://img.shields.io/badge/Status-Active%20Development-brightgreen)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform: ESP32-P4](https://img.shields.io/badge/Platform-ESP32--P4-blue.svg)](https://espressif.com/)
 [![Framework: ESP-IDF](https://img.shields.io/badge/Framework-ESP--IDF-green.svg)](https://docs.espressif.com/)
@@ -30,13 +31,13 @@ cd DIY-Welding-Positioner-ESP32-P4
 ```bash
 pio run -t upload -e esp32p4-touch-43
 ```
-5. **Connect hardware:** Wire the TB6600 driver, NEMA 23 stepper motor, and power supply according to the pinout.
+5. **Connect hardware:** Wire your TB6600 driver, NEMA 23 stepper motor, and external power supply.
 
 ---
 
 ## 🎥 Demo
 
-Watch the system in action (UI walkthrough and motor rotation):  
+Watch the system in action: **UI interaction, Motor rotation, and Simulated welding passes.**  
 *(Demo video link coming soon - Insert YouTube link here)*
 
 ---
@@ -70,7 +71,7 @@ Driven by a NEMA 23 stepper motor and a 60:1 worm gear, it ensures ultra-smooth 
 - **Speed control:** Precise on-the-fly RPM adjustment.
 - **LVGL touch interface:** Glove-safe, high-contrast industrial dark UI.
 - **Hardware safety:** Dedicated NC E-STOP interrupt and software watchdog.
-- **Smooth motion:** Utilizing RMT hardware pulses for micro-stepping control.
+- **Smooth motion:** FastAccelStepper utilizing RMT hardware pulses for micro-stepping control.
 
 ---
 
@@ -116,6 +117,14 @@ Driven by a NEMA 23 stepper motor and a 60:1 worm gear, it ensures ultra-smooth 
 
 ---
 
+## 🔧 Supported Drivers
+
+- **TB6600** (Current standard configuration)
+- **DM542** (Planned / Drop-in replacement)
+- **TMC5160** (Future ultra-silent integration)
+
+---
+
 ## 🧠 System Overview
 
 ```mermaid
@@ -132,32 +141,27 @@ graph LR
     style E fill:#00E5FF,stroke:#000,stroke-width:2px,color:#000
 ```
 
-### 🏗️ Project Architecture
+### 📂 Project Directory Structure
 
 ```text
-ESP32-P4 Firmware
- ├── UI (LVGL 8.x)
- │     ├── Main Dashboard (RPM Gauge, Controls)
- │     ├── Settings Menus
- │     └── Theme System (Dark/Cyan)
- ├── Motion Control (FastAccelStepper)
- │     ├── Step Pulse Generation (RMT)
- │     ├── Acceleration/Deceleration
- │     └── Real-time RPM calculations
- ├── Input Handling
- │     ├── Analog Potentiometer (ADC)
- │     └── E-STOP external interrupt
- └── State Machine
-       ├── Continuous / Jog / Pulse / Step Modes
-       └── Safety Halt State
+DIY-Welding-Positioner-ESP32-P4/
+├── src/
+│   ├── main.cpp
+│   ├── motion/         # FastAccelStepper logic & RMT pulses
+│   ├── ui/             # LVGL 8.x dashboards & themes
+│   └── config.h        # Pinouts & physical gear ratios
+├── docs/
+│   └── images/         # Wiring diagrams & UI mockups
+├── platformio.ini      # Build environment for ESP32-P4
+└── README.md           # This master documentation
 ```
 
 ---
 
-## 📍 Pinout & Wiring
+## 📍 Pinout
 
 <div align="center">
-  <img src="docs/images/pinout.jpg" width="500" alt="Wiring Example">
+  <img src="docs/images/pinout.jpg" width="500" alt="ESP32 Pinout Diagram">
 </div>
 
 | ESP32 Pin | Function | Notes |
@@ -169,6 +173,14 @@ ESP32-P4 Firmware
 | `GPIO 33` | **E-STOP** | NC Contact (Active LOW halt) |
 
 *(Note: Touch screen I2C is wired internally to GPIO 7/8. Display MIPI-DSI uses dedicated lanes).*
+
+### 🔌 Wiring Diagram
+
+<div align="center">
+  <img src="docs/images/wiring_diagram.png" width="600" alt="Hardware Wiring Sequence">
+</div>
+
+*Connect the ESP32 STEP/DIR pins to the TB6600 driver unit, power the driver with the external 24V PSU, and wire the 4 motor coils to A+/A- and B+/B-.*
 
 ---
 

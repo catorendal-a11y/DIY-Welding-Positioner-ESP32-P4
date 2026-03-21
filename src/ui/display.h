@@ -1,5 +1,5 @@
 // TIG Rotator Controller - Display Driver
-// ESP32-P4: EK79007 480×800 via MIPI-DSI + GT911 touch
+// ESP32-P4: ST7701S 480×800 via MIPI-DSI + GT911 touch
 // Uses ESP-IDF native MIPI-DSI and LCD panel APIs
 
 #pragma once
@@ -7,7 +7,7 @@
 #include "../config.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_mipi_dsi.h"
-#include "esp_lcd_ek79007.h"
+#include "esp_lcd_st7701.h"
 #include "esp_lcd_touch.h"
 #include "esp_lcd_touch_gt911.h"
 

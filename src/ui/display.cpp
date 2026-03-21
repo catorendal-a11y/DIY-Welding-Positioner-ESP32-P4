@@ -1,5 +1,5 @@
 // TIG Rotator Controller - Display Implementation
-// ESP32-P4: EK79007 480×800 MIPI-DSI + GT911 touch (I2C)
+// ESP32-P4: ST7701S 480×800 MIPI-DSI + GT911 touch (I2C)
 
 #include "display.h"
 #include <Arduino.h>
@@ -7,7 +7,7 @@
 
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_mipi_dsi.h"
-#include "esp_lcd_ek79007.h"
+#include "esp_lcd_st7701.h"
 #include "esp_lcd_touch.h"
 #include "esp_lcd_touch_gt911.h"
 #include "driver/i2c_master.h"
@@ -28,7 +28,7 @@ static esp_lcd_panel_io_handle_t    dsi_io     = nullptr;
 // ───────────────────────────────────────────────────────────────────────────────
 // BACKLIGHT CONTROL
 // ───────────────────────────────────────────────────────────────────────────────
-#define BL_GPIO         26    // Backlight GPIO (board-specific, may need adjustment)
+#define BL_GPIO         26    // Backlight GPIO (board-specific)
 #define BL_LEDC_CH      LEDC_CHANNEL_0
 #define BL_LEDC_TIMER   LEDC_TIMER_0
 
@@ -104,10 +104,10 @@ static void touch_init() {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// DISPLAY INITIALIZATION — MIPI-DSI + EK79007
+// DISPLAY INITIALIZATION — MIPI-DSI + ST7701S
 // ───────────────────────────────────────────────────────────────────────────────
 void display_init() {
-  LOG_I("Display init: ESP32-P4 MIPI-DSI EK79007 %dx%d", DISPLAY_H_RES, DISPLAY_V_RES);
+  LOG_I("Display init: ESP32-P4 MIPI-DSI ST7701S %dx%d", DISPLAY_H_RES, DISPLAY_V_RES);
 
   // ─────────────────────────────────────────────────────────────────────────
   // 1. BACKLIGHT — start dark, fade in after panel init
@@ -119,10 +119,10 @@ void display_init() {
   // 2. MIPI-DSI BUS
   // ─────────────────────────────────────────────────────────────────────────
   esp_lcd_dsi_bus_config_t bus_cfg = {
-    .bus_id            = 0,
-    .num_data_lanes    = MIPI_DSI_LANE_NUM,
-    .phy_clk_src       = MIPI_DSI_PHY_CLK_SRC_DEFAULT,
-    .lane_bit_rate_mbps = 1000,  // 1 Gbps per lane
+    .bus_id             = 0,
+    .num_data_lanes     = MIPI_DSI_LANE_NUM,
+    .phy_clk_src        = MIPI_DSI_PHY_CLK_SRC_DEFAULT,
+    .lane_bit_rate_mbps = 500,
   };
   ESP_ERROR_CHECK(esp_lcd_new_dsi_bus(&bus_cfg, &dsi_bus));
 
@@ -137,34 +137,37 @@ void display_init() {
   ESP_ERROR_CHECK(esp_lcd_new_panel_io_dbi(dsi_bus, &dbi_cfg, &dsi_io));
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 4. EK79007 PANEL DRIVER
+  // 4. ST7701S PANEL DRIVER
   // ─────────────────────────────────────────────────────────────────────────
   esp_lcd_dpi_panel_config_t dpi_cfg = {
     .virtual_channel    = 0,
     .dpi_clk_src        = MIPI_DSI_DPI_CLK_SRC_DEFAULT,
-    .dpi_clock_freq_mhz = 52,
+    .dpi_clock_freq_mhz = 26,
     .in_color_format    = LCD_COLOR_FMT_RGB565,
-    .out_color_format   = LCD_COLOR_FMT_RGB565,
     .num_fbs            = 1,
     .video_timing = {
-      .h_size           = DISPLAY_H_RES_NATIVE,   // 480 native portrait width
-      .v_size           = DISPLAY_V_RES_NATIVE,   // 800 native portrait height
-      .hsync_pulse_width = 4,
-      .hsync_back_porch  = 30,
-      .hsync_front_porch = 30,
-      .vsync_pulse_width = 4,
-      .vsync_back_porch  = 16,
-      .vsync_front_porch = 16,
+      .h_size            = DISPLAY_H_RES_NATIVE,   // 480 native portrait width
+      .v_size            = DISPLAY_V_RES_NATIVE,   // 800 native portrait height
+      .hsync_pulse_width = 10,
+      .hsync_back_porch  = 10,
+      .hsync_front_porch = 20,
+      .vsync_pulse_width = 10,
+      .vsync_back_porch  = 10,
+      .vsync_front_porch = 10,
     },
   };
 
-  ek79007_vendor_config_t vendor_cfg = {
+  st7701_vendor_config_t vendor_cfg = {
     .init_cmds      = nullptr,
     .init_cmds_size = 0,
     .mipi_config = {
       .dsi_bus    = dsi_bus,
       .dpi_config = &dpi_cfg,
-      .lane_num   = MIPI_DSI_LANE_NUM,
+    },
+    .flags = {
+      .use_mipi_interface = 1,
+      .mirror_by_cmd      = 0,
+      .auto_del_panel_io  = 0,
     },
   };
 
@@ -175,12 +178,12 @@ void display_init() {
     .vendor_config  = &vendor_cfg,
   };
 
-  ESP_ERROR_CHECK(esp_lcd_new_panel_ek79007(dsi_io, &panel_cfg, &display_panel));
+  ESP_ERROR_CHECK(esp_lcd_new_panel_st7701(dsi_io, &panel_cfg, &display_panel));
   ESP_ERROR_CHECK(esp_lcd_panel_reset(display_panel));
   ESP_ERROR_CHECK(esp_lcd_panel_init(display_panel));
   ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(display_panel, true));
 
-  LOG_I("EK79007 MIPI-DSI panel init OK");
+  LOG_I("ST7701S MIPI-DSI panel init OK");
 
   // ─────────────────────────────────────────────────────────────────────────
   // 5. TOUCH — GT911

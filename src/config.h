@@ -21,8 +21,8 @@
 // Backlight: controlled by dedicated GPIO on the board
 //
 // I2C for touch (directly on ESP32-P4 I2C pins from header)
-#define PIN_TOUCH_SDA    6   // I2C SDA (board I2C bus)
-#define PIN_TOUCH_SCL    7   // I2C SCL (board I2C bus)
+#define PIN_TOUCH_SDA    7   // I2C SDA (board internal I2C bus)
+#define PIN_TOUCH_SCL    8   // I2C SCL (board internal I2C bus)
 #define TOUCH_ADDR_GT911 0x5D // GT911 default I2C address
 
 // MIPI-DSI lane configuration (ESP32-P4 hardware)

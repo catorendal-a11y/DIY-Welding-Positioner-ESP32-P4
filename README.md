@@ -67,15 +67,26 @@ It is especially useful when precise, repeatable rotation is required during wel
 
 ## 🧠 System Overview
 
-The system consists of:
+```mermaid
+graph LR
+    A[ESP32-P4 Controller] -->|Step/Dir Pulses| B(TB6600 Driver)
+    B -->|Current/Microstepping| C(NEMA 23 Stepper)
+    C -->|3 Nm Torque| D{60:1 Worm Gear}
+    D -->|Ultra-smooth low RPM| E((Rotary Table))
+    
+    style A fill:#00E5FF,stroke:#000,stroke-width:2px,color:#000
+    style B fill:#333,stroke:#00E5FF,stroke-width:1px,color:#fff
+    style C fill:#333,stroke:#00E5FF,stroke-width:1px,color:#fff
+    style D fill:#555,stroke:#fff,stroke-width:1px,color:#fff
+    style E fill:#00E5FF,stroke:#000,stroke-width:2px,color:#000
+```
 
-- **ESP32-P4 Controller** → Generates precision step pulses
-- **TB6600 Driver** → Controls motor current and microstepping
-- **NEMA 23 Stepper Motor** → Provides torque
-- **60:1 Worm Gear** → Reduces speed and increases torque
-- **Rotary Welding Table** → Rotates workpiece smoothly
-- **User Interface** → Touch display using LVGL
-- **Safety System** → Hardware E-STOP + watchdog
+The system components work in sequence to ensure flawless, non-backdrivable rotation:
+- **ESP32-P4 Controller** → Generates precision hardware step pulses.
+- **TB6600 Driver** → Provides exact microstepping current.
+- **NEMA 23 Stepper Motor** → Delivers rotational torque.
+- **60:1 Worm Gear** → Drastically reduces speed, multiplies torque, and locks the table in place.
+- **Rotary Welding Table** → Holds the workpiece securely for TIG/MIG automation.
 
 ---
 

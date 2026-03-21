@@ -3,7 +3,7 @@
 # 🔧 DIY Welding Positioner ESP32-P4
 **Precision Multi-Mode Rotator Controller for Welding**
 
-<img src="docs/images/ui_mockup.png" width="600" alt="UI Design Mockup">
+<img src="docs/images/ui_mockup.png?v=2" width="600" alt="UI Design Mockup">
 
 *Built on the ESP32-P4 with a 4.3" MIPI-DSI ST7701S touch display, featuring a modern, glove-safe industrial dark UI.*
 

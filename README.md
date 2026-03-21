@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🔧 DIY Welding Positioner ESP
+# 🔧 DIY Welding Positioner ESP32-P4
 **Precision Multi-Mode Rotator Controller for TIG Pipe Welding**
 
 <img src="docs/images/ui_mockup.png" width="600" alt="UI Design Mockup">

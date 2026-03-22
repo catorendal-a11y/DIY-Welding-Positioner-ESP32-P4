@@ -21,8 +21,9 @@
 - [x] Boot-safe ENA pin (motor disabled on startup)
 - [x] Professional README with wiring diagrams, pinouts, BOM
 - [x] EMI Mitigation Guide (docs/EMI_MITIGATION.md)
-- [x] Hardware Setup Guide (docs/HARDWARE_SETUP.md)
+- [x] External hardware setup guide (docs/HARDWARE_SETUP.md)
 - [x] Safety System Documentation (docs/SAFETY_SYSTEM.md)
+- [x] Full Code Audit & v0.3.0-beta Release (Critical bugs & warnings fixed)
 
 ## 🔄 In Progress
 

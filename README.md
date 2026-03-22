@@ -31,8 +31,9 @@ cd DIY-Welding-Positioner-ESP32-P4
 3. **Select board environment:** `esp32p4-release` (Waveshare ESP32-P4 4.3")
 4. **Build and flash:** Click the PlatformIO "Upload" button (➔), or run:
 ```bash
-pio run -t upload -e esp32p4-release
+pio run -t upload
 ```
+*(Since `default_envs` is configured, adding `-e esp32p4-release` is optional).*
 5. **Connect hardware:** Wire your TB6600 driver, NEMA 23 stepper motor, and external power supply.
 
 ---
@@ -175,7 +176,7 @@ This firmware has been successfully tested with:
 
 ---
 
-### 📂 Project Directory Structure
+## 📂 Project Directory Structure
 
 ```text
 DIY-Welding-Positioner-ESP32-P4/
@@ -265,7 +266,7 @@ Before connecting mechanical load:
 ### Motor does not move
 - Check STEP/DIR wiring continuity.
 - Verify `ENABLE` pin logic (try tying it directly to LOW/GND if motor lacks holding torque).
-- Confirm driver power supply is active and outputs 24V+.
+- Confirm driver power supply is active and outputs 24V–36V at ≥5A.
 
 ### Wrong rotation direction
 - Swap the DIR pin polarity in firmware, OR physically reverse one motor coil wiring pair (A+ and A-).

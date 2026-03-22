@@ -24,6 +24,7 @@
 - [x] External hardware setup guide (docs/HARDWARE_SETUP.md)
 - [x] Safety System Documentation (docs/SAFETY_SYSTEM.md)
 - [x] Full Code Audit & v0.3.0-beta Release (Critical bugs & warnings fixed)
+- [x] Program Preset Storage (ArduinoJson + LittleFS)
 
 ## 🔄 In Progress
 
@@ -35,7 +36,6 @@
 
 - [ ] Closed-loop encoder feedback
 - [ ] Wi-Fi / Web panel remote control (ESP32-C6)
-- [ ] Program preset storage (ArduinoJson + SPIFFS)
 - [ ] OTA firmware updates
 - [ ] TIG HF interference sync mode
 - [ ] TMC5160 silent stepper support

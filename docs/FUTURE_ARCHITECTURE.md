@@ -55,6 +55,9 @@ The ESP32-P4 lacks integrated Wi-Fi and Bluetooth to dedicate silicon entirely t
 
 ## 3. Program Preset Storage (LittleFS + ArduinoJson)
 
+> **✅ STATUS: IMPLEMENTED**
+> *This feature has been successfully integrated into the main branch. The documentation below reflects the active implementation.*
+
 Operators frequently perform repetitive welds. Setting the exact RPM, pulse timing, and step angles manually each time is inefficient.
 
 ### Memory Architecture
@@ -85,6 +88,6 @@ Operators frequently perform repetitive welds. Setting the exact RPM, pulse timi
 
 ### Implementation Phasing
 When we are ready to code these, they should be implemented completely independently in this logical order:
-1. **Phase 1: LittleFS Presets** (Pure software update, highly visible UI improvement).
+1. **Phase 1: LittleFS Presets** (✅ IMPLEMENTED - Software update, highly visible UI improvement).
 2. **Phase 2: Closed-Loop PCNT** (Requires mounting the encoder and routing safe shielded cables).
 3. **Phase 3: C6 Web Remote** (Requires flashing a secondary MCU and writing an asynchronous web frontend).

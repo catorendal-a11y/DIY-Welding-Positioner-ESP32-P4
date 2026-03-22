@@ -137,6 +137,7 @@ graph TD
 - **LVGL touch interface:** Glove-safe, high-contrast industrial dark UI.
 - **Hardware safety:** Dedicated NC E-STOP interrupt and software watchdog.
 - **Smooth motion:** FastAccelStepper utilizing RMT hardware pulses for micro-stepping control.
+- **Program Presets:** Save and load custom welding parameters to onboard LittleFS flash memory.
 
 ### 🖥️ All UI Screens
 
@@ -338,9 +339,9 @@ Before connecting mechanical load:
 - [x] Basic rotation and UI setup
 - [x] Speed control and Acceleration
 - [x] Pulse and Step modes
+- [x] Program Preset Storage (LittleFS + ArduinoJson)
 - [ ] Welding HF interference sync mode isolation
 - [ ] Wi-Fi / Web panel remote control (ESP32-C6)
-- [ ] Preset storage to memory
 - [ ] OTA firmware updates
 
 ---

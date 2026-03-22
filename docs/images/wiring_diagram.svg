@@ -267,8 +267,8 @@
     <text x="70" y="82" class="t-red" font-size="18" text-anchor="middle" font-weight="bold">⏻</text>
 
     <!-- terminals -->
-    <circle cx="45" cy="115" r="3" fill="#FF1744"/>
-    <circle cx="95" cy="115" r="3" fill="#555"/>
+    <circle cx="45" cy="5" r="3" fill="#FF1744"/>
+    <circle cx="95" cy="5" r="3" fill="#555"/>
   </g>
 
   <!-- ══════════════════════════════════════════════════════════════════ -->
@@ -279,25 +279,25 @@
     <text x="80" y="20" class="t-purple" font-size="12" text-anchor="middle" font-weight="bold">10k POT</text>
     <text x="80" y="35" class="t-dim" font-size="10" text-anchor="middle">(Speed Control)</text>
     <!-- terminals -->
-    <circle cx="30" cy="60" r="3" fill="#FF1744"/>
-    <circle cx="80" cy="60" r="3" fill="#D500F9"/>
-    <circle cx="130" cy="60" r="3" fill="#555"/>
+    <circle cx="30" cy="0" r="3" fill="#FF1744"/>
+    <circle cx="80" cy="0" r="3" fill="#D500F9"/>
+    <circle cx="130" cy="0" r="3" fill="#555"/>
   </g>
 
   <!-- ══════════════════════════════════════════════════════════════════ -->
   <!-- WIRES: ESP32 → POT & E-STOP                                       -->
   <!-- ══════════════════════════════════════════════════════════════════ -->
-  <!-- POT 3V3 (absolute: X=290, Y=740) → ESP 3V3 (Left Row 1, absolute: X=200, Y=190) -->
-  <path d="M 290 740 L 290 580 L 160 580 L 160 190 L 200 190" class="wire-pwr"/>
-  <!-- POT Wiper (absolute: X=340, Y=740) → ESP GPIO49 (Left Row 7, absolute: X=200, Y=310) -->
-  <path d="M 340 740 L 340 600 L 180 600 L 180 310 L 200 310" class="wire-pot"/>
-  <!-- POT GND (absolute: X=390, Y=740) → ESP GND (Right Row 8, absolute: X=230, Y=330) -->
-  <path d="M 390 740 L 390 620 L 250 620 L 250 330 L 230 330" class="wire-gnd"/>
+  <!-- POT 3V3 (absolute: X=290, Y=680) → ESP 3V3 (Left Row 1, absolute: X=200, Y=190) -->
+  <path d="M 290 680 L 290 580 L 160 580 L 160 190 L 200 190" class="wire-pwr"/>
+  <!-- POT Wiper (absolute: X=340, Y=680) → ESP GPIO49 (Left Row 7, absolute: X=200, Y=310) -->
+  <path d="M 340 680 L 340 600 L 180 600 L 180 310 L 200 310" class="wire-pot"/>
+  <!-- POT GND (absolute: X=390, Y=680) → ESP GND (Right Row 8, absolute: X=230, Y=330) -->
+  <path d="M 390 680 L 390 620 L 250 620 L 250 330 L 230 330" class="wire-gnd"/>
 
-  <!-- E-STOP SIG (absolute: X=95, Y=775) → ESP GPIO33 (Right Row 4, absolute: X=230, Y=250) -->
-  <path d="M 95 775 L 95 560 L 330 560 L 330 250 L 230 250" class="wire-estop"/>
-  <!-- E-STOP GND (absolute: X=145, Y=775) → ESP GND (Right Row 8, absolute: X=230, Y=330) -->
-  <path d="M 145 775 L 145 610 L 305 610 L 305 330 L 230 330" class="wire-gnd"/>
+  <!-- E-STOP SIG (absolute: X=95, Y=665) → ESP GPIO33 (Right Row 4, absolute: X=230, Y=250) -->
+  <path d="M 95 665 L 95 560 L 330 560 L 330 250 L 230 250" class="wire-estop"/>
+  <!-- E-STOP GND (absolute: X=145, Y=665) → ESP GND (Right Row 8, absolute: X=230, Y=330) -->
+  <path d="M 145 665 L 145 610 L 305 610 L 305 330 L 230 330" class="wire-gnd"/>
 
   <!-- ══════════════════════════════════════════════════════════════════ -->
   <!-- WIRES: ESP32 → TB6600 (Signal) ROUTED OVER THE TOP                -->

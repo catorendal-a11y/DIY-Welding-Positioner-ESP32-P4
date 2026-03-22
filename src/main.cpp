@@ -11,6 +11,7 @@
 #include "motor/speed.h"
 #include "control/control.h"
 #include "safety/safety.h"
+#include "storage/storage.h"
 #include "esp_task_wdt.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -168,6 +169,9 @@ void setup() {
 
   // Cache stepper pointer for ESTOP ISR
   safety_cache_stepper();
+
+  // Initialize storage (LittleFS + Presets API)
+  storage_init();
 
   // Initialize control state machine
   control_init();

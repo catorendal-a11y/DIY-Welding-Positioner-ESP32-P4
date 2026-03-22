@@ -37,7 +37,6 @@
 - [ ] Closed-loop encoder feedback
 - [ ] Wi-Fi / Web panel remote control (ESP32-C6)
 - [ ] OTA firmware updates
-- [ ] TIG HF interference sync mode
 - [ ] TMC5160 silent stepper support
 
 ---

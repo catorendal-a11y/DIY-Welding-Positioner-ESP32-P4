@@ -340,7 +340,6 @@ Before connecting mechanical load:
 - [x] Speed control and Acceleration
 - [x] Pulse and Step modes
 - [x] Program Preset Storage (LittleFS + ArduinoJson)
-- [ ] Welding HF interference sync mode isolation
 - [ ] Wi-Fi / Web panel remote control (ESP32-C6)
 - [ ] OTA firmware updates
 

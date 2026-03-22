@@ -61,7 +61,7 @@ void motor_init() {
   stepper->setAutoEnable(false);  // Manual enable control
 
   // Set acceleration and initial speed
-  stepper->setAcceleration(5000);          // steps/s²
+  stepper->setAcceleration(ACCELERATION);   // steps/s² from config.h
   stepper->setSpeedInHz(10000);            // 10 kHz = 5 RPM workpiece (for testing)
 
   LOG_I("FastAccelStepper init OK");

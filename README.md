@@ -239,7 +239,7 @@ Open `src/config.h` to tweak:
 #define MOTOR_MICROSTEPS 8      // Must match dip-switches on your TB6600
 #define MOTOR_GEAR_RATIO 60     // e.g., 60:1 Worm Gear
 #define MAX_RPM 3.0             // Upper limit of the UI gauge
-#define ACCELERATION 500        // Stepper acceleration (steps/s²)
+#define ACCELERATION 5000       // Stepper acceleration (steps/s²)
 ```
 
 ---

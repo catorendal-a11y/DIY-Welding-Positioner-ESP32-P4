@@ -54,6 +54,8 @@
 
 // Motor: NEMA 23 (3 Nm)
 // 60:1 worm gear provides excellent holding torque and self-locking
+#define ACCELERATION    5000   // Stepper acceleration (steps/s²)
+                                // 5000 = ~1s ramp to max speed. Lower for smoother starts.
 
 // ───────────────────────────────────────────────────────────────────────────────
 // BUILD CONFIGURATION

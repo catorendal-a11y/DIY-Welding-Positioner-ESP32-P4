@@ -1,0 +1,366 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 920" width="1200" height="920">
+  <defs>
+    <style>
+      .screen-bg { fill: #050505; }
+      .btn-bg { fill: #181818; }
+      .btn-border { stroke: #333333; stroke-width: 1; }
+      .btn-active { stroke: #00E5FF; stroke-width: 2; }
+      .text-main { fill: #FFFFFF; }
+      .text-dim { fill: #444444; }
+      .text-cyan { fill: #00E5FF; }
+      .text-green { fill: #00E676; }
+      .text-red { fill: #FF1744; }
+      .text-amber { fill: #FF9100; }
+      .text-purple { fill: #D500F9; }
+      .text-teal { fill: #1DE9B6; }
+      .gauge-arc { fill: none; stroke: #111111; stroke-width: 7; }
+      .gauge-active { fill: none; stroke: #00E5FF; stroke-width: 5; }
+    </style>
+  </defs>
+
+  <!-- Title -->
+  <text x="600" y="30" font-family="sans-serif" font-size="24" fill="#FFFFFF" text-anchor="middle" font-weight="bold">DIY Welding Positioner — UI Screens (4.3" IPS 800×480)</text>
+
+  <!-- ============================================ -->
+  <!-- SCREEN 1: MAIN SCREEN -->
+  <!-- ============================================ -->
+  <g transform="translate(30, 60)">
+    <rect width="360" height="216" rx="8" class="screen-bg" stroke="#333333" stroke-width="2"/>
+    <text x="180" y="20" font-family="sans-serif" font-size="14" class="text-dim" text-anchor="middle">MAIN SCREEN</text>
+
+    <!-- Status bar -->
+    <text x="20" y="40" font-family="sans-serif" font-size="10" class="text-dim">TIG ROTATOR</text>
+    <text x="180" y="40" font-family="sans-serif" font-size="10" class="text-green" text-anchor="middle">RUNNING</text>
+    <text x="340" y="40" font-family="sans-serif" font-size="10" class="text-dim" text-anchor="end">24.5V</text>
+
+    <!-- Gauge - 270° arc -->
+    <path d="M 129 159 A 72 72 0 1 1 231 159" class="gauge-arc"/>
+    <path d="M 129 159 A 72 72 0 0 1 115 133" class="gauge-active"/>
+    <text x="180" y="130" font-family="sans-serif" font-size="45" class="text-main" text-anchor="middle" font-weight="bold">1.8</text>
+    <text x="180" y="152" font-family="sans-serif" font-size="11" class="text-cyan" text-anchor="middle" letter-spacing="1">RPM</text>
+
+    <!-- Gauge labels -->
+    <g font-family="sans-serif" font-size="8" class="text-dim" text-anchor="middle" font-weight="bold">
+      <text x="118" y="173">0</text>
+      <text x="101" y="79">2.0</text>
+      <text x="180" y="25">3.0</text>
+      <text x="259" y="79">4.0</text>
+      <text x="242" y="173">6.0</text>
+    </g>
+
+    <!-- Left buttons -->
+    <rect x="16" y="54" width="59" height="34" rx="5" fill="#0c1a1c" class="btn-active"/>
+    <text x="45" y="76" font-family="sans-serif" font-size="9" class="text-main" text-anchor="middle" font-weight="bold">ON</text>
+
+    <rect x="16" y="95" width="59" height="34" rx="5" fill="#121212" stroke="#222" stroke-width="1"/>
+    <text x="45" y="117" font-family="sans-serif" font-size="9" class="text-dim" text-anchor="middle">STOP</text>
+
+    <rect x="16" y="135" width="59" height="34" rx="5" fill="#121212" stroke="#222" stroke-width="1"/>
+    <text x="45" y="157" font-family="sans-serif" font-size="9" class="text-main" text-anchor="middle">JOG</text>
+
+    <!-- Right buttons -->
+    <rect x="285" y="54" width="59" height="34" rx="5" fill="#0c1a1c" class="btn-active"/>
+    <text x="314" y="76" font-family="sans-serif" font-size="9" class="text-main" text-anchor="middle" font-weight="bold">CW</text>
+
+    <rect x="285" y="95" width="59" height="34" rx="5" fill="#121212" stroke="#222" stroke-width="1"/>
+    <text x="314" y="117" font-family="sans-serif" font-size="9" class="text-dim" text-anchor="middle">CCW</text>
+
+    <rect x="285" y="135" width="59" height="34" rx="5" fill="#121212" stroke="#222" stroke-width="1"/>
+    <text x="314" y="157" font-family="sans-serif" font-size="9" class="text-main" text-anchor="middle">MENU</text>
+
+    <!-- RPM buttons -->
+    <rect x="132" y="180" width="43" height="25" rx="5" fill="#121212" stroke="#333" stroke-width="1"/>
+    <text x="153" y="197" font-family="sans-serif" font-size="8" class="text-main" text-anchor="middle">- RPM</text>
+
+    <rect x="184" y="180" width="43" height="25" rx="5" fill="#121212" stroke="#333" stroke-width="1"/>
+    <text x="205" y="197" font-family="sans-serif" font-size="8" class="text-main" text-anchor="middle">+ RPM</text>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- SCREEN 2: MENU -->
+  <!-- ============================================ -->
+  <g transform="translate(420, 60)">
+    <rect width="360" height="216" rx="8" class="screen-bg" stroke="#333333" stroke-width="2"/>
+    <text x="180" y="20" font-family="sans-serif" font-size="14" class="text-dim" text-anchor="middle">MODE SELECTION MENU</text>
+
+    <!-- Menu items -->
+    <rect x="30" y="45" width="300" height="38" rx="4" class="btn-bg" stroke="#00E5FF" stroke-width="1.5"/>
+    <text x="50" y="70" font-family="sans-serif" font-size="13" class="text-cyan">► PULSE MODE</text>
+    <text x="315" y="70" font-family="sans-serif" font-size="11" class="text-dim" text-anchor="end">Tack weld</text>
+
+    <rect x="30" y="88" width="300" height="38" rx="4" class="btn-bg btn-border"/>
+    <text x="50" y="113" font-family="sans-serif" font-size="13" class="text-teal">► STEP MODE</text>
+    <text x="315" y="113" font-family="sans-serif" font-size="11" class="text-dim" text-anchor="end">Angle position</text>
+
+    <rect x="30" y="131" width="300" height="38" rx="4" class="btn-bg btn-border"/>
+    <text x="50" y="156" font-family="sans-serif" font-size="13" class="text-cyan">► TIMER MODE</text>
+    <text x="315" y="156" font-family="sans-serif" font-size="11" class="text-dim" text-anchor="end">Timed rotation</text>
+
+    <rect x="30" y="174" width="300" height="38" rx="4" class="btn-bg btn-border"/>
+    <text x="50" y="199" font-family="sans-serif" font-size="13" class="text-dim">► PROGRAMS</text>
+    <text x="315" y="199" font-family="sans-serif" font-size="11" class="text-dim" text-anchor="end">Saved presets</text>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- SCREEN 3: PULSE MODE -->
+  <!-- ============================================ -->
+  <g transform="translate(810, 60)">
+    <rect width="360" height="216" rx="8" class="screen-bg" stroke="#D500F9" stroke-width="2"/>
+    <text x="180" y="20" font-family="sans-serif" font-size="14" class="text-purple" text-anchor="middle">PULSE MODE</text>
+
+    <!-- State badge -->
+    <text x="180" y="42" font-family="sans-serif" font-size="12" class="text-purple" text-anchor="middle" font-weight="bold">PULSE ACTIVE</text>
+
+    <!-- Parameters -->
+    <rect x="30" y="55" width="145" height="54" rx="4" class="btn-bg btn-border"/>
+    <text x="102" y="79" font-family="sans-serif" font-size="11" class="text-dim" text-anchor="middle">DEGREES</text>
+    <text x="102" y="99" font-family="sans-serif" font-size="20" class="text-main" text-anchor="middle" font-weight="bold">10°</text>
+
+    <rect x="185" y="55" width="145" height="54" rx="4" class="btn-bg btn-border"/>
+    <text x="257" y="79" font-family="sans-serif" font-size="11" class="text-dim" text-anchor="middle">PAUSE</text>
+    <text x="257" y="99" font-family="sans-serif" font-size="20" class="text-main" text-anchor="middle" font-weight="bold">2.0s</text>
+
+    <!-- RPM gauge (small) -->
+    <circle cx="102" cy="153" r="28" class="gauge-arc" stroke-width="2"/>
+    <path d="M 74 153 A 28 28 0 1 1 130 153" class="gauge-active" stroke-width="3"/>
+    <text x="102" y="153" font-family="sans-serif" font-size="13" class="text-main" text-anchor="middle" dominant-baseline="middle" font-weight="bold">1.2</text>
+
+    <!-- Control buttons -->
+    <rect x="185" y="130" width="145" height="38" rx="4" class="btn-bg" stroke="#00E676" stroke-width="2"/>
+    <text x="257" y="155" font-family="sans-serif" font-size="13" class="text-green" text-anchor="middle" font-weight="bold">▶ START</text>
+
+    <rect x="185" y="175" width="67" height="28" rx="3" class="btn-bg btn-border"/>
+    <text x="218" y="193" font-family="sans-serif" font-size="11" class="text-dim" text-anchor="middle">-10°</text>
+
+    <rect x="263" y="175" width="67" height="28" rx="3" class="btn-bg btn-border"/>
+    <text x="296" y="193" font-family="sans-serif" font-size="11" class="text-dim" text-anchor="middle">+10°</text>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- SCREEN 4: STEP MODE -->
+  <!-- ============================================ -->
+  <g transform="translate(30, 306)">
+    <rect width="360" height="216" rx="8" class="screen-bg" stroke="#1DE9B6" stroke-width="2"/>
+    <text x="180" y="20" font-family="sans-serif" font-size="14" class="text-teal" text-anchor="middle">STEP MODE</text>
+
+    <!-- Angle display (large) -->
+    <circle cx="150" cy="93" r="58" fill="#0A0A0A" stroke="#1DE9B6" stroke-width="2"/>
+    <text x="150" y="93" font-family="sans-serif" font-size="40" class="text-teal" text-anchor="middle" dominant-baseline="middle" font-weight="bold">90°</text>
+
+    <!-- Preset angles -->
+    <rect x="20" y="172" width="55" height="28" rx="3" class="btn-bg btn-border"/>
+    <text x="47" y="191" font-family="sans-serif" font-size="11" class="text-dim" text-anchor="middle">45°</text>
+
+    <rect x="82" y="172" width="55" height="28" rx="3" class="btn-bg" stroke="#1DE9B6" stroke-width="1.5"/>
+    <text x="109" y="191" font-family="sans-serif" font-size="11" class="text-teal" text-anchor="middle">90°</text>
+
+    <rect x="144" y="172" width="55" height="28" rx="3" class="btn-bg btn-border"/>
+    <text x="171" y="191" font-family="sans-serif" font-size="11" class="text-dim" text-anchor="middle">180°</text>
+
+    <rect x="206" y="172" width="55" height="28" rx="3" class="btn-bg btn-border"/>
+    <text x="233" y="191" font-family="sans-serif" font-size="11" class="text-dim" text-anchor="middle">360°</text>
+
+    <rect x="268" y="172" width="55" height="28" rx="3" class="btn-bg btn-border"/>
+    <text x="295" y="191" font-family="sans-serif" font-size="11" class="text-dim" text-anchor="middle">CUSTOM</text>
+
+    <!-- Execute button -->
+    <rect x="245" y="85" width="75" height="65" rx="4" class="btn-bg" stroke="#1DE9B6" stroke-width="2"/>
+    <text x="282" y="117" font-family="sans-serif" font-size="13" class="text-teal" text-anchor="middle" dominant-baseline="middle" font-weight="bold">STEP</text>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- SCREEN 5: JOG MODE -->
+  <!-- ============================================ -->
+  <g transform="translate(420, 306)">
+    <rect width="360" height="216" rx="8" class="screen-bg" stroke="#FF9100" stroke-width="2"/>
+    <text x="180" y="20" font-family="sans-serif" font-size="14" class="text-amber" text-anchor="middle">JOG MODE</text>
+
+    <text x="180" y="45" font-family="sans-serif" font-size="12" class="text-amber" text-anchor="middle">HOLD TO ROTATE</text>
+
+    <!-- Large hold button -->
+    <rect x="55" y="60" width="230" height="95" rx="8" class="btn-bg" stroke="#FF9100" stroke-width="3" fill="#FF9100" fill-opacity="0.1"/>
+    <text x="170" y="107" font-family="sans-serif" font-size="26" class="text-amber" text-anchor="middle" dominant-baseline="middle" font-weight="bold">◀ JOG ▶</text>
+    <text x="170" y="137" font-family="sans-serif" font-size="12" class="text-dim" text-anchor="middle">Touch &amp; hold to run</text>
+
+    <!-- Direction buttons -->
+    <rect x="20" y="170" width="70" height="28" rx="4" class="btn-bg" stroke="#00E5FF" stroke-width="1.5"/>
+    <text x="55" y="184" font-family="sans-serif" font-size="12" class="text-cyan" text-anchor="middle" dominant-baseline="middle" font-weight="bold">CW ↑</text>
+
+    <rect x="270" y="170" width="70" height="28" rx="4" class="btn-bg" stroke="#333333" stroke-width="1"/>
+    <text x="305" y="184" font-family="sans-serif" font-size="12" class="text-dim" text-anchor="middle" dominant-baseline="middle" font-weight="bold">CCW ↓</text>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- SCREEN 6: TIMER MODE -->
+  <!-- ============================================ -->
+  <g transform="translate(810, 306)">
+    <rect width="360" height="216" rx="8" class="screen-bg" stroke="#00E5FF" stroke-width="2"/>
+    <text x="180" y="20" font-family="sans-serif" font-size="14" class="text-cyan" text-anchor="middle">TIMER MODE</text>
+
+    <!-- Timer display -->
+    <rect x="60" y="40" width="240" height="65" rx="4" fill="#0A0A0A" stroke="#00E5FF" stroke-width="1"/>
+    <text x="180" y="83" font-family="sans-serif" font-size="40" class="text-cyan" text-anchor="middle" font-weight="bold">00:30</text>
+
+    <!-- Duration preset buttons -->
+    <rect x="20" y="118" width="65" height="33" rx="3" class="btn-bg btn-border"/>
+    <text x="52" y="140" font-family="sans-serif" font-size="11" class="text-dim" text-anchor="middle">10s</text>
+
+    <rect x="95" y="118" width="65" height="33" rx="3" class="btn-bg" stroke="#00E5FF" stroke-width="1.5"/>
+    <text x="127" y="140" font-family="sans-serif" font-size="11" class="text-cyan" text-anchor="middle">30s</text>
+
+    <rect x="170" y="118" width="65" height="33" rx="3" class="btn-bg btn-border"/>
+    <text x="202" y="140" font-family="sans-serif" font-size="11" class="text-dim" text-anchor="middle">60s</text>
+
+    <rect x="245" y="118" width="65" height="33" rx="3" class="btn-bg btn-border"/>
+    <text x="277" y="140" font-family="sans-serif" font-size="11" class="text-dim" text-anchor="middle">CUSTOM</text>
+
+    <!-- RPM display -->
+    <text x="45" y="178" font-family="sans-serif" font-size="11" class="text-dim">SPEED:</text>
+    <text x="90" y="178" font-family="sans-serif" font-size="15" class="text-main" font-weight="bold">2.0 RPM</text>
+
+    <!-- Start button -->
+    <rect x="245" y="168" width="100" height="33" rx="4" class="btn-bg" stroke="#00E676" stroke-width="2"/>
+    <text x="295" y="190" font-family="sans-serif" font-size="13" class="text-green" text-anchor="middle" font-weight="bold">▶ START</text>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- SCREEN 7: ESTOP OVERLAY -->
+  <!-- ============================================ -->
+  <g transform="translate(30, 552)">
+    <rect width="360" height="150" rx="8" fill="#FF1744" fill-opacity="0.2" stroke="#FF1744" stroke-width="3"/>
+    <text x="180" y="25" font-family="sans-serif" font-size="14" class="text-red" text-anchor="middle" font-weight="bold">⚠ E-STOP TRIGGERED</text>
+
+    <!-- Warning icon -->
+    <circle cx="180" cy="70" r="25" fill="none" stroke="#FF1744" stroke-width="3"/>
+    <text x="180" y="78" font-family="sans-serif" font-size="24" class="text-red" text-anchor="middle" font-weight="bold">!</text>
+
+    <!-- Reset instruction -->
+    <text x="180" y="115" font-family="sans-serif" font-size="11" class="text-main" text-anchor="middle">Motor stopped. Check safety conditions.</text>
+    <text x="180" y="132" font-family="sans-serif" font-size="11" class="text-dim" text-anchor="middle">Release E-STOP button, then tap to reset.</text>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- SCREEN 8: SETTINGS -->
+  <!-- ============================================ -->
+  <g transform="translate(420, 552)">
+    <rect width="360" height="150" rx="8" class="screen-bg" stroke="#333333" stroke-width="2"/>
+    <text x="180" y="20" font-family="sans-serif" font-size="14" class="text-dim" text-anchor="middle">SETTINGS</text>
+
+    <!-- Settings items -->
+    <rect x="20" y="35" width="320" height="26" rx="3" class="btn-bg btn-border"/>
+    <text x="35" y="53" font-family="sans-serif" font-size="11" class="text-main">Max RPM Limit</text>
+    <text x="325" y="53" font-family="sans-serif" font-size="11" class="text-cyan" text-anchor="end">3.0</text>
+
+    <rect x="20" y="66" width="320" height="26" rx="3" class="btn-bg btn-border"/>
+    <text x="35" y="84" font-family="sans-serif" font-size="11" class="text-main">Acceleration</text>
+    <text x="325" y="84" font-family="sans-serif" font-size="11" class="text-dim" text-anchor="end">5000</text>
+
+    <rect x="20" y="97" width="320" height="26" rx="3" class="btn-bg btn-border"/>
+    <text x="35" y="115" font-family="sans-serif" font-size="11" class="text-main">Screen Brightness</text>
+    <text x="325" y="115" font-family="sans-serif" font-size="11" class="text-dim" text-anchor="end">100%</text>
+
+    <!-- Back button -->
+    <rect x="20" y="128" width="80" height="18" rx="3" class="btn-bg" stroke="#8A8A8A" stroke-width="1"/>
+    <text x="60" y="141" font-family="sans-serif" font-size="9" class="text-dim" text-anchor="middle">← BACK</text>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- COLOR LEGEND -->
+  <!-- ============================================ -->
+  <g transform="translate(810, 552)">
+    <rect width="360" height="150" rx="8" fill="#0A0A0A" stroke="#333333" stroke-width="1"/>
+    <text x="180" y="20" font-family="sans-serif" font-size="14" class="text-dim" text-anchor="middle">COLOR LEGEND</text>
+
+    <circle cx="30" cy="40" r="6" fill="#00E5FF"/>
+    <text x="45" y="44" font-family="sans-serif" font-size="10" class="text-dim">Cyan - Accent / Active</text>
+
+    <circle cx="30" cy="60" r="6" fill="#00E676"/>
+    <text x="45" y="64" font-family="sans-serif" font-size="10" class="text-dim">Green - Running / Start</text>
+
+    <circle cx="30" cy="80" r="6" fill="#FF1744"/>
+    <text x="45" y="84" font-family="sans-serif" font-size="10" class="text-dim">Red - E-STOP / Stop</text>
+
+    <circle cx="30" cy="100" r="6" fill="#FF9100"/>
+    <text x="45" y="104" font-family="sans-serif" font-size="10" class="text-dim">Amber - Jog / Warning</text>
+
+    <circle cx="200" cy="40" r="6" fill="#D500F9"/>
+    <text x="215" y="44" font-family="sans-serif" font-size="10" class="text-dim">Purple - Pulse Mode</text>
+
+    <circle cx="200" cy="60" r="6" fill="#1DE9B6"/>
+    <text x="215" y="64" font-family="sans-serif" font-size="10" class="text-dim">Teal - Step Mode</text>
+
+    <circle cx="200" cy="80" r="6" fill="#FFFFFF"/>
+    <text x="215" y="84" font-family="sans-serif" font-size="10" class="text-dim">White - Primary Text</text>
+
+    <circle cx="200" cy="100" r="6" fill="#444444"/>
+    <text x="215" y="104" font-family="sans-serif" font-size="10" class="text-dim">Grey - Secondary</text>
+
+    <text x="180" y="135" font-family="sans-serif" font-size="9" class="text-dim" text-anchor="middle">Industrial dark theme • Glove-safe buttons</text>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- SCREEN NAVIGATION FLOW -->
+  <!-- ============================================ -->
+  <g transform="translate(30, 730)">
+    <rect width="1140" height="110" rx="8" fill="#0A0A0A" stroke="#333333" stroke-width="1"/>
+    <text x="570" y="20" font-family="sans-serif" font-size="12" class="text-dim" text-anchor="middle">SCREEN NAVIGATION FLOW</text>
+
+    <!-- Flow boxes -->
+    <rect x="20" y="35" width="80" height="30" rx="4" class="btn-bg" stroke="#00E5FF" stroke-width="1.5"/>
+    <text x="60" y="55" font-family="sans-serif" font-size="10" class="text-cyan" text-anchor="middle">MAIN</text>
+
+    <text x="110" y="55" font-family="sans-serif" font-size="14" class="text-dim">→</text>
+
+    <rect x="130" y="35" width="80" height="30" rx="4" class="btn-bg btn-border"/>
+    <text x="170" y="55" font-family="sans-serif" font-size="10" class="text-dim" text-anchor="middle">MENU</text>
+
+    <text x="220" y="55" font-family="sans-serif" font-size="14" class="text-dim">→</text>
+
+    <g transform="translate(240, 35)">
+      <rect width="70" height="30" rx="4" class="btn-bg" stroke="#D500F9" stroke-width="1"/>
+      <text x="35" y="20" font-family="sans-serif" font-size="8" class="text-purple" text-anchor="middle">PULSE</text>
+    </g>
+    <g transform="translate(320, 35)">
+      <rect width="70" height="30" rx="4" class="btn-bg" stroke="#1DE9B6" stroke-width="1"/>
+      <text x="35" y="20" font-family="sans-serif" font-size="8" class="text-teal" text-anchor="middle">STEP</text>
+    </g>
+    <g transform="translate(400, 35)">
+      <rect width="70" height="30" rx="4" class="btn-bg" stroke="#FF9100" stroke-width="1"/>
+      <text x="35" y="20" font-family="sans-serif" font-size="8" class="text-amber" text-anchor="middle">JOG</text>
+    </g>
+    <g transform="translate(480, 35)">
+      <rect width="70" height="30" rx="4" class="btn-bg" stroke="#00E5FF" stroke-width="1"/>
+      <text x="35" y="20" font-family="sans-serif" font-size="8" class="text-cyan" text-anchor="middle">TIMER</text>
+    </g>
+
+    <text x="570" y="55" font-family="sans-serif" font-size="14" class="text-dim">→</text>
+
+    <rect x="590" y="35" width="80" height="30" rx="4" class="btn-bg btn-border"/>
+    <text x="630" y="55" font-family="sans-serif" font-size="10" class="text-dim" text-anchor="middle">PROGRAMS</text>
+
+    <text x="680" y="55" font-family="sans-serif" font-size="14" class="text-dim">|</text>
+
+    <rect x="700" y="35" width="80" height="30" rx="4" class="btn-bg btn-border"/>
+    <text x="740" y="55" font-family="sans-serif" font-size="10" class="text-dim" text-anchor="middle">SETTINGS</text>
+
+    <text x="790" y="55" font-family="sans-serif" font-size="14" class="text-dim">→</text>
+
+    <rect x="810" y="35" width="80" height="30" rx="4" class="btn-bg btn-border"/>
+    <text x="850" y="55" font-family="sans-serif" font-size="10" class="text-dim" text-anchor="middle">ABOUT</text>
+
+    <text x="910" y="55" font-family="sans-serif" font-size="14" class="text-dim">→</text>
+
+    <rect x="930" y="35" width="80" height="30" rx="4" class="btn-bg btn-border"/>
+    <text x="970" y="55" font-family="sans-serif" font-size="10" class="text-dim" text-anchor="middle">ESTOP</text>
+
+    <!-- E-STOP note -->
+    <rect x="20" y="75" width="200" height="25" rx="4" fill="#FF1744" fill-opacity="0.2" stroke="#FF1744" stroke-width="1"/>
+    <text x="120" y="92" font-family="sans-serif" font-size="10" class="text-red" text-anchor="middle" font-weight="bold">E-STOP overlays ALL screens</text>
+
+    <text x="260" y="92" font-family="sans-serif" font-size="10" class="text-dim">• Auto-return to MAIN after mode completes</text>
+  </g>
+
+  <!-- Footer -->
+  <text x="600" y="895" font-family="sans-serif" font-size="12" fill="#444444" text-anchor="middle">DIY Welding Positioner ESP32-P4 • LVGL 8.x Dark Theme • 4.3" IPS 800×480 Landscape</text>
+
+</svg>

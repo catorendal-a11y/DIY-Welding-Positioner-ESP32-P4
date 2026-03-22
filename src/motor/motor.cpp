@@ -106,8 +106,7 @@ bool motor_is_running() {
 
 uint32_t motor_get_current_hz() {
   if (stepper == nullptr) return 0;
-  // FastAccelStepper doesn't have getCurrentSpeedInHz(), return 0 or track manually
-  return 0;  // TODO: Track speed manually if needed
+  return stepper->getCurrentSpeedInMilliHz() / 1000;
 }
 
 FastAccelStepper* motor_get_stepper() {

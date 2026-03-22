@@ -6,7 +6,8 @@ This document outlines the architectural blueprints for the three major upcoming
 
 ## 1. Closed-Loop Encoder Feedback
 
-In an open-loop system, if physical resistance exceeds the stepper motor's torque (e.g., a heavy pipe binding), the motor skips steps. The firmware has no way of knowing this, resulting in an inaccurate final weld angle.
+> **❌ STATUS: CANCELLED**
+> *Etter nærmere vurdering har vi besluttet at dette trinnmotoroppsettet er kraftig og presist nok (open-loop) til at vi ikke trenger å innføre kompleksiteten med en fysisk enkoder.*
 
 ### Hardware Pipeline
 - **Sensor:** A magnetic absolute encoder (e.g., **AS5600** via I2C) or a high-resolution optical quadrature encoder attached to the main drive shaft or motor shaft.
@@ -89,5 +90,5 @@ Operators frequently perform repetitive welds. Setting the exact RPM, pulse timi
 ### Implementation Phasing
 When we are ready to code these, they should be implemented completely independently in this logical order:
 1. **Phase 1: LittleFS Presets** (✅ IMPLEMENTED - Software update, highly visible UI improvement).
-2. **Phase 2: Closed-Loop PCNT** (Requires mounting the encoder and routing safe shielded cables).
+2. **Phase 2: Closed-Loop PCNT** (❌ CANCELLED).
 3. **Phase 3: C6 Web Remote** (Requires flashing a secondary MCU and writing an asynchronous web frontend).

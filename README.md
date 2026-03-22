@@ -328,7 +328,6 @@ Before connecting mechanical load:
 
 - Single-axis control only.
 - Requires manual configuration of your specific gear ratio in `config.h`.
-- Encoder feedback loop (Closed-Loop) is planned but not currently implemented.
 - Not tested with external servo motors (pure step/dir steppers only).
 
 ---

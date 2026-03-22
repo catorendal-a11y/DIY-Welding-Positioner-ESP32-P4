@@ -73,21 +73,51 @@ Driven by a NEMA 23 stepper motor and a 60:1 worm gear, it ensures ultra-smooth 
 
 ---
 
-## 🧠 System Overview
+## 🧠 Industrial RTOS Architecture
+
+This project is built on a professional dual-core **FreeRTOS** architecture, separating critical realtime motor control from the heavy graphics processing.
 
 ```mermaid
-graph LR
-    A[ESP32-P4 Controller] -->|Step/Dir Pulses| B(TB6600 Driver)
-    B -->|Current/Microstepping| C(NEMA 23 Stepper)
-    C -->|3 Nm Torque| D{60:1 Worm Gear}
-    D -->|Ultra-smooth low RPM| E((Rotary Table))
-    
-    style A fill:#00E5FF,stroke:#000,stroke-width:2px,color:#000
-    style B fill:#333,stroke:#00E5FF,stroke-width:1px,color:#fff
-    style C fill:#333,stroke:#00E5FF,stroke-width:1px,color:#fff
-    style D fill:#555,stroke:#fff,stroke-width:1px,color:#fff
-    style E fill:#00E5FF,stroke:#000,stroke-width:2px,color:#000
+graph TD
+    subgraph Core 1: User Interface
+        UI[LVGL 8.x GUI Task] -->|Events| Q[State Machine Queue]
+        Touch[GT911 I2C Touch] --> UI
+        Disp[MIPI-DSI ST7701S] --- UI
+    end
+
+    subgraph Core 0: Realtime Control
+        SM[State Machine Task] -->|Target Hz| Motor[Motor Task]
+        Q --> SM
+        Pot[ADC Potentiometer] --> SM
+        
+        subgraph Hardware Safety Layer
+            ESTOP[NC E-STOP Button] -->|GPIO 33 ISR < 1ms| ENA[Hardware Disable]
+            WDT[Task Watchdog Timer] -.->|Monitors| SM
+            WDT -.->|Monitors| Motor
+        end
+    end
+
+    Motor -->|RMT Hardware Pulses| TB[TB6600 Driver]
+    ENA --> TB
+    TB --> N23[NEMA 23 3Nm Stepper]
+    N23 --> GEAR{60:1 Worm Gear}
+    GEAR --> TABLE((Rotary Table))
+
+    style UI fill:#003366,stroke:#00E5FF,stroke-width:2px,color:#fff
+    style Motor fill:#660000,stroke:#FF3333,stroke-width:2px,color:#fff
+    style SM fill:#333333,stroke:#fff,stroke-width:1px,color:#fff
+    style Hardware Safety Layer fill:#1a0000,stroke:#FF0000,stroke-width:2px,color:#fff
+    style TB fill:#333,stroke:#00E5FF,stroke-width:1px,color:#fff
+    style N23 fill:#333,stroke:#00E5FF,stroke-width:1px,color:#fff
+    style GEAR fill:#555,stroke:#fff,stroke-width:1px,color:#fff
+    style TABLE fill:#00E5FF,stroke:#000,stroke-width:2px,color:#000
 ```
+
+### Core Design Principles
+1. **Task Isolation:** UI rendering (Core 1) cannot block motor pulses (Core 0).
+2. **Hardware Timers:** Motor steps are generated using the ESP32 RMT peripheral, ensuring jitter-free micro-stepping regardless of CPU load.
+3. **Fail-Safe Safety:** The Emergency Stop is tied directly to a zero-latency hardware interrupt (ISR) that cuts the driver's enable pin in <0.5ms. A 2.0-second hardware watchdog (TWDT) monitors the control tasks.
+4. **Acceleration Ramps:** Linear S-curve acceleration via `FastAccelStepper` prevents motor stalls and jerky weld starts.
 
 ---
 

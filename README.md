@@ -26,10 +26,10 @@ git clone https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4.git
 cd DIY-Welding-Positioner-ESP32-P4
 ```
 2. **Open in VS Code** with the **PlatformIO** extension installed.
-3. **Select board environment:** `esp32p4-touch-43` (Waveshare ESP32-P4 4.3")
+3. **Select board environment:** `esp32p4-release` (Waveshare ESP32-P4 4.3")
 4. **Build and flash:** Click the PlatformIO "Upload" button (➔), or run:
 ```bash
-pio run -t upload -e esp32p4-touch-43
+pio run -t upload -e esp32p4-release
 ```
 5. **Connect hardware:** Wire your TB6600 driver, NEMA 23 stepper motor, and external power supply.
 
@@ -158,7 +158,9 @@ graph LR
 DIY-Welding-Positioner-ESP32-P4/
 ├── src/
 │   ├── main.cpp
-│   ├── motion/         # FastAccelStepper logic & RMT pulses
+│   ├── motor/          # FastAccelStepper logic & RMT pulses
+│   ├── control/        # Welding modes (continuous, jog, pulse, step)
+│   ├── safety/         # E-STOP interrupt & hardware watchdog
 │   ├── ui/             # LVGL 8.x dashboards & themes
 │   └── config.h        # Pinouts & physical gear ratios
 ├── docs/

@@ -4,8 +4,6 @@
 #include "screens.h"
 #include "theme.h"
 #include "../config.h"
-#include "../motor/speed.h"
-#include "../control/control.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STATE

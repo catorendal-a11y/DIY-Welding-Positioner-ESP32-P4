@@ -26,7 +26,7 @@ git clone https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4.git
 cd DIY-Welding-Positioner-ESP32-P4
 ```
 2. **Open in VS Code** with the **PlatformIO** extension installed.
-3. **Select board environment:** `esp32p4-touch-43`
+3. **Select board environment:** `esp32p4-touch-43` (Waveshare ESP32-P4 4.3")
 4. **Build and flash:** Click the PlatformIO "Upload" button (➔), or run:
 ```bash
 pio run -t upload -e esp32p4-touch-43
@@ -108,6 +108,11 @@ Driven by a NEMA 23 stepper motor and a 60:1 worm gear, it ensures ultra-smooth 
 - NEMA 23 motor
 - 24–36V power supply
 
+### 🔧 Supported Drivers
+- **TB6600** (Current standard configuration)
+- **DM542** (Planned / Drop-in replacement)
+- **TMC5160** (Future ultra-silent integration)
+
 ---
 
 ## 🧰 Bill of Materials (BOM)
@@ -118,7 +123,7 @@ Driven by a NEMA 23 stepper motor and a 60:1 worm gear, it ensures ultra-smooth 
 | **Stepper Driver** | TB6600 (Set to 8 microsteps) | 1 |
 | **Stepper Motor** | NEMA 23 (3 Nm torque) | 1 |
 | **Gearbox** | RV30 60:1 Worm Gear Reducer | 1 |
-| **Power Supply** | 24V DC (Size to match stepper draw) | 1 |
+| **Power Supply** | 24V DC, ≥5A recommended for NEMA 23 (3Nm) | 1 |
 | **Controls** | 10k Potentiometer (Speed) & NC E-STOP Button | 1 |
 
 ---
@@ -131,17 +136,7 @@ Driven by a NEMA 23 stepper motor and a 60:1 worm gear, it ensures ultra-smooth 
 
 > **See also:** [Detailed Hardware Setup Guide](docs/HARDWARE_SETUP.md) · [EMI Mitigation Guide](docs/EMI_MITIGATION.md)
 
----
 
-## 🔧 Supported Drivers
-
-- **TB6600** (Current standard configuration)
-- **DM542** (Planned / Drop-in replacement)
-- **TMC5160** (Future ultra-silent integration)
-
----
-
-## 🧠 System Overview
 
 ```mermaid
 graph LR
@@ -182,23 +177,15 @@ DIY-Welding-Positioner-ESP32-P4/
 
 | ESP32 Pin | Function | Notes |
 |-----------|----------|-------|
-| `GPIO 50` | **STEP (PUL)** | Step pulse output |
-| `GPIO 51` | **DIR** | Direction control (CW/CCW) |
-| `GPIO 52` | **ENABLE** | Active LOW to enable motor |
-| `GPIO 49` | **Analog Input** | Potentiometer speed control |
-| `GPIO 33` | **E-STOP** | NC Contact (Active LOW halt) |
+| `GPIO 50` | **STEP (Output)** | Step pulse output |
+| `GPIO 51` | **DIR (Output)** | Direction control (CW/CCW) |
+| `GPIO 52` | **ENABLE (Output)** | Active LOW to enable motor |
+| `GPIO 49` | **ADC (Input)** | Potentiometer speed control (verify ADC capability on your board revision) |
+| `GPIO 33` | **E-STOP (Input, Interrupt)** | NC Contact (Active LOW halt) |
 
 *(Note: Touch screen I2C is wired internally to GPIO 7/8. Display MIPI-DSI uses dedicated lanes).*
 
-### 🔌 Wiring Diagram
 
-<div align="center">
-  <img src="docs/images/wiring_diagram.png" width="600" alt="Hardware Wiring Sequence">
-</div>
-
-*Connect the ESP32 STEP/DIR pins to the TB6600 driver unit, power the driver with the external 24V PSU, and wire the 4 motor coils to A+/A- and B+/B-.*
-
----
 
 ## ⚙️ Configuration
 
@@ -230,6 +217,7 @@ Open `src/config.h` to tweak:
 
 - **E-STOP:** The E-STOP uses an external hardware interrupt. Breaking the NC circuit instantly sets the motor speed and acceleration to 0 and cuts the enable pin.
 - **Power Sequencing:** Never power the motor without the TB6600 driver properly connected to the coils.
+- **Motor Coils (CRITICAL):** Never connect or disconnect motor coils while the stepper driver is powered. This will destroy the driver.
 - **Voltage Verification:** Always verify your 24V-36V power supply output before connecting it to the system.
 - **Testing:** Always test new configurations with low motor current settings first to prevent mechanical damage.
 

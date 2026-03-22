@@ -3,6 +3,8 @@
 # 🔧 DIY Welding Positioner Controller (ESP32-P4)
 **Precision Multi-Mode Welding Rotator for TIG, MIG, and Pipe Welding**
 
+**Firmware Version:** v0.3.0-beta
+
 <img src="docs/images/ui_mockup.svg" width="600" alt="DIY Welding Positioner UI Design">
 
 **Open-source ESP32-P4 based welding positioner controller designed for rotary welding tables, pipe welding rotators, and automated fabrication systems.**
@@ -56,6 +58,24 @@ Driven by a NEMA 23 stepper motor and a 60:1 worm gear, it ensures ultra-smooth 
 
 ---
 
+## 🧠 System Overview
+
+```mermaid
+graph LR
+    A[ESP32-P4 Controller] -->|Step/Dir Pulses| B(TB6600 Driver)
+    B -->|Current/Microstepping| C(NEMA 23 Stepper)
+    C -->|3 Nm Torque| D{60:1 Worm Gear}
+    D -->|Ultra-smooth low RPM| E((Rotary Table))
+    
+    style A fill:#00E5FF,stroke:#000,stroke-width:2px,color:#000
+    style B fill:#333,stroke:#00E5FF,stroke-width:1px,color:#fff
+    style C fill:#333,stroke:#00E5FF,stroke-width:1px,color:#fff
+    style D fill:#555,stroke:#fff,stroke-width:1px,color:#fff
+    style E fill:#00E5FF,stroke:#000,stroke-width:2px,color:#000
+```
+
+---
+
 ## 📸 Real Hardware
 
 <p align="center">
@@ -99,7 +119,7 @@ Driven by a NEMA 23 stepper motor and a 60:1 worm gear, it ensures ultra-smooth 
 - **PlatformIO:** Core 6.x or newer
 - **ESP-IDF:** v5.2+ (via `pioarduino` core, pinned release)
 - **LVGL:** 8.x
-- **FastAccelStepper:** Latest release
+- **FastAccelStepper:** ^0.31.3 (pinned)
 - **Display:** ESP-IDF native MIPI-DSI panel driver (ST7701S-class). **Not LovyanGFX.**
 
 ### Hardware Check
@@ -128,6 +148,20 @@ Driven by a NEMA 23 stepper motor and a 60:1 worm gear, it ensures ultra-smooth 
 
 ---
 
+## ✅ Verified Hardware
+
+This firmware has been successfully tested with:
+
+- Waveshare ESP32-P4 4.3" Touch Display
+- TB6600 Stepper Driver
+- NEMA 23 (3 Nm torque)
+- RV30 Worm Gear Reducer (60:1)
+- 24V / 5A DC Power Supply
+- 10k Potentiometer
+- NC Emergency Stop Button
+
+---
+
 ## 🔌 Wiring Diagram
 
 <div align="center">
@@ -135,22 +169,6 @@ Driven by a NEMA 23 stepper motor and a 60:1 worm gear, it ensures ultra-smooth 
 </div>
 
 > **See also:** [Detailed Hardware Setup Guide](docs/HARDWARE_SETUP.md) · [EMI Mitigation Guide](docs/EMI_MITIGATION.md)
-
-
-
-```mermaid
-graph LR
-    A[ESP32-P4 Controller] -->|Step/Dir Pulses| B(TB6600 Driver)
-    B -->|Current/Microstepping| C(NEMA 23 Stepper)
-    C -->|3 Nm Torque| D{60:1 Worm Gear}
-    D -->|Ultra-smooth low RPM| E((Rotary Table))
-    
-    style A fill:#00E5FF,stroke:#000,stroke-width:2px,color:#000
-    style B fill:#333,stroke:#00E5FF,stroke-width:1px,color:#fff
-    style C fill:#333,stroke:#00E5FF,stroke-width:1px,color:#fff
-    style D fill:#555,stroke:#fff,stroke-width:1px,color:#fff
-    style E fill:#00E5FF,stroke:#000,stroke-width:2px,color:#000
-```
 
 ### 📂 Project Directory Structure
 
@@ -212,6 +230,18 @@ Open `src/config.h` to tweak:
 | **Pulse** | Specialized for tack-welding. Rotates a specific distance, pauses for the tack to fuse, and automatically rotates again. |
 | **Step** | Rotates an exact degree amount (e.g., 90° for a quarter-turn) and stops. |
 | **Timer** | Rotates at a set speed for an exact duration (e.g., 30 seconds). |
+
+---
+
+## 🧪 First Bench Test Checklist
+
+Before connecting mechanical load:
+
+- [ ] Display boots successfully
+- [ ] Touch input responds correctly
+- [ ] Motor rotates at 0.3 RPM
+- [ ] E-STOP halts motion immediately
+- [ ] No watchdog resets observed
 
 ---
 

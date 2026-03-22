@@ -41,8 +41,9 @@ The TB6600 uses optically isolated inputs. Wire them in a **Common Ground** conf
 - **E-STOP (Normally Closed Button):**
   - Pin 1 -> `GPIO 33`
   - Pin 2 -> GND
+  - **CRITICAL:** Add an external 10k pull-up resistor between 3.3V and `GPIO 33`.
 
-_Note: `GPIO 33` utilizes the ESP32-P4 internal pull-up resistor (`INPUT_PULLUP`). The NC E-STOP button connects `GPIO 33` to GND constantly. When pressed, the circuit breaks, `GPIO 33` floats `HIGH`, and the hardware interrupt fires instantly._
+_Note: The NC E-STOP button connects `GPIO 33` to GND constantly. When pressed, the circuit breaks, the external pull-up resistor pulls `GPIO 33` `HIGH`, and the hardware interrupt fires instantly._
 
 ## 4. Safety & Thermal Management
 - **Heat Sinking:** Stepper drivers get hot during long welding runs. Mount the TB6600 to the metal enclosure for thermal dissipation or add a 40mm fan.

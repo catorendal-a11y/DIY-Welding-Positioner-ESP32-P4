@@ -208,7 +208,6 @@ Full validation is currently in progress.
 
 - **TB6600** (Current standard configuration)
 - **DM542** (Planned / Drop-in replacement)
-- **TMC5160** (Future ultra-silent integration)
 
 ---
 

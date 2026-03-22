@@ -128,11 +128,6 @@ graph LR
 - NEMA 23 motor
 - 24–36V power supply
 
-### 🔧 Supported Drivers
-- **TB6600** (Current standard configuration)
-- **DM542** (Planned / Drop-in replacement)
-- **TMC5160** (Future ultra-silent integration)
-
 ---
 
 ## 🧰 Bill of Materials (BOM)
@@ -162,6 +157,14 @@ This firmware has been successfully tested with:
 
 ---
 
+## 🔧 Supported Drivers
+
+- **TB6600** (Current standard configuration)
+- **DM542** (Planned / Drop-in replacement)
+- **TMC5160** (Future ultra-silent integration)
+
+---
+
 ## 🔌 Wiring Diagram
 
 <div align="center">
@@ -169,6 +172,8 @@ This firmware has been successfully tested with:
 </div>
 
 > **See also:** [Detailed Hardware Setup Guide](docs/HARDWARE_SETUP.md) · [EMI Mitigation Guide](docs/EMI_MITIGATION.md)
+
+---
 
 ### 📂 Project Directory Structure
 

@@ -16,63 +16,50 @@ pio run -t upload
 ```
 *(Since `default_envs` is configured, adding `-e esp32p4-release` is optional).*
 
-**Optional debug build:**
-```bash
-pio run -t upload -e esp32p4-debug
-```
-*This enables verbose logging and debug diagnostics.*
-
-5. **Connect hardware:** Wire your TB6600 driver, NEMA 23 stepper motor, and external power supply.
-
 ---
 
 ## 🧠 Industrial Architecture (RTOS-Native)
-Unlike basic Arduino projects, this firmware is built on a **High-Performance Multi-Core RTOS Architecture** designed for mission-critical reliability in high-noise welding environments:
+Built on a **High-Performance Multi-Core RISC-V Architecture** for mission-critical reliability:
 
 - **Dual-Core Task Isolation:**
-  - **Core 0 (High Priority):** Dedicated to Real-Time Motor Control, Safety Interrupts, and ADC speed filtering.
-  - **Core 1 (Low Priority):** Dedicated to the LVGL GUI, Touch Input, and Storage/Health monitoring.
-- **Hardware Safety:**
-  - **Hard Reset Watchdog:** ESP32-P4 internal Task Watchdog (TWDT) monitors motor & safety tasks.
-  - **Boot-Safe ENA:** Stepper Enable is held HIGH (Disconnected) until all systems are healthy.
-  - **Instant E-STOP ISR:** Dedicated hardware interrupt fires in microseconds to freeze motion.
-- **Health Monitoring:** Real-time stack watermarking and heap analytics available in Debug builds.
+  - **Core 0 (High Priority):** Real-Time Motor Control & [Safety Interrupts](docs/SAFETY_SYSTEM.md).
+  - **Core 1 (Low Priority):** LVGL GUI, Touch Input, & Storage.
+- **Fail-Safe Operation:**
+  - **Hardware Watchdog (TWDT):** 2.0s hardware reset if motor or safety tasks stall.
+  - **Instant E-STOP ISR:** Microsecond-response hardware interrupt on `GPIO 33`.
+  - **Acceleration Ramping:** Linear & S-Curve ramps to prevent step loss and mechanical shock.
+- **Health Monitoring:** Real-time stack watermarking and heap analytics (accessible via Serial Debug).
 
 ---
 
 ## 🛠️ Hardware Requirements
 - **MCU:** ESP32-P4 (360MHz Dual RISC-V).
-- **Display:** 4.3" MIPI-DSI LCD (ST7701S). *Note: LovyanGFX is NOT supported for MIPI-DSI on P4.*
-- **Touch:** GT911 (I2C).
-- **Stepper Driver:** TB6600, DM542, or any Opto-isolated STEP/DIR driver (24V-36V).
+- **Display:** 4.3" MIPI-DSI LCD (ST7701S).
+- **Stepper Driver:** TB6600, DM542, or any Opto-isolated STEP/DIR driver.
 - **Power:** 24V 5A PSU + DC-DC Buck (for ESP32-P4).
 
-### 🛒 Bill of Materials (BOM)
-- [Waveshare ESP32-P4 4.3" Dev Board](https://www.waveshare.com/esp32-p4-touch-4.3.htm)
-- [NEMA 23 Stepper Motor](https://www.google.com/search?q=nema+23)
-- [TB6600 Stepper Driver](https://www.google.com/search?q=tb6600)
-- [K11-100 or K12-100 Rotary Table](https://www.google.com/search?q=welding+rotary+chuck)
-
----
-
-## 🎯 Target Hardware (Designed & Configured For)
-This firmware is designed and configured for the following hardware. Full validation is currently in progress.
+### 🎯 Target Hardware & [Setup Guide](docs/HARDWARE_SETUP.md)
 - Waveshare ESP32-P4 4.3" Touch Display
 - TB6600 Stepper Driver
 - NEMA 23 (3 Nm torque)
-- RV30 Worm Gear Reducer (60:1)
 - 24V / 5A DC Power Supply
-- 10k Potentiometer
-- NC Emergency Stop Button
+- **Metal Case mandatory** (See [EMI Mitigation Guide](docs/EMI_MITIGATION.md))
 
 ---
 
-## ⚠️ Critical: EMI & Safety for TIG/MIG
-Industrial environments (especially TIG HF-start) generate extreme Electromagnetic Interference (EMI):
-- **Grounded Metal Enclosure:** Required to shield the MCU from RF plasma noise.
-- **Star Grounding:** Prevents ground loops that trigger false E-STOPS.
-- **Cable Shielding:** Shielded motor and signal wires are mandatory.
-- See the full [EMI Mitigation Guide](docs/EMI_MITIGATION.md) and [Hardware Setup Guide](docs/HARDWARE_SETUP.md) for detailed schematics.
+## 🖥️ UI & Control Modes
+The system features a professional **System Status Panel** on all screens displaying:
+- **RPM / SFM:** Current calculated surface speed.
+- **Direction:** (CW/CCW) visualization.
+- **State:** (IDLE, RUN, FAULT, E-STOP).
+
+| Mode | Use Case | Features |
+|------|----------|----------|
+| **Continuous** | Standard pipe welding | Real-time RPM adjustment (0.1–3.0) |
+| **Jog** | Part setup / Tack welding | Momentary CW/CCW overrides |
+| **Pulse** | Heat control (thin-wall) | Configurable On/Pause timing |
+| **Step** | Flanges / Bolt patterns | Precise angle increments |
+| **Timer** | Production runs | Auto-stop after set duration |
 
 ---
 
@@ -80,13 +67,12 @@ Industrial environments (especially TIG HF-start) generate extreme Electromagnet
 ├── src/
 │   ├── main.cpp        # FreeRTOS task orchestration & watchdog
 │   ├── motor/          # FastAccelStepper logic & RMT pulses
-│   ├── control/        # Welding modes (continuous, jog, pulse, step, timer)
-│   ├── safety/         # E-STOP interrupt & hardware watchdog
+│   ├── control/        # [State Machine](src/control/control.h) (Idle/Run/Fault/E-Stop)
+│   ├── safety/         # Hard interrupt logic & hardware watchdog
 │   ├── ui/             # LVGL 8.x dashboards & themes
 │   └── config.h        # Pinouts & physical gear ratios
-├── lib/
-│   └── esp_lcd_st7701/ # ESP32-P4 Native MIPI Driver
-└── docs/               # Schematics & EMI Mitigation
+├── test/               # Logic verification & simulation suites
+└── docs/               # [Safety](docs/SAFETY_SYSTEM.md), [EMI](docs/EMI_MITIGATION.md), [Setup](docs/HARDWARE_SETUP.md)
 
 ---
 
@@ -99,20 +85,7 @@ Industrial environments (especially TIG HF-start) generate extreme Electromagnet
 | **POT Wiper**| GPIO 49 | 12-bit ADC |
 | **E-STOP** | GPIO 33 | **NC** (Hardware Interrupt) |
 
-*(Note: Touch screen I2C is wired internally to GPIO 7/8. Display MIPI-DSI uses dedicated lanes).*
-
----
-
-## ⚙️ Configuration
-Adjust these in `src/config.h`:
-```cpp
-#define MOTOR_MICROSTEPS 8      // Must match dip-switches on your TB6600
-#define MOTOR_GEAR_RATIO 60     // e.g., 60:1 Worm Gear
-#define MAX_RPM 3.0             // Upper limit of the UI gauge
-#define ACCELERATION 500        // Stepper acceleration (steps/s²)
-```
-
 ---
 
 ## ⚖️ License
-MIT License - See [LICENSE](LICENSE) for details. Developed by @catorendal-a11y.
+MIT License - Developed by @catorendal-a11y.

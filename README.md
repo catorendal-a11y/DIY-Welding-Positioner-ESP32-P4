@@ -73,6 +73,12 @@ Driven by a NEMA 23 stepper motor and a 60:1 worm gear, it ensures ultra-smooth 
 - **Hardware safety:** Dedicated NC E-STOP interrupt and software watchdog.
 - **Smooth motion:** FastAccelStepper utilizing RMT hardware pulses for micro-stepping control.
 
+### 🖥️ All UI Screens
+
+<div align="center">
+  <img src="docs/images/ui_all_screens.svg" width="900" alt="All UI Screens Overview">
+</div>
+
 ---
 
 ## 📊 Performance Specifications

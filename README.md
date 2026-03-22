@@ -3,7 +3,7 @@
 # 🔧 DIY Welding Positioner Controller (ESP32-P4)
 **Precision Multi-Mode Welding Rotator for TIG, MIG, and Pipe Welding**
 
-<img src="docs/images/ui_mockup.png?v=2" width="600" alt="DIY Welding Positioner UI Design">
+<img src="docs/images/ui_mockup.svg" width="600" alt="DIY Welding Positioner UI Design">
 
 **Open-source ESP32-P4 based welding positioner controller designed for rotary welding tables, pipe welding rotators, and automated fabrication systems.**
 

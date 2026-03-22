@@ -1,118 +1,153 @@
-// TIG Rotator Controller - Timer Mode Screen (T-24)
+// TIG Rotator Controller - Timer Mode Screen
+// Matching ui_all_screens.svg: Large timer display + presets + START
 
 #include <Arduino.h>
 #include "../screens.h"
 #include "../theme.h"
 #include "../../control/control.h"
+#include "../../motor/speed.h"
 #include "../../config.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STATE
 // ───────────────────────────────────────────────────────────────────────────────
-static uint32_t timerMin = 0;
-static uint32_t timerSec = 30;
+static uint32_t timerSeconds = 30;
+static lv_obj_t* timerLabel = nullptr;
+static lv_obj_t* speedValLabel = nullptr;
+static lv_obj_t* startBtn = nullptr;
 
 // ───────────────────────────────────────────────────────────────────────────────
 // EVENT HANDLERS
 // ───────────────────────────────────────────────────────────────────────────────
 static void back_event_cb(lv_event_t* e) { screens_show(SCREEN_MENU); }
 
+static void preset_event_cb(lv_event_t* e) {
+  timerSeconds = (uint32_t)(intptr_t)lv_event_get_user_data(e);
+  uint32_t min = timerSeconds / 60;
+  uint32_t sec = timerSeconds % 60;
+  lv_label_set_text_fmt(timerLabel, "%02d:%02d", (int)min, (int)sec);
+}
+
 static void start_event_cb(lv_event_t* e) {
   SystemState state = control_get_state();
-  if (state == STATE_IDLE) {
-    uint32_t duration = timerMin * 60 + timerSec;
-    if (duration > 0) {
-      control_start_timer(duration);
-    }
+  if (state == STATE_IDLE && timerSeconds > 0) {
+    control_start_timer(timerSeconds);
+    lv_obj_t* label = lv_obj_get_child(startBtn, 0);
+    lv_label_set_text(label, "■ STOP");
+    lv_obj_set_style_border_color(startBtn, COL_RED, 0);
   } else if (state == STATE_TIMER) {
     control_stop();
+    lv_obj_t* label = lv_obj_get_child(startBtn, 0);
+    lv_label_set_text(label, "▶ START");
+    lv_obj_set_style_border_color(startBtn, COL_GREEN, 0);
   }
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// SCREEN CREATE
+// SCREEN CREATE — SVG: Large timer, preset row, speed display, start button
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_timer_create() {
   lv_obj_t* screen = screenRoots[SCREEN_TIMER];
+  lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
-  // Header
-  lv_obj_t* header = lv_obj_create(screen);
-  lv_obj_set_size(header, SCREEN_W, STATUS_BAR_H);
-  lv_obj_set_pos(header, 0, 0);
-  lv_obj_set_style_bg_color(header, COL_BG_CARD, 0);
-  lv_obj_set_style_border_width(header, 0, 0);
-
-  lv_obj_t* backBtn = lv_btn_create(header);
-  lv_obj_set_size(backBtn, 80, STATUS_BAR_H);
-  lv_obj_set_style_bg_color(backBtn, COL_BG_CARD, 0);
-  lv_obj_set_style_border_width(backBtn, 0, 0);
-  lv_obj_add_event_cb(backBtn, back_event_cb, LV_EVENT_CLICKED, nullptr);
-
-  lv_obj_t* backLabel = lv_label_create(backBtn);
-  lv_label_set_text(backLabel, "◄ BACK");
-  lv_obj_set_style_text_color(backLabel, COL_ACCENT, 0);
-  lv_obj_center(backLabel);
-
-  lv_obj_t* title = lv_label_create(header);
-  lv_label_set_text(title, "⏱ TIMER MODE");
+  // Title
+  lv_obj_t* title = lv_label_create(screen);
+  lv_label_set_text(title, "TIMER MODE");
   lv_obj_set_style_text_font(title, &lv_font_montserrat_18, 0);
   lv_obj_set_style_text_color(title, COL_ACCENT, 0);
-  lv_obj_align(title, LV_ALIGN_LEFT_MID, 90, 0);
+  lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 12);
 
-  // Duration input panel
-  lv_obj_t* durPanel = lv_obj_create(screen);
-  lv_obj_set_size(durPanel, 456, 100);
-  lv_obj_set_pos(durPanel, 12, 44);
-  lv_obj_set_style_bg_color(durPanel, COL_BG_CARD, 0);
-  lv_obj_set_style_radius(durPanel, RADIUS_CARD, 0);
+  // ── Timer display panel (SVG: large "00:30" in cyan box) ──
+  lv_obj_t* timerPanel = lv_obj_create(screen);
+  lv_obj_set_size(timerPanel, 550, 140);
+  lv_obj_align(timerPanel, LV_ALIGN_TOP_MID, 0, 45);
+  lv_obj_set_style_bg_color(timerPanel, lv_color_hex(0x0A0A0A), 0);
+  lv_obj_set_style_radius(timerPanel, 8, 0);
+  lv_obj_set_style_border_width(timerPanel, 1, 0);
+  lv_obj_set_style_border_color(timerPanel, COL_ACCENT, 0);
 
-  lv_obj_t* durLabel = lv_label_create(durPanel);
-  lv_label_set_text(durLabel, "DURATION");
-  lv_obj_set_style_text_color(durLabel, COL_TEXT_LABEL, 0);
-  lv_obj_align(durLabel, LV_ALIGN_TOP_MID, 0, 8);
+  timerLabel = lv_label_create(timerPanel);
+  lv_label_set_text(timerLabel, "00:30");
+  lv_obj_set_style_text_font(timerLabel, &lv_font_montserrat_48, 0);
+  lv_obj_set_style_text_color(timerLabel, COL_ACCENT, 0);
+  lv_obj_center(timerLabel);
 
-  // Time display - "00 : 30"
-  lv_obj_t* timeLabel = lv_label_create(screen);
-  lv_label_set_text(timeLabel, "00 : 30");
-  lv_obj_set_style_text_font(timeLabel, &lv_font_montserrat_48, 0);
-  lv_obj_set_style_text_color(timeLabel, COL_TEXT, 0);
-  lv_obj_align(timeLabel, LV_ALIGN_CENTER, 0, 20);
+  // ── Duration preset buttons ──
+  const uint32_t presets[] = {10, 30, 60};
+  const char* presetLabels[] = {"10s", "30s", "60s"};
 
-  // Progress bar
-  lv_obj_t* bar = lv_bar_create(screen);
-  lv_obj_set_size(bar, 432, 14);
-  lv_obj_align(bar, LV_ALIGN_CENTER, 0, 60);
-  lv_bar_set_value(bar, 0, LV_ANIM_OFF);
-  lv_obj_set_style_bg_color(bar, COL_BG_INPUT, 0);
-  lv_obj_set_style_bg_color(bar, COL_ACCENT, LV_PART_INDICATOR);
+  for (int i = 0; i < 3; i++) {
+    lv_obj_t* btn = lv_btn_create(screen);
+    lv_obj_set_size(btn, 155, 65);
+    lv_obj_set_pos(btn, 55 + i * 170, 210);
+    lv_obj_set_style_bg_color(btn, COL_BTN_NORMAL, 0);
+    lv_obj_set_style_radius(btn, 6, 0);
 
-  // START/STOP buttons
-  lv_obj_t* startBtn = lv_btn_create(screen);
-  lv_obj_set_size(startBtn, 220, 52);
-  lv_obj_set_pos(startBtn, 12, 264);
-  lv_obj_set_style_bg_color(startBtn, COL_GREEN_DARK, 0);
-  lv_obj_set_style_radius(startBtn, RADIUS_BTN, 0);
+    if (presets[i] == 30) {
+      lv_obj_set_style_border_width(btn, 2, 0);
+      lv_obj_set_style_border_color(btn, COL_ACCENT, 0);
+    } else {
+      lv_obj_set_style_border_width(btn, 1, 0);
+      lv_obj_set_style_border_color(btn, COL_BORDER_SPD, 0);
+    }
+
+    lv_obj_add_event_cb(btn, preset_event_cb, LV_EVENT_CLICKED, (void*)(intptr_t)presets[i]);
+
+    lv_obj_t* lbl = lv_label_create(btn);
+    lv_label_set_text(lbl, presetLabels[i]);
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_color(lbl, (presets[i] == 30) ? COL_ACCENT : COL_TEXT_DIM, 0);
+    lv_obj_center(lbl);
+  }
+
+  // CUSTOM button
+  lv_obj_t* customBtn = lv_btn_create(screen);
+  lv_obj_set_size(customBtn, 155, 65);
+  lv_obj_set_pos(customBtn, 55 + 3 * 170, 210);
+  lv_obj_set_style_bg_color(customBtn, COL_BTN_NORMAL, 0);
+  lv_obj_set_style_radius(customBtn, 6, 0);
+  lv_obj_set_style_border_width(customBtn, 1, 0);
+  lv_obj_set_style_border_color(customBtn, COL_BORDER_SPD, 0);
+
+  lv_obj_t* customLabel = lv_label_create(customBtn);
+  lv_label_set_text(customLabel, "CUSTOM");
+  lv_obj_set_style_text_color(customLabel, COL_TEXT_DIM, 0);
+  lv_obj_center(customLabel);
+
+  // ── Speed display ──
+  lv_obj_t* speedLabel = lv_label_create(screen);
+  lv_label_set_text(speedLabel, "SPEED:");
+  lv_obj_set_style_text_font(speedLabel, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_color(speedLabel, COL_TEXT_DIM, 0);
+  lv_obj_set_pos(speedLabel, 55, 310);
+
+  speedValLabel = lv_label_create(screen);
+  lv_label_set_text(speedValLabel, "2.0 RPM");
+  lv_obj_set_style_text_font(speedValLabel, &lv_font_montserrat_18, 0);
+  lv_obj_set_style_text_color(speedValLabel, COL_TEXT, 0);
+  lv_obj_set_pos(speedValLabel, 140, 306);
+
+  // ── START button ──
+  startBtn = lv_btn_create(screen);
+  lv_obj_set_size(startBtn, 230, 65);
+  lv_obj_set_pos(startBtn, 520, 295);
+  lv_obj_set_style_bg_color(startBtn, COL_BTN_NORMAL, 0);
+  lv_obj_set_style_radius(startBtn, 8, 0);
+  lv_obj_set_style_border_width(startBtn, 2, 0);
+  lv_obj_set_style_border_color(startBtn, COL_GREEN, 0);
   lv_obj_add_event_cb(startBtn, start_event_cb, LV_EVENT_CLICKED, nullptr);
 
   lv_obj_t* startLabel = lv_label_create(startBtn);
-  lv_label_set_text(startLabel, "▶ START TIMER");
+  lv_label_set_text(startLabel, "▶ START");
+  lv_obj_set_style_text_font(startLabel, &lv_font_montserrat_18, 0);
+  lv_obj_set_style_text_color(startLabel, COL_GREEN, 0);
   lv_obj_center(startLabel);
 
-  lv_obj_t* stopBtn = lv_btn_create(screen);
-  lv_obj_set_size(stopBtn, 220, 52);
-  lv_obj_set_pos(stopBtn, 248, 264);
-  lv_obj_set_style_bg_color(stopBtn, COL_RED, 0);
-  lv_obj_set_style_radius(stopBtn, RADIUS_BTN, 0);
-  lv_obj_add_event_cb(stopBtn, start_event_cb, LV_EVENT_CLICKED, nullptr);
-
-  lv_obj_t* stopLabel = lv_label_create(stopBtn);
-  lv_label_set_text(stopLabel, "■ STOP");
-  lv_obj_center(stopLabel);
-
-  LOG_I("Screen timer: created");
+  LOG_I("Screen timer: SVG-matched layout created");
 }
 
 void screen_timer_update() {
-  // Update countdown and progress bar
-  // TODO: Implement full update logic
+  if (!screens_is_active(SCREEN_TIMER)) return;
+  float rpm = speed_get_target_rpm();
+  lv_label_set_text_fmt(speedValLabel, "%.1f RPM", rpm);
 }

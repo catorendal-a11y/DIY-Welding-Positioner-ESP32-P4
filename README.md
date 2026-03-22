@@ -4,6 +4,7 @@
 **Precision Multi-Mode Welding Rotator for TIG, MIG, and Pipe Welding**
 
 **Firmware Version:** v0.3.0-beta
+*(See Git tags for release history)*
 
 <img src="docs/images/ui_mockup.svg" width="600" alt="DIY Welding Positioner UI Design">
 
@@ -34,6 +35,13 @@ cd DIY-Welding-Positioner-ESP32-P4
 pio run -t upload
 ```
 *(Since `default_envs` is configured, adding `-e esp32p4-release` is optional).*
+
+**Optional debug build:**
+```bash
+pio run -t upload -e esp32p4-debug
+```
+*This enables verbose logging and debug diagnostics.*
+
 5. **Connect hardware:** Wire your TB6600 driver, NEMA 23 stepper motor, and external power supply.
 
 ---
@@ -144,9 +152,10 @@ graph LR
 
 ---
 
-## ✅ Verified Hardware
+## 🧪 Target Hardware (Designed & Configured For)
 
-This firmware has been successfully tested with:
+This firmware is designed and configured for the following hardware.
+Full validation is currently in progress.
 
 - Waveshare ESP32-P4 4.3" Touch Display
 - TB6600 Stepper Driver
@@ -211,7 +220,7 @@ DIY-Welding-Positioner-ESP32-P4/
 
 *(Note: Touch screen I2C is wired internally to GPIO 7/8. Display MIPI-DSI uses dedicated lanes).*
 
-
+---
 
 ## ⚙️ Configuration
 
@@ -222,7 +231,7 @@ Open `src/config.h` to tweak:
 #define MOTOR_MICROSTEPS 8      // Must match dip-switches on your TB6600
 #define MOTOR_GEAR_RATIO 60     // e.g., 60:1 Worm Gear
 #define MAX_RPM 3.0             // Upper limit of the UI gauge
-#define ACCELERATION 500        // Stepper acceleration curve
+#define ACCELERATION 500        // Stepper acceleration (steps/s²)
 ```
 
 ---

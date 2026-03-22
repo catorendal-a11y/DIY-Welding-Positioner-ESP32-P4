@@ -85,7 +85,7 @@ Driven by a NEMA 23 stepper motor and a 60:1 worm gear, it ensures ultra-smooth 
 
 | Parameter | Value |
 |-----------|-------|
-| **Output RPM Range** | 0.1 – 12 RPM (Configurable) |
+| **Output RPM Range** | 0.1 – 3.0 RPM (safe default; up to 5.0 in clean environments) |
 | **Gear Ratio** | 60:1 Worm Gear |
 | **Microstepping** | 8x (Adjustable on driver) |
 | **Motor Torque** | 3.0 Nm (NEMA 23) |
@@ -96,11 +96,11 @@ Driven by a NEMA 23 stepper motor and a 60:1 worm gear, it ensures ultra-smooth 
 
 ## 🧩 Requirements
 
-### Software Dependencies
 - **PlatformIO:** Core 6.x or newer
-- **ESP-IDF:** v5.2+ (via `pioarduino` core)
+- **ESP-IDF:** v5.2+ (via `pioarduino` core, pinned release)
 - **LVGL:** 8.x
 - **FastAccelStepper:** Latest release
+- **Display:** ESP-IDF native MIPI-DSI panel driver (ST7701S-class). **Not LovyanGFX.**
 
 ### Hardware Check
 - Waveshare / Guition ESP32-P4 4.3" Touch Display
@@ -120,6 +120,16 @@ Driven by a NEMA 23 stepper motor and a 60:1 worm gear, it ensures ultra-smooth 
 | **Gearbox** | RV30 60:1 Worm Gear Reducer | 1 |
 | **Power Supply** | 24V DC (Size to match stepper draw) | 1 |
 | **Controls** | 10k Potentiometer (Speed) & NC E-STOP Button | 1 |
+
+---
+
+## 🔌 Wiring Diagram
+
+<div align="center">
+  <img src="docs/images/wiring_diagram.svg" width="800" alt="Wiring Diagram">
+</div>
+
+> **See also:** [Detailed Hardware Setup Guide](docs/HARDWARE_SETUP.md) · [EMI Mitigation Guide](docs/EMI_MITIGATION.md)
 
 ---
 

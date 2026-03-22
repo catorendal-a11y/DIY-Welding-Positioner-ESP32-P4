@@ -7,6 +7,8 @@
 // Available GPIOs: 28–35, 49–52 (see board pin diagram)
 // ───────────────────────────────────────────────────────────────────────────────
 #define PIN_POT         49   // ADC — Potentiometer speed input
+                              // NOTE: GPIO 49 ADC channel must be verified against
+                              // ESP32-P4 datasheet. High GPIOs (47-54) may be reserved.
 #define PIN_STEP        50   // Step pulse output (FastAccelStepper RMT)
 #define PIN_DIR         51   // Direction: CW=HIGH, CCW=LOW
 #define PIN_ENA         52   // Enable: Active LOW to TB6600
@@ -14,9 +16,11 @@
 #define PIN_SPARE       35   // Reserved for future encoder/expansion
 
 // ───────────────────────────────────────────────────────────────────────────────
-// DISPLAY & TOUCH — MIPI-DSI (handled by ESP-IDF drivers)
+// DISPLAY & TOUCH — MIPI-DSI (handled by ESP-IDF native drivers)
 // ───────────────────────────────────────────────────────────────────────────────
-// Display: EK79007, 480×800 (portrait), MIPI-DSI — no GPIO pin config needed
+// Display: MIPI-DSI panel via ESP-IDF esp_lcd driver (board-specific)
+//          Waveshare/Guition 4.3" uses ST7701S-class controller.
+//          Do NOT use LovyanGFX — it does not support MIPI-DSI on ESP32-P4.
 // Touch: GT911 capacitive, I2C — connected via board's I2C bus
 // Backlight: controlled by dedicated GPIO on the board
 //
@@ -54,7 +58,12 @@
 // ───────────────────────────────────────────────────────────────────────────────
 // BUILD CONFIGURATION
 // ───────────────────────────────────────────────────────────────────────────────
-#define DEBUG_BUILD     1      // 1 = debug logs enabled, 0 = production (silent)
+// DEBUG_BUILD is set by platformio.ini build flags:
+//   env:esp32p4-debug   → DEBUG_BUILD=1  (verbose serial logging)
+//   env:esp32p4-release → DEBUG_BUILD=0  (silent, max performance)
+#ifndef DEBUG_BUILD
+  #define DEBUG_BUILD   0    // Default to production (silent) if not set by build
+#endif
 
 // ───────────────────────────────────────────────────────────────────────────────
 // DEBUG LOGGING MACROS

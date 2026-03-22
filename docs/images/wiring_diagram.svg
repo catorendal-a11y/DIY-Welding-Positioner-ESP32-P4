@@ -1,0 +1,321 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 700" width="1100" height="700">
+  <defs>
+    <style>
+      .bg { fill: #0A0A0A; }
+      .box { fill: #121212; stroke: #333; stroke-width: 2; rx: 10; }
+      .box-esp { fill: #0c1a1c; stroke: #00E5FF; stroke-width: 2; rx: 10; }
+      .box-tb { fill: #1a0c0c; stroke: #FF9100; stroke-width: 2; rx: 10; }
+      .box-motor { fill: #0c1a12; stroke: #1DE9B6; stroke-width: 2; rx: 10; }
+      .box-psu { fill: #1a1a0c; stroke: #FFD600; stroke-width: 2; rx: 10; }
+      .wire-sig { stroke: #00E5FF; stroke-width: 2.5; fill: none; }
+      .wire-pwr { stroke: #FF1744; stroke-width: 3; fill: none; stroke-dasharray: 8,4; }
+      .wire-gnd { stroke: #555; stroke-width: 2.5; fill: none; }
+      .wire-motor { stroke: #1DE9B6; stroke-width: 3; fill: none; }
+      .wire-estop { stroke: #FF1744; stroke-width: 2.5; fill: none; }
+      .wire-pot { stroke: #D500F9; stroke-width: 2; fill: none; }
+      .t-main { fill: #FFF; font-family: sans-serif; font-weight: bold; }
+      .t-dim { fill: #888; font-family: sans-serif; }
+      .t-cyan { fill: #00E5FF; font-family: sans-serif; }
+      .t-amber { fill: #FF9100; font-family: sans-serif; }
+      .t-teal { fill: #1DE9B6; font-family: sans-serif; }
+      .t-red { fill: #FF1744; font-family: sans-serif; }
+      .t-yellow { fill: #FFD600; font-family: sans-serif; }
+      .t-purple { fill: #D500F9; font-family: sans-serif; }
+      .pin { fill: #222; stroke: #555; stroke-width: 1; }
+      .pin-label { fill: #CCC; font-family: monospace; font-size: 11px; }
+    </style>
+    <marker id="arrowCyan" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#00E5FF"/>
+    </marker>
+    <marker id="arrowGnd" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#555"/>
+    </marker>
+    <marker id="arrowMotor" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#1DE9B6"/>
+    </marker>
+    <marker id="arrowPwr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#FF1744"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1100" height="700" class="bg"/>
+
+  <!-- Title -->
+  <text x="550" y="30" class="t-main" font-size="20" text-anchor="middle">DIY Welding Positioner — Wiring Diagram</text>
+  <text x="550" y="50" class="t-dim" font-size="13" text-anchor="middle">ESP32-P4 · TB6600 Stepper Driver · NEMA 23 · 24V DC</text>
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- ESP32-P4 BOARD                                                    -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(60, 120)">
+    <rect width="240" height="350" class="box-esp" rx="10"/>
+    <text x="120" y="28" class="t-cyan" font-size="16" text-anchor="middle" font-weight="bold">ESP32-P4</text>
+    <text x="120" y="46" class="t-dim" font-size="11" text-anchor="middle">Waveshare 4.3" Touch</text>
+    <text x="120" y="62" class="t-dim" font-size="10" text-anchor="middle">800×480 MIPI-DSI IPS</text>
+
+    <!-- Display mockup -->
+    <rect x="30" y="72" width="180" height="80" rx="4" fill="#050505" stroke="#00E5FF" stroke-width="1"/>
+    <text x="120" y="105" class="t-main" font-size="22" text-anchor="middle">1.8</text>
+    <text x="120" y="122" class="t-cyan" font-size="9" text-anchor="middle">RPM</text>
+    <text x="120" y="145" class="t-dim" font-size="8" text-anchor="middle">LVGL 8.x Touch UI</text>
+
+    <!-- Pin labels (right side) -->
+    <rect x="220" y="168" width="20" height="14" class="pin" rx="2"/>
+    <text x="215" y="179" class="pin-label" text-anchor="end">GPIO 50</text>
+    <text x="205" y="193" class="t-dim" font-size="8" text-anchor="end">STEP (RMT)</text>
+
+    <rect x="220" y="208" width="20" height="14" class="pin" rx="2"/>
+    <text x="215" y="219" class="pin-label" text-anchor="end">GPIO 51</text>
+    <text x="205" y="233" class="t-dim" font-size="8" text-anchor="end">DIR</text>
+
+    <rect x="220" y="248" width="20" height="14" class="pin" rx="2"/>
+    <text x="215" y="259" class="pin-label" text-anchor="end">GPIO 52</text>
+    <text x="205" y="273" class="t-dim" font-size="8" text-anchor="end">ENA</text>
+
+    <rect x="220" y="288" width="20" height="14" class="pin" rx="2"/>
+    <text x="215" y="299" class="pin-label" text-anchor="end">GND</text>
+
+    <!-- Pin labels (left side — E-STOP + POT) -->
+    <rect x="0" y="208" width="20" height="14" class="pin" rx="2"/>
+    <text x="25" y="219" class="pin-label">GPIO 33</text>
+    <text x="25" y="233" class="t-dim" font-size="8">E-STOP (PULLUP)</text>
+
+    <rect x="0" y="258" width="20" height="14" class="pin" rx="2"/>
+    <text x="25" y="269" class="pin-label">GPIO 49</text>
+    <text x="25" y="283" class="t-dim" font-size="8">ADC (POT)</text>
+
+    <rect x="0" y="298" width="20" height="14" class="pin" rx="2"/>
+    <text x="25" y="309" class="pin-label">3.3V</text>
+
+    <rect x="0" y="328" width="20" height="14" class="pin" rx="2"/>
+    <text x="25" y="339" class="pin-label">GND</text>
+
+    <!-- USB-C label -->
+    <rect x="85" y="345" width="70" height="5" rx="2" fill="#555"/>
+    <text x="120" y="340" class="t-dim" font-size="8" text-anchor="middle">USB-C (5V)</text>
+  </g>
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- TB6600 STEPPER DRIVER                                             -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(480, 100)">
+    <rect width="220" height="380" class="box-tb" rx="10"/>
+    <text x="110" y="28" class="t-amber" font-size="16" text-anchor="middle" font-weight="bold">TB6600</text>
+    <text x="110" y="46" class="t-dim" font-size="11" text-anchor="middle">Stepper Motor Driver</text>
+
+    <!-- Signal side (left) -->
+    <text x="20" y="78" class="t-amber" font-size="11" font-weight="bold">SIGNAL (3.3V Logic)</text>
+
+    <rect x="0" y="94" width="20" height="14" class="pin" rx="2"/>
+    <text x="25" y="105" class="pin-label">PUL+</text>
+
+    <rect x="0" y="120" width="20" height="14" class="pin" rx="2"/>
+    <text x="25" y="131" class="pin-label">PUL-</text>
+
+    <rect x="0" y="150" width="20" height="14" class="pin" rx="2"/>
+    <text x="25" y="161" class="pin-label">DIR+</text>
+
+    <rect x="0" y="176" width="20" height="14" class="pin" rx="2"/>
+    <text x="25" y="187" class="pin-label">DIR-</text>
+
+    <rect x="0" y="206" width="20" height="14" class="pin" rx="2"/>
+    <text x="25" y="217" class="pin-label">ENA+</text>
+
+    <rect x="0" y="232" width="20" height="14" class="pin" rx="2"/>
+    <text x="25" y="243" class="pin-label">ENA-</text>
+
+    <!-- Common GND note -->
+    <rect x="15" y="258" width="140" height="22" rx="4" fill="#1a0a0a" stroke="#FF9100" stroke-width="1"/>
+    <text x="85" y="274" class="t-amber" font-size="9" text-anchor="middle">PUL-/DIR-/ENA- → GND</text>
+
+    <!-- Motor side (right) -->
+    <text x="110" y="305" class="t-amber" font-size="11" font-weight="bold" text-anchor="middle">MOTOR OUTPUT</text>
+
+    <rect x="200" y="315" width="20" height="14" class="pin" rx="2"/>
+    <text x="195" y="326" class="pin-label" text-anchor="end">A+</text>
+
+    <rect x="200" y="338" width="20" height="14" class="pin" rx="2"/>
+    <text x="195" y="349" class="pin-label" text-anchor="end">A-</text>
+
+    <rect x="200" y="358" width="20" height="14" class="pin" rx="2"/>
+    <text x="195" y="369" class="pin-label" text-anchor="end">B+</text>
+
+    <!-- Power side (top-right) -->
+    <text x="200" y="78" class="t-amber" font-size="11" font-weight="bold" text-anchor="end">POWER</text>
+
+    <rect x="200" y="90" width="20" height="14" class="pin" rx="2"/>
+    <text x="195" y="101" class="pin-label" text-anchor="end">V+</text>
+
+    <rect x="200" y="114" width="20" height="14" class="pin" rx="2"/>
+    <text x="195" y="125" class="pin-label" text-anchor="end">GND</text>
+
+    <!-- DIP Switch label -->
+    <rect x="60" y="130" width="100" height="50" rx="4" fill="#0a0a0a" stroke="#555" stroke-width="1"/>
+    <text x="110" y="148" class="t-dim" font-size="9" text-anchor="middle">DIP SWITCH</text>
+    <text x="110" y="162" class="t-amber" font-size="10" text-anchor="middle" font-weight="bold">1/8 | 3.0A</text>
+    <text x="110" y="175" class="t-dim" font-size="8" text-anchor="middle">1600 pulse/rev</text>
+  </g>
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- NEMA 23 STEPPER MOTOR                                             -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(830, 200)">
+    <rect width="200" height="180" class="box-motor" rx="10"/>
+    <text x="100" y="28" class="t-teal" font-size="16" text-anchor="middle" font-weight="bold">NEMA 23</text>
+    <text x="100" y="46" class="t-dim" font-size="11" text-anchor="middle">3.0 Nm Stepper Motor</text>
+
+    <!-- Motor icon -->
+    <circle cx="100" cy="100" r="40" fill="none" stroke="#1DE9B6" stroke-width="2"/>
+    <circle cx="100" cy="100" r="8" fill="#1DE9B6"/>
+    <text x="100" y="155" class="t-dim" font-size="10" text-anchor="middle">200 steps/rev</text>
+    <text x="100" y="170" class="t-dim" font-size="10" text-anchor="middle">4-wire bipolar</text>
+
+    <!-- Coil labels -->
+    <rect x="0" y="80" width="20" height="14" class="pin" rx="2"/>
+    <text x="25" y="91" class="pin-label">A+/A-</text>
+
+    <rect x="0" y="110" width="20" height="14" class="pin" rx="2"/>
+    <text x="25" y="121" class="pin-label">B+/B-</text>
+  </g>
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- 24V PSU                                                           -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(830, 70)">
+    <rect width="200" height="100" class="box-psu" rx="10"/>
+    <text x="100" y="25" class="t-yellow" font-size="14" text-anchor="middle" font-weight="bold">24V DC PSU</text>
+    <text x="100" y="43" class="t-dim" font-size="11" text-anchor="middle">100W+ (4.5A min)</text>
+
+    <!-- Terminals -->
+    <text x="35" y="68" class="t-red" font-size="13" text-anchor="middle" font-weight="bold">V+</text>
+    <text x="35" y="82" class="t-dim" font-size="10" text-anchor="middle">24V</text>
+
+    <text x="165" y="68" class="t-dim" font-size="13" text-anchor="middle" font-weight="bold">V-</text>
+    <text x="165" y="82" class="t-dim" font-size="10" text-anchor="middle">GND</text>
+
+    <!-- AC input label -->
+    <text x="100" y="95" class="t-dim" font-size="9" text-anchor="middle">AC 110-240V input</text>
+  </g>
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- E-STOP BUTTON                                                     -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(60, 530)">
+    <rect width="150" height="110" rx="10" fill="#1a0a0a" stroke="#FF1744" stroke-width="2"/>
+    <text x="75" y="25" class="t-red" font-size="14" text-anchor="middle" font-weight="bold">E-STOP</text>
+    <text x="75" y="42" class="t-dim" font-size="10" text-anchor="middle">NC (Normally Closed)</text>
+
+    <!-- E-stop icon -->
+    <circle cx="75" cy="70" r="22" fill="#FF1744" fill-opacity="0.3" stroke="#FF1744" stroke-width="2"/>
+    <text x="75" y="77" class="t-red" font-size="16" text-anchor="middle" font-weight="bold">⏻</text>
+
+    <text x="75" y="105" class="t-dim" font-size="9" text-anchor="middle">Press = Circuit OPEN</text>
+  </g>
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- POTENTIOMETER                                                     -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(60, 660)">
+    <rect width="150" height="30" rx="6" fill="#121212" stroke="#D500F9" stroke-width="1"/>
+    <text x="75" y="20" class="t-purple" font-size="12" text-anchor="middle" font-weight="bold">10k POT (Speed)</text>
+  </g>
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- WORM GEAR                                                         -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(830, 420)">
+    <rect width="200" height="70" rx="8" fill="#121212" stroke="#555" stroke-width="1"/>
+    <text x="100" y="25" class="t-dim" font-size="13" text-anchor="middle" font-weight="bold">60:1 WORM GEAR</text>
+    <text x="100" y="45" class="t-dim" font-size="11" text-anchor="middle">→ Welding Table</text>
+    <text x="100" y="60" class="t-dim" font-size="10" text-anchor="middle">0.1 – 3.0 RPM output</text>
+  </g>
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- WIRES: ESP32 → TB6600 (Signal)                                    -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- GPIO50 (STEP) → PUL+ -->
+  <path d="M 300 293 L 390 293 L 390 201 L 480 201" class="wire-sig" marker-end="url(#arrowCyan)"/>
+  <text x="385" y="195" class="t-cyan" font-size="9" text-anchor="end">STEP</text>
+
+  <!-- GPIO51 (DIR) → DIR+ -->
+  <path d="M 300 333 L 410 333 L 410 251 L 480 251" class="wire-sig" marker-end="url(#arrowCyan)"/>
+  <text x="405" y="245" class="t-cyan" font-size="9" text-anchor="end">DIR</text>
+
+  <!-- GPIO52 (ENA) → ENA+ -->
+  <path d="M 300 373 L 430 373 L 430 307 L 480 307" class="wire-sig" marker-end="url(#arrowCyan)"/>
+  <text x="425" y="300" class="t-cyan" font-size="9" text-anchor="end">ENA</text>
+
+  <!-- GND → PUL-/DIR-/ENA- (common ground) -->
+  <path d="M 300 413 L 450 413 L 450 227 L 480 227" class="wire-gnd" marker-end="url(#arrowGnd)"/>
+  <path d="M 450 227 L 450 277 L 480 277" class="wire-gnd" marker-end="url(#arrowGnd)"/>
+  <path d="M 450 277 L 450 333 L 480 333" class="wire-gnd" marker-end="url(#arrowGnd)"/>
+  <text x="445" y="215" class="t-dim" font-size="9" text-anchor="end">GND</text>
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- WIRES: TB6600 → Motor                                             -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <path d="M 720 417 L 760 417 L 760 287 L 830 287" class="wire-motor" marker-end="url(#arrowMotor)"/>
+  <path d="M 720 440 L 775 440 L 775 317 L 830 317" class="wire-motor" marker-end="url(#arrowMotor)"/>
+  <text x="777" y="275" class="t-teal" font-size="9">Coil A</text>
+  <text x="777" y="332" class="t-teal" font-size="9">Coil B</text>
+
+  <!-- Motor → Worm Gear -->
+  <path d="M 930 380 L 930 420" class="wire-motor" marker-end="url(#arrowMotor)" stroke-dasharray="6,3"/>
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- WIRES: PSU → TB6600                                               -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <path d="M 830 132 L 780 132 L 780 190 L 700 190" class="wire-pwr" marker-end="url(#arrowPwr)"/>
+  <text x="760" y="180" class="t-red" font-size="9">24V+</text>
+
+  <path d="M 830 152 L 750 152 L 750 215 L 700 215" class="wire-gnd" marker-end="url(#arrowGnd)"/>
+  <text x="745" y="225" class="t-dim" font-size="9">PWR GND</text>
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- WIRES: E-STOP → ESP32                                             -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <path d="M 135 530 L 135 500 L 50 500 L 50 335 L 60 335" class="wire-estop"/>
+  <text x="42" y="430" class="t-red" font-size="9" writing-mode="tb">E-STOP</text>
+
+  <!-- E-STOP GND wire -->
+  <path d="M 210 580 L 240 580 L 240 460 L 50 460 L 50 455 L 60 455" class="wire-gnd"/>
+  <text x="245" y="520" class="t-dim" font-size="8">GND</text>
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- WIRES: POT → ESP32                                                -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <path d="M 135 660 L 135 500 L 35 500 L 35 385 L 60 385" class="wire-pot"/>
+  <text x="30" y="530" class="t-purple" font-size="9" writing-mode="tb">WIPER (ADC)</text>
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- LEGEND                                                            -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(280, 560)">
+    <rect width="400" height="115" rx="8" fill="#0A0A0A" stroke="#333" stroke-width="1"/>
+    <text x="200" y="20" class="t-dim" font-size="12" text-anchor="middle" font-weight="bold">WIRE LEGEND</text>
+
+    <line x1="20" y1="38" x2="70" y2="38" stroke="#00E5FF" stroke-width="2.5"/>
+    <text x="80" y="42" class="t-dim" font-size="11">Signal (3.3V logic: STEP / DIR / ENA)</text>
+
+    <line x1="20" y1="58" x2="70" y2="58" stroke="#FF1744" stroke-width="3" stroke-dasharray="8,4"/>
+    <text x="80" y="62" class="t-dim" font-size="11">Power (24V DC)</text>
+
+    <line x1="20" y1="78" x2="70" y2="78" stroke="#555" stroke-width="2.5"/>
+    <text x="80" y="82" class="t-dim" font-size="11">Ground (GND)</text>
+
+    <line x1="20" y1="98" x2="70" y2="98" stroke="#1DE9B6" stroke-width="3"/>
+    <text x="80" y="102" class="t-dim" font-size="11">Motor coils (A+/A-  B+/B-)</text>
+  </g>
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- SAFETY NOTE                                                       -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(710, 530)">
+    <rect width="330" height="60" rx="6" fill="#1a0a0a" stroke="#FF9100" stroke-width="1"/>
+    <text x="165" y="20" class="t-amber" font-size="11" text-anchor="middle" font-weight="bold">⚠ SAFETY: OPTOISOLATED</text>
+    <text x="165" y="37" class="t-dim" font-size="10" text-anchor="middle">TB6600 optocouplers separate 3.3V</text>
+    <text x="165" y="52" class="t-dim" font-size="10" text-anchor="middle">ESP32 logic from 24V motor power</text>
+  </g>
+
+</svg>

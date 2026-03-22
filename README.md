@@ -152,7 +152,7 @@ graph LR
 
 ---
 
-## 🧪 Target Hardware (Designed & Configured For)
+## 🎯 Target Hardware (Designed & Configured For)
 
 This firmware is designed and configured for the following hardware.
 Full validation is currently in progress.
@@ -192,7 +192,7 @@ DIY-Welding-Positioner-ESP32-P4/
 ├── src/
 │   ├── main.cpp
 │   ├── motor/          # FastAccelStepper logic & RMT pulses
-│   ├── control/        # Welding modes (continuous, jog, pulse, step)
+│   ├── control/        # Welding modes (continuous, jog, pulse, step, timer)
 │   ├── safety/         # E-STOP interrupt & hardware watchdog
 │   ├── ui/             # LVGL 8.x dashboards & themes
 │   └── config.h        # Pinouts & physical gear ratios

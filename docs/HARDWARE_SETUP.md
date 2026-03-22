@@ -6,8 +6,9 @@ This guide details the physical electrical wiring and structural assembly requir
 - **ESP32-P4 Dev Board:** Must be the 4.3" Waveshare/Guition variant with MIPI-DSI interface.
 - **Micro-Stepper Driver:** TB6600 (or equivalent like DM542). Must be capable of handling 24V-36V and 3A-4A output for NEMA 23.
 - **Motor:** NEMA 23 Stepper Motor (approx 3.0 Nm holding torque recommended for welding tables).
-- **Power Supply (PSU):** 24V DC, minimum 4.5A (100W+). Dedicated for the stepper driver.
+- **Power Supply (PSU):** 24V DC, minimum 5.0A (120W+). Dedicated for the stepper driver.
 - **DC-DC Converter:** Step-down buck converter (24V -> 5V 2A) to power the ESP32-P4 if not using USB-C.
+- **Enclosure:** **Metallic (Aluminum/Steel) grounded enclosure**. Essential for EMI mitigation.
 
 ## 2. TB6600 Driver Configuration
 Before powering on, configure the DIP switches on the side of your TB6600.
@@ -42,3 +43,7 @@ The TB6600 uses optically isolated inputs. Wire them in a **Common Ground** conf
   - Pin 2 -> GND
 
 _Note: `GPIO 33` utilizes the ESP32-P4 internal pull-up resistor (`INPUT_PULLUP`). The NC E-STOP button connects `GPIO 33` to GND constantly. When pressed, the circuit breaks, `GPIO 33` floats `HIGH`, and the hardware interrupt fires instantly._
+
+## 4. Safety & Thermal Management
+- **Heat Sinking:** Stepper drivers get hot during long welding runs. Mount the TB6600 to the metal enclosure for thermal dissipation or add a 40mm fan.
+- **Power Sequencing:** Always power the logic (USB-C or DC-DC) first, then the motor 24V supply. The firmware holds the motor ENA pin HIGH (Disabled) on boot for safety.

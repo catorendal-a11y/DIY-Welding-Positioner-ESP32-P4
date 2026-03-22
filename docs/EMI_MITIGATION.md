@@ -8,6 +8,7 @@ To ensure your ESP32-P4 positioner runs flawlessly in an industrial welding envi
 ## 1. Grounding (The Most Critical Step)
 - **Star Grounding:** Do not daisy-chain ground wires. Run individual ground lines from the stepper driver, the ESP32 power converter, and the enclosure directly to a single central grounding point.
 - **Welding Table Isolation:** The positioner chassis MUST be electrically bonded to the welding table ground, but the ESP32 control logic GND must remain separated from the welding earth ground loop.
+- **Metal Enclosure:** House the entire controller in a grounded **aluminum or steel enclosure**. Plastic cases provide zero protection against the high-frequency RF noise of a TIG arc.
 
 ## 2. Cable Shielding
 - Use **shielded cables** for the STEP, DIR, and ENA signal lines between the ESP32 and the TB6600.
@@ -27,3 +28,6 @@ Snap-on ferrite bead chokes absorb high-frequency EMI spikes.
 ## 5. E-STOP Hardware Filtering (RC Filter)
 If EMI causes false E-STOP triggers on `GPIO 33`, adding a hardware RC (Resistor-Capacitor) low-pass filter to the pin is highly recommended.
 - Place a `100nF` ceramic capacitor between `GPIO 33` and `GND`, physically as close to the ESP32 pin as possible.
+
+## 6. Transient Voltage Suppression (TVS)
+For maximum reliability, add **TVS Diodes** (e.g., SMF3.3) on the E-STOP and Potentiometer wiper lines. These shunt high-voltage transients to ground before they can reach the ESP32-P4's internal junction.

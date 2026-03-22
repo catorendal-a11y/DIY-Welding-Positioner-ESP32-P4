@@ -49,9 +49,8 @@ void jog_stop() {
 
   LOG_D("Jog stop");
 
-  // Immediate halt
-  motor_halt();
-  control_transition_to(STATE_IDLE);
+  // Transition through STOPPING (motor_stop triggers deceleration)
+  control_transition_to(STATE_STOPPING);
 }
 
 // ───────────────────────────────────────────────────────────────────────────────

@@ -93,7 +93,7 @@ void screens_update_current() {
 // ───────────────────────────────────────────────────────────────────────────────
 void screens_set_back_button(lv_obj_t* btn, ScreenId dest) {
   lv_obj_add_event_cb(btn, [](lv_event_t* e) {
-    ScreenId* dest = (ScreenId*)lv_event_get_user_data(e);
-    screens_show(*dest);
+    ScreenId dest = (ScreenId)(size_t)lv_event_get_user_data(e);
+    screens_show(dest);
   }, LV_EVENT_CLICKED, (void*)(size_t)dest);
 }

@@ -101,6 +101,7 @@ void safety_reset_estop() {
 // ───────────────────────────────────────────────────────────────────────────────
 void safetyTask(void* pvParameters) {
   LOG_I("Safety task started on Core %d", xPortGetCoreID());
+  esp_task_wdt_add(NULL);  // Register with watchdog (BUG-03 fix)
 
   // Attach ESTOP interrupt here (after all other init is complete)
   safety_attach_estop();

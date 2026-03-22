@@ -92,8 +92,8 @@ void speed_apply() {
   float rpm = speed_get_target_rpm();
   uint32_t hz = (uint32_t)rpmToStepHz(rpm);
 
-  // Set direction based on current direction
-  digitalWrite(PIN_DIR, (currentDir == DIR_CW) ? HIGH : LOW);
+  // NOTE: Direction is set by mode entry functions (motor_run_cw/ccw, jog_start, etc.)
+  // Do NOT set DIR pin here — it would conflict with jog direction overrides.
 
   // Apply speed using motor API
   FastAccelStepper* stepper = motor_get_stepper();

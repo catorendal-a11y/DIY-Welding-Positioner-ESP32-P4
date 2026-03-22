@@ -15,10 +15,14 @@ void continuous_start() {
   LOG_I("Continuous mode: start");
 
   // Set direction and enable motor
-  digitalWrite(PIN_ENA, LOW);
-  digitalWrite(PIN_DIR, (speed_get_direction() == DIR_CW) ? HIGH : LOW);
+  Direction dir = speed_get_direction();
+  if (dir == DIR_CW) {
+    motor_run_cw();
+  } else {
+    motor_run_ccw();
+  }
 
-  // Apply target speed
+  // Apply target speed from pot/slider
   speed_apply();
 
   // Transition to RUNNING state

@@ -21,12 +21,13 @@ void step_execute(float angle_deg) {
   SystemState state = control_get_state();
   if (state != STATE_IDLE && state != STATE_STEP) return;
 
-  // Validate angle
+  // Validate angle (use epsilon for float comparison)
   const float validAngles[] = {5.0f, 10.0f, 15.0f, 30.0f, 45.0f, 90.0f};
   bool isValid = false;
   for (int i = 0; i < 6; i++) {
-    if (angle_deg == validAngles[i]) {
+    if (fabsf(angle_deg - validAngles[i]) < 0.01f) {
       isValid = true;
+      angle_deg = validAngles[i];  // Snap to exact value
       break;
     }
   }
@@ -43,10 +44,11 @@ void step_execute(float angle_deg) {
   // Set direction
   digitalWrite(PIN_DIR, (speed_get_direction() == DIR_CW) ? HIGH : LOW);
 
-  // Enable and move
+  // Enable and move at a default step speed
   digitalWrite(PIN_ENA, LOW);
   FastAccelStepper* stepper = motor_get_stepper();
   if (stepper != nullptr) {
+    stepper->setSpeedInHz((uint32_t)rpmToStepHz(0.5f));  // Default step speed
     stepper->move(steps);
   }
 

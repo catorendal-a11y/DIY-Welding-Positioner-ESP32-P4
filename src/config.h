@@ -79,7 +79,7 @@
   #define LOG_D(...) do{}while(0)
   #define LOG_I(...) do{}while(0)
   #define LOG_W(...) do{}while(0)
-  #define LOG_E(...) do{}while(0)
+  #define LOG_E(f,...) Serial.printf("[E] " f "\n", ##__VA_ARGS__)  // Always active
 #endif
 
 // ───────────────────────────────────────────────────────────────────────────────

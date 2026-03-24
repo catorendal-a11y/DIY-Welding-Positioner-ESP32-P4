@@ -13,6 +13,7 @@
 #include "safety/safety.h"
 #include "storage/storage.h"
 #include "esp_task_wdt.h"
+#include "esp_cache.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SAFETY GLOBALS (defined in safety.cpp)

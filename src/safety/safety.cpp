@@ -148,14 +148,15 @@ void safetyTask(void* pvParameters) {
 // HARDWARE WATCHDOG — 2 second timeout
 // ───────────────────────────────────────────────────────────────────────────────
 void safety_init_watchdog() {
-  // ESP32-P4 watchdog initialization (ESP-IDF 5.x API)
+  // ESP32-P4 watchdog reconfiguration (ESP-IDF 5.x API)
+  // Arduino framework already inits the watchdog, so we reconfigure it
   esp_task_wdt_config_t wdt_cfg = {
     .timeout_ms       = 2000,
     .idle_core_mask   = 0,        // Don't watch idle tasks
     .trigger_panic    = true,     // Panic on timeout
   };
-  esp_task_wdt_init(&wdt_cfg);
-  LOG_I("Watchdog init: 2000ms timeout, panic on timeout");
+  esp_task_wdt_reconfigure(&wdt_cfg);
+  LOG_I("Watchdog reconfigured: 2000ms timeout, panic on timeout");
 }
 
 void safety_feed_watchdog() {

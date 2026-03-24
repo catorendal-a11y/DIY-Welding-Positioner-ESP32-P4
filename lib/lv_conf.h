@@ -11,8 +11,9 @@
 // ───────────────────────────────────────────────────────────────────────────────
 // COLOR SETTINGS
 // ───────────────────────────────────────────────────────────────────────────────
-#define LV_COLOR_DEPTH          16      // RGB565
+#define LV_COLOR_DEPTH          16      // RGB565 - matches ST7701S MIPI-DSI (BSP uses this)
 #define LV_COLOR_SCREEN_TRANSP  0       // No transparency needed
+#define LV_COLOR_16_SWAP        0       // Byte order: RGB565 (not swapped)
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN RESOLUTION

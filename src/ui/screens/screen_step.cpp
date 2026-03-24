@@ -35,6 +35,22 @@ void screen_step_create() {
   lv_obj_t* screen = screenRoots[SCREEN_STEP];
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
+  // ── Back button (top-left) ──
+  lv_obj_t* backBtn = lv_btn_create(screen);
+  lv_obj_set_size(backBtn, 80, 40);
+  lv_obj_set_pos(backBtn, 16, 12);
+  lv_obj_set_style_bg_color(backBtn, COL_BTN_NORMAL, 0);
+  lv_obj_set_style_radius(backBtn, 6, 0);
+  lv_obj_set_style_border_width(backBtn, 1, 0);
+  lv_obj_set_style_border_color(backBtn, COL_BORDER, 0);
+  lv_obj_add_event_cb(backBtn, back_event_cb, LV_EVENT_CLICKED, nullptr);
+
+  lv_obj_t* backLabel = lv_label_create(backBtn);
+  lv_label_set_text(backLabel, "BACK");
+  lv_obj_set_style_text_font(backLabel, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_color(backLabel, COL_TEXT_DIM, 0);
+  lv_obj_center(backLabel);
+
   // Title
   lv_obj_t* title = lv_label_create(screen);
   lv_label_set_text(title, "STEP MODE");

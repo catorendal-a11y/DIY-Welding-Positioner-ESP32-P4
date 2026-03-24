@@ -8,7 +8,7 @@
 // ───────────────────────────────────────────────────────────────────────────────
 // BACKGROUND COLORS (from SVG)
 // ───────────────────────────────────────────────────────────────────────────────
-#define COL_BG          lv_color_hex(0x050505)   // SVG: #050505 main background
+#define COL_BG          lv_color_hex(0x0A0A0A)   // Dark background (SVG: near black)
 #define COL_BG_CARD     lv_color_hex(0x121212)   // SVG: #121212 inactive button fill
 #define COL_BG_INPUT    lv_color_hex(0x1A1A1A)   // Input fields
 #define COL_BG_ACTIVE   lv_color_hex(0x0C1A1C)   // SVG: #0c1a1c active button fill (dark teal)
@@ -18,6 +18,7 @@
 // ───────────────────────────────────────────────────────────────────────────────
 #define COL_ACCENT      lv_color_hex(0x00E5FF)   // SVG: #00E5FF neon cyan - gauge arc, active borders
 #define COL_ACCENT_DIM  lv_color_hex(0x005566)   // Dimmed accent
+#define COL_ACCENT_DARK lv_color_hex(0x003344)   // Darker accent for button backgrounds
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STATUS COLORS

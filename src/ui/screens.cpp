@@ -1,6 +1,7 @@
 // TIG Rotator Controller - Screen Management Implementation
 // Handles navigation between all 12 screens
 
+#include <Arduino.h>
 #include "screens.h"
 #include "theme.h"
 #include "../config.h"

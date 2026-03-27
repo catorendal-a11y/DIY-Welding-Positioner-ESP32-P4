@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480">
+  <defs>
+    <style>
+      .screen-bg  { fill: #000000; }
+      .header-bg  { fill: #0A0A0A; }
+      .btn-bg     { fill: #1A1A1C; }
+      .btn-active { fill: #0C1A1C; }
+      .panel-bg   { fill: #1A1A1C; }
+      .sep        { fill: #1A1A1A; }
+    </style>
+  </defs>
+
+  <!-- Full screen background -->
+  <rect width="800" height="480" class="screen-bg"/>
+
+  <!-- ─── HEADER BAR ─────────────────────────────────── -->
+  <rect width="800" height="48" class="header-bg"/>
+  <text x="24" y="30" font-family="sans-serif" font-size="14" fill="#555555" font-weight="bold" letter-spacing="2">TIG ROTATOR</text>
+  <text x="400" y="30" font-family="sans-serif" font-size="14" fill="#00E676" text-anchor="middle" font-weight="bold">● RUNNING</text>
+  <text x="776" y="30" font-family="sans-serif" font-size="14" fill="#555555" text-anchor="end">24.5V</text>
+  <rect y="48" width="800" height="2" class="sep"/>
+
+  <!-- ─── GAUGE (270° arc, centre of screen) ─────────── -->
+  <!-- Background arc -->
+  <path d="M 238 380 A 180 180 0 1 1 562 380" fill="none" stroke="#1A1A1A" stroke-width="18"/>
+  <!-- Active arc (small segment to show ~1.8/6.0 ≈ 30%) -->
+  <path d="M 238 380 A 180 180 0 0 1 195 273" fill="none" stroke="#00E5FF" stroke-width="14" stroke-linecap="round"/>
+
+  <!-- RPM value -->
+  <text x="400" y="320" font-family="sans-serif" font-size="90" fill="#FFFFFF" text-anchor="middle" font-weight="bold">1.8</text>
+  <text x="400" y="360" font-family="sans-serif" font-size="22" fill="#00E5FF" text-anchor="middle" letter-spacing="4">RPM</text>
+
+  <!-- Gauge labels -->
+  <g font-family="sans-serif" font-size="14" fill="#444444" text-anchor="middle" font-weight="bold">
+    <text x="228" y="405">0</text>
+    <text x="175" y="185">2.0</text>
+    <text x="400" y="72">3.0</text>
+    <text x="625" y="185">4.0</text>
+    <text x="572" y="405">6.0</text>
+  </g>
+
+  <!-- ─── LEFT BUTTONS ────────────────────────────────── -->
+  <rect x="24" y="70"  width="110" height="64" rx="10" class="btn-active" stroke="#00E5FF" stroke-width="2"/>
+  <text x="79" y="111" font-family="sans-serif" font-size="18" fill="#FFFFFF" text-anchor="middle" font-weight="bold">ON</text>
+
+  <rect x="24" y="146" width="110" height="64" rx="10" class="btn-bg" stroke="#666666" stroke-width="2"/>
+  <text x="79" y="187" font-family="sans-serif" font-size="18" fill="#FFFFFF" text-anchor="middle">STOP</text>
+
+  <rect x="24" y="222" width="110" height="64" rx="10" class="btn-bg" stroke="#666666" stroke-width="2"/>
+  <text x="79" y="263" font-family="sans-serif" font-size="18" fill="#FFFFFF" text-anchor="middle">JOG</text>
+
+  <!-- ─── RIGHT BUTTONS ───────────────────────────────── -->
+  <rect x="666" y="70"  width="110" height="64" rx="10" class="btn-active" stroke="#00E5FF" stroke-width="2"/>
+  <text x="721" y="111" font-family="sans-serif" font-size="18" fill="#FFFFFF" text-anchor="middle" font-weight="bold">CW</text>
+
+  <rect x="666" y="146" width="110" height="64" rx="10" class="btn-bg" stroke="#666666" stroke-width="2"/>
+  <text x="721" y="187" font-family="sans-serif" font-size="18" fill="#FFFFFF" text-anchor="middle">CCW</text>
+
+  <rect x="666" y="222" width="110" height="64" rx="10" class="btn-bg" stroke="#666666" stroke-width="2"/>
+  <text x="721" y="263" font-family="sans-serif" font-size="18" fill="#FFFFFF" text-anchor="middle">MENU</text>
+
+  <!-- ─── BOTTOM SEPARATOR ────────────────────────────── -->
+  <rect x="0" y="418" width="800" height="2" class="sep"/>
+
+  <!-- ─── RPM BUTTONS (bottom center) ────────────────── -->
+  <rect x="280" y="428" width="108" height="40" rx="8" class="btn-bg" stroke="#666666" stroke-width="2"/>
+  <text x="334" y="454" font-family="sans-serif" font-size="16" fill="#FFFFFF" text-anchor="middle">− RPM</text>
+
+  <rect x="412" y="428" width="108" height="40" rx="8" class="btn-bg" stroke="#666666" stroke-width="2"/>
+  <text x="466" y="454" font-family="sans-serif" font-size="16" fill="#FFFFFF" text-anchor="middle">+ RPM</text>
+
+</svg>

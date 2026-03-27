@@ -5,6 +5,7 @@
 #include "../../motor/motor.h"
 #include "../../motor/speed.h"
 #include "../../config.h"
+#include <FastAccelStepper.h>
 
 // ───────────────────────────────────────────────────────────────────────────────
 // CONTINUOUS MODE ENTRY
@@ -14,16 +15,26 @@ void continuous_start() {
 
   LOG_I("Continuous mode: start");
 
-  // Set direction and enable motor
+  // Get stepper instance
+  FastAccelStepper* stepper = motor_get_stepper();
+  if (stepper != nullptr) {
+    // Clear any previous stop state and reset queue
+    // This is needed after forceStop() from ESTOP
+    stepper->stopMove();  // Clear any forceStop state
+    delay(10);  // Brief pause for state to clear
+  }
+
+  // CRITICAL: Set speed BEFORE starting motor
+  // FastAccelStepper needs speed set before runForward/runBackward
+  speed_apply();
+
+  // Set direction and start motor
   Direction dir = speed_get_direction();
   if (dir == DIR_CW) {
     motor_run_cw();
   } else {
     motor_run_ccw();
   }
-
-  // Apply target speed from pot/slider
-  speed_apply();
 
   // Transition to RUNNING state
   control_transition_to(STATE_RUNNING);

@@ -3,6 +3,7 @@
 
 #include "motor.h"
 #include "../config.h"
+#include "microstep.h"
 #include <FastAccelStepper.h>
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -58,14 +59,15 @@ void motor_init() {
   // Configure stepper
   stepper->setDirectionPin(PIN_DIR);
   stepper->setEnablePin(PIN_ENA, false);  // false = active LOW
-  stepper->setAutoEnable(false);  // Manual enable control
+  stepper->setAutoEnable(true);   // Auto-enable when running
 
   // Set acceleration and initial speed
   stepper->setAcceleration(ACCELERATION);   // steps/s² from config.h
   stepper->setSpeedInHz(10000);            // 10 kHz = 5 RPM workpiece (for testing)
 
   LOG_I("FastAccelStepper init OK");
-  LOG_I("  Steps/rev: %d", STEPS_PER_REV);
+  LOG_I("  Microstep: %s", microstep_get_string());
+  LOG_I("  Steps/rev: %u", microstep_get_steps_per_rev());
   LOG_I("  Initial speed: 10000 Hz (5 RPM workpiece)");
 }
 
@@ -73,28 +75,54 @@ void motor_init() {
 // MOTOR CONTROL FUNCTIONS
 // ───────────────────────────────────────────────────────────────────────────────
 void motor_run_cw() {
-  digitalWrite(PIN_DIR, HIGH);   // CW direction
-  digitalWrite(PIN_ENA, LOW);    // Enable motor
-  stepper->runForward();
-  LOG_I("Motor: CW");
+  // DIR and ENA handled automatically by FastAccelStepper
+  if (stepper != nullptr) {
+    // Ensure stepper is in a good state before running
+    if (stepper->isRunning()) {
+      // Already running, just continue
+      LOG_D("Motor: CW (already running)");
+    } else {
+      stepper->runForward();
+      LOG_I("Motor: CW (running=%d)", stepper->isRunning());
+    }
+  }
 }
 
 void motor_run_ccw() {
-  digitalWrite(PIN_DIR, LOW);    // CCW direction
-  digitalWrite(PIN_ENA, LOW);    // Enable motor
-  stepper->runBackward();
-  LOG_I("Motor: CCW");
+  // DIR and ENA handled automatically by FastAccelStepper
+  if (stepper != nullptr) {
+    if (stepper->isRunning()) {
+      LOG_D("Motor: CCW (already running)");
+    } else {
+      stepper->runBackward();
+      LOG_I("Motor: CCW (running=%d)", stepper->isRunning());
+    }
+  }
 }
 
 void motor_stop() {
-  stepper->stopMove();
-  LOG_I("Motor: stopping (smooth decel)");
+  if (stepper != nullptr) {
+    stepper->stopMove();
+    LOG_I("Motor: stopping (smooth decel)");
+  }
 }
 
 void motor_halt() {
-  stepper->forceStop();
-  digitalWrite(PIN_ENA, HIGH);   // Disable motor immediately
-  LOG_I("Motor: HALT");
+  // Immediate stop - auto-enable will disable ENA automatically
+  if (stepper != nullptr) {
+    stepper->forceStop();
+    LOG_I("Motor: HALT");
+  }
+}
+
+void motor_disable() {
+  // Only stop if actually running to avoid double forceStop()
+  // NOTE: After forceStop(), we need stopMove() to clear the state before next run
+  if (stepper != nullptr && stepper->isRunning()) {
+    stepper->forceStop();
+    delay(10);  // Let stop complete
+  }
+  LOG_I("Motor: DISABLED (running=%d)", stepper ? stepper->isRunning() : 0);
 }
 
 // ───────────────────────────────────────────────────────────────────────────────

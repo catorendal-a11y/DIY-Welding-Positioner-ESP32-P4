@@ -35,7 +35,7 @@
   <rect width="1400" height="900" class="bg"/>
 
   <!-- Title -->
-  <text x="700" y="30" class="t-main" font-size="28" text-anchor="middle">DIY Welding Positioner — Wiring Diagram</text>
+  <text x="700" y="30" class="t-main" font-size="28" text-anchor="middle">TIG Rotator — Wiring Diagram</text>
   <text x="700" y="55" class="t-dim" font-size="14" text-anchor="middle">ESP32-P4 · TB6600 Stepper Driver · NEMA 23 · 24V DC</text>
 
   <!-- ══════════════════════════════════════════════════════════════════ -->
@@ -74,25 +74,25 @@
     <text x="202" y="162" class="label-gnd" text-anchor="end">GND</text>
     <rect x="208" y="152" width="12" height="12" class="header-pin" fill="#555"/>
 
-    <!-- Row 4 (Y=178) ENA / ESTOP -->
+    <!-- Row 4 (Y=178) GPIO33 ENA / GPIO52 unused -->
     <rect x="100" y="178" width="12" height="12" class="header-pin"/>
     <text x="118" y="188" class="label-gpio" text-anchor="start">GPIO52</text>
     <text x="202" y="188" class="label-gpio" text-anchor="end">GPIO33</text>
     <rect x="208" y="178" width="12" height="12" class="header-pin"/>
 
-    <!-- Row 5 (Y=204) DIR -->
+    <!-- Row 5 (Y=204) GPIO31 DIR -->
     <rect x="100" y="204" width="12" height="12" class="header-pin"/>
     <text x="118" y="214" class="label-gpio" text-anchor="start">GPIO51</text>
     <text x="202" y="214" class="label-gpio" text-anchor="end">GPIO31</text>
     <rect x="208" y="204" width="12" height="12" class="header-pin"/>
 
-    <!-- Row 6 (Y=230) STEP -->
+    <!-- Row 6 (Y=230) GPIO30 STEP -->
     <rect x="100" y="230" width="12" height="12" class="header-pin"/>
     <text x="118" y="240" class="label-gpio" text-anchor="start">GPIO50</text>
     <text x="202" y="240" class="label-gpio" text-anchor="end">GPIO30</text>
     <rect x="208" y="230" width="12" height="12" class="header-pin"/>
 
-    <!-- Row 7 (Y=256) POT -->
+    <!-- Row 7 (Y=256) GPIO49 POT -->
     <rect x="100" y="256" width="12" height="12" class="header-pin"/>
     <text x="118" y="266" class="label-gpio" text-anchor="start">GPIO49</text>
     <text x="202" y="266" class="label-gpio" text-anchor="end">GPIO29</text>
@@ -104,9 +104,9 @@
     <text x="202" y="292" class="label-gnd" text-anchor="end">GND</text>
     <rect x="208" y="282" width="12" height="12" class="header-pin" fill="#555"/>
 
-    <!-- Row 9 (Y=308) -->
+    <!-- Row 9 (Y=308) GPIO34 E-STOP -->
     <rect x="100" y="308" width="12" height="12" class="header-pin"/>
-    <text x="118" y="318" class="t-dim" font-size="11" text-anchor="start">GPIO34</text>
+    <text x="118" y="318" class="label-gpio" text-anchor="start">GPIO34</text>
     <text x="202" y="318" class="t-dim" font-size="11" text-anchor="end">ESP_3V3</text>
     <rect x="208" y="308" width="12" height="12" class="header-pin"/>
 
@@ -136,15 +136,14 @@
 
   </g>
 
-  <!-- Left Pin Function Annotations (Outside the ESP box, gap increased) -->
-  <text x="115" y="288" class="t-cyan" font-size="15" text-anchor="end" font-weight="bold">ENA</text>
-  <text x="115" y="314" class="t-cyan" font-size="15" text-anchor="end" font-weight="bold">DIR</text>
-  <text x="115" y="340" class="t-cyan" font-size="15" text-anchor="end" font-weight="bold">STEP</text>
-  <text x="115" y="366" class="t-purple" font-size="15" text-anchor="end" font-weight="bold">POT</text>
+  <!-- Left Pin Function Annotations -->
+  <text x="115" y="376" class="t-purple" font-size="15" text-anchor="end" font-weight="bold">POT</text>
+  <text x="115" y="428" class="t-red" font-size="15" text-anchor="end" font-weight="bold">E-STOP</text>
 
-  <!-- Right Pin Function Annotations (Outside the ESP box) -->
-  <!-- ESP block starts at 140, right is 500. `X` at 520 -->
-  <text x="520" y="288" class="t-red" font-size="15" text-anchor="start" font-weight="bold">E-STOP</text>
+  <!-- Right Pin Function Annotations -->
+  <text x="520" y="288" class="t-cyan" font-size="15" text-anchor="start" font-weight="bold">ENA</text>
+  <text x="520" y="314" class="t-cyan" font-size="15" text-anchor="start" font-weight="bold">DIR</text>
+  <text x="520" y="340" class="t-cyan" font-size="15" text-anchor="start" font-weight="bold">STEP</text>
 
 
   <!-- ══════════════════════════════════════════════════════════════════ -->
@@ -291,42 +290,35 @@
   <!-- ══════════════════════════════════════════════════════════════════ -->
   <!-- POT 3V3 (absolute: X=290, Y=680) → ESP 3V3 (Left Row 1, absolute: X=246, Y=206) -->
   <path d="M 290 680 L 290 640 L 110 640 L 110 206 L 246 206" class="wire-pwr"/>
-  
+
   <!-- POT Wiper (absolute: X=340, Y=680) → ESP GPIO49 (Left Row 7, absolute: X=246, Y=362) -->
   <path d="M 340 680 L 340 620 L 120 620 L 120 362 L 246 362" class="wire-pot"/>
 
-  <!-- E-STOP SIG (absolute: X=125, Y=665) → ESP GPIO33 (Right Row 4, absolute: X=354, Y=284) -->
-  <!-- ESTOP is at X=80, pin at X=45 inside -> abs X=125 -->
-  <!-- ESP Right Row 4 abs X=354, Y=284 -->
-  <path d="M 125 665 L 125 630 L 460 630 L 460 284 L 354 284" class="wire-estop"/>
+  <!-- E-STOP SIG (absolute: X=125, Y=665) → ESP GPIO34 (Left Row 9, absolute: X=246, Y=414) -->
+  <path d="M 125 665 L 125 630 L 140 630 L 140 414 L 246 414" class="wire-estop"/>
 
   <!-- E-STOP GND (absolute: X=175, Y=665) → ESP GND (Right Row 8, absolute: X=354, Y=388) -->
-  <!-- ESTOP pin 95 inside -> abs X=175 -->
-  <!-- ESP Right Row 8 abs X=354, Y=388 -->
   <path d="M 175 665 L 175 600 L 480 600 L 480 388 L 354 388" class="wire-gnd"/>
 
   <!-- POT GND (absolute: X=390, Y=680) → branches into E-STOP GND array -->
   <path d="M 390 680 L 390 600 L 480 600" class="wire-gnd"/>
 
   <!-- ══════════════════════════════════════════════════════════════════ -->
-  <!-- WIRES: ESP32 → TB6600 (Signal) ROUTED OVER THE TOP                -->
+  <!-- WIRES: ESP32 → TB6600 (Signal)                                    -->
   <!-- ══════════════════════════════════════════════════════════════════ -->
   <!-- ESP GND (Left Row 3, abs: 246, 258) → ENA- (760, 245), DIR- (293), PUL- (341) -->
   <path d="M 246 258 L 90 258 L 90 100 L 780 100 L 780 245 L 760 245" class="wire-gnd"/>
   <path d="M 780 245 L 780 293 L 760 293" class="wire-gnd"/>
   <path d="M 780 293 L 780 341 L 760 341" class="wire-gnd"/>
 
-  <!-- GPIO52 (ENA, abs: 246, 284) → ENA+ (760, 269) -->
-  <!-- Uses X=70, Y=80 for passing -->
-  <path d="M 246 284 L 70 284 L 70 80 L 800 80 L 800 269 L 760 269" class="wire-sig"/>
-  
-  <!-- GPIO51 (DIR, abs: 246, 310) → DIR+ (760, 317) -->
-  <!-- Uses X=50, Y=60 for passing -->
-  <path d="M 246 310 L 50 310 L 50 60 L 820 60 L 820 317 L 760 317" class="wire-sig"/>
+  <!-- GPIO33 (ENA, right row 4, abs: 354, 284) → ENA+ (760, 269) -->
+  <path d="M 354 284 L 500 284 L 500 80 L 800 80 L 800 269 L 760 269" class="wire-sig"/>
 
-  <!-- GPIO50 (STEP, abs: 246, 336) → PUL+ (760, 365) -->
-  <!-- Uses X=30, Y=40 for passing -->
-  <path d="M 246 336 L 30 336 L 30 40 L 840 40 L 840 365 L 760 365" class="wire-sig"/>
+  <!-- GPIO31 (DIR, right row 5, abs: 354, 310) → DIR+ (760, 317) -->
+  <path d="M 354 310 L 510 310 L 510 60 L 820 60 L 820 317 L 760 317" class="wire-sig"/>
+
+  <!-- GPIO30 (STEP, right row 6, abs: 354, 336) → PUL+ (760, 365) -->
+  <path d="M 354 336 L 520 336 L 520 40 L 840 40 L 840 365 L 760 365" class="wire-sig"/>
 
   <!-- ══════════════════════════════════════════════════════════════════ -->
   <!-- WIRES: TB6600 → Motor (4-wire cascade)                            -->
@@ -347,12 +339,12 @@
   <path d="M 760 467 L 900 467 L 900 410 L 1000 410" class="wire-motor" stroke="#000000"/>
   <text x="910" y="405" fill="#000000" font-size="12" font-weight="bold">BLACK</text>
 
-  <!-- Motor → Worm Gear -->
+  <!-- Motor → Gear -->
   <g transform="translate(1000, 620)">
     <rect width="220" height="70" rx="8" fill="#121212" stroke="#555" stroke-width="1"/>
-    <text x="110" y="25" class="t-dim" font-size="14" text-anchor="middle" font-weight="bold">60:1 WORM GEAR</text>
+    <text x="110" y="25" class="t-dim" font-size="14" text-anchor="middle" font-weight="bold">1:108 GEAR REDUCTION</text>
     <text x="110" y="45" class="t-dim" font-size="12" text-anchor="middle">→ Welding Table</text>
-    <text x="110" y="60" class="t-dim" font-size="11" text-anchor="middle">0.1 – 3.0 RPM output</text>
+    <text x="110" y="60" class="t-dim" font-size="11" text-anchor="middle">0.1 – 5.0 RPM output</text>
   </g>
   <path d="M 1110 580 L 1110 620" class="wire-motor" stroke-dasharray="6,3"/>
 
@@ -386,6 +378,18 @@
     <line x1="25" y1="116" x2="45" y2="116" stroke="#2196F3" stroke-width="3"/>
     <line x1="45" y1="116" x2="65" y2="116" stroke="#F44336" stroke-width="3"/>
     <text x="85" y="121" class="t-dim" font-size="14">Motor coils (A+/A-  B+/B-)</text>
+  </g>
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- PIN REFERENCE                                                     -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(80, 100)">
+    <text x="0" y="0" class="t-dim" font-size="13" font-weight="bold">PIN REFERENCE:</text>
+    <text x="0" y="25" class="t-cyan" font-size="12">• GPIO33 → TB6600 ENA+ (Right, Row 4)</text>
+    <text x="0" y="45" class="t-cyan" font-size="12">• GPIO31 → TB6600 DIR+ (Right, Row 5)</text>
+    <text x="0" y="65" class="t-cyan" font-size="12">• GPIO30 → TB6600 PUL+ (Right, Row 6)</text>
+    <text x="0" y="85" class="t-purple" font-size="12">• GPIO49 → POT Wiper  (Left, Row 7)</text>
+    <text x="0" y="105" class="t-red" font-size="12">• GPIO34 → E-STOP     (Left, Row 9)</text>
   </g>
 
 </svg>

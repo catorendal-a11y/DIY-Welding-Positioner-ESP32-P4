@@ -16,6 +16,7 @@ extern void pulse_start(uint32_t on_ms, uint32_t off_ms);
 extern void pulse_stop();
 extern void pulse_update();
 extern void step_execute(float angle_deg);
+extern void step_stop();
 extern void step_reset_accumulator();
 extern void step_update();
 extern void jog_start(Direction dir);
@@ -68,9 +69,10 @@ bool control_is_valid_transition(SystemState from, SystemState to) {
     return (to == STATE_STOPPING || to == STATE_ESTOP);
   }
 
-  // From PULSE/STEP/JOG/TIMER, can go to STOPPING or ESTOP
+  // From PULSE/STEP/JOG/TIMER, can go to STOPPING, IDLE, ESTOP, or JOG (for direction change)
   if (from == STATE_PULSE || from == STATE_STEP || from == STATE_JOG || from == STATE_TIMER) {
-    return (to == STATE_STOPPING || to == STATE_ESTOP);
+    return (to == STATE_STOPPING || to == STATE_IDLE || to == STATE_ESTOP ||
+            (from == STATE_JOG && to == STATE_JOG));  // Allow JOG→JOG for direction change
   }
 
   // From STOPPING, can go to IDLE or ESTOP
@@ -109,7 +111,8 @@ void control_transition_to(SystemState newState) {
   // Handle state entry actions
   switch (newState) {
     case STATE_IDLE:
-      // Motor should already be stopped from STOPPING or ESTOP
+      // CRITICAL: Disable motor to prevent vibration/holding torque
+      motor_disable();  // Properly disable stepper outputs
       break;
 
     case STATE_RUNNING:
@@ -159,12 +162,25 @@ void control_start_continuous() {
 }
 
 void control_stop() {
+  // Only stop if we're actually in an active mode
+  if (currentState == STATE_IDLE) {
+    LOG_D("control_stop() called while IDLE - ignored");
+    return;
+  }
+
   if (currentState == STATE_RUNNING) {
     continuous_stop();
   } else if (currentState == STATE_PULSE) {
     pulse_stop();
+  } else if (currentState == STATE_JOG) {
+    jog_stop();
+  } else if (currentState == STATE_STEP) {
+    step_stop();
   } else if (currentState == STATE_TIMER) {
     timer_stop();
+  } else if (currentState == STATE_STOPPING) {
+    // Already stopping - nothing to do
+    LOG_D("control_stop() called while already STOPPING");
   }
 }
 
@@ -174,6 +190,12 @@ void control_start_pulse(uint32_t on_ms, uint32_t off_ms) {
 
 void control_start_step(float angle_deg) {
   step_execute(angle_deg);
+}
+
+void control_stop_step() {
+  if (currentState == STATE_STEP) {
+    step_stop();
+  }
 }
 
 void control_start_jog_cw() {

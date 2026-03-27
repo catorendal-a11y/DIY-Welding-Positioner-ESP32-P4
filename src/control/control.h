@@ -39,6 +39,7 @@ void control_start_pulse(uint32_t on_ms, uint32_t off_ms);
 
 // Step mode
 void control_start_step(float angle_deg);
+void control_stop_step();
 void control_reset_step_accumulator();
 float control_get_step_accumulated();   // For UI display
 long control_get_step_count();           // For UI display

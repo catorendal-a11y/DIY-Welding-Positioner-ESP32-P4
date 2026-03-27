@@ -1,86 +1,68 @@
-// TIG Rotator Controller - Jog Mode
-// Motor runs only while button held, stops on release
+// TIG Rotator Controller - Microstep Settings Implementation
+// EEPROM storage for microstep configuration
 
-#include "../control.h"
-#include "../../motor/motor.h"
-#include "../../motor/speed.h"
-#include "../../config.h"
-
-// ───────────────────────────────────────────────────────────────────────────────
-// JOG MODE STATE
-// ───────────────────────────────────────────────────────────────────────────────
-static float jogRPM = 0.5f;  // Default jog speed (workpiece RPM)
+#include "microstep.h"
+#include "../config.h"
+#include <EEPROM.h>
 
 // ───────────────────────────────────────────────────────────────────────────────
-// JOG MODE START
+// STATE
 // ───────────────────────────────────────────────────────────────────────────────
-void jog_start(Direction dir) {
-  // Allow jog from IDLE or while already jogging (direction change)
-  SystemState state = control_get_state();
-  if (state != STATE_IDLE && state != STATE_JOG) return;
+static MicrostepSetting currentMicrostep = MICROSTEP_8;
 
-  LOG_I("Jog mode: %s", (dir == DIR_CW) ? "CW" : "CCW");
-
-  // Set direction
-  speed_set_direction(dir);
-
-  FastAccelStepper* stepper = motor_get_stepper();
-  if (stepper != nullptr) {
-    uint32_t hz = (uint32_t)rpmToStepHz(jogRPM);
-    stepper->setSpeedInHz(hz);
-
-    // Clear any forceStop state from ESTOP
-    stepper->stopMove();
-    delay(10);
-
-    if (dir == DIR_CW) {
-      stepper->runForward();
-    } else {
-      stepper->runBackward();
-    }
-  }
-
-  control_transition_to(STATE_JOG);
-}
+// EEPROM addresses (offset from calibration which uses 0-2)
+#define EEPROM_MICROSTEP_ADDR   10  // Separate from calibration (0-2)
 
 // ───────────────────────────────────────────────────────────────────────────────
-// JOG MODE STOP (immediate)
+// INITIALIZATION
 // ───────────────────────────────────────────────────────────────────────────────
-void jog_stop() {
-  SystemState state = control_get_state();
-  LOG_I("jog_stop() called, state=%s", control_state_name(state));
+void microstep_init() {
+  uint8_t value;
+  EEPROM.get(EEPROM_MICROSTEP_ADDR, value);
 
-  if (state != STATE_JOG) {
-    LOG_W("jog_stop() called but not in JOG state!");
-    return;
-  }
-
-  LOG_I("Jog stop - calling motor_halt()");
-
-  // For jog mode, use forceStop (immediate) instead of smooth deceleration
-  motor_halt();
-
-  // Transition directly to IDLE (now allowed by validation)
-  LOG_I("Transitioning to IDLE");
-  control_transition_to(STATE_IDLE);
-}
-
-// ───────────────────────────────────────────────────────────────────────────────
-// JOG SPEED SET
-// ───────────────────────────────────────────────────────────────────────────────
-void jog_set_speed(float rpm) {
-  jogRPM = constrain(rpm, 0.1f, 2.0f);
-
-  // Update speed if currently jogging
-  if (control_get_state() == STATE_JOG) {
-    FastAccelStepper* stepper = motor_get_stepper();
-    if (stepper != nullptr) {
-      uint32_t hz = (uint32_t)rpmToStepHz(jogRPM);
-      stepper->setSpeedInHz(hz);
-    }
+  // Validate loaded value
+  if (value == 8 || value == 16 || value == 32) {
+    currentMicrostep = (MicrostepSetting)value;
+    LOG_I("Microstep loaded: %s", microstep_get_string());
+  } else {
+    currentMicrostep = MICROSTEP_8;  // Default
+    LOG_I("Microstep: default (1/8)");
   }
 }
 
-float jog_get_speed() {
-  return jogRPM;
+// ───────────────────────────────────────────────────────────────────────────────
+// GET/SET
+// ───────────────────────────────────────────────────────────────────────────────
+MicrostepSetting microstep_get() {
+  return currentMicrostep;
+}
+
+void microstep_set(MicrostepSetting setting) {
+  if (setting == MICROSTEP_8 || setting == MICROSTEP_16 || setting == MICROSTEP_32) {
+    currentMicrostep = setting;
+    LOG_I("Microstep set to: %s", microstep_get_string());
+  }
+}
+
+const char* microstep_get_string() {
+  switch (currentMicrostep) {
+    case MICROSTEP_8:  return "1/8";
+    case MICROSTEP_16: return "1/16";
+    case MICROSTEP_32: return "1/32";
+    default: return "1/8";
+  }
+}
+
+uint32_t microstep_get_steps_per_rev() {
+  // 200 steps per revolution * microstep setting
+  return 200 * (uint32_t)currentMicrostep;
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
+// EEPROM STORAGE
+// ───────────────────────────────────────────────────────────────────────────────
+void microstep_save() {
+  EEPROM.put(EEPROM_MICROSTEP_ADDR, (uint8_t)currentMicrostep);
+  EEPROM.commit();
+  LOG_I("Microstep saved: %s", microstep_get_string());
 }

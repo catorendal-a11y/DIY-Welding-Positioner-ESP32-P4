@@ -28,10 +28,23 @@ void pulse_start(uint32_t on_ms, uint32_t off_ms) {
 
   LOG_I("Pulse mode: ON=%lu OFF=%lu", pulseOnMs, pulseOffMs);
 
-  // Start motor
-  digitalWrite(PIN_ENA, LOW);
-  digitalWrite(PIN_DIR, (speed_get_direction() == DIR_CW) ? HIGH : LOW);
+  // Clear any forceStop state from ESTOP
+  FastAccelStepper* stepper = motor_get_stepper();
+  if (stepper != nullptr) {
+    stepper->stopMove();
+    delay(10);
+  }
+
+  // CRITICAL: Set speed BEFORE starting motor
   speed_apply();
+
+  // Start motor in current direction
+  Direction dir = speed_get_direction();
+  if (dir == DIR_CW) {
+    motor_run_cw();
+  } else {
+    motor_run_ccw();
+  }
 
   control_transition_to(STATE_PULSE);
 }
@@ -51,13 +64,19 @@ void pulse_update() {
     pulseStateStartMs = millis();
 
     if (pulseIsOn) {
-      // Start ON phase
-      digitalWrite(PIN_ENA, LOW);
-      speed_apply();
+      // Start ON phase - run motor in CURRENT direction
+      FastAccelStepper* stepper = motor_get_stepper();
+      if (stepper != nullptr) {
+        Direction dir = speed_get_direction();
+        if (dir == DIR_CW) {
+          stepper->runForward();
+        } else {
+          stepper->runBackward();
+        }
+      }
       LOG_D("Pulse: ON");
     } else {
       // Start OFF phase (motor holds position)
-      // ENA stays LOW to maintain holding torque
       FastAccelStepper* stepper = motor_get_stepper();
       if (stepper != nullptr) stepper->stopMove();
       LOG_D("Pulse: OFF");

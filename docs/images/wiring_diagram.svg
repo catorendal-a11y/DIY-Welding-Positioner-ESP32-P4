@@ -1,6 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-50 0 1550 1060" width="1550" height="1060">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1060" width="1600" height="1060">
 
-  <rect x="-50" width="1600" height="1060" fill="#080C0C"/>
+  <rect width="1600" height="1060" fill="#080C0C"/>
+<g transform="translate(50,0)">
 
   <!-- Title -->
   <text x="725" y="38" font-family="sans-serif" font-size="30" fill="#FFF" text-anchor="middle" font-weight="bold">TIG Rotator — Wiring Diagram</text>
@@ -384,4 +385,5 @@
     <text x="84" y="146" font-family="sans-serif" font-size="15" fill="#CCC">POT wiper / E-STOP signal</text>
   </g>
 
+</g>
 </svg>

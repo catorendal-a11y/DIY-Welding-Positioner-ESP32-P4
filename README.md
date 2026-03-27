@@ -6,7 +6,7 @@
 **Firmware Version:** v0.3.0-beta
 *(See Git tags for release history)*
 
-<img src="docs/images/ui_mockup.svg" width="600" alt="DIY Welding Positioner UI Design">
+<img src="docs/images/ui_all_screens.svg" width="900" alt="DIY Welding Positioner — All UI Screens">
 
 **Open-source ESP32-P4 based welding positioner controller designed for rotary welding tables, pipe welding rotators, and automated fabrication systems.**
 

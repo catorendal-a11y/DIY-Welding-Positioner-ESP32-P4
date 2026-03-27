@@ -1,424 +1,419 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 860" width="1400" height="860">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1100" width="1800" height="1100">
   <defs>
-    <style>
-      .bg      { fill: #060808; }
-      /* Component boxes */
-      .esp-bg  { fill: #071214; }
-      .tb-bg   { fill: #140F06; }
-      .mot-bg  { fill: #061410; }
-      .psu-bg  { fill: #141206; }
-      .est-bg  { fill: #140606; }
-      .pot-bg  { fill: #100614; }
-      .leg-bg  { fill: #0A0A0A; }
-      /* Pin squares */
-      .pin-sq  { fill: #1A1A1A; stroke: #444; stroke-width: 1; }
-      .pin-gnd { fill: #222; stroke: #555; stroke-width: 1; }
-    </style>
-    <marker id="arrowC" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-      <polygon points="0 0, 8 3, 0 6" fill="#00E5FF" opacity="0.7"/>
+    <marker id="arrowC" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#00E5FF"/>
     </marker>
-    <marker id="arrowR" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-      <polygon points="0 0, 8 3, 0 6" fill="#FF1744" opacity="0.7"/>
+    <marker id="arrowR" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#FF5252"/>
     </marker>
-    <marker id="arrowG" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-      <polygon points="0 0, 8 3, 0 6" fill="#555" opacity="0.7"/>
+    <marker id="arrowG" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#666"/>
     </marker>
-    <marker id="arrowT" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-      <polygon points="0 0, 8 3, 0 6" fill="#1DE9B6" opacity="0.7"/>
+    <marker id="arrowT" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#1DE9B6"/>
     </marker>
   </defs>
 
-  <!-- ╔══════════════════════════════════════════════════════════╗ -->
-  <!--                     BACKGROUND                             -->
-  <!-- ╚══════════════════════════════════════════════════════════╝ -->
-  <rect width="1400" height="860" class="bg"/>
+  <!-- Background -->
+  <rect width="1800" height="1100" fill="#080C0C"/>
 
-  <!-- Header -->
-  <text x="700" y="36" font-family="sans-serif" font-size="26" fill="#FFFFFF" text-anchor="middle" font-weight="bold">TIG Rotator — Wiring Diagram</text>
-  <text x="700" y="58" font-family="sans-serif" font-size="14" fill="#555555" text-anchor="middle">ESP32-P4 · TB6600 Stepper Driver · NEMA 23 · 24V DC Power Supply</text>
-  <rect x="100" y="66" width="1200" height="1" fill="#1A2A2A"/>
+  <!-- Title -->
+  <text x="900" y="44" font-family="sans-serif" font-size="34" fill="#FFFFFF" text-anchor="middle" font-weight="bold">TIG Rotator — Wiring Diagram</text>
+  <text x="900" y="70" font-family="sans-serif" font-size="17" fill="#66AAAA" text-anchor="middle">ESP32-P4 · TB6600 Stepper Driver · NEMA 23 · 24V DC Power Supply</text>
+  <rect x="100" y="82" width="1600" height="2" fill="#1A3333"/>
 
-  <!-- ╔══════════════════════════════════════════════════════════╗ -->
-  <!--                    ESP32-P4 BOARD                          -->
-  <!-- ╚══════════════════════════════════════════════════════════╝ -->
-  <g transform="translate(50, 80)">
-    <rect width="310" height="560" rx="12" class="esp-bg" stroke="#00E5FF" stroke-width="2"/>
-    <!-- Header glow bar -->
-    <rect x="0" y="0" width="310" height="44" rx="12" fill="#00E5FF" fill-opacity="0.08"/>
-    <rect x="0" y="33" width="310" height="11" fill="#00E5FF" fill-opacity="0.08"/>
-    <text x="155" y="20" font-family="sans-serif" font-size="15" fill="#00E5FF" text-anchor="middle" font-weight="bold" letter-spacing="1">ESP32-P4</text>
-    <text x="155" y="36" font-family="sans-serif" font-size="10" fill="#446666" text-anchor="middle">Waveshare/Guition 4.3" · JC4880P433</text>
+  <!-- ══════════════════════════════════════════════════════
+       ESP32-P4 BOARD
+       ══════════════════════════════════════════════════ -->
+  <g transform="translate(40, 100)">
+    <rect width="380" height="680" rx="14" fill="#071214" stroke="#00E5FF" stroke-width="2.5"/>
+    <!-- Header band -->
+    <rect x="0" y="0" width="380" height="56" rx="14" fill="#00E5FF" fill-opacity="0.12"/>
+    <rect x="0" y="42" width="380" height="14" fill="#00E5FF" fill-opacity="0.12"/>
+    <text x="190" y="26" font-family="sans-serif" font-size="20" fill="#00E5FF" text-anchor="middle" font-weight="bold" letter-spacing="2">ESP32-P4</text>
+    <text x="190" y="48" font-family="sans-serif" font-size="13" fill="#669999" text-anchor="middle">Waveshare / Guition JC4880P433  4.3"</text>
 
-    <!-- 2×13 Header label -->
-    <text x="155" y="64" font-family="sans-serif" font-size="10" fill="#334444" text-anchor="middle" font-weight="bold" letter-spacing="1">2×13 GPIO HEADER</text>
-    <rect x="65" y="70" width="180" height="470" rx="4" fill="#040A0A" stroke="#1A2A2A" stroke-width="1"/>
+    <!-- Header block label -->
+    <text x="190" y="78" font-family="sans-serif" font-size="13" fill="#335555" text-anchor="middle" font-weight="bold" letter-spacing="1">2 × 13  GPIO HEADER</text>
+    <rect x="70" y="84" width="240" height="574" rx="6" fill="#040A0A" stroke="#162626" stroke-width="1"/>
 
-    <!-- Pin rows: Left col x=75 (14px sq), Right col x=221 (14px sq) -->
-    <!-- Y start = 86, step = 35 -->
+    <!-- Helper macro: each row Y = 100 + n*42, pin-sq = 18px, step 42 -->
 
-    <!-- ROW 1: 3V3 | 5V -->
-    <rect x="75"  y="86"  width="14" height="14" class="pin-sq"/>
-    <text x="95"  y="99"  font-family="monospace" font-size="11" fill="#FF5252">3V3</text>
-    <text x="221" y="99"  font-family="monospace" font-size="11" fill="#FF5252" text-anchor="end">5V</text>
-    <rect x="225" y="86"  width="14" height="14" class="pin-sq"/>
+    <!-- ROW 1 — 3V3 | 5V -->
+    <rect x="80"  y="100" width="18" height="18" rx="3" fill="#1A0606" stroke="#FF5252" stroke-width="1.5"/>
+    <text x="104" y="114" font-family="monospace" font-size="14" fill="#FF7070">3V3</text>
+    <text x="275" y="114" font-family="monospace" font-size="14" fill="#FF7070" text-anchor="end">5V</text>
+    <rect x="278" y="100" width="18" height="18" rx="3" fill="#1A0606" stroke="#FF5252" stroke-width="1.5"/>
 
-    <!-- ROW 2: 3V3 | 5V -->
-    <rect x="75"  y="121" width="14" height="14" class="pin-sq"/>
-    <text x="95"  y="134" font-family="monospace" font-size="11" fill="#FF5252">3V3</text>
-    <text x="221" y="134" font-family="monospace" font-size="11" fill="#FF5252" text-anchor="end">5V</text>
-    <rect x="225" y="121" width="14" height="14" class="pin-sq"/>
+    <!-- ROW 2 — 3V3 | 5V -->
+    <rect x="80"  y="142" width="18" height="18" rx="3" fill="#1A0606" stroke="#FF5252" stroke-width="1.5"/>
+    <text x="104" y="156" font-family="monospace" font-size="14" fill="#FF7070">3V3</text>
+    <text x="275" y="156" font-family="monospace" font-size="14" fill="#FF7070" text-anchor="end">5V</text>
+    <rect x="278" y="142" width="18" height="18" rx="3" fill="#1A0606" stroke="#FF5252" stroke-width="1.5"/>
 
-    <!-- ROW 3: GND | GND -->
-    <rect x="75"  y="156" width="14" height="14" class="pin-gnd"/>
-    <text x="95"  y="169" font-family="monospace" font-size="11" fill="#888">GND</text>
-    <text x="221" y="169" font-family="monospace" font-size="11" fill="#888" text-anchor="end">GND</text>
-    <rect x="225" y="156" width="14" height="14" class="pin-gnd"/>
+    <!-- ROW 3 — GND | GND -->
+    <rect x="80"  y="184" width="18" height="18" rx="3" fill="#1A1A1A" stroke="#666" stroke-width="1.5"/>
+    <text x="104" y="198" font-family="monospace" font-size="14" fill="#AAAAAA">GND</text>
+    <text x="275" y="198" font-family="monospace" font-size="14" fill="#AAAAAA" text-anchor="end">GND</text>
+    <rect x="278" y="184" width="18" height="18" rx="3" fill="#1A1A1A" stroke="#666" stroke-width="1.5"/>
 
-    <!-- ROW 4: GPIO52 (ENA) | GPIO33 (E-STOP) -->
-    <rect x="75"  y="191" width="14" height="14" class="pin-sq" stroke="#00E5FF" stroke-width="1.5"/>
-    <text x="95"  y="204" font-family="monospace" font-size="11" fill="#8BC34A">GPIO52</text>
-    <text x="221" y="204" font-family="monospace" font-size="11" fill="#FF5252" text-anchor="end">GPIO33</text>
-    <rect x="225" y="191" width="14" height="14" class="pin-sq" stroke="#FF1744" stroke-width="1.5"/>
+    <!-- ROW 4 — GPIO52 ENA | GPIO33 E-STOP -->
+    <rect x="80"  y="226" width="18" height="18" rx="3" fill="#061214" stroke="#00E5FF" stroke-width="2"/>
+    <text x="104" y="240" font-family="monospace" font-size="14" fill="#00DDFF">GPIO52</text>
+    <text x="275" y="240" font-family="monospace" font-size="14" fill="#FF5252" text-anchor="end">GPIO33</text>
+    <rect x="278" y="226" width="18" height="18" rx="3" fill="#140606" stroke="#FF1744" stroke-width="2"/>
 
-    <!-- ROW 5: GPIO51 (DIR) | GPIO31 -->
-    <rect x="75"  y="226" width="14" height="14" class="pin-sq" stroke="#00E5FF" stroke-width="1.5"/>
-    <text x="95"  y="239" font-family="monospace" font-size="11" fill="#8BC34A">GPIO51</text>
-    <text x="221" y="239" font-family="monospace" font-size="11" fill="#666" text-anchor="end">GPIO31</text>
-    <rect x="225" y="226" width="14" height="14" class="pin-sq"/>
+    <!-- ROW 5 — GPIO51 DIR | GPIO31 -->
+    <rect x="80"  y="268" width="18" height="18" rx="3" fill="#061214" stroke="#00E5FF" stroke-width="2"/>
+    <text x="104" y="282" font-family="monospace" font-size="14" fill="#00DDFF">GPIO51</text>
+    <text x="275" y="282" font-family="monospace" font-size="14" fill="#555555" text-anchor="end">GPIO31</text>
+    <rect x="278" y="268" width="18" height="18" rx="3" fill="#1A1A1A" stroke="#444" stroke-width="1"/>
 
-    <!-- ROW 6: GPIO50 (STEP) | GPIO30 -->
-    <rect x="75"  y="261" width="14" height="14" class="pin-sq" stroke="#00E5FF" stroke-width="1.5"/>
-    <text x="95"  y="274" font-family="monospace" font-size="11" fill="#8BC34A">GPIO50</text>
-    <text x="221" y="274" font-family="monospace" font-size="11" fill="#666" text-anchor="end">GPIO30</text>
-    <rect x="225" y="261" width="14" height="14" class="pin-sq"/>
+    <!-- ROW 6 — GPIO50 STEP | GPIO30 -->
+    <rect x="80"  y="310" width="18" height="18" rx="3" fill="#061214" stroke="#00E5FF" stroke-width="2"/>
+    <text x="104" y="324" font-family="monospace" font-size="14" fill="#00DDFF">GPIO50</text>
+    <text x="275" y="324" font-family="monospace" font-size="14" fill="#555555" text-anchor="end">GPIO30</text>
+    <rect x="278" y="310" width="18" height="18" rx="3" fill="#1A1A1A" stroke="#444" stroke-width="1"/>
 
-    <!-- ROW 7: GPIO49 (POT) | GPIO29 -->
-    <rect x="75"  y="296" width="14" height="14" class="pin-sq" stroke="#CC44FF" stroke-width="1.5"/>
-    <text x="95"  y="309" font-family="monospace" font-size="11" fill="#CC88FF">GPIO49</text>
-    <text x="221" y="309" font-family="monospace" font-size="11" fill="#666" text-anchor="end">GPIO29</text>
-    <rect x="225" y="296" width="14" height="14" class="pin-sq"/>
+    <!-- ROW 7 — GPIO49 POT | GPIO29 -->
+    <rect x="80"  y="352" width="18" height="18" rx="3" fill="#120614" stroke="#CC44FF" stroke-width="2"/>
+    <text x="104" y="366" font-family="monospace" font-size="14" fill="#DD99FF">GPIO49</text>
+    <text x="275" y="366" font-family="monospace" font-size="14" fill="#555555" text-anchor="end">GPIO29</text>
+    <rect x="278" y="352" width="18" height="18" rx="3" fill="#1A1A1A" stroke="#444" stroke-width="1"/>
 
-    <!-- ROW 8: GPIO35 (spare) | GND -->
-    <rect x="75"  y="331" width="14" height="14" class="pin-sq"/>
-    <text x="95"  y="344" font-family="monospace" font-size="11" fill="#666">GPIO35</text>
-    <text x="221" y="344" font-family="monospace" font-size="11" fill="#888" text-anchor="end">GND</text>
-    <rect x="225" y="331" width="14" height="14" class="pin-gnd"/>
+    <!-- ROW 8 — GPIO35 | GND -->
+    <rect x="80"  y="394" width="18" height="18" rx="3" fill="#1A1A1A" stroke="#444" stroke-width="1"/>
+    <text x="104" y="408" font-family="monospace" font-size="14" fill="#555555">GPIO35</text>
+    <text x="275" y="408" font-family="monospace" font-size="14" fill="#AAAAAA" text-anchor="end">GND</text>
+    <rect x="278" y="394" width="18" height="18" rx="3" fill="#1A1A1A" stroke="#666" stroke-width="1.5"/>
 
-    <!-- ROW 9: GPIO34 (E-STOP) -->
-    <rect x="75"  y="366" width="14" height="14" class="pin-sq" stroke="#FF1744" stroke-width="1.5"/>
-    <text x="95"  y="379" font-family="monospace" font-size="11" fill="#FF5252">GPIO34</text>
-    <text x="221" y="379" font-family="monospace" font-size="11" fill="#888" text-anchor="end">ESP_3V3</text>
-    <rect x="225" y="366" width="14" height="14" class="pin-sq"/>
+    <!-- ROW 9 — GPIO34 E-STOP | ESP_3V3 -->
+    <rect x="80"  y="436" width="18" height="18" rx="3" fill="#140606" stroke="#FF1744" stroke-width="2"/>
+    <text x="104" y="450" font-family="monospace" font-size="14" fill="#FF5252">GPIO34</text>
+    <text x="275" y="450" font-family="monospace" font-size="14" fill="#666666" text-anchor="end">ESP_3V3</text>
+    <rect x="278" y="436" width="18" height="18" rx="3" fill="#1A1A1A" stroke="#444" stroke-width="1"/>
 
-    <!-- ROW 10-13: dimmed / future use -->
-    <rect x="75"  y="401" width="14" height="14" class="pin-sq"/><text x="95"  y="414" font-family="monospace" font-size="11" fill="#333">GPIO32</text>
-    <text x="221" y="414" font-family="monospace" font-size="11" fill="#333" text-anchor="end">C6_RX</text><rect x="225" y="401" width="14" height="14" class="pin-sq"/>
-    <rect x="75"  y="436" width="14" height="14" class="pin-sq"/><text x="95"  y="449" font-family="monospace" font-size="11" fill="#333">GPIO28</text>
-    <text x="221" y="449" font-family="monospace" font-size="11" fill="#333" text-anchor="end">C6_TX</text><rect x="225" y="436" width="14" height="14" class="pin-sq"/>
-    <rect x="75"  y="471" width="14" height="14" class="pin-sq"/><text x="95"  y="484" font-family="monospace" font-size="11" fill="#333">I2C_SDA</text>
-    <text x="221" y="484" font-family="monospace" font-size="11" fill="#333" text-anchor="end">C6_IO9</text><rect x="225" y="471" width="14" height="14" class="pin-sq"/>
-    <rect x="75"  y="506" width="14" height="14" class="pin-sq"/><text x="95"  y="519" font-family="monospace" font-size="11" fill="#333">I2C_SCL</text>
-    <text x="221" y="519" font-family="monospace" font-size="11" fill="#333" text-anchor="end">C6_EN</text><rect x="225" y="506" width="14" height="14" class="pin-sq"/>
+    <!-- ROW 10-13 (future / dimmed) -->
+    <rect x="80"  y="478" width="18" height="18" rx="3" fill="#111" stroke="#333" stroke-width="1"/>
+    <text x="104" y="492" font-family="monospace" font-size="14" fill="#333333">GPIO32</text>
+    <text x="275" y="492" font-family="monospace" font-size="14" fill="#333333" text-anchor="end">C6_RX</text>
+    <rect x="278" y="478" width="18" height="18" rx="3" fill="#111" stroke="#333" stroke-width="1"/>
 
-    <!-- USB-C indicator at bottom -->
-    <rect x="115" y="545" width="80" height="6" rx="3" fill="#334444"/>
-    <text x="155" y="558" font-family="sans-serif" font-size="10" fill="#445555" text-anchor="middle">USB-C  Programming / Serial</text>
+    <rect x="80"  y="520" width="18" height="18" rx="3" fill="#111" stroke="#333" stroke-width="1"/>
+    <text x="104" y="534" font-family="monospace" font-size="14" fill="#333333">GPIO28</text>
+    <text x="275" y="534" font-family="monospace" font-size="14" fill="#333333" text-anchor="end">C6_TX</text>
+    <rect x="278" y="520" width="18" height="18" rx="3" fill="#111" stroke="#333" stroke-width="1"/>
+
+    <rect x="80"  y="562" width="18" height="18" rx="3" fill="#111" stroke="#333" stroke-width="1"/>
+    <text x="104" y="576" font-family="monospace" font-size="14" fill="#333333">I2C_SDA</text>
+    <text x="275" y="576" font-family="monospace" font-size="14" fill="#333333" text-anchor="end">C6_IO9</text>
+    <rect x="278" y="562" width="18" height="18" rx="3" fill="#111" stroke="#333" stroke-width="1"/>
+
+    <rect x="80"  y="604" width="18" height="18" rx="3" fill="#111" stroke="#333" stroke-width="1"/>
+    <text x="104" y="618" font-family="monospace" font-size="14" fill="#333333">I2C_SCL</text>
+    <text x="275" y="618" font-family="monospace" font-size="14" fill="#333333" text-anchor="end">C6_EN</text>
+    <rect x="278" y="604" width="18" height="18" rx="3" fill="#111" stroke="#333" stroke-width="1"/>
+
+    <!-- USB-C -->
+    <rect x="140" y="652" width="100" height="8" rx="4" fill="#1A3333"/>
+    <text x="190" y="672" font-family="sans-serif" font-size="12" fill="#446666" text-anchor="middle">USB-C  (Programming / Serial)</text>
   </g>
 
-  <!-- Pin function callouts (right of ESP box) -->
-  <text x="375" y="183" font-family="sans-serif" font-size="12" fill="#00E5FF" font-weight="bold">ENA</text>
-  <text x="375" y="218" font-family="sans-serif" font-size="12" fill="#00E5FF" font-weight="bold">DIR</text>
-  <text x="375" y="253" font-family="sans-serif" font-size="12" fill="#00E5FF" font-weight="bold">STEP</text>
-  <text x="375" y="388" font-family="sans-serif" font-size="12" fill="#FF1744" font-weight="bold">E-STOP IN</text>
+  <!-- Pin function labels RIGHT of ESP -->
+  <text x="434" y="245" font-family="sans-serif" font-size="15" fill="#00E5FF" font-weight="bold">ENA</text>
+  <text x="434" y="287" font-family="sans-serif" font-size="15" fill="#00E5FF" font-weight="bold">DIR</text>
+  <text x="434" y="329" font-family="sans-serif" font-size="15" fill="#00E5FF" font-weight="bold">STEP</text>
+  <text x="434" y="455" font-family="sans-serif" font-size="15" fill="#FF5252" font-weight="bold">E-STOP</text>
 
-  <!-- Left callouts -->
-  <text x="42" y="288" font-family="sans-serif" font-size="12" fill="#CC88FF" font-weight="bold" text-anchor="end">POT</text>
+  <!-- Pin function labels LEFT of ESP -->
+  <text x="32"  y="371" font-family="sans-serif" font-size="15" fill="#DD99FF" font-weight="bold" text-anchor="end">POT</text>
 
-  <!-- ╔══════════════════════════════════════════════════════════╗ -->
-  <!--                    TB6600 DRIVER                           -->
-  <!-- ╚══════════════════════════════════════════════════════════╝ -->
-  <g transform="translate(540, 80)">
-    <rect width="210" height="470" rx="12" class="tb-bg" stroke="#FF9100" stroke-width="2"/>
-    <rect x="0" y="0" width="210" height="44" rx="12" fill="#FF9100" fill-opacity="0.08"/>
-    <rect x="0" y="33" width="210" height="11" fill="#FF9100" fill-opacity="0.08"/>
-    <text x="105" y="20" font-family="sans-serif" font-size="15" fill="#FF9100" text-anchor="middle" font-weight="bold" letter-spacing="1">TB6600</text>
-    <text x="105" y="36" font-family="sans-serif" font-size="10" fill="#664422" text-anchor="middle">Microstep Stepper Driver</text>
+  <!-- ══════════════════════════════════════════════════════
+       TB6600 DRIVER
+       ══════════════════════════════════════════════════ -->
+  <g transform="translate(640, 100)">
+    <rect width="280" height="580" rx="14" fill="#140F06" stroke="#FF9100" stroke-width="2.5"/>
+    <rect x="0" y="0" width="280" height="56" rx="14" fill="#FF9100" fill-opacity="0.12"/>
+    <rect x="0" y="42" width="280" height="14" fill="#FF9100" fill-opacity="0.12"/>
+    <text x="140" y="26" font-family="sans-serif" font-size="20" fill="#FF9100" text-anchor="middle" font-weight="bold" letter-spacing="2">TB6600</text>
+    <text x="140" y="48" font-family="sans-serif" font-size="13" fill="#996633" text-anchor="middle">Microstep Stepper Driver</text>
 
     <!-- SIGNAL section -->
-    <text x="105" y="64" font-family="sans-serif" font-size="10" fill="#664422" text-anchor="middle" letter-spacing="1">SIGNAL PINS</text>
+    <text x="140" y="76" font-family="sans-serif" font-size="13" fill="#886633" text-anchor="middle" font-weight="bold" letter-spacing="1">SIGNAL PINS</text>
+
     <!-- ENA- -->
-    <rect x="0"   y="72"  width="18" height="16" class="pin-sq" rx="3"/>
-    <text x="24"  y="84"  font-family="monospace" font-size="12" fill="#AAA">ENA−</text>
+    <rect x="12" y="86"  width="20" height="20" rx="4" fill="#1A1A1A" stroke="#555" stroke-width="1.5"/>
+    <text x="40" y="101" font-family="monospace" font-size="15" fill="#888888">ENA −</text>
     <!-- ENA+ -->
-    <rect x="0"   y="95"  width="18" height="16" class="pin-sq" rx="3" stroke="#00E5FF" stroke-width="1.5"/>
-    <text x="24"  y="107" font-family="monospace" font-size="12" fill="#00E5FF">ENA+</text>
+    <rect x="12" y="116" width="20" height="20" rx="4" fill="#061214" stroke="#00E5FF" stroke-width="2"/>
+    <text x="40" y="131" font-family="monospace" font-size="15" fill="#00E5FF">ENA +</text>
     <!-- DIR- -->
-    <rect x="0"   y="118" width="18" height="16" class="pin-sq" rx="3"/>
-    <text x="24"  y="130" font-family="monospace" font-size="12" fill="#AAA">DIR−</text>
+    <rect x="12" y="146" width="20" height="20" rx="4" fill="#1A1A1A" stroke="#555" stroke-width="1.5"/>
+    <text x="40" y="161" font-family="monospace" font-size="15" fill="#888888">DIR −</text>
     <!-- DIR+ -->
-    <rect x="0"   y="141" width="18" height="16" class="pin-sq" rx="3" stroke="#00E5FF" stroke-width="1.5"/>
-    <text x="24"  y="153" font-family="monospace" font-size="12" fill="#00E5FF">DIR+</text>
+    <rect x="12" y="176" width="20" height="20" rx="4" fill="#061214" stroke="#00E5FF" stroke-width="2"/>
+    <text x="40" y="191" font-family="monospace" font-size="15" fill="#00E5FF">DIR +</text>
     <!-- PUL- -->
-    <rect x="0"   y="164" width="18" height="16" class="pin-sq" rx="3"/>
-    <text x="24"  y="176" font-family="monospace" font-size="12" fill="#AAA">PUL−</text>
+    <rect x="12" y="206" width="20" height="20" rx="4" fill="#1A1A1A" stroke="#555" stroke-width="1.5"/>
+    <text x="40" y="221" font-family="monospace" font-size="15" fill="#888888">PUL −</text>
     <!-- PUL+ -->
-    <rect x="0"   y="187" width="18" height="16" class="pin-sq" rx="3" stroke="#00E5FF" stroke-width="1.5"/>
-    <text x="24"  y="199" font-family="monospace" font-size="12" fill="#00E5FF">PUL+</text>
+    <rect x="12" y="236" width="20" height="20" rx="4" fill="#061214" stroke="#00E5FF" stroke-width="2"/>
+    <text x="40" y="251" font-family="monospace" font-size="15" fill="#00E5FF">PUL +</text>
 
     <!-- Divider -->
-    <rect x="10" y="215" width="190" height="1" fill="#2A1A0A"/>
-    <text x="105" y="230" font-family="sans-serif" font-size="10" fill="#664422" text-anchor="middle" letter-spacing="1">MOTOR PINS</text>
+    <rect x="16" y="270" width="248" height="2" fill="#2A1A0A"/>
+    <text x="140" y="292" font-family="sans-serif" font-size="13" fill="#886633" text-anchor="middle" font-weight="bold" letter-spacing="1">MOTOR COIL PINS</text>
 
     <!-- A+ A- B+ B- -->
-    <rect x="0"   y="238" width="18" height="16" class="pin-sq" rx="3" stroke="#F44336" stroke-width="1.5"/>
-    <text x="24"  y="250" font-family="monospace" font-size="12" fill="#F44336">A+</text>
-    <rect x="0"   y="261" width="18" height="16" class="pin-sq" rx="3"/>
-    <text x="24"  y="273" font-family="monospace" font-size="12" fill="#AAA">A−</text>
-    <rect x="0"   y="284" width="18" height="16" class="pin-sq" rx="3" stroke="#2196F3" stroke-width="1.5"/>
-    <text x="24"  y="296" font-family="monospace" font-size="12" fill="#2196F3">B+</text>
-    <rect x="0"   y="307" width="18" height="16" class="pin-sq" rx="3"/>
-    <text x="24"  y="319" font-family="monospace" font-size="12" fill="#AAA">B−</text>
+    <rect x="12" y="302" width="20" height="20" rx="4" fill="#180404" stroke="#F44336" stroke-width="2"/>
+    <text x="40" y="317" font-family="monospace" font-size="15" fill="#F44336">A +</text>
+    <rect x="12" y="332" width="20" height="20" rx="4" fill="#1A1A1A" stroke="#555" stroke-width="1.5"/>
+    <text x="40" y="347" font-family="monospace" font-size="15" fill="#AAAAAA">A −</text>
+    <rect x="12" y="362" width="20" height="20" rx="4" fill="#040C18" stroke="#2196F3" stroke-width="2"/>
+    <text x="40" y="377" font-family="monospace" font-size="15" fill="#2196F3">B +</text>
+    <rect x="12" y="392" width="20" height="20" rx="4" fill="#1A1A1A" stroke="#555" stroke-width="1.5"/>
+    <text x="40" y="407" font-family="monospace" font-size="15" fill="#AAAAAA">B −</text>
 
     <!-- Divider -->
-    <rect x="10" y="335" width="190" height="1" fill="#2A1A0A"/>
-    <text x="105" y="350" font-family="sans-serif" font-size="10" fill="#664422" text-anchor="middle" letter-spacing="1">POWER</text>
+    <rect x="16" y="426" width="248" height="2" fill="#2A1A0A"/>
+    <text x="140" y="448" font-family="sans-serif" font-size="13" fill="#886633" text-anchor="middle" font-weight="bold" letter-spacing="1">POWER</text>
 
     <!-- VCC GND -->
-    <rect x="0"   y="357" width="18" height="16" class="pin-sq" rx="3" stroke="#FF1744" stroke-width="1.5"/>
-    <text x="24"  y="369" font-family="monospace" font-size="12" fill="#FF5252">VCC (24V)</text>
-    <rect x="0"   y="380" width="18" height="16" class="pin-sq" rx="3"/>
-    <text x="24"  y="392" font-family="monospace" font-size="12" fill="#888">GND</text>
+    <rect x="12" y="456" width="20" height="20" rx="4" fill="#140404" stroke="#FF1744" stroke-width="2"/>
+    <text x="40" y="471" font-family="monospace" font-size="15" fill="#FF5252">VCC  (24V)</text>
+    <rect x="12" y="486" width="20" height="20" rx="4" fill="#1A1A1A" stroke="#666" stroke-width="1.5"/>
+    <text x="40" y="501" font-family="monospace" font-size="15" fill="#AAAAAA">GND</text>
 
     <!-- DIP Switch -->
-    <rect x="20" y="415" width="170" height="46" rx="6" fill="#0A0500" stroke="#443300" stroke-width="1"/>
-    <text x="105" y="429" font-family="sans-serif" font-size="10" fill="#664422" text-anchor="middle" letter-spacing="1">DIP SWITCH</text>
-    <text x="105" y="445" font-family="sans-serif" font-size="13" fill="#FF9100" text-anchor="middle" font-weight="bold">1/8 step · 3.0A peak</text>
-    <text x="105" y="458" font-family="monospace" font-size="9" fill="#443300" text-anchor="middle">OFF OFF ON OFF ON OFF</text>
+    <rect x="20" y="520" width="240" height="54" rx="8" fill="#0A0500" stroke="#553300" stroke-width="1.5"/>
+    <text x="140" y="538" font-family="sans-serif" font-size="13" fill="#886633" text-anchor="middle" letter-spacing="1">DIP SWITCH  SETTING</text>
+    <text x="140" y="558" font-family="sans-serif" font-size="16" fill="#FF9100" text-anchor="middle" font-weight="bold">1/8 step  ·  3.0A peak</text>
   </g>
 
-  <!-- ╔══════════════════════════════════════════════════════════╗ -->
-  <!--                    NEMA 23 MOTOR                           -->
-  <!-- ╚══════════════════════════════════════════════════════════╝ -->
-  <g transform="translate(900, 80)">
-    <rect width="240" height="310" rx="12" class="mot-bg" stroke="#1DE9B6" stroke-width="2"/>
-    <rect x="0" y="0" width="240" height="44" rx="12" fill="#1DE9B6" fill-opacity="0.08"/>
-    <rect x="0" y="33" width="240" height="11" fill="#1DE9B6" fill-opacity="0.08"/>
-    <text x="120" y="20" font-family="sans-serif" font-size="15" fill="#1DE9B6" text-anchor="middle" font-weight="bold" letter-spacing="1">NEMA 23</text>
-    <text x="120" y="36" font-family="sans-serif" font-size="10" fill="#226644" text-anchor="middle">3.0 Nm Bipolar Stepper Motor</text>
+  <!-- ══════════════════════════════════════════════════════
+       NEMA 23 MOTOR
+       ══════════════════════════════════════════════════ -->
+  <g transform="translate(1100, 90)">
+    <rect width="300" height="380" rx="14" fill="#061410" stroke="#1DE9B6" stroke-width="2.5"/>
+    <rect x="0" y="0" width="300" height="56" rx="14" fill="#1DE9B6" fill-opacity="0.10"/>
+    <rect x="0" y="42" width="300" height="14" fill="#1DE9B6" fill-opacity="0.10"/>
+    <text x="150" y="26" font-family="sans-serif" font-size="20" fill="#1DE9B6" text-anchor="middle" font-weight="bold" letter-spacing="2">NEMA 23</text>
+    <text x="150" y="48" font-family="sans-serif" font-size="13" fill="#226644" text-anchor="middle">3.0 Nm Bipolar Stepper Motor</text>
 
-    <!-- Motor symbol -->
-    <circle cx="120" cy="130" r="55" fill="none" stroke="#1DE9B6" stroke-width="2"/>
-    <circle cx="120" cy="130" r="14" fill="#1DE9B6" fill-opacity="0.15" stroke="#1DE9B6" stroke-width="2"/>
-    <text x="120" y="135" font-family="sans-serif" font-size="12" fill="#1DE9B6" text-anchor="middle">M</text>
+    <!-- Motor circle symbol -->
+    <circle cx="150" cy="170" r="68" fill="none" stroke="#1DE9B6" stroke-width="2.5"/>
+    <circle cx="150" cy="170" r="20" fill="#0C201A" stroke="#1DE9B6" stroke-width="2"/>
+    <text x="150" y="176" font-family="sans-serif" font-size="16" fill="#1DE9B6" text-anchor="middle" font-weight="bold">M</text>
+    <!-- shaft -->
+    <rect x="210" y="163" width="38" height="14" rx="5" fill="#1DE9B6" fill-opacity="0.4"/>
 
-    <!-- Shaft -->
-    <rect x="167" y="126" width="28" height="8" rx="3" fill="#1DE9B6" fill-opacity="0.4"/>
+    <!-- Coil lead pins LEFT -->
+    <rect x="0"  y="120" width="20" height="20" rx="4" fill="#180404" stroke="#F44336" stroke-width="2"/>
+    <text x="-8" y="135" font-family="monospace" font-size="14" fill="#F44336" text-anchor="end">A+</text>
+    <rect x="0"  y="152" width="20" height="20" rx="4" fill="#1A1A1A" stroke="#666" stroke-width="1.5"/>
+    <text x="-8" y="167" font-family="monospace" font-size="14" fill="#AAAAAA" text-anchor="end">A−</text>
+    <rect x="0"  y="184" width="20" height="20" rx="4" fill="#040C18" stroke="#2196F3" stroke-width="2"/>
+    <text x="-8" y="199" font-family="monospace" font-size="14" fill="#2196F3" text-anchor="end">B+</text>
+    <rect x="0"  y="216" width="20" height="20" rx="4" fill="#1A1A1A" stroke="#666" stroke-width="1.5"/>
+    <text x="-8" y="231" font-family="monospace" font-size="14" fill="#AAAAAA" text-anchor="end">B−</text>
 
-    <!-- Coil lead pins (left side) -->
-    <rect x="0" y="95"  width="16" height="14" class="pin-sq" rx="2" stroke="#F44336" stroke-width="1.5"/>
-    <text x="-6" y="107" font-family="monospace" font-size="11" fill="#F44336" text-anchor="end">A+</text>
-
-    <rect x="0" y="120" width="16" height="14" class="pin-sq" rx="2"/>
-    <text x="-6" y="132" font-family="monospace" font-size="11" fill="#AAA" text-anchor="end">A−</text>
-
-    <rect x="0" y="145" width="16" height="14" class="pin-sq" rx="2" stroke="#2196F3" stroke-width="1.5"/>
-    <text x="-6" y="157" font-family="monospace" font-size="11" fill="#2196F3" text-anchor="end">B+</text>
-
-    <rect x="0" y="170" width="16" height="14" class="pin-sq" rx="2"/>
-    <text x="-6" y="182" font-family="monospace" font-size="11" fill="#AAA" text-anchor="end">B−</text>
-
-    <!-- specs -->
-    <text x="120" y="210" font-family="sans-serif" font-size="12" fill="#226644" text-anchor="middle">200 steps/rev (1.8°/step)</text>
-    <text x="120" y="230" font-family="sans-serif" font-size="12" fill="#226644" text-anchor="middle">4-wire bipolar</text>
+    <!-- Specs -->
+    <text x="150" y="272" font-family="sans-serif" font-size="14" fill="#337755" text-anchor="middle">200 steps / rev  (1.8° per step)</text>
+    <text x="150" y="294" font-family="sans-serif" font-size="14" fill="#337755" text-anchor="middle">4-wire bipolar</text>
 
     <!-- Gear box -->
-    <rect x="30" y="250" width="180" height="50" rx="8" fill="#040A08" stroke="#1A4433" stroke-width="1"/>
-    <text x="120" y="268" font-family="sans-serif" font-size="11" fill="#1DE9B6" text-anchor="middle" font-weight="bold">1:108 GEAR REDUCTION</text>
-    <text x="120" y="284" font-family="sans-serif" font-size="11" fill="#226644" text-anchor="middle">Output: 0.1 – 5.0 RPM</text>
-    <text x="120" y="298" font-family="sans-serif" font-size="11" fill="#226644" text-anchor="middle">→ Welding Table / Positioner</text>
+    <rect x="24" y="316" width="252" height="56" rx="10" fill="#040A08" stroke="#1A4433" stroke-width="1.5"/>
+    <text x="150" y="336" font-family="sans-serif" font-size="14" fill="#1DE9B6" text-anchor="middle" font-weight="bold">1 : 108  GEAR REDUCTION</text>
+    <text x="150" y="356" font-family="sans-serif" font-size="13" fill="#337755" text-anchor="middle">Output: 0.1 – 5.0 RPM → Welding Table</text>
   </g>
 
-  <!-- ╔══════════════════════════════════════════════════════════╗ -->
-  <!--                     24V PSU                                -->
-  <!-- ╚══════════════════════════════════════════════════════════╝ -->
-  <g transform="translate(900, 440)">
-    <rect width="240" height="120" rx="12" class="psu-bg" stroke="#FFD600" stroke-width="2"/>
-    <rect x="0" y="0" width="240" height="44" rx="12" fill="#FFD600" fill-opacity="0.08"/>
-    <rect x="0" y="33" width="240" height="11" fill="#FFD600" fill-opacity="0.08"/>
-    <text x="120" y="20" font-family="sans-serif" font-size="15" fill="#FFD600" text-anchor="middle" font-weight="bold" letter-spacing="1">24V DC PSU</text>
-    <text x="120" y="36" font-family="sans-serif" font-size="10" fill="#555522" text-anchor="middle">100W+ · Min 4.5A</text>
+  <!-- ══════════════════════════════════════════════════════
+       24V PSU
+       ══════════════════════════════════════════════════ -->
+  <g transform="translate(1100, 530)">
+    <rect width="300" height="150" rx="14" fill="#141206" stroke="#FFD600" stroke-width="2.5"/>
+    <rect x="0" y="0" width="300" height="56" rx="14" fill="#FFD600" fill-opacity="0.10"/>
+    <rect x="0" y="42" width="300" height="14" fill="#FFD600" fill-opacity="0.10"/>
+    <text x="150" y="26" font-family="sans-serif" font-size="20" fill="#FFD600" text-anchor="middle" font-weight="bold" letter-spacing="2">24V  DC  PSU</text>
+    <text x="150" y="48" font-family="sans-serif" font-size="13" fill="#665522" text-anchor="middle">Min 100W · 4.5A minimum</text>
 
     <!-- Terminals -->
-    <rect x="30" y="60" width="60" height="40" rx="6" fill="#100800" stroke="#FF5252" stroke-width="1.5"/>
-    <text x="60" y="79" font-family="sans-serif" font-size="14" fill="#FF5252" text-anchor="middle" font-weight="bold">V+</text>
-    <text x="60" y="93" font-family="sans-serif" font-size="11" fill="#FF5252" text-anchor="middle">24V</text>
+    <rect x="30"  y="72" width="90" height="56" rx="8" fill="#100800" stroke="#FF5252" stroke-width="2"/>
+    <text x="75"  y="97" font-family="sans-serif" font-size="18" fill="#FF5252" text-anchor="middle" font-weight="bold">V+</text>
+    <text x="75"  y="116" font-family="sans-serif" font-size="13" fill="#FF5252" text-anchor="middle">24V</text>
 
-    <rect x="150" y="60" width="60" height="40" rx="6" fill="#080808" stroke="#555" stroke-width="1.5"/>
-    <text x="180" y="79" font-family="sans-serif" font-size="14" fill="#888" text-anchor="middle" font-weight="bold">V−</text>
-    <text x="180" y="93" font-family="sans-serif" font-size="11" fill="#666" text-anchor="middle">GND</text>
+    <rect x="180" y="72" width="90" height="56" rx="8" fill="#0A0A0A" stroke="#666" stroke-width="2"/>
+    <text x="225" y="97" font-family="sans-serif" font-size="18" fill="#AAAAAA" text-anchor="middle" font-weight="bold">V−</text>
+    <text x="225" y="116" font-family="sans-serif" font-size="13" fill="#888888" text-anchor="middle">GND</text>
   </g>
 
-  <!-- ╔══════════════════════════════════════════════════════════╗ -->
-  <!--                    E-STOP BUTTON                           -->
-  <!-- ╚══════════════════════════════════════════════════════════╝ -->
-  <g transform="translate(50, 700)">
-    <rect width="170" height="130" rx="12" class="est-bg" stroke="#FF1744" stroke-width="2"/>
-    <rect x="0" y="0" width="170" height="44" rx="12" fill="#FF1744" fill-opacity="0.08"/>
-    <rect x="0" y="33" width="170" height="11" fill="#FF1744" fill-opacity="0.08"/>
-    <text x="85" y="20" font-family="sans-serif" font-size="14" fill="#FF1744" text-anchor="middle" font-weight="bold">E-STOP</text>
-    <text x="85" y="36" font-family="sans-serif" font-size="10" fill="#552222" text-anchor="middle">NC · Normally Closed</text>
+  <!-- ══════════════════════════════════════════════════════
+       E-STOP BUTTON
+       ══════════════════════════════════════════════════ -->
+  <g transform="translate(40, 860)">
+    <rect width="220" height="170" rx="14" fill="#140606" stroke="#FF1744" stroke-width="2.5"/>
+    <rect x="0" y="0" width="220" height="56" rx="14" fill="#FF1744" fill-opacity="0.10"/>
+    <rect x="0" y="42" width="220" height="14" fill="#FF1744" fill-opacity="0.10"/>
+    <text x="110" y="26" font-family="sans-serif" font-size="20" fill="#FF1744" text-anchor="middle" font-weight="bold">E-STOP</text>
+    <text x="110" y="48" font-family="sans-serif" font-size="13" fill="#662222" text-anchor="middle">NC · Normally Closed</text>
 
-    <!-- Big red button icon -->
-    <circle cx="85" cy="86" r="28" fill="#FF1744" fill-opacity="0.15" stroke="#FF1744" stroke-width="2"/>
-    <circle cx="85" cy="86" r="18" fill="#FF1744" fill-opacity="0.3"/>
-    <text x="85" y="92" font-family="sans-serif" font-size="18" fill="#FF1744" text-anchor="middle" font-weight="bold">⏻</text>
+    <!-- Red button -->
+    <circle cx="110" cy="112" r="34" fill="#FF1744" fill-opacity="0.15" stroke="#FF1744" stroke-width="2"/>
+    <circle cx="110" cy="112" r="22" fill="#FF1744" fill-opacity="0.35"/>
+    <text x="110" y="120" font-family="sans-serif" font-size="22" fill="#FF1744" text-anchor="middle" font-weight="bold">⏻</text>
 
-    <!-- Terminal dots -->
-    <circle cx="52" cy="126" r="5" fill="#FF1744"/>
-    <circle cx="118" cy="126" r="5" fill="#555"/>
-    <text x="52"  y="140" font-family="monospace" font-size="9" fill="#FF1744" text-anchor="middle">SIG</text>
-    <text x="118" y="140" font-family="monospace" font-size="9" fill="#888" text-anchor="middle">GND</text>
+    <!-- Terminals -->
+    <circle cx="66"  cy="162" r="7" fill="#FF1744"/>
+    <circle cx="154" cy="162" r="7" fill="#555"/>
+    <text x="66"  y="175" font-family="monospace" font-size="12" fill="#FF7070" text-anchor="middle">SIG</text>
+    <text x="154" y="175" font-family="monospace" font-size="12" fill="#888888" text-anchor="middle">GND</text>
   </g>
 
-  <!-- ╔══════════════════════════════════════════════════════════╗ -->
-  <!--                   POTENTIOMETER                            -->
-  <!-- ╚══════════════════════════════════════════════════════════╝ -->
-  <g transform="translate(260, 714)">
-    <rect width="200" height="100" rx="12" class="pot-bg" stroke="#CC44FF" stroke-width="2"/>
-    <rect x="0" y="0" width="200" height="44" rx="12" fill="#CC44FF" fill-opacity="0.08"/>
-    <rect x="0" y="33" width="200" height="11" fill="#CC44FF" fill-opacity="0.08"/>
-    <text x="100" y="20" font-family="sans-serif" font-size="14" fill="#CC88FF" text-anchor="middle" font-weight="bold">10kΩ POT</text>
-    <text x="100" y="36" font-family="sans-serif" font-size="10" fill="#442255" text-anchor="middle">Speed Control</text>
+  <!-- ══════════════════════════════════════════════════════
+       POTENTIOMETER
+       ══════════════════════════════════════════════════ -->
+  <g transform="translate(320, 876)">
+    <rect width="260" height="130" rx="14" fill="#100614" stroke="#CC44FF" stroke-width="2.5"/>
+    <rect x="0" y="0" width="260" height="56" rx="14" fill="#CC44FF" fill-opacity="0.10"/>
+    <rect x="0" y="42" width="260" height="14" fill="#CC44FF" fill-opacity="0.10"/>
+    <text x="130" y="26" font-family="sans-serif" font-size="20" fill="#CC88FF" text-anchor="middle" font-weight="bold">10kΩ  POT</text>
+    <text x="130" y="48" font-family="sans-serif" font-size="13" fill="#551166" text-anchor="middle">Speed Control (ADC input)</text>
 
-    <!-- 3 terminal dots -->
-    <circle cx="36"  cy="80" r="6" fill="#FF5252"/>
-    <circle cx="100" cy="80" r="6" fill="#CC88FF"/>
-    <circle cx="164" cy="80" r="6" fill="#555"/>
-    <text x="36"  y="96" font-family="monospace" font-size="9" fill="#FF5252" text-anchor="middle">3V3</text>
-    <text x="100" y="96" font-family="monospace" font-size="9" fill="#CC88FF" text-anchor="middle">WIPER</text>
-    <text x="164" y="96" font-family="monospace" font-size="9" fill="#888" text-anchor="middle">GND</text>
+    <!-- 3 terminals -->
+    <circle cx="46"  cy="100" r="9" fill="#FF5252"/>
+    <circle cx="130" cy="100" r="9" fill="#CC44FF"/>
+    <circle cx="214" cy="100" r="9" fill="#555"/>
+    <text x="46"  y="122" font-family="monospace" font-size="13" fill="#FF7070" text-anchor="middle">3V3</text>
+    <text x="130" y="122" font-family="monospace" font-size="13" fill="#DD99FF" text-anchor="middle">WIPER</text>
+    <text x="214" y="122" font-family="monospace" font-size="13" fill="#888888" text-anchor="middle">GND</text>
   </g>
 
-  <!-- ══════════════════════════════════════════════════════════════ -->
-  <!-- WIRES                                                         -->
-  <!-- ══════════════════════════════════════════════════════════════ -->
-  <!-- SIGNAL WIRES: ESP → TB6600 (Cyan) -->
-  <!-- ENA: ESP GPIO52 left pin (50+75=125, 80+191+7=278) → TB6600 ENA+ (540, 80+95+8=183) -->
-  <path d="M 125 278 L 430 278 L 430 163 L 540 163" fill="none" stroke="#00E5FF" stroke-width="2" opacity="0.8" marker-end="url(#arrowC)"/>
-  <text x="470" y="274" font-family="sans-serif" font-size="9" fill="#00E5FF">ENA</text>
+  <!-- ══════════════════════════════════════════════════════
+       SIGNAL WIRES (ESP → TB6600)   CYAN
+       ══════════════════════════════════════════════════ -->
+  <!-- ENA: ESP GPIO52 left pin (40+80=120, 100+226+9=335) → TB ENA+ (640, 100+116+10=226) -->
+  <path d="M 120 335 L 520 335 L 520 226 L 640 226" fill="none" stroke="#00E5FF" stroke-width="3" marker-end="url(#arrowC)"/>
+  <text x="560" y="316" font-family="sans-serif" font-size="13" fill="#00CCCC" font-weight="bold">ENA</text>
 
-  <!-- DIR: ESP GPIO51 left pin (125, 313) → TB6600 DIR+ (540, 219) -->
-  <path d="M 125 313 L 445 313 L 445 219 L 540 219" fill="none" stroke="#00E5FF" stroke-width="2" opacity="0.8" marker-end="url(#arrowC)"/>
-  <text x="480" y="309" font-family="sans-serif" font-size="9" fill="#00E5FF">DIR</text>
+  <!-- DIR: ESP GPIO51 left (120, 377) → TB DIR+ (640, 276) -->
+  <path d="M 120 377 L 536 377 L 536 276 L 640 276" fill="none" stroke="#00E5FF" stroke-width="3" marker-end="url(#arrowC)"/>
+  <text x="576" y="358" font-family="sans-serif" font-size="13" fill="#00CCCC" font-weight="bold">DIR</text>
 
-  <!-- STEP: ESP GPIO50 left pin (125, 348) → TB6600 PUL+ (540, 275) -->
-  <path d="M 125 348 L 460 348 L 460 275 L 540 275" fill="none" stroke="#00E5FF" stroke-width="2" opacity="0.8" marker-end="url(#arrowC)"/>
-  <text x="490" y="344" font-family="sans-serif" font-size="9" fill="#00E5FF">STEP</text>
+  <!-- STEP: ESP GPIO50 left (120, 419) → TB PUL+ (640, 326) -->
+  <path d="M 120 419 L 552 419 L 552 326 L 640 326" fill="none" stroke="#00E5FF" stroke-width="3" marker-end="url(#arrowC)"/>
+  <text x="590" y="400" font-family="sans-serif" font-size="13" fill="#00CCCC" font-weight="bold">STEP</text>
 
-  <!-- GND bus: ESP GND (50+239=289, 80+156+7=243) → TB6600 ENA-(540,160), DIR-(540,206), PUL-(540,252) -->
-  <path d="M 289 243 L 289 56 L 820 56 L 820 160 L 540 160" fill="none" stroke="#555555" stroke-width="2" opacity="0.8"/>
-  <path d="M 820 160 L 820 206 L 540 206" fill="none" stroke="#555555" stroke-width="2" opacity="0.8"/>
-  <path d="M 820 206 L 820 252 L 540 252" fill="none" stroke="#555555" stroke-width="2" opacity="0.8"/>
+  <!-- GND bus: ESP GND right row3 (40+296=336, 100+184+9=293) → TB ENA-/DIR-/PUL- -->
+  <path d="M 336 293 L 336 70 L 1010 70 L 1010 196 L 640 196" fill="none" stroke="#555555" stroke-width="2.5"/>
+  <path d="M 1010 196 L 1010 246 L 640 246" fill="none" stroke="#555555" stroke-width="2.5"/>
+  <path d="M 1010 246 L 1010 296 L 640 296" fill="none" stroke="#555555" stroke-width="2.5"/>
+  <text x="840" y="62" font-family="sans-serif" font-size="12" fill="#666666" text-anchor="middle">GND  BUS</text>
 
-  <!-- MOTOR WIRES: TB6600 → NEMA 23 (colour coded) -->
-  <!-- A+ (TB: 540+0, 80+238+8=326) → NEMA A+ (900, 80+95+7=182) -->
-  <path d="M 540 326 L 860 326 L 860 182 L 900 182" fill="none" stroke="#F44336" stroke-width="2.5" opacity="0.9" marker-end="url(#arrowT)"/>
-  <text x="830" y="322" font-family="sans-serif" font-size="9" fill="#F44336" text-anchor="end">RED  A+</text>
+  <!-- ══════════════════════════════════════════════════════
+       MOTOR WIRES (TB6600 → NEMA 23)
+       ══════════════════════════════════════════════════ -->
+  <!-- A+: TB A+ pin (640, 100+302+10=412) → NEMA A+ (1100, 90+120+10=220) -->
+  <path d="M 640 412 L 1060 412 L 1060 220 L 1100 220" fill="none" stroke="#F44336" stroke-width="3" marker-end="url(#arrowT)"/>
+  <text x="870" y="403" font-family="sans-serif" font-size="13" fill="#F44336" text-anchor="middle" font-weight="bold">RED · A+</text>
 
-  <!-- A- (TB: 540, 349) → NEMA A- (900, 207) -->
-  <path d="M 540 349 L 870 349 L 870 207 L 900 207" fill="none" stroke="#4CAF50" stroke-width="2.5" opacity="0.9" marker-end="url(#arrowT)"/>
-  <text x="830" y="345" font-family="sans-serif" font-size="9" fill="#4CAF50" text-anchor="end">GREEN  A−</text>
+  <!-- A-: TB A- (640, 442) → NEMA A- (1100, 252) -->
+  <path d="M 640 442 L 1070 442 L 1070 252 L 1100 252" fill="none" stroke="#4CAF50" stroke-width="3" marker-end="url(#arrowT)"/>
+  <text x="870" y="432" font-family="sans-serif" font-size="13" fill="#4CAF50" text-anchor="middle" font-weight="bold">GREEN · A−</text>
 
-  <!-- B+ (TB: 540, 372) → NEMA B+ (900, 232) -->
-  <path d="M 540 372 L 880 372 L 880 232 L 900 232" fill="none" stroke="#2196F3" stroke-width="2.5" opacity="0.9" marker-end="url(#arrowT)"/>
-  <text x="830" y="368" font-family="sans-serif" font-size="9" fill="#2196F3" text-anchor="end">BLUE  B+</text>
+  <!-- B+: TB B+ (640, 472) → NEMA B+ (1100, 284) -->
+  <path d="M 640 472 L 1080 472 L 1080 284 L 1100 284" fill="none" stroke="#2196F3" stroke-width="3" marker-end="url(#arrowT)"/>
+  <text x="870" y="462" font-family="sans-serif" font-size="13" fill="#2196F3" text-anchor="middle" font-weight="bold">BLUE · B+</text>
 
-  <!-- B- (TB: 540, 395) → NEMA B- (900, 257) -->
-  <path d="M 540 395 L 890 395 L 890 257 L 900 257" fill="none" stroke="#FFFFFF" stroke-width="2.5" opacity="0.5" marker-end="url(#arrowT)"/>
-  <text x="830" y="391" font-family="sans-serif" font-size="9" fill="#AAA" text-anchor="end">BLACK  B−</text>
+  <!-- B-: TB B- (640, 502) → NEMA B- (1100, 316) -->
+  <path d="M 640 502 L 1090 502 L 1090 316 L 1100 316" fill="none" stroke="#CCCCCC" stroke-width="3" marker-end="url(#arrowT)"/>
+  <text x="870" y="492" font-family="sans-serif" font-size="13" fill="#CCCCCC" text-anchor="middle" font-weight="bold">BLACK · B−</text>
 
-  <!-- POWER WIRES: PSU → TB6600 -->
-  <!-- PSU V+ (900+60=960, 440+80+20=540) → TB VCC (540+0, 80+357+8=445) -->
-  <path d="M 960 540 L 960 490 L 530 490 L 530 445 L 540 445" fill="none" stroke="#FF1744" stroke-width="2.5" stroke-dasharray="10 4" opacity="0.9" marker-end="url(#arrowR)"/>
-  <text x="740" y="484" font-family="sans-serif" font-size="10" fill="#FF5252" text-anchor="middle">24V  DC</text>
+  <!-- ══════════════════════════════════════════════════════
+       POWER WIRES (PSU → TB6600)
+       ══════════════════════════════════════════════════ -->
+  <!-- PSU V+ (1100+75=1175, 530+100=630) → TB VCC (640, 556) -->
+  <path d="M 1175 630 L 1175 560 L 630 560 L 630 556" fill="none" stroke="#FF5252" stroke-width="3" stroke-dasharray="12 5" marker-end="url(#arrowR)"/>
+  <text x="900" y="549" font-family="sans-serif" font-size="14" fill="#FF7070" text-anchor="middle" font-weight="bold">24V DC</text>
 
-  <!-- PSU GND (900+180=1080, 540) → TB GND (540, 468) -->
-  <path d="M 1080 540 L 1080 510 L 520 510 L 520 468 L 540 468" fill="none" stroke="#555555" stroke-width="2" opacity="0.8" marker-end="url(#arrowG)"/>
+  <!-- PSU GND (1100+225=1325, 630) → TB GND (640, 586) -->
+  <path d="M 1325 630 L 1325 580 L 620 580 L 620 586" fill="none" stroke="#666666" stroke-width="2.5" marker-end="url(#arrowG)"/>
+  <text x="980" y="575" font-family="sans-serif" font-size="13" fill="#888888" text-anchor="middle">GND</text>
 
-  <!-- E-STOP wires -->
-  <!-- E-STOP SIG (50+52=102, 700+126=826) → ESP GPIO34 left (125, 80+366+7=453) -->
-  <path d="M 102 826 L 102 650 L 130 650 L 130 453 L 125 453" fill="none" stroke="#FF1744" stroke-width="2" opacity="0.8" marker-end="url(#arrowR)"/>
+  <!-- ══════════════════════════════════════════════════════
+       E-STOP WIRES
+       ══════════════════════════════════════════════════ -->
+  <!-- E-STOP SIG (40+66=106, 860+162=1022) → ESP GPIO34 left (120, 100+436+9=545) -->
+  <path d="M 106 1022 L 106 800 L 136 800 L 136 545 L 120 545" fill="none" stroke="#FF1744" stroke-width="2.5" marker-end="url(#arrowR)"/>
 
-  <!-- E-STOP GND (50+118=168, 826) → shared GND bus  -->
-  <path d="M 168 826 L 168 670 L 289 670 L 289 243" fill="none" stroke="#555555" stroke-width="2" opacity="0.6"/>
+  <!-- E-STOP GND → shared GND bus (336, 293 region) -->
+  <path d="M 194 1022 L 194 820 L 336 820 L 336 293" fill="none" stroke="#555555" stroke-width="2"/>
 
-  <!-- POTENTIOMETER wires -->
-  <!-- POT 3V3 (260+36=296, 714+80=794) → ESP 3V3 row1 right (50+239=289, 80+86+7=173) -->
-  <path d="M 296 794 L 296 690 L 70 690 L 70 173 L 125 173" fill="none" stroke="#FF5252" stroke-width="1.5" stroke-dasharray="6 3" opacity="0.7" marker-end="url(#arrowR)"/>
+  <!-- ══════════════════════════════════════════════════════
+       POT WIRES
+       ══════════════════════════════════════════════════ -->
+  <!-- POT 3V3 (320+46=366, 876+100=976) → ESP 3V3 left row1 (120, 100+100+9=209) -->
+  <path d="M 366 976 L 366 850 L 72 850 L 72 209 L 120 209" fill="none" stroke="#FF5252" stroke-width="2" stroke-dasharray="8 4" marker-end="url(#arrowR)"/>
 
-  <!-- POT Wiper (260+100=360, 794) → ESP GPIO49 left (125, 80+296+7=383) -->
-  <path d="M 360 794 L 360 680 L 118 680 L 118 383 L 125 383" fill="none" stroke="#CC88FF" stroke-width="2" opacity="0.8" marker-end="url(#arrowC)"/>
-  <text x="200" y="676" font-family="sans-serif" font-size="9" fill="#CC88FF">WIPER</text>
+  <!-- POT WIPER (320+130=450, 976) → ESP GPIO49 left (120, 100+352+9=461) -->
+  <path d="M 450 976 L 450 840 L 110 840 L 110 461 L 120 461" fill="none" stroke="#CC44FF" stroke-width="2.5" marker-end="url(#arrowC)"/>
+  <text x="278" y="833" font-family="sans-serif" font-size="13" fill="#DD99FF">WIPER → GPIO49</text>
 
-  <!-- POT GND (260+164=424, 794) → shared GND bus -->
-  <path d="M 424 794 L 424 675 L 289 675" fill="none" stroke="#555555" stroke-width="1.5" opacity="0.6"/>
+  <!-- POT GND (320+214=534, 976) → shared GND bus -->
+  <path d="M 534 976 L 534 830 L 336 830" fill="none" stroke="#555555" stroke-width="2"/>
 
-  <!-- ══════════════════════════════════════════════════════════════ -->
-  <!-- PIN REFERENCE BOX                                             -->
-  <!-- ══════════════════════════════════════════════════════════════ -->
-  <g transform="translate(500, 620)">
-    <rect width="360" height="160" rx="10" fill="#060A08" stroke="#1A2A1A" stroke-width="1"/>
-    <text x="180" y="20" font-family="sans-serif" font-size="12" fill="#446644" text-anchor="middle" font-weight="bold" letter-spacing="1">PIN REFERENCE</text>
+  <!-- ══════════════════════════════════════════════════════
+       PIN REFERENCE
+       ══════════════════════════════════════════════════ -->
+  <g transform="translate(640, 720)">
+    <rect width="420" height="200" rx="12" fill="#060A08" stroke="#1A3322" stroke-width="1.5"/>
+    <text x="210" y="26" font-family="sans-serif" font-size="15" fill="#55AA77" text-anchor="middle" font-weight="bold" letter-spacing="1">PIN REFERENCE</text>
 
-    <text x="14" y="40"  font-family="monospace" font-size="11" fill="#00E5FF">GPIO52</text>
-    <text x="85" y="40"  font-family="monospace" font-size="11" fill="#555">→  TB6600  ENA+</text>
+    <text x="18" y="54" font-family="monospace" font-size="14" fill="#00DDFF">GPIO52</text>
+    <text x="100" y="54" font-family="monospace" font-size="14" fill="#AAAAAA">→  TB6600  ENA+</text>
 
-    <text x="14" y="58"  font-family="monospace" font-size="11" fill="#00E5FF">GPIO51</text>
-    <text x="85" y="58"  font-family="monospace" font-size="11" fill="#555">→  TB6600  DIR+</text>
+    <text x="18" y="80" font-family="monospace" font-size="14" fill="#00DDFF">GPIO51</text>
+    <text x="100" y="80" font-family="monospace" font-size="14" fill="#AAAAAA">→  TB6600  DIR+</text>
 
-    <text x="14" y="76"  font-family="monospace" font-size="11" fill="#00E5FF">GPIO50</text>
-    <text x="85" y="76"  font-family="monospace" font-size="11" fill="#555">→  TB6600  PUL+</text>
+    <text x="18" y="106" font-family="monospace" font-size="14" fill="#00DDFF">GPIO50</text>
+    <text x="100" y="106" font-family="monospace" font-size="14" fill="#AAAAAA">→  TB6600  PUL+  (STEP)</text>
 
-    <text x="14" y="94"  font-family="monospace" font-size="11" fill="#CC88FF">GPIO49</text>
-    <text x="85" y="94"  font-family="monospace" font-size="11" fill="#555">→  Potentiometer Wiper (ADC)</text>
+    <text x="18" y="132" font-family="monospace" font-size="14" fill="#DD99FF">GPIO49</text>
+    <text x="100" y="132" font-family="monospace" font-size="14" fill="#AAAAAA">→  Potentiometer Wiper  (ADC)</text>
 
-    <text x="14" y="112" font-family="monospace" font-size="11" fill="#FF5252">GPIO34</text>
-    <text x="85" y="112" font-family="monospace" font-size="11" fill="#555">→  E-STOP NC contact</text>
+    <text x="18" y="158" font-family="monospace" font-size="14" fill="#FF6666">GPIO34</text>
+    <text x="100" y="158" font-family="monospace" font-size="14" fill="#AAAAAA">→  E-STOP NC contact</text>
 
-    <text x="14" y="130" font-family="monospace" font-size="11" fill="#FF5252">GPIO33</text>
-    <text x="85" y="130" font-family="monospace" font-size="11" fill="#555">→  (E-STOP secondary / future)</text>
-
-    <text x="14" y="150" font-family="monospace" font-size="11" fill="#555555">GND−−−−−−−−−−−−−−−−−−−−−−−</text>
-    <text x="168" y="150" font-family="monospace" font-size="11" fill="#555">→  TB6600 ENA/DIR/PUL (−)</text>
+    <text x="18" y="184" font-family="monospace" font-size="14" fill="#555555">GND</text>
+    <text x="100" y="184" font-family="monospace" font-size="14" fill="#777777">→  TB6600 ENA/DIR/PUL (−) pins</text>
   </g>
 
-  <!-- ══════════════════════════════════════════════════════════════ -->
-  <!-- WIRE LEGEND                                                    -->
-  <!-- ══════════════════════════════════════════════════════════════ -->
-  <g transform="translate(890, 620)">
-    <rect width="300" height="190" rx="10" fill="#060A08" stroke="#1A2A1A" stroke-width="1"/>
-    <text x="150" y="20" font-family="sans-serif" font-size="12" fill="#446644" text-anchor="middle" font-weight="bold" letter-spacing="1">WIRE LEGEND</text>
+  <!-- ══════════════════════════════════════════════════════
+       WIRE LEGEND
+       ══════════════════════════════════════════════════ -->
+  <g transform="translate(1100, 740)">
+    <rect width="360" height="260" rx="12" fill="#060A08" stroke="#1A3322" stroke-width="1.5"/>
+    <text x="180" y="26" font-family="sans-serif" font-size="15" fill="#55AA77" text-anchor="middle" font-weight="bold" letter-spacing="1">WIRE LEGEND</text>
 
-    <line x1="20" y1="38" x2="65" y2="38" stroke="#00E5FF" stroke-width="2.5"/>
-    <text x="75" y="43" font-family="sans-serif" font-size="11" fill="#888">Signal — STEP / DIR / ENA (3.3V)</text>
+    <line x1="18" y1="50" x2="70" y2="50" stroke="#00E5FF" stroke-width="3"/>
+    <text x="82" y="56" font-family="sans-serif" font-size="14" fill="#CCCCCC">Signal  (STEP / DIR / ENA)</text>
 
-    <line x1="20" y1="62" x2="65" y2="62" stroke="#FF1744" stroke-width="2.5" stroke-dasharray="10 4"/>
-    <text x="75" y="67" font-family="sans-serif" font-size="11" fill="#888">Power — 24V or 3.3V</text>
+    <line x1="18" y1="84" x2="70" y2="84" stroke="#FF5252" stroke-width="3" stroke-dasharray="12 5"/>
+    <text x="82" y="90" font-family="sans-serif" font-size="14" fill="#CCCCCC">Power  (24V or 3.3V)</text>
 
-    <line x1="20" y1="86" x2="65" y2="86" stroke="#555" stroke-width="2.5"/>
-    <text x="75" y="91" font-family="sans-serif" font-size="11" fill="#888">Ground (GND)</text>
+    <line x1="18" y1="118" x2="70" y2="118" stroke="#666" stroke-width="3"/>
+    <text x="82" y="124" font-family="sans-serif" font-size="14" fill="#CCCCCC">Ground  (GND)</text>
 
-    <line x1="20" y1="110" x2="65" y2="110" stroke="#F44336" stroke-width="2.5"/>
-    <text x="75" y="115" font-family="sans-serif" font-size="11" fill="#888">Motor coil A  (RED / GREEN)</text>
+    <line x1="18" y1="152" x2="70" y2="152" stroke="#F44336" stroke-width="3"/>
+    <text x="82" y="158" font-family="sans-serif" font-size="14" fill="#CCCCCC">Motor coil  A  (RED / GREEN)</text>
 
-    <line x1="20" y1="134" x2="65" y2="134" stroke="#2196F3" stroke-width="2.5"/>
-    <text x="75" y="139" font-family="sans-serif" font-size="11" fill="#888">Motor coil B  (BLUE / BLACK)</text>
+    <line x1="18" y1="186" x2="70" y2="186" stroke="#2196F3" stroke-width="3"/>
+    <text x="82" y="192" font-family="sans-serif" font-size="14" fill="#CCCCCC">Motor coil  B  (BLUE / BLACK)</text>
 
-    <line x1="20" y1="158" x2="65" y2="158" stroke="#CC88FF" stroke-width="2"/>
-    <text x="75" y="163" font-family="sans-serif" font-size="11" fill="#888">Potentiometer wiper (ADC)</text>
+    <line x1="18" y1="220" x2="70" y2="220" stroke="#CC44FF" stroke-width="2.5"/>
+    <text x="82" y="226" font-family="sans-serif" font-size="14" fill="#CCCCCC">Potentiometer wiper</text>
 
-    <line x1="20" y1="180" x2="65" y2="180" stroke="#FF1744" stroke-width="2"/>
-    <text x="75" y="185" font-family="sans-serif" font-size="11" fill="#888">E-STOP signal</text>
+    <line x1="18" y1="248" x2="70" y2="248" stroke="#FF1744" stroke-width="2.5"/>
+    <text x="82" y="254" font-family="sans-serif" font-size="14" fill="#CCCCCC">E-STOP signal</text>
   </g>
 
 </svg>

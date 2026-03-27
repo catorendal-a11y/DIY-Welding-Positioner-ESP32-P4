@@ -7,9 +7,9 @@
 // Available GPIOs: 28–35, 49–52 (see board pin diagram)
 // ───────────────────────────────────────────────────────────────────────────────
 #define PIN_POT         49   // ADC — Potentiometer speed input (left row 7)
-#define PIN_STEP        30   // Step pulse output → TB6600 PUL+ (right side, row 6)
-#define PIN_DIR         31   // Direction → TB6600 DIR+ (right side, row 5)
-#define PIN_ENA         33   // Enable → TB6600 ENA+ (right side, row 4)
+#define PIN_STEP        50   // Step pulse output → TB6600 PUL+ (left row 6)
+#define PIN_DIR         51   // Direction → TB6600 DIR+ (left row 5)
+#define PIN_ENA         52   // Enable → TB6600 ENA+ (left row 4)
 #define PIN_ESTOP       34   // Emergency Stop: Active LOW, NC contact
 #define PIN_SPARE       35   // Reserved for future encoder/expansion
 

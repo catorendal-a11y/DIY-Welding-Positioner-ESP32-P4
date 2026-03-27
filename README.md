@@ -145,12 +145,6 @@ graph TD
 - **Smooth motion:** FastAccelStepper utilizing RMT hardware pulses for micro-stepping control.
 - **Program Presets:** Save and load custom welding parameters to onboard LittleFS flash memory.
 
-### 🖥️ All UI Screens
-
-<div align="center">
-  <img src="docs/images/ui_all_screens.svg" width="900" alt="All UI Screens Overview">
-</div>
-
 ---
 
 ## 📊 Performance Specifications

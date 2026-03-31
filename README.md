@@ -69,7 +69,7 @@ Watch the system in action: **UI interaction, Motor rotation, and Simulated weld
 
 This project is a **DIY welding positioner controller** built using the powerful **ESP32-P4 microcontroller**. It is designed to control rotary welding tables, welding turntables, pipe welding rotators, and automated fabrication systems. 
 
-Driven by a NEMA 23 stepper motor and a 108:1 worm gear, it ensures ultra-smooth low-RPM rotation ideal for circular weld seams and continuous TIG/MIG passes.
+Driven by a NEMA 23 stepper motor and a 200:1 worm gear, it ensures ultra-smooth low-RPM rotation ideal for circular weld seams and continuous TIG/MIG passes.
 
 ### 🎯 Project Goals
 - Build a reliable, industrial-grade DIY welding positioner.
@@ -153,7 +153,7 @@ graph TD
 | Parameter | Value |
 |-----------|-------|
 | **Output RPM Range** | 0.05 – 5.0 RPM (current: 1.0 RPM max with TB6600, pending DM542T upgrade) |
-| **Gear Ratio** | 108:1 Worm Gear |
+| **Gear Ratio** | 200:1 Worm Gear |
 | **Microstepping** | 1/4, 1/8, 1/16, 1/32 (Selectable in Settings) |
 | **Motor Torque** | 3.0 Nm (NEMA 23) |
 | **Control Resolution**| 0.01 RPM |
@@ -184,7 +184,7 @@ graph TD
 | **MCU Board** | GUITION JC4880P443C (480x800, ESP32-P4, MIPI-DSI) | 1 |
 | **Stepper Driver** | TB6600 (DM542T planned upgrade) | 1 |
 | **Stepper Motor** | NEMA 23 (3 Nm torque) | 1 |
-| **Gearbox** | 108:1 Worm Gear Reducer | 1 |
+| **Gearbox** | 200:1 Worm Gear Reducer | 1 |
 | **Power Supply** | 24V DC, ≥5A recommended for NEMA 23 (3Nm) | 1 |
 | **Controls** | 10k Potentiometer (Speed) & NC E-STOP Button | 1 |
 
@@ -198,7 +198,7 @@ All components have been validated on real hardware.
 - GUITION JC4880P443C ESP32-P4 4.3" Touch Display (480x800)
 - TB6600 Stepper Driver
 - NEMA 23 (3 Nm torque)
-- 108:1 Worm Gear Reducer
+- 200:1 Worm Gear Reducer
 - 24V / 5A DC Power Supply
 - 10k Potentiometer
 - NC Emergency Stop Button
@@ -219,6 +219,16 @@ All components have been validated on real hardware.
 </div>
 
 > **See also:** [Detailed Hardware Setup Guide](docs/HARDWARE_SETUP.md) · [EMI Mitigation Guide](docs/EMI_MITIGATION.md) · [Safety System](docs/SAFETY_SYSTEM.md)
+
+---
+
+## ⚙️ Worm Gear Assembly
+
+<div align="center">
+  <img src="docs/images/motor.worm.svg" width="600" alt="Worm Gear Assembly">
+</div>
+
+> The 200:1 worm gear reducer converts the stepper motor's high-speed, low-torque output into the ultra-smooth, high-torque rotation needed for welding positioners.
 
 ---
 
@@ -268,7 +278,7 @@ Open `src/config.h` to tweak:
 
 ```cpp
 #define MICROSTEPS      8      // Must match dip-switches on your TB6600
-#define GEAR_RATIO      108    // Worm gear ratio
+#define GEAR_RATIO      200    // Worm gear ratio
 #define MAX_RPM         1.0    // Upper limit of the UI gauge
 #define MIN_RPM         0.05   // Lower limit
 #define ACCELERATION    7000   // Stepper acceleration (steps/s²)

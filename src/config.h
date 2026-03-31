@@ -54,7 +54,7 @@
 #define STEPS_PER_REV   (200 * MICROSTEPS)   // 1600 steps/rev motor
 
 // GEAR & ROLLER SYSTEM
-#define GEAR_RATIO      108.0f    // 1:108 worm gear
+#define GEAR_RATIO      200.0f    // 1:200 worm gear
 #define D_EMNE          0.300f    // Workpiece diameter: 300mm
 #define D_RULLE         0.080f    // Roller diameter: 80mm
 

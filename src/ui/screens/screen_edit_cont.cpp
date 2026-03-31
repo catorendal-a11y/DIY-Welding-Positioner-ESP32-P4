@@ -403,7 +403,7 @@ void screen_edit_cont_create() {
 
     // ── Info line (SVG: "ACCEL MED . STEPS/S 3556 . GEAR 10:1 . MICRO 16x") ──
     lv_obj_t* infoLabel = lv_label_create(screen);
-    lv_label_set_text(infoLabel, "ACCEL MED . STEPS/S 3556 . GEAR 108:1 . MICRO 8x");
+    lv_label_set_text(infoLabel, "ACCEL MED . STEPS/S 3556 . GEAR 200:1 . MICRO 8x");
     lv_obj_set_style_text_font(infoLabel, FONT_TINY, 0);
     lv_obj_set_style_text_color(infoLabel, COL_TEXT_VDIM, 0);
     lv_obj_set_pos(infoLabel, 20, 256);

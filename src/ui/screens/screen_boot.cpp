@@ -166,7 +166,7 @@ void screen_boot_create() {
         "Display: MIPI-DSI 800x480"
     };
     static const char* specsRight[] = {
-        "Motor: TB6600 108:1 worm gear",
+        "Motor: TB6600 200:1 worm gear",
         "Microstep: 1/8 (1600 steps/rev)",
         "RPM Range: 0.1 - 5.0",
         "Firmware: " FW_VERSION " LVGL 9.x"

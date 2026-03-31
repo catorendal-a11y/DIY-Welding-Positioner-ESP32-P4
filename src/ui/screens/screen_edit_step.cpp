@@ -53,7 +53,7 @@ static void update_computed() {
   }
 
   // Total steps
-  long totalSteps = (long)(editAngle * editRepeats * (200.0f * 8.0f * 108.0f / 360.0f));
+  long totalSteps = (long)(editAngle * editRepeats * (200.0f * 8.0f * 200.0f / 360.0f));
   if (stepsLabel) lv_label_set_text_fmt(stepsLabel, "%ld", totalSteps);
 }
 

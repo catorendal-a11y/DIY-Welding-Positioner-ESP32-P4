@@ -58,7 +58,7 @@ The following configuration has been tested and confirmed working on real hardwa
 | **MCU Board** | Waveshare ESP32-P4 4.3" Display | Tested |
 | **Stepper Driver** | TB6600 | Tested (1/4 and 1/8 microstepping) |
 | **Stepper Motor** | NEMA 23 (3 Nm) | Tested |
-| **Gearbox** | 108:1 Worm Gear | Tested |
+| **Gearbox** | 200:1 Worm Gear | Tested |
 | **Power Supply** | 24V DC | Tested |
 | **Potentiometer** | 10k (LA42DWQ-22) | Tested (ADC range 0-3315) |
 | **E-STOP** | NC Button | Tested |

@@ -41,10 +41,13 @@ static lv_obj_t* pulseBtn = nullptr;
 static const char* state_strings[] = {
   "IDLE", "RUN", "PULSE", "STEP", "JOG", "TIMER", "STOP", "E-STOP"
 };
-static lv_color_t state_colors[] = {
-  COL_TEXT_DIM, COL_GREEN, COL_ACCENT, COL_ACCENT,
-  COL_ACCENT, COL_ACCENT, COL_ACCENT, COL_RED
-};
+static lv_color_t get_state_color(int state) {
+  switch (state) {
+    case 1: return COL_GREEN;
+    case 7: return COL_RED;
+    default: return COL_ACCENT;
+  }
+}
 
 // ───────────────────────────────────────────────────────────────────────────────
 // EVENT handlers
@@ -368,7 +371,7 @@ void screen_main_update() {
   // Header state
   if (state < (int)(sizeof(state_strings) / sizeof(state_strings[0]))) {
     lv_label_set_text(stateLabel, state_strings[state]);
-    lv_obj_set_style_text_color(stateLabel, state_colors[state], 0);
+    lv_obj_set_style_text_color(stateLabel, get_state_color(state), 0);
   }
 
   // RPM in gauge

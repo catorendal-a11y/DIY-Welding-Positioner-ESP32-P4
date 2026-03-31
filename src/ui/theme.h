@@ -14,7 +14,7 @@
 #define COL_BG_DIM      lv_color_hex(0x080808)   // SVG: #080808 dim area (.dim)
 #define COL_BG_ROW      lv_color_hex(0x0E0E0E)   // SVG: #0E0E0E setting rows
 #define COL_BTN_BG      lv_color_hex(0x141414)   // SVG: #141414 button fill (.b, .sm)
-#define COL_BG_ACTIVE   lv_color_hex(0x1A1600)   // SVG: #1A1600 active button (.ba)
+// COL_BG_ACTIVE is now dynamic (see g_accent_dim below)
 #define COL_BG_DANGER   lv_color_hex(0x1A0A0A)   // SVG: #1A0A0A danger/stop (.br)
 #define COL_PANEL_BG    lv_color_hex(0x141414)   // Panel background
 #define COL_SEPARATOR   lv_color_hex(0x1A1A1A)   // SVG: separator line color
@@ -22,12 +22,24 @@
 #define COL_GAUGE_BG    lv_color_hex(0x111111)   // SVG: #111 gauge track
 
 // ───────────────────────────────────────────────────────────────────────────────
-// ACCENT COLORS (from new_ui.svg)
+// DYNAMIC ACCENT COLORS (set at runtime from theme palette)
 // ───────────────────────────────────────────────────────────────────────────────
-#define COL_ACCENT      lv_color_hex(0xFF9500)   // SVG: #FF9500 orange accent
-#define COL_GREEN       lv_color_hex(0x00C853)   // SVG: #00C853 green (run, OK)
-#define COL_RED         lv_color_hex(0xFF1744)   // SVG: #FF1744 red (stop, danger)
-#define COL_AMBER       lv_color_hex(0xFF9500)   // Same as accent in v2.0
+extern lv_color_t g_accent;
+extern lv_color_t g_accent_dim;
+extern lv_color_t g_accent_border;
+
+#define COL_ACCENT      g_accent
+#define COL_BG_ACTIVE   g_accent_dim
+#define COL_BORDER_ACT  g_accent_border
+#define COL_AMBER       g_accent
+#define COL_GREEN       lv_color_hex(0x00C853)
+#define COL_RED         lv_color_hex(0xFF1744)
+
+void theme_init();
+void theme_set_color(uint8_t idx);
+void theme_refresh();
+const char* theme_get_name(uint8_t idx);
+uint8_t theme_get_count();
 
 // ───────────────────────────────────────────────────────────────────────────────
 // TEXT COLORS (from new_ui.svg)
@@ -43,7 +55,7 @@
 // BORDER COLORS (from new_ui.svg)
 // ───────────────────────────────────────────────────────────────────────────────
 #define COL_BORDER      lv_color_hex(0x2E2E2E)   // SVG: #2E2E2E inactive border (.b)
-#define COL_BORDER_ACT  lv_color_hex(0xFF9500)   // SVG: #FF9500 active border (.ba)
+// COL_BORDER_ACT is now dynamic (see g_accent_border below)
 #define COL_BORDER_SM   lv_color_hex(0x333333)   // SVG: #333 small button border (.sm)
 #define COL_BORDER_ROW  lv_color_hex(0x1E1E1E)   // SVG: #1E1E1E row border
 #define COL_BORDER_DNG  lv_color_hex(0xFF1744)   // SVG: #FF1744 danger border (.br)

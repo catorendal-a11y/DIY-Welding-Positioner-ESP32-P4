@@ -37,6 +37,7 @@ typedef enum {
 // SCREEN MANAGEMENT
 // ───────────────────────────────────────────────────────────────────────────────
 void screens_init();                    // Initialize all screens
+void screens_reinit();                  // Destroy and recreate all screens (theme change)
 void screens_show(ScreenId id);         // Show specific screen
 ScreenId screens_get_current();         // Get current screen
 bool screens_is_active(ScreenId id);    // Check if screen is active

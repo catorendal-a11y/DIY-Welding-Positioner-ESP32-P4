@@ -54,6 +54,24 @@ void screens_init() {
   LOG_I("Screens init complete");
 }
 
+void screens_reinit() {
+  ScreenId prev = currentScreen;
+
+  for (int i = 0; i < SCREEN_COUNT; i++) {
+    if (screenRoots[i]) {
+      lv_obj_delete(screenRoots[i]);
+      screenRoots[i] = nullptr;
+    }
+  }
+
+  currentScreen = SCREEN_NONE;
+  screens_init();
+
+  if (prev >= 0 && prev < SCREEN_COUNT && screenRoots[prev]) {
+    screens_show(prev);
+  }
+}
+
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN NAVIGATION
 // ───────────────────────────────────────────────────────────────────────────────

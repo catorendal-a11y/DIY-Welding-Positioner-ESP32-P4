@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0A0A0A"/>
+      <stop offset="100%" stop-color="#111111"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#FF9500"/>
+      <stop offset="100%" stop-color="#FFB340"/>
+    </linearGradient>
+    <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#FF9500"/>
+      <stop offset="60%" stop-color="#FF9500"/>
+      <stop offset="100%" stop-color="#1A1A1A"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowStrong">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1280" height="640" fill="url(#bg)"/>
+
+  <!-- Grid pattern -->
+  <g opacity="0.03">
+    <line x1="0" y1="0" x2="0" y2="640" stroke="#fff" stroke-width="1">
+      <animate attributeName="x1" values="0;1280" dur="0.1s" fill="freeze"/>
+      <animate attributeName="x2" values="0;1280" dur="0.1s" fill="freeze"/>
+    </line>
+    <g stroke="#ffffff" stroke-width="0.5">
+      <line x1="0" y1="80" x2="1280" y2="80"/>
+      <line x1="0" y1="160" x2="1280" y2="160"/>
+      <line x1="0" y1="240" x2="1280" y2="240"/>
+      <line x1="0" y1="320" x2="1280" y2="320"/>
+      <line x1="0" y1="400" x2="1280" y2="400"/>
+      <line x1="0" y1="480" x2="1280" y2="480"/>
+      <line x1="0" y1="560" x2="1280" y2="560"/>
+      <line x1="160" y1="0" x2="160" y2="640"/>
+      <line x1="320" y1="0" x2="320" y2="640"/>
+      <line x1="480" y1="0" x2="480" y2="640"/>
+      <line x1="640" y1="0" x2="640" y2="640"/>
+      <line x1="800" y1="0" x2="800" y2="640"/>
+      <line x1="960" y1="0" x2="960" y2="640"/>
+      <line x1="1120" y1="0" x2="1120" y2="640"/>
+    </g>
+  </g>
+
+  <!-- Left accent line -->
+  <rect x="0" y="0" width="4" height="640" fill="url(#accent)"/>
+
+  <!-- Gauge visualization (right side) -->
+  <g transform="translate(980, 320)">
+    <!-- Gauge track -->
+    <path d="M -140 0 A 140 140 0 1 1 140 0" fill="none" stroke="#1A1A1A" stroke-width="16" stroke-linecap="round"/>
+    <!-- Gauge active arc -->
+    <path d="M -140 0 A 140 140 0 1 1 98.99 98.99" fill="none" stroke="url(#gaugeGrad)" stroke-width="12" stroke-linecap="round" filter="url(#glow)"/>
+    <!-- Tick marks -->
+    <g stroke="#333" stroke-width="1.5">
+      <line x1="-155" y1="0" x2="-170" y2="0"/>
+      <line x1="-109.6" y1="-109.6" x2="-120.2" y2="-120.2"/>
+      <line x1="0" y1="-155" x2="0" y2="-170"/>
+      <line x1="109.6" y1="-109.6" x2="120.2" y2="-120.2"/>
+      <line x1="155" y1="0" x2="170" y2="0"/>
+    </g>
+    <!-- RPM value -->
+    <text x="0" y="-10" text-anchor="middle" font-family="monospace" font-size="56" font-weight="bold" fill="#FF9500" filter="url(#glow)">0.50</text>
+    <text x="0" y="30" text-anchor="middle" font-family="monospace" font-size="22" fill="#555">RPM</text>
+    <!-- Needle dot -->
+    <circle cx="70" cy="-121" r="6" fill="#FF9500" filter="url(#glowStrong)"/>
+  </g>
+
+  <!-- Title section -->
+  <g transform="translate(60, 80)">
+    <!-- Chip badge -->
+    <rect x="0" y="0" width="180" height="28" rx="4" fill="#1A1600" stroke="#FF9500" stroke-width="1.5"/>
+    <text x="90" y="19" text-anchor="middle" font-family="monospace" font-size="13" fill="#FF9500">ESP32-P4 / RISC-V</text>
+
+    <!-- Main title -->
+    <text x="0" y="80" font-family="sans-serif" font-size="52" font-weight="bold" fill="#E0E0E0">
+      DIY Welding
+    </text>
+    <text x="0" y="140" font-family="sans-serif" font-size="52" font-weight="bold" fill="#FF9500">
+      Positioner Controller
+    </text>
+
+    <!-- Subtitle -->
+    <text x="0" y="185" font-family="monospace" font-size="16" fill="#555">
+      Open-source TIG rotator with LVGL touch UI
+    </text>
+  </g>
+
+  <!-- Feature cards -->
+  <g transform="translate(60, 330)">
+    <!-- Card 1 -->
+    <rect x="0" y="0" width="240" height="100" rx="4" fill="#0D0D0D" stroke="#2E2E2E" stroke-width="1"/>
+    <rect x="0" y="0" width="4" height="100" rx="2" fill="#FF9500"/>
+    <text x="24" y="32" font-family="monospace" font-size="13" fill="#FF9500">MOTOR</text>
+    <text x="24" y="55" font-family="sans-serif" font-size="16" fill="#CCC">NEMA 23 + TB6600</text>
+    <text x="24" y="78" font-family="monospace" font-size="13" fill="#555">0.01 - 1.0 RPM</text>
+
+    <!-- Card 2 -->
+    <rect x="260" y="0" width="240" height="100" rx="4" fill="#0D0D0D" stroke="#2E2E2E" stroke-width="1"/>
+    <rect x="260" y="0" width="4" height="100" rx="2" fill="#FF9500"/>
+    <text x="284" y="32" font-family="monospace" font-size="13" fill="#FF9500">DISPLAY</text>
+    <text x="284" y="55" font-family="sans-serif" font-size="16" fill="#CCC">4.3" MIPI-DSI</text>
+    <text x="284" y="78" font-family="monospace" font-size="13" fill="#555">800x480 + GT911 Touch</text>
+
+    <!-- Card 3 -->
+    <rect x="520" y="0" width="240" height="100" rx="4" fill="#0D0D0D" stroke="#2E2E2E" stroke-width="1"/>
+    <rect x="520" y="0" width="4" height="100" rx="2" fill="#FF9500"/>
+    <text x="544" y="32" font-family="monospace" font-size="13" fill="#FF9500">MODES</text>
+    <text x="544" y="55" font-family="sans-serif" font-size="16" fill="#CCC">5 Welding Modes</text>
+    <text x="544" y="78" font-family="monospace" font-size="13" fill="#555">Cont / Pulse / Step / Jog / Timer</text>
+  </g>
+
+  <!-- Bottom bar -->
+  <rect x="0" y="560" width="1280" height="80" fill="#090909"/>
+  <line x1="0" y1="560" x2="1280" y2="560" stroke="#1A1A1A" stroke-width="1"/>
+
+  <!-- Bottom stats -->
+  <g transform="translate(60, 598)">
+    <text x="0" y="0" font-family="monospace" font-size="13" fill="#555">GEAR</text>
+    <text x="0" y="22" font-family="monospace" font-size="18" fill="#AAA">199.5 : 1</text>
+  </g>
+  <line x1="160" y1="575" x2="160" y2="630" stroke="#1A1A1A" stroke-width="1"/>
+
+  <g transform="translate(200, 598)">
+    <text x="0" y="0" font-family="monospace" font-size="13" fill="#555">MICROSTEPPING</text>
+    <text x="0" y="22" font-family="monospace" font-size="18" fill="#AAA">1/8 (1600 steps/rev)</text>
+  </g>
+  <line x1="440" y1="575" x2="440" y2="630" stroke="#1A1A1A" stroke-width="1"/>
+
+  <g transform="translate(480, 598)">
+    <text x="0" y="0" font-family="monospace" font-size="13" fill="#555">UI FRAMEWORK</text>
+    <text x="0" y="22" font-family="monospace" font-size="18" fill="#AAA">LVGL 9.x</text>
+  </g>
+  <line x1="640" y1="575" x2="640" y2="630" stroke="#1A1A1A" stroke-width="1"/>
+
+  <g transform="translate(680, 598)">
+    <text x="0" y="0" font-family="monospace" font-size="13" fill="#555">LICENSE</text>
+    <text x="0" y="22" font-family="monospace" font-size="18" fill="#AAA">MIT</text>
+  </g>
+  <line x1="800" y1="575" x2="800" y2="630" stroke="#1A1A1A" stroke-width="1"/>
+
+  <g transform="translate(840, 598)">
+    <text x="0" y="0" font-family="monospace" font-size="13" fill="#555">SAFETY</text>
+    <text x="0" y="22" font-family="monospace" font-size="18" fill="#AAA">E-STOP + FreeRTOS</text>
+  </g>
+
+  <!-- GitHub icon hint (top right) -->
+  <g transform="translate(1180, 60)" opacity="0.3">
+    <path d="M16 0C7.16 0 0 7.16 0 16c0 7.08 4.58 13.06 10.94 15.18.08.01.12-.01.12-.06v-2.82c-4.44.97-5.38-2.14-5.38-2.14-.73-1.85-1.78-2.34-1.78-2.34-1.45-1 .11-.98.11-.98 1.61.11 2.46 1.65 2.46 1.65 1.43 2.45 3.75 1.74 4.66 1.33.14-1.03.56-1.74 1.02-2.14-3.56-.4-7.3-1.78-7.3-7.92 0-1.75.63-3.18 1.65-4.3-.17-.4-.71-2.03.16-4.22 0 0 1.35-.43 4.4 1.64 1.28-.35 2.64-.53 4-.54 1.36.01 2.72.19 4 .54 3.05-2.07 4.39-1.64 4.39-1.64.87 2.19.33 3.82.16 4.22 1.03 1.12 1.65 2.55 1.65 4.3 0 6.16-3.75 7.51-7.32 7.9.57.5 1.09 1.47 1.09 2.96v4.39c0 .05.04.07.12.06C27.42 29.06 32 23.06 32 16 32 7.16 24.84 0 16 0z" fill="#E0E0E0" transform="scale(1.5)"/>
+  </g>
+</svg>

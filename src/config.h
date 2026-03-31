@@ -47,20 +47,20 @@
 // ───────────────────────────────────────────────────────────────────────────────
 // MOTOR & MECHANICAL PARAMETERS
 // ───────────────────────────────────────────────────────────────────────────────
-#define MIN_RPM         0.05f     // Minimum workpiece RPM
+#define MIN_RPM         0.01f     // Minimum workpiece RPM
 #define MAX_RPM         1.0f      // Maximum workpiece RPM (temporary until DM542T)
 
 #define MICROSTEPS      8         // 1/8 microstepping (TB6600 DIP)
 #define STEPS_PER_REV   (200 * MICROSTEPS)   // 1600 steps/rev motor
 
 // GEAR & ROLLER SYSTEM
-#define GEAR_RATIO      200.0f    // 1:200 worm gear
+#define GEAR_RATIO      (60.0f * 133.0f / 40.0f)   // = 199.5 (worm gear)
 #define D_EMNE          0.300f    // Workpiece diameter: 300mm
 #define D_RULLE         0.080f    // Roller diameter: 80mm
 
 // SPEED CHARACTERISTICS
-#define START_SPEED     80        // Hz — low start for smooth 0.1 RPM
-#define ACCELERATION    7000      // steps/s²
+#define START_SPEED     100       // Hz — under 199 Hz min for 0.01 RPM
+#define ACCELERATION    2000      // steps/s² — safe ramp through resonance
 
 // ───────────────────────────────────────────────────────────────────────────────
 // BUILD CONFIGURATION

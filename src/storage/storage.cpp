@@ -1,7 +1,7 @@
 #include "storage.h"
 
 std::vector<Preset> g_presets;
-SystemSettings g_settings = { 5000, 8, 1.0f, false, 150, 60, false };
+SystemSettings g_settings = { 5000, 8, 1.0f, true, 150, 60, false, 0 };
 
 static volatile bool savePending = false;
 static uint32_t lastSaveMs = 0;
@@ -142,6 +142,7 @@ bool storage_load_settings() {
     g_settings.brightness = doc["brightness"] | 150;
     g_settings.dim_timeout = doc["dim_timeout"] | 60;
     g_settings.dir_switch_enabled = doc["dir_switch_enabled"] | false;
+    g_settings.accent_color = doc["accent_color"] | 0;
 
     LOG_I("Loaded system settings from LittleFS.");
     return true;
@@ -162,6 +163,7 @@ static bool storage_save_settings_internal() {
     doc["brightness"] = g_settings.brightness;
     doc["dim_timeout"] = g_settings.dim_timeout;
     doc["dir_switch_enabled"] = g_settings.dir_switch_enabled;
+    doc["accent_color"] = g_settings.accent_color;
 
     if (serializeJson(doc, file) == 0) {
         LOG_E("Failed to write JSON to settings file");
@@ -210,7 +212,7 @@ void storage_get_usage(size_t* used, size_t* total) {
 
 void storage_format() {
     g_presets.clear();
-    g_settings = { 5000, 8, 1.0f, false, 150, 60, false };
+    g_settings = { 5000, 8, 1.0f, true, 150, 60, false, 0 };
     LittleFS.format();
     LOG_I("Storage formatted - all data erased");
 }

@@ -29,8 +29,8 @@ static volatile bool speedUpdatePending = false;
 // ───────────────────────────────────────────────────────────────────────────────
 float rpmToStepHz(float rpm_workpiece) {
   // Formula: RPM × GearRatio × (D_workpiece / D_roller) × StepsPerRev / 60
-  // = rpm × 200 × 3.75 × 1600 / 60 = rpm × 20000
-  // 0.1 RPM -> 1080 Hz, 1 RPM -> 10800 Hz, 3 RPM -> 32400 Hz
+  // = rpm × 199.5 × 3.75 × 1600 / 60 = rpm × 19950
+  // 0.01 RPM -> 199 Hz, 0.1 RPM -> 1995 Hz, 1 RPM -> 19950 Hz
   return rpm_workpiece * GEAR_RATIO * (D_EMNE / D_RULLE) * STEPS_PER_REV / 60.0f;
 }
 

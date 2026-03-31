@@ -351,17 +351,15 @@ Before connecting mechanical load:
 ## 🛣️ Roadmap
 
 - [x] Basic rotation and UI setup
-- [x] Speed control and Acceleration
-- [x] Live RPM adjustment (pot + buttons during rotation)
-- [x] Pulse and Step modes
+- [x] All 5 welding modes (Continuous, Pulse, Step, Jog, Timer)
 - [x] Program Preset Storage (LittleFS + ArduinoJson)
-- [x] ISR IRAM-safe RMT/GPTIMER flags for PSRAM cache coherency
+- [x] Live RPM adjustment (pot + buttons during rotation)
 - [x] Microstepping selection (1/4, 1/8, 1/16, 1/32)
-- [x] Linear acceleration phase for resonance-zone traversal
-- [x] Thread-safe cross-core speed updates (volatile + request flag)
-- [ ] Wi-Fi / Web panel remote control (ESP32-C6)
-- [ ] OTA firmware updates
-- [ ] DM542T driver integration with anti-resonance DSP
+- [x] Accent color theme system (8 colors)
+- [x] DM542T driver support
+- [ ] Increase MAX_RPM to 5.0 with DM542T
+- [ ] Enclosure design files (3D printable)
+- [ ] Assembly guide
 
 ---
 

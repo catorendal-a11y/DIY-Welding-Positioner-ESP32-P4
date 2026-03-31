@@ -44,6 +44,9 @@ TaskHandle_t storageHandle = nullptr;
 void lvglTask(void* pvParameters) {
   LOG_I("LVGL task started on Core %d", xPortGetCoreID());
 
+  // Initialize theme colors from settings before creating screens
+  theme_init();
+
   // Initialize screens after LVGL is ready
   screens_init();
 

@@ -10,6 +10,17 @@
 // Maximum number of presets the system can hold
 #define MAX_PRESETS 16
 #define PRESETS_FILE "/presets.json"
+#define SETTINGS_FILE "/settings.json"
+
+struct SystemSettings {
+    int acceleration;
+    int microstep;         // e.g., 8 for 1/8, 16 for 1/16
+    float calibration_factor;
+    bool rpm_buttons_enabled;
+    uint8_t brightness;    // 0-255 backlight PWM
+    uint8_t dim_timeout;   // Seconds before auto-dim (0=off, 30, 60, 120, 300)
+    bool dir_switch_enabled; // CW/CCW hardware switch on GPIO28
+};
 
 // Preset struct matching the system's control capabilities
 struct Preset {
@@ -27,16 +38,32 @@ struct Preset {
     
     // Timer settings
     uint32_t timer_ms;
+
+    // Extended settings (v1.3.0)
+    uint8_t direction;         // 0=CW, 1=CCW
+    uint16_t pulse_cycles;     // 0=infinite
+    uint16_t step_repeats;     // 1..99
+    float step_dwell_sec;      // 0..30s
+    uint8_t timer_auto_stop;   // 1=auto stop at end
+    uint8_t cont_soft_start;   // 1=soft start enabled
 };
 
 // Global active preset list loaded from flash
 extern std::vector<Preset> g_presets;
 
+// Global settings
+extern SystemSettings g_settings;
+
 // Core functions
 void storage_init();
 bool storage_load_presets();
 bool storage_save_presets();
+bool storage_load_settings();
+void storage_save_settings();
+void storage_flush();
 
 // Helper functions
 Preset* storage_get_preset(uint8_t id);
 bool storage_delete_preset(uint8_t id);
+void storage_get_usage(size_t* used, size_t* total);
+void storage_format();

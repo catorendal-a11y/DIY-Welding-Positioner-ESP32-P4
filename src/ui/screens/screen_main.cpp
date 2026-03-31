@@ -1,350 +1,425 @@
 // TIG Rotator Controller - Main Screen
-// Pixel-perfect recreation of ui_mockup.svg using LVGL 8.x
-// Layout: 800×480, dark industrial, cyan accents
+// Gauge center with RPM, side buttons, bottom bar
+// Gauge semicircle center at (400, 200), R=130
+// RPM value in FONT_HUGE in center
+// RPM +/- under gauge
+// Side buttons: 3 left, 3 right, all gray by default, highlight accent when active
+// Bottom bar: START + STOP (56px tall)
 
 #include "../screens.h"
 #include "../theme.h"
 #include "../../config.h"
 #include "../../motor/speed.h"
 #include "../../control/control.h"
+#include "../../storage/storage.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // WIDGETS
 // ───────────────────────────────────────────────────────────────────────────────
-static lv_obj_t* mainScreen = nullptr;
+// Quick-pulse defaults (ms) — used when pulse button is pressed from main screen
+static uint32_t mainPulseOnMs  = 500;
+static uint32_t mainPulseOffMs = 500;
+
+static lv_obj_t* mainScreenPtr = nullptr;
 static lv_obj_t* stateLabel = nullptr;
-static lv_obj_t* voltageLabel = nullptr;
-
-// Center Gauge
-static lv_obj_t* rpmMeter = nullptr;
-static lv_meter_scale_t* scaleBase = nullptr;
-static lv_meter_scale_t* scaleActive = nullptr;
-static lv_meter_indicator_t* rpmIndicator = nullptr;
 static lv_obj_t* rpmLabel = nullptr;
-static lv_obj_t* rpmUnitLabel = nullptr;
+static lv_obj_t* rpmIndicatorArc = nullptr;
+static lv_obj_t* pulseOnLabel = nullptr;
+static lv_obj_t* pulseOffLabel = nullptr;
 
-// Side Panel Buttons
 static lv_obj_t* startBtn = nullptr;
 static lv_obj_t* stopBtn = nullptr;
+static lv_obj_t* rpmDownBtn = nullptr;
+static lv_obj_t* rpmUpBtn = nullptr;
 static lv_obj_t* jogBtn = nullptr;
 static lv_obj_t* cwBtn = nullptr;
-static lv_obj_t* ccwBtn = nullptr;
-static lv_obj_t* menuBtn = nullptr;
-
-// Speed Buttons
-static lv_obj_t* speedDownBtn = nullptr;
-static lv_obj_t* speedUpBtn = nullptr;
+static lv_obj_t* pulseBtn = nullptr;
 
 // ───────────────────────────────────────────────────────────────────────────────
-// STATE BADGE COLORS
+// STATE
 // ───────────────────────────────────────────────────────────────────────────────
-static const char* state_badge_strings[] = {
-  "IDLE",      // STATE_IDLE
-  "RUNNING",   // STATE_RUNNING
-  "PULSE",     // STATE_PULSE
-  "STEP",      // STATE_STEP
-  "JOG",       // STATE_JOG
-  "TIMER",     // STATE_TIMER
-  "STOPPING",  // STATE_STOPPING
-  "ESTOP"      // STATE_ESTOP
+static const char* state_strings[] = {
+  "IDLE", "RUN", "PULSE", "STEP", "JOG", "TIMER", "STOP", "E-STOP"
 };
-
-static lv_color_t state_badge_colors[] = {
-  COL_TEXT_DIM,   // IDLE
-  COL_GREEN,      // RUNNING
-  COL_PURPLE,     // PULSE
-  COL_TEAL,       // STEP
-  COL_AMBER,      // JOG
-  COL_ACCENT,     // TIMER
-  COL_AMBER,      // STOPPING
-  COL_RED         // ESTOP
+static lv_color_t state_colors[] = {
+  COL_TEXT_DIM, COL_GREEN, COL_ACCENT, COL_ACCENT,
+  COL_ACCENT, COL_ACCENT, COL_ACCENT, COL_RED
 };
 
 // ───────────────────────────────────────────────────────────────────────────────
-// EVENT HANDLERS
+// EVENT handlers
 // ───────────────────────────────────────────────────────────────────────────────
-static void start_event_cb(lv_event_t* e) {
-  if (control_get_state() == STATE_IDLE) {
-    control_start_continuous();
-  }
+static void start_event_cb(lv_event_t*) {
+  if (control_get_state() == STATE_IDLE) control_start_continuous();
 }
-
-static void stop_event_cb(lv_event_t* e) {
-  if (control_get_state() == STATE_RUNNING || control_get_state() == STATE_JOG) {
-    control_stop();
-  }
+static void stop_event_cb(lv_event_t*) {
+  control_stop();
 }
-
-static void jog_event_cb(lv_event_t* e) {
-  lv_event_code_t code = lv_event_get_code(e);
-  if (code == LV_EVENT_PRESSED) {
-    if (speed_get_direction() == DIR_CW) {
-      control_start_jog_cw();
-    } else {
-      control_start_jog_ccw();
-    }
-  } else if (code == LV_EVENT_RELEASED) {
-    control_stop();
-  }
+static void jog_press_cb(lv_event_t*) {
+  if (speed_get_direction() == DIR_CW) control_start_jog_cw();
+  else control_start_jog_ccw();
 }
-
-static void ccw_event_cb(lv_event_t* e) {
-  speed_set_direction(DIR_CCW);
+static void jog_release_cb(lv_event_t*) {
+  control_stop();
+}
+static void cw_event_cb(lv_event_t*) {
+  Direction d = speed_get_direction();
+  speed_set_direction(d == DIR_CW ? DIR_CCW : DIR_CW);
   screen_main_update();
 }
-
-static void cw_event_cb(lv_event_t* e) {
-  speed_set_direction(DIR_CW);
+static void pulse_event_cb(lv_event_t*) {
+  control_start_pulse(mainPulseOnMs, mainPulseOffMs);
   screen_main_update();
 }
-
-static void speed_down_event_cb(lv_event_t* e) {
+static void speed_down_cb(lv_event_t*) {
   float rpm = speed_get_target_rpm();
-  if (rpm > 0.1f) speed_slider_set(rpm - 0.1f);
+  rpm -= 0.1f;
+  if (rpm < MIN_RPM) rpm = MIN_RPM;
+  speed_slider_set(rpm);
   screen_main_update();
 }
-
-static void speed_up_event_cb(lv_event_t* e) {
+static void speed_up_cb(lv_event_t*) {
   float rpm = speed_get_target_rpm();
-  if (rpm < MAX_RPM) speed_slider_set(rpm + 0.1f);
+  rpm += 0.1f;
+  if (rpm > MAX_RPM) rpm = MAX_RPM;
+  speed_slider_set(rpm);
   screen_main_update();
 }
-
-static void menu_event_cb(lv_event_t* e) {
+static void pulse_on_down_cb(lv_event_t*) {
+  if (mainPulseOnMs >= 200) mainPulseOnMs -= 100;
+  screen_main_update();
+}
+static void pulse_on_up_cb(lv_event_t*) {
+  if (mainPulseOnMs <= 4900) mainPulseOnMs += 100;
+  screen_main_update();
+}
+static void pulse_off_down_cb(lv_event_t*) {
+  if (mainPulseOffMs >= 200) mainPulseOffMs -= 100;
+  screen_main_update();
+}
+static void pulse_off_up_cb(lv_event_t*) {
+  if (mainPulseOffMs <= 4900) mainPulseOffMs += 100;
+  screen_main_update();
+}
+static void menu_event_cb(lv_event_t*) {
   screens_show(SCREEN_MENU);
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// HELPER: Create a side-panel button at absolute SVG coordinates
-// SVG uses translate(x, y) for each button group
+// Helpers
 // ───────────────────────────────────────────────────────────────────────────────
-static lv_obj_t* create_svg_button(lv_obj_t* parent, int16_t x, int16_t y,
-                                    int16_t w, int16_t h, int16_t radius,
-                                    const char* text, bool active) {
-  lv_obj_t* btn = lv_btn_create(parent);
+static lv_obj_t* make_btn(lv_obj_t* parent, int x, int y, int w, int h,
+                           const char* text, bool accent) {
+  lv_obj_t* btn = lv_button_create(parent);
   lv_obj_set_size(btn, w, h);
   lv_obj_set_pos(btn, x, y);
+  lv_obj_set_style_radius(btn, RADIUS_BTN, 0);
+  lv_obj_set_style_shadow_width(btn, 0, 0);
+  lv_obj_set_style_pad_all(btn, 0, 0);
 
-  // SVG active state: fill=#0c1a1c, stroke=#00E5FF, stroke-width=2
-  // SVG inactive state: fill=#121212, stroke=#222, stroke-width=1
-  if (active) {
+  if (accent) {
     lv_obj_set_style_bg_color(btn, COL_BG_ACTIVE, 0);
     lv_obj_set_style_border_color(btn, COL_ACCENT, 0);
     lv_obj_set_style_border_width(btn, 2, 0);
   } else {
-    lv_obj_set_style_bg_color(btn, COL_BTN_NORMAL, 0);
+    lv_obj_set_style_bg_color(btn, COL_BTN_BG, 0);
     lv_obj_set_style_border_color(btn, COL_BORDER, 0);
     lv_obj_set_style_border_width(btn, 1, 0);
   }
-  lv_obj_set_style_radius(btn, radius, 0);
-  lv_obj_set_style_shadow_width(btn, 0, 0);
 
-  lv_obj_t* label = lv_label_create(btn);
-  lv_label_set_text(label, text);
-  // SVG active text: font-size=20, font-weight=bold, fill=#FFF
-  // SVG inactive text: font-size=18, fill=#555 or #FFF
-  if (active) {
-    lv_obj_set_style_text_font(label, &lv_font_montserrat_20, 0);
-    lv_obj_set_style_text_color(label, COL_TEXT, 0);
-  } else {
-    lv_obj_set_style_text_font(label, &lv_font_montserrat_18, 0);
-    lv_obj_set_style_text_color(label, COL_TEXT, 0);
-  }
-  lv_obj_center(label);
-
+  lv_obj_t* lbl = lv_label_create(btn);
+  lv_label_set_text(lbl, text);
+  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_color(lbl, accent ? COL_ACCENT : COL_TEXT, 0);
+  lv_obj_center(lbl);
   return btn;
 }
 
+static void set_btn_style(lv_obj_t* btn, lv_color_t bg, lv_color_t border,
+                           int bw, lv_color_t text_col) {
+  lv_obj_set_style_bg_color(btn, bg, 0);
+  lv_obj_set_style_border_color(btn, border, 0);
+  lv_obj_set_style_border_width(btn, bw, 0);
+  lv_obj_t* lbl = lv_obj_get_child(btn, 0);
+  if (lbl) lv_obj_set_style_text_color(lbl, text_col, 0);
+}
+
 // ───────────────────────────────────────────────────────────────────────────────
-// SCREEN CREATE — Pixel-perfect match to ui_mockup.svg
+// SCREEN CREATE
+// Layout: Header 30 | Side buttons | Gauge center | RPM+/- | Bottom bar
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_main_create() {
-  mainScreen = screenRoots[SCREEN_MAIN];
-  lv_obj_set_style_bg_color(mainScreen, COL_BG, 0);
+  mainScreenPtr = screenRoots[SCREEN_MAIN];
+  lv_obj_set_style_bg_color(mainScreenPtr, COL_BG, 0);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // TOP STATUS BAR
-  // SVG: "TIG ROTATOR" at (30,35) fill=#444, "RUNNING" at (400,35) fill=#00E676
-  //      "24.5V" at (770,35) fill=#444
-  // ─────────────────────────────────────────────────────────────────────────
-  lv_obj_t* title = lv_label_create(mainScreen);
-  lv_label_set_text(title, "TIG ROTATOR");
-  lv_obj_set_style_text_font(title, &lv_font_montserrat_14, 0);
-  lv_obj_set_style_text_color(title, COL_TEXT_LABEL, 0);
-  lv_obj_set_pos(title, 30, 15);   // SVG: x=30 y=35 (baseline), adjust for top-left anchor
+  // ── Header (30px) ──
+  lv_obj_t* header = lv_obj_create(mainScreenPtr);
+  lv_obj_set_size(header, SCREEN_W, HEADER_H);
+  lv_obj_set_pos(header, 0, 0);
+  lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
+  lv_obj_set_style_pad_all(header, 0, 0);
+  lv_obj_set_style_border_width(header, 0, 0);
+  lv_obj_set_style_radius(header, 0, 0);
+  lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
 
-  stateLabel = lv_label_create(mainScreen);
+  lv_obj_t* title = lv_label_create(header);
+  lv_label_set_text(title, "TIG-ROTATOR");
+  lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_color(title, COL_ACCENT, 0);
+  lv_obj_set_pos(title, PAD_X, 8);
+
+  stateLabel = lv_label_create(header);
   lv_label_set_text(stateLabel, "IDLE");
-  lv_obj_set_style_text_font(stateLabel, &lv_font_montserrat_16, 0);
-  lv_obj_set_style_text_color(stateLabel, COL_TEXT_DIM, 0);
-  lv_obj_align(stateLabel, LV_ALIGN_TOP_MID, 0, 15);
+  lv_obj_set_style_text_font(stateLabel, FONT_NORMAL, 0);
+  lv_obj_set_style_text_color(stateLabel, COL_GREEN, 0);
+  lv_obj_set_pos(stateLabel, 160, 8);
 
-  voltageLabel = lv_label_create(mainScreen);
-  lv_label_set_text(voltageLabel, "24.5V");
-  lv_obj_set_style_text_font(voltageLabel, &lv_font_montserrat_14, 0);
-  lv_obj_set_style_text_color(voltageLabel, COL_TEXT_LABEL, 0);
-  lv_obj_set_pos(voltageLabel, 735, 15);  // SVG: x=770 anchor=end, approx -35px for text width
+  // ── Gauge semicircle, center at (400, 200), R=130 ──
+  const int arcCX = 400;
+  const int arcCY = 170;
+  const int arcR = 150;
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // CENTRAL GAUGE (SVG: arc at center 400,240, radius=160)
-  // ─────────────────────────────────────────────────────────────────────────
-  rpmMeter = lv_meter_create(mainScreen);
-  lv_obj_set_size(rpmMeter, GAUGE_R * 2 + 20, GAUGE_R * 2 + 20);  // 340x340
-  // Center the meter visually at SVG (400, 240)
-  lv_obj_set_pos(rpmMeter, GAUGE_CX - GAUGE_R - 10, GAUGE_CY - GAUGE_R - 10);
-  lv_obj_set_style_bg_color(rpmMeter, COL_BG, 0);
-  lv_obj_set_style_bg_opa(rpmMeter, LV_OPA_TRANSP, 0);
-  lv_obj_set_style_border_width(rpmMeter, 0, 0);
-  lv_obj_set_style_pad_all(rpmMeter, 10, 0);
-  lv_obj_remove_style(rpmMeter, nullptr, LV_PART_INDICATOR);
+  // Track arc (background)
+  lv_obj_t* gaugeTrack = lv_arc_create(mainScreenPtr);
+  int trackSize = arcR * 2 + 20;
+  lv_obj_set_size(gaugeTrack, trackSize, trackSize);
+  lv_obj_set_pos(gaugeTrack, arcCX - trackSize/2, arcCY - trackSize/2);
+  lv_obj_remove_flag(gaugeTrack, LV_OBJ_FLAG_SCROLLABLE);
+  lv_arc_set_bg_angles(gaugeTrack, 135, 405);
+  lv_arc_set_value(gaugeTrack, 0);
+  lv_obj_remove_style(gaugeTrack, NULL, LV_PART_KNOB);
+  lv_obj_remove_style(gaugeTrack, NULL, LV_PART_INDICATOR);
+  lv_obj_set_style_bg_opa(gaugeTrack, LV_OPA_TRANSP, 0);
+  lv_obj_set_style_border_width(gaugeTrack, 0, 0);
+  lv_obj_set_style_pad_all(gaugeTrack, 10, 0);
+  lv_obj_set_style_arc_color(gaugeTrack, COL_GAUGE_BG, LV_PART_MAIN);
+  lv_obj_set_style_arc_width(gaugeTrack, 12, LV_PART_MAIN);
+  lv_obj_remove_flag(gaugeTrack, LV_OBJ_FLAG_CLICKABLE);
 
-  // Background arc scale (SVG: stroke=#111, stroke-width=15)
-  scaleBase = lv_meter_add_scale(rpmMeter);
-  lv_meter_set_scale_ticks(rpmMeter, scaleBase, 61, 2, 12, COL_GAUGE_TICK);
-  lv_meter_set_scale_range(rpmMeter, scaleBase, 0, 60, 270, 135);
+  // Active arc (value indicator)
+  rpmIndicatorArc = lv_arc_create(mainScreenPtr);
+  int activeSize = arcR * 2;
+  lv_obj_set_size(rpmIndicatorArc, activeSize, activeSize);
+  lv_obj_set_pos(rpmIndicatorArc, arcCX - activeSize/2, arcCY - activeSize/2);
+  lv_arc_set_rotation(rpmIndicatorArc, 135);
+  lv_arc_set_bg_angles(rpmIndicatorArc, 0, 270);
+  lv_arc_set_range(rpmIndicatorArc, 0, 30);
+  lv_arc_set_value(rpmIndicatorArc, 0);
+  lv_obj_remove_style(rpmIndicatorArc, nullptr, LV_PART_KNOB);
+  lv_obj_remove_flag(rpmIndicatorArc, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_style_arc_color(rpmIndicatorArc, COL_BG, LV_PART_MAIN);
+  lv_obj_set_style_arc_opa(rpmIndicatorArc, LV_OPA_TRANSP, LV_PART_MAIN);
+  lv_obj_set_style_arc_color(rpmIndicatorArc, COL_ACCENT, LV_PART_INDICATOR);
+  lv_obj_set_style_arc_width(rpmIndicatorArc, 8, LV_PART_INDICATOR);
 
-  // Active sweep scale (SVG: stroke=#00E5FF, stroke-width=12, with glow filter)
-  scaleActive = lv_meter_add_scale(rpmMeter);
-  lv_meter_set_scale_ticks(rpmMeter, scaleActive, 61, 3, 16, COL_ACCENT);
-  lv_meter_set_scale_range(rpmMeter, scaleActive, 0, 60, 270, 135);
-
-  // Arc indicator (the cyan sweep)
-  rpmIndicator = lv_meter_add_arc(rpmMeter, scaleActive, 12, COL_ACCENT, -5);
-  lv_meter_set_indicator_start_value(rpmMeter, rpmIndicator, 0);
-  lv_meter_set_indicator_end_value(rpmMeter, rpmIndicator, 0);
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // LARGE RPM VALUE (SVG: "1.8" at (400,260) font-size=100 fill=#FFF bold)
-  // ─────────────────────────────────────────────────────────────────────────
-  rpmLabel = lv_label_create(mainScreen);
+  // RPM value centered in gauge
+  rpmLabel = lv_label_create(mainScreenPtr);
   lv_label_set_text(rpmLabel, "0.0");
-  // lv_font_montserrat_48 is the largest commonly included Montserrat in LVGL 8
-  // The SVG calls for font-size=100, so we use 48 which is the biggest built-in
-  lv_obj_set_style_text_font(rpmLabel, &lv_font_montserrat_48, 0);
-  lv_obj_set_style_text_color(rpmLabel, COL_TEXT, 0);
-  // SVG: y=260 (baseline from top), center horizontally at x=400
-  lv_obj_set_pos(rpmLabel, GAUGE_CX, GAUGE_CY - 15);
-  lv_obj_set_style_text_align(rpmLabel, LV_TEXT_ALIGN_CENTER, 0);
-  lv_obj_align(rpmLabel, LV_ALIGN_TOP_MID, 0, GAUGE_CY - 40);
+  lv_obj_set_style_text_font(rpmLabel, FONT_HUGE, 0);
+  lv_obj_set_style_text_color(rpmLabel, COL_ACCENT, 0);
+  lv_obj_set_pos(rpmLabel, arcCX - 60, arcCY - 40);
 
-  // "RPM" unit label (SVG: (400,305) font-size=22 fill=#00E5FF bold, letter-spacing=3)
-  rpmUnitLabel = lv_label_create(mainScreen);
-  lv_label_set_text(rpmUnitLabel, "R P M");
-  lv_obj_set_style_text_font(rpmUnitLabel, &lv_font_montserrat_20, 0);
-  lv_obj_set_style_text_color(rpmUnitLabel, COL_ACCENT, 0);
-  lv_obj_set_style_text_letter_space(rpmUnitLabel, 4, 0);
-  lv_obj_align(rpmUnitLabel, LV_ALIGN_TOP_MID, 0, GAUGE_CY + 20);
+  // "RPM" text under value
+  lv_obj_t* rpmTag = lv_label_create(mainScreenPtr);
+  lv_label_set_text(rpmTag, "RPM");
+  lv_obj_set_style_text_font(rpmTag, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_color(rpmTag, COL_TEXT_DIM, 0);
+  lv_obj_set_pos(rpmTag, arcCX - 20, arcCY + 20);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // LEFT SIDE PANEL BUTTONS
-  // SVG coordinates: translate(35, 120/210/300), width=130, height=75, rx=12
-  // ─────────────────────────────────────────────────────────────────────────
-  startBtn = create_svg_button(mainScreen, LEFT_BTN_X, BTN_ROW_1_Y,
-                                BTN_W, BTN_H, RADIUS_BTN, "ON", true);
-  lv_obj_add_event_cb(startBtn, start_event_cb, LV_EVENT_CLICKED, nullptr);
+  // ── Left side buttons: JOG, CW, PULSE (170x72, gray by default) ──
+  const int sideW = 170;
+  const int sideH = 72;
+  const int sideGap = 10;
+  const int leftX = 8;
+  const int rightX = 800 - 8 - sideW;
 
-  stopBtn = create_svg_button(mainScreen, LEFT_BTN_X, BTN_ROW_2_Y,
-                               BTN_W, BTN_H, RADIUS_BTN, "STOP", false);
-  lv_obj_add_event_cb(stopBtn, stop_event_cb, LV_EVENT_CLICKED, nullptr);
+  jogBtn = make_btn(mainScreenPtr, leftX, 36, sideW, sideH, "JOG", false);
+  lv_obj_add_event_cb(jogBtn, jog_press_cb, LV_EVENT_PRESSED, nullptr);
+  lv_obj_add_event_cb(jogBtn, jog_release_cb, LV_EVENT_RELEASED, nullptr);
+  lv_obj_add_event_cb(jogBtn, jog_release_cb, LV_EVENT_PRESS_LOST, nullptr);
 
-  jogBtn = create_svg_button(mainScreen, LEFT_BTN_X, BTN_ROW_3_Y,
-                              BTN_W, BTN_H, RADIUS_BTN, "JOG", false);
-  lv_obj_add_event_cb(jogBtn, jog_event_cb, LV_EVENT_ALL, nullptr);
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // RIGHT SIDE PANEL BUTTONS
-  // SVG coordinates: translate(635, 120/210/300), width=130, height=75, rx=12
-  // ─────────────────────────────────────────────────────────────────────────
-  cwBtn = create_svg_button(mainScreen, RIGHT_BTN_X, BTN_ROW_1_Y,
-                             BTN_W, BTN_H, RADIUS_BTN, LV_SYMBOL_UP " CW", true);
+  cwBtn = make_btn(mainScreenPtr, leftX, 36 + sideH + sideGap, sideW, sideH, "CW", false);
   lv_obj_add_event_cb(cwBtn, cw_event_cb, LV_EVENT_CLICKED, nullptr);
 
-  ccwBtn = create_svg_button(mainScreen, RIGHT_BTN_X, BTN_ROW_2_Y,
-                              BTN_W, BTN_H, RADIUS_BTN, LV_SYMBOL_DOWN " CCW", false);
-  lv_obj_add_event_cb(ccwBtn, ccw_event_cb, LV_EVENT_CLICKED, nullptr);
+  pulseBtn = make_btn(mainScreenPtr, leftX, 36 + (sideH + sideGap) * 2, sideW, sideH, "PULSE", false);
+  lv_obj_add_event_cb(pulseBtn, pulse_event_cb, LV_EVENT_CLICKED, nullptr);
 
-  menuBtn = create_svg_button(mainScreen, RIGHT_BTN_X, BTN_ROW_3_Y,
-                               BTN_W, BTN_H, RADIUS_BTN, "MENU", false);
+  // ── Right side buttons: STEP, TIMER, MENU (170x72, gray) ──
+  lv_obj_t* stepBtn = make_btn(mainScreenPtr, rightX, 36, sideW, sideH, "STEP", false);
+  lv_obj_add_event_cb(stepBtn, [](lv_event_t*) { screens_show(SCREEN_STEP); }, LV_EVENT_CLICKED, nullptr);
+
+  lv_obj_t* timerBtn = make_btn(mainScreenPtr, rightX, 36 + sideH + sideGap, sideW, sideH, "TIMER", false);
+  lv_obj_add_event_cb(timerBtn, [](lv_event_t*) { screens_show(SCREEN_TIMER); }, LV_EVENT_CLICKED, nullptr);
+
+  lv_obj_t* menuBtn = make_btn(mainScreenPtr, rightX, 36 + (sideH + sideGap) * 2, sideW, sideH, "MENU", false);
   lv_obj_add_event_cb(menuBtn, menu_event_cb, LV_EVENT_CLICKED, nullptr);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // SPEED CONTROL BUTTONS (under gauge)
-  // SVG: translate(295/410, 400), width=95, height=55, rx=10
-  // ─────────────────────────────────────────────────────────────────────────
-  speedDownBtn = create_svg_button(mainScreen, SPD_BTN_L_X, SPD_BTN_Y,
-                                    BTN_W_SM, BTN_H_SM, RADIUS_BTN_SM, "- RPM", false);
-  // Override border to match SVG #333
-  lv_obj_set_style_border_color(speedDownBtn, COL_BORDER_SPD, 0);
-  lv_obj_add_event_cb(speedDownBtn, speed_down_event_cb, LV_EVENT_CLICKED, nullptr);
+  // ── RPM +/- under gauge (y=290) ──
+  rpmDownBtn = make_btn(mainScreenPtr, 280, 310, 120, 56, "-", false);
+  rpmUpBtn = make_btn(mainScreenPtr, 410, 310, 120, 56, "+", false);
+  lv_obj_add_event_cb(rpmDownBtn, speed_down_cb, LV_EVENT_CLICKED, nullptr);
+  lv_obj_add_event_cb(rpmUpBtn, speed_up_cb, LV_EVENT_CLICKED, nullptr);
 
-  speedUpBtn = create_svg_button(mainScreen, SPD_BTN_R_X, SPD_BTN_Y,
-                                  BTN_W_SM, BTN_H_SM, RADIUS_BTN_SM, "+ RPM", false);
-  lv_obj_set_style_border_color(speedUpBtn, COL_BORDER_SPD, 0);
-  lv_obj_add_event_cb(speedUpBtn, speed_up_event_cb, LV_EVENT_CLICKED, nullptr);
+  // ── Pulse time controls under PULSE button (left column x=8, w=170) ──
+  // PULSE btn bottom: y=272. Two rows: ON time, OFF time
+  // Row 1: ON  y=280
+  const int pCol = 8;
+  const int pW = 170;
+  const int pH = 44;
+  const int pBtnW = 52;
 
-  LOG_I("Screen main: SVG-matched layout created");
+  lv_obj_t* onTag = lv_label_create(mainScreenPtr);
+  lv_label_set_text(onTag, "ON");
+  lv_obj_set_style_text_font(onTag, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_color(onTag, COL_TEXT_DIM, 0);
+  lv_obj_set_pos(onTag, pCol + 2, 286);
+
+  lv_obj_t* pulseOnDownBtn = make_btn(mainScreenPtr, pCol + 24, 280, pBtnW, pH, "-", false);
+  lv_obj_add_event_cb(pulseOnDownBtn, pulse_on_down_cb, LV_EVENT_CLICKED, nullptr);
+
+  pulseOnLabel = lv_label_create(mainScreenPtr);
+  lv_obj_set_style_text_font(pulseOnLabel, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_color(pulseOnLabel, COL_TEXT, 0);
+  lv_obj_set_pos(pulseOnLabel, pCol + 80, 290);
+
+  lv_obj_t* pulseOnUpBtn = make_btn(mainScreenPtr, pCol + pW - pBtnW, 280, pBtnW, pH, "+", false);
+  lv_obj_add_event_cb(pulseOnUpBtn, pulse_on_up_cb, LV_EVENT_CLICKED, nullptr);
+
+  // Row 2: OFF y=330
+  lv_obj_t* offTag = lv_label_create(mainScreenPtr);
+  lv_label_set_text(offTag, "OFF");
+  lv_obj_set_style_text_font(offTag, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_color(offTag, COL_TEXT_DIM, 0);
+  lv_obj_set_pos(offTag, pCol + 2, 336);
+
+  lv_obj_t* pulseOffDownBtn = make_btn(mainScreenPtr, pCol + 24, 330, pBtnW, pH, "-", false);
+  lv_obj_add_event_cb(pulseOffDownBtn, pulse_off_down_cb, LV_EVENT_CLICKED, nullptr);
+
+  pulseOffLabel = lv_label_create(mainScreenPtr);
+  lv_obj_set_style_text_font(pulseOffLabel, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_color(pulseOffLabel, COL_TEXT, 0);
+  lv_obj_set_pos(pulseOffLabel, pCol + 80, 340);
+
+  lv_obj_t* pulseOffUpBtn = make_btn(mainScreenPtr, pCol + pW - pBtnW, 330, pBtnW, pH, "+", false);
+  lv_obj_add_event_cb(pulseOffUpBtn, pulse_off_up_cb, LV_EVENT_CLICKED, nullptr);
+
+  // ── Bottom bar: START + STOP (y=420, h=56) ──
+  const int botY = 420;
+  const int botH = 56;
+  const int botBtnW = 392;
+  const int botGap = 8;
+
+  startBtn = lv_button_create(mainScreenPtr);
+  lv_obj_set_size(startBtn, botBtnW, botH);
+  lv_obj_set_pos(startBtn, 4, botY);
+  set_btn_style(startBtn, COL_BTN_BG, COL_BORDER, 1, COL_TEXT);
+  lv_obj_set_style_radius(startBtn, RADIUS_BTN, 0);
+  lv_obj_set_style_shadow_width(startBtn, 0, 0);
+  lv_obj_set_style_pad_all(startBtn, 0, 0);
+  lv_obj_add_event_cb(startBtn, start_event_cb, LV_EVENT_CLICKED, nullptr);
+  lv_obj_t* startLbl = lv_label_create(startBtn);
+  lv_label_set_text(startLbl, "> START");
+  lv_obj_set_style_text_font(startLbl, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_color(startLbl, COL_TEXT, 0);
+  lv_obj_center(startLbl);
+
+  stopBtn = lv_button_create(mainScreenPtr);
+  lv_obj_set_size(stopBtn, botBtnW, botH);
+  lv_obj_set_pos(stopBtn, 4 + botBtnW + botGap, botY);
+  lv_obj_set_style_bg_color(stopBtn, COL_BG_DANGER, 0);
+  lv_obj_set_style_radius(stopBtn, RADIUS_BTN, 0);
+  lv_obj_set_style_border_width(stopBtn, 2, 0);
+  lv_obj_set_style_border_color(stopBtn, COL_RED, 0);
+  lv_obj_set_style_shadow_width(stopBtn, 0, 0);
+  lv_obj_set_style_pad_all(stopBtn, 0, 0);
+  lv_obj_add_event_cb(stopBtn, stop_event_cb, LV_EVENT_CLICKED, nullptr);
+  lv_obj_t* stopLbl = lv_label_create(stopBtn);
+  lv_label_set_text(stopLbl, "[] STOP");
+  lv_obj_set_style_text_font(stopLbl, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_color(stopLbl, COL_RED, 0);
+  lv_obj_center(stopLbl);
+
+  LOG_I("Screen main: centered gauge layout created");
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// SCREEN UPDATE — Dynamic state-driven visual updates
+// SCREEN UPDATE
 // ───────────────────────────────────────────────────────────────────────────────
-
-// Helper: Set button to SVG active or inactive visual state
-static void set_btn_svg_state(lv_obj_t* btn, bool active) {
-  if (active) {
-    // SVG active: fill=#0c1a1c, stroke=#00E5FF 2px, shadow glow
-    lv_obj_set_style_bg_color(btn, COL_BG_ACTIVE, 0);
-    lv_obj_set_style_border_color(btn, COL_ACCENT, 0);
-    lv_obj_set_style_border_width(btn, 2, 0);
-    lv_obj_set_style_shadow_color(btn, COL_ACCENT, 0);
-    lv_obj_set_style_shadow_width(btn, 20, 0);
-    lv_obj_set_style_shadow_spread(btn, 2, 0);
-    lv_obj_set_style_shadow_opa(btn, LV_OPA_30, 0);
-    // Update child label to white bold
-    lv_obj_t* label = lv_obj_get_child(btn, 0);
-    if (label) {
-      lv_obj_set_style_text_color(label, COL_TEXT, 0);
-      lv_obj_set_style_text_font(label, &lv_font_montserrat_20, 0);
-    }
-  } else {
-    // SVG inactive: fill=#121212, stroke=#222 1px, no shadow
-    lv_obj_set_style_bg_color(btn, COL_BTN_NORMAL, 0);
-    lv_obj_set_style_border_color(btn, COL_BORDER, 0);
-    lv_obj_set_style_border_width(btn, 1, 0);
-    lv_obj_set_style_shadow_width(btn, 0, 0);
-    // Update child label to dimmed
-    lv_obj_t* label = lv_obj_get_child(btn, 0);
-    if (label) {
-      lv_obj_set_style_text_color(label, COL_TEXT_DIM, 0);
-      lv_obj_set_style_text_font(label, &lv_font_montserrat_18, 0);
-    }
-  }
-}
-
 void screen_main_update() {
   if (!screens_is_active(SCREEN_MAIN)) return;
 
   SystemState state = control_get_state();
   Direction dir = speed_get_direction();
-  float rpm = speed_get_actual_rpm();
+
+  float rpm;
+  bool is_running = (state == STATE_RUNNING || state == STATE_PULSE ||
+                     state == STATE_STEP || state == STATE_TIMER ||
+                     state == STATE_JOG);
+  if (is_running) {
+    rpm = speed_get_actual_rpm();
+    if (rpm < 0.01f) rpm = speed_get_target_rpm();
+  } else {
+    rpm = speed_get_target_rpm();
+  }
   int32_t val = (int32_t)(rpm * 10.0f);
 
-  // Update State Badge (SVG: center top, green when running)
-  lv_label_set_text(stateLabel, state_badge_strings[state]);
-  lv_obj_set_style_text_color(stateLabel, state_badge_colors[state], 0);
+  // Header state
+  if (state < (int)(sizeof(state_strings) / sizeof(state_strings[0]))) {
+    lv_label_set_text(stateLabel, state_strings[state]);
+    lv_obj_set_style_text_color(stateLabel, state_colors[state], 0);
+  }
 
-  // Update Gauge Arc
-  lv_meter_set_indicator_end_value(rpmMeter, rpmIndicator, val);
+  // RPM in gauge
   lv_label_set_text_fmt(rpmLabel, "%.1f", rpm);
+  lv_arc_set_value(rpmIndicatorArc, val);
 
-  // Dynamic Button States (matching SVG active/inactive patterns)
-  bool is_running = (state == STATE_RUNNING || state == STATE_PULSE ||
-                     state == STATE_STEP || state == STATE_TIMER);
+  // START button: gray when idle, accent when running
+  if (is_running) {
+    set_btn_style(startBtn, COL_BG_ACTIVE, COL_ACCENT, 2, COL_ACCENT);
+  } else {
+    set_btn_style(startBtn, COL_BTN_BG, COL_BORDER, 1, COL_TEXT);
+  }
 
-  set_btn_svg_state(startBtn, is_running);
-  set_btn_svg_state(stopBtn, !is_running && state != STATE_IDLE);
+  // JOG button: accent when jogging, gray otherwise
+  if (state == STATE_JOG) {
+    set_btn_style(jogBtn, COL_BG_ACTIVE, COL_ACCENT, 2, COL_ACCENT);
+  } else {
+    set_btn_style(jogBtn, COL_BTN_BG, COL_BORDER, 1, COL_TEXT);
+  }
 
-  // Direction buttons reflect current direction
-  set_btn_svg_state(cwBtn, (dir == DIR_CW));
-  set_btn_svg_state(ccwBtn, (dir == DIR_CCW));
+  // CW button: accent when CW, gray when CCW
+  lv_obj_t* cwLbl = lv_obj_get_child(cwBtn, 0);
+  if (cwLbl) lv_label_set_text(cwLbl, (dir == DIR_CW) ? "CW" : "CCW");
+  if (dir == DIR_CW) {
+    set_btn_style(cwBtn, COL_BG_ACTIVE, COL_ACCENT, 2, COL_ACCENT);
+  } else {
+    set_btn_style(cwBtn, COL_BTN_BG, COL_BORDER, 1, COL_TEXT);
+  }
+
+  // PULSE button: accent when pulsing
+  if (state == STATE_PULSE) {
+    set_btn_style(pulseBtn, COL_BG_ACTIVE, COL_ACCENT, 2, COL_ACCENT);
+  } else {
+    set_btn_style(pulseBtn, COL_BTN_BG, COL_BORDER, 1, COL_TEXT);
+  }
+
+  // Pulse time labels
+  if (pulseOnLabel) {
+    char buf[12];
+    snprintf(buf, sizeof(buf), "%.1fs", mainPulseOnMs / 1000.0f);
+    lv_label_set_text(pulseOnLabel, buf);
+  }
+  if (pulseOffLabel) {
+    char buf[12];
+    snprintf(buf, sizeof(buf), "%.1fs", mainPulseOffMs / 1000.0f);
+    lv_label_set_text(pulseOffLabel, buf);
+  }
+
+  if (g_settings.rpm_buttons_enabled) {
+    lv_obj_remove_state(rpmDownBtn, LV_STATE_DISABLED);
+    lv_obj_remove_state(rpmUpBtn, LV_STATE_DISABLED);
+  } else {
+    lv_obj_add_state(rpmDownBtn, LV_STATE_DISABLED);
+    lv_obj_add_state(rpmUpBtn, LV_STATE_DISABLED);
+  }
 }

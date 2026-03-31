@@ -1,16 +1,39 @@
 // TIG Rotator Controller - LVGL Hardware Abstraction Layer Implementation
-// LVGL 8.x with PSRAM buffers, MIPI-DSI DPI panel flush
+// LVGL 9.x with PSRAM buffers, MIPI-DSI DPI panel flush
 // Color format: RGB565 (matching ST7701S and JC4880P433C BSP)
+// Manual 90° CW rotation in flush callback (LVGL rotation crashes on ESP32-P4)
 
 #include "lvgl_hal.h"
 #include <Arduino.h>
 #include "../config.h"
 #include "display.h"
+#include "../storage/storage.h"
 
 #include <esp_timer.h>
 #include <esp_heap_caps.h>
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_touch.h"
+
+static uint32_t lastActivityMs = 0;
+static bool isDimmed = false;
+static uint8_t dimBrightness = 15;
+
+void dim_reset_activity() {
+  lastActivityMs = millis();
+  if (isDimmed) {
+    isDimmed = false;
+    display_set_brightness(g_settings.brightness);
+  }
+}
+
+void dim_update() {
+  if (g_settings.dim_timeout == 0) return;
+  if (isDimmed) return;
+  if (millis() - lastActivityMs > (uint32_t)g_settings.dim_timeout * 1000) {
+    isDimmed = true;
+    display_set_brightness(dimBrightness);
+  }
+}
 
 // ───────────────────────────────────────────────────────────────────────────────
 // TICK TIMER — 1ms tick for LVGL animations and timers
@@ -22,80 +45,120 @@ static void IRAM_ATTR lvgl_tick_cb(void* arg) {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// LVGL BUFFERS - PSRAM (NOT DMA - draw_bitmap handles DMA internally)
+// LVGL BUFFERS - PSRAM
+// LVGL renders at 800x480 landscape, flush callback rotates to 480x800 portrait
 // ───────────────────────────────────────────────────────────────────────────────
-static lv_disp_draw_buf_t draw_buf;
-static lv_color_t *buf1 = nullptr;
-static lv_color_t *buf2 = nullptr;
+static uint8_t *buf1 = nullptr;
+static uint8_t *buf2 = nullptr;
+static size_t buf_bytes = 0;
+
+// Pre-allocated rotation scratch buffer (PSRAM)
+// Max strip: 800 × 80 lines = 64000 pixels × 2 bytes = 128000 bytes
+static uint16_t *rot_buf = nullptr;
+static size_t rot_buf_pixels = 0;
 
 void lvgl_alloc_buffers() {
-  // LVGL_COLOR_DEPTH=16: lv_color_t is 2 bytes (RGB565)
-  // Buffer size: 480 × 80 lines × 2 bytes = 76800 bytes per buffer
-  // IMPORTANT: Use internal DMA-capable RAM for DMA2D compatibility!
-  // PSRAM causes esp_cache_msync crash with DMA2D enabled
-  size_t buf_bytes = DISPLAY_H_RES_NATIVE * LVGL_BUF_LINES * sizeof(lv_color_t);
+  // Buffer for LVGL rendering: 800 × 80 lines × 2 bytes = 128000 bytes
+  buf_bytes = DISPLAY_H_RES * LVGL_BUF_LINES * 2;
 
-  // Use internal DMA-capable RAM (required for DMA2D)
-  buf1 = (lv_color_t*)heap_caps_malloc(buf_bytes, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
-  buf2 = (lv_color_t*)heap_caps_malloc(buf_bytes, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+  // Rotation scratch buffer: same max size as a strip
+  rot_buf_pixels = DISPLAY_H_RES * LVGL_BUF_LINES; // 800 * 80 = 64000 pixels
 
-  // Fallback: try without DMA flag if allocation fails
-  if (!buf1 || !buf2) {
-    LOG_W("DMA alloc failed, trying internal RAM without DMA flag...");
+  // Use PSRAM (32MB available) — DMA2D is disabled so PSRAM is safe
+  buf1 = (uint8_t*)heap_caps_malloc(buf_bytes, MALLOC_CAP_SPIRAM);
+  buf2 = (uint8_t*)heap_caps_malloc(buf_bytes, MALLOC_CAP_SPIRAM);
+  rot_buf = (uint16_t*)heap_caps_malloc(rot_buf_pixels * 2, MALLOC_CAP_SPIRAM);
+
+  if (!buf1 || !buf2 || !rot_buf) {
+    LOG_E("FATAL: LVGL buffer alloc failed!");
     if (buf1) heap_caps_free(buf1);
     if (buf2) heap_caps_free(buf2);
-
-    buf1 = (lv_color_t*)heap_caps_malloc(buf_bytes, MALLOC_CAP_INTERNAL);
-    buf2 = (lv_color_t*)heap_caps_malloc(buf_bytes, MALLOC_CAP_INTERNAL);
-
-    if (!buf1 || !buf2) {
-      LOG_E("FATAL: Cannot allocate LVGL buffers!");
-      if (buf1) heap_caps_free(buf1);
-      buf1 = nullptr;
-      return;
-    }
-    LOG_W("Using internal RAM (non-DMA) - may have issues with DMA2D");
+    if (rot_buf) heap_caps_free(rot_buf);
+    buf1 = nullptr;
+    rot_buf = nullptr;
+    return;
   }
-
-  lv_disp_draw_buf_init(&draw_buf, buf1, buf2, DISPLAY_H_RES_NATIVE * LVGL_BUF_LINES);
-  LOG_I("LVGL buffers OK: %zu bytes each, internal DMA-RAM, RGB565, no DMA2D", buf_bytes);
+  LOG_I("LVGL buffers OK: 2x%zu bytes draw + %zu bytes rotation (PSRAM)", buf_bytes, rot_buf_pixels * 2);
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// DISPLAY FLUSH CALLBACK — RGB565 direct pass-through (no conversion needed!)
-// CRITICAL: lv_disp_flush_ready() is called by vsync callback, NOT here!
+// DISPLAY FLUSH CALLBACK — Manual 90° CW rotation from 800x480 to 480x800
+//
+// LVGL renders at 800x480 (landscape). The physical panel is 480x800 (portrait).
+// Rotation mapping: landscape (x, y) → portrait (y, 799-x)
+//
+// For a strip (x1,y1)→(x2,y2) with W=x2-x1+1, H=y2-y1+1:
+//   Portrait rectangle: (y1, 799-x2) → (y2, 799-x1)
+//   Portrait width = H, Portrait height = W
+//   pixel rotation: rot_buf[(x2-x)*H + (y-y1)] = src_buf[(y-y1)*W + (x-x1)]
 // ───────────────────────────────────────────────────────────────────────────────
-void lvgl_flush_cb(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p) {
-  // Safety check - prevent crash on null buffer or display
-  if (!display_panel || !color_p || !area) {
-    lv_disp_flush_ready(disp);
+void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
+  if (!display_panel || !px_map || !area || !rot_buf) {
+    lv_display_flush_ready(disp);
     return;
   }
 
-  int x1 = area->x1;
-  int y1 = area->y1;
-  int x2 = area->x2;
-  int y2 = area->y2;
+  int x1 = area->x1, y1 = area->y1;
+  int x2 = area->x2, y2 = area->y2;
 
-  // RGB565 direct pass-through - no conversion needed!
-  // LVGL RGB565 (2 bytes/pixel) matches MIPI-DPI RGB565 format
-  esp_lcd_panel_draw_bitmap(display_panel, x1, y1, x2 + 1, y2 + 1, (uint16_t*)color_p);
+  // Clamp to logical resolution
+  if (x1 < 0) x1 = 0;
+  if (y1 < 0) y1 = 0;
+  if (x2 >= DISPLAY_H_RES) x2 = DISPLAY_H_RES - 1;
+  if (y2 >= DISPLAY_V_RES) y2 = DISPLAY_V_RES - 1;
 
-  // CRITICAL: Do NOT call lv_disp_flush_ready() here!
-  // Vsync callback will call it when hardware completes frame transfer
+  int W = x2 - x1 + 1;  // LVGL strip width (up to 800)
+  int H = y2 - y1 + 1;  // LVGL strip height (up to 80)
+
+  if (W <= 0 || H <= 0) {
+    lv_display_flush_ready(disp);
+    return;
+  }
+
+  // Check rotation buffer fits
+  if ((size_t)(W * H) > rot_buf_pixels) {
+    LOG_E("Rotation buffer too small: need %d, have %zu", W * H, rot_buf_pixels);
+    lv_display_flush_ready(disp);
+    return;
+  }
+
+  uint16_t *src = (uint16_t*)px_map;
+
+  // 90° CW rotation: landscape (x, y) → portrait (y, 799-x)
+  for (int r = 0; r < H; r++) {
+    int ly = y1 + r;  // landscape y
+    for (int c = 0; c < W; c++) {
+      int lx = x1 + c;  // landscape x
+      // Destination in portrait buffer:
+      //   portrait_x = ly, portrait_y = 799 - lx
+      //   In rotated strip buffer (row-major, portrait area):
+      //     row = portrait_y - (799-x2) = x2 - lx
+      //     col = portrait_x - y1 = ly - y1 = r
+      rot_buf[(x2 - lx) * H + r] = src[r * W + c];
+    }
+  }
+
+  // Portrait rectangle coordinates
+  int px1 = y1;          // portrait x start
+  int py1 = 799 - x2;    // portrait y start
+  int px2 = y2;          // portrait x end
+  int py2 = 799 - x1;    // portrait y end
+
+  esp_lcd_panel_draw_bitmap(display_panel, px1, py1, px2 + 1, py2 + 1, rot_buf);
+  lv_display_flush_ready(disp);
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
 // TOUCH READ CALLBACK — Called by LVGL to poll GT911 touch input
+// Touch is 480x800 portrait, but LVGL sees 800x480 landscape
+// So we swap x/y to match the landscape orientation
 // ───────────────────────────────────────────────────────────────────────────────
-void lvgl_touchpad_read_cb(lv_indev_drv_t *indev_drv, lv_indev_data_t *data) {
-  // Safety check - don't crash if touch failed to init
+void lvgl_touchpad_read_cb(lv_indev_t *indev_drv, lv_indev_data_t *data) {
   if (display_touch == nullptr) {
     data->state = LV_INDEV_STATE_RELEASED;
     return;
   }
 
-  // Read touch data from GT911
   esp_lcd_touch_read_data(display_touch);
 
   uint16_t touch_x[1];
@@ -103,13 +166,20 @@ void lvgl_touchpad_read_cb(lv_indev_drv_t *indev_drv, lv_indev_data_t *data) {
   uint16_t touch_strength[1];
   uint8_t  touch_cnt = 0;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   bool touched = esp_lcd_touch_get_coordinates(display_touch,
-                   touch_x, touch_y, touch_strength, &touch_cnt, 1);
+                    touch_x, touch_y, touch_strength, &touch_cnt, 1);
+#pragma GCC diagnostic pop
 
   if (touched && touch_cnt > 0) {
-    data->point.x = touch_x[0];
-    data->point.y = touch_y[0];
+    uint16_t px = touch_x[0];
+    uint16_t py = touch_y[0];
+
+    data->point.x = 799 - py;      // landscape x = 799 - portrait y
+    data->point.y = px;             // landscape y = portrait x
     data->state = LV_INDEV_STATE_PRESSED;
+    dim_reset_activity();
   } else {
     data->state = LV_INDEV_STATE_RELEASED;
   }
@@ -120,8 +190,8 @@ void lvgl_touchpad_read_cb(lv_indev_drv_t *indev_drv, lv_indev_data_t *data) {
 // ───────────────────────────────────────────────────────────────────────────────
 void lvgl_hal_init() {
   LOG_I("LVGL HAL init starting...");
+  lastActivityMs = millis();
 
-  // Initialize LVGL core
   lv_init();
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -129,46 +199,35 @@ void lvgl_hal_init() {
   // ─────────────────────────────────────────────────────────────────────────
   lvgl_alloc_buffers();
 
-  if (buf1 == nullptr || buf2 == nullptr) {
+  if (buf1 == nullptr || buf2 == nullptr || rot_buf == nullptr) {
     LOG_E("LVGL buffer allocation failed - cannot continue");
     return;
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // REGISTER DISPLAY DRIVER (LVGL 8.x API)
+  // REGISTER DISPLAY DRIVER (LVGL 9.x API)
+  // Logical resolution is 800x480 landscape (NO LVGL rotation)
+  // Flush callback handles rotation to 480x800 physical panel
   // ─────────────────────────────────────────────────────────────────────────
-  static lv_disp_drv_t disp_drv;
-  lv_disp_drv_init(&disp_drv);
-  // Native portrait resolution - LVGL will rotate for landscape
-  disp_drv.hor_res = DISPLAY_H_RES_NATIVE;  // 480
-  disp_drv.ver_res = DISPLAY_V_RES_NATIVE;  // 800
-  disp_drv.flush_cb = lvgl_flush_cb;
-  disp_drv.draw_buf = &draw_buf;
-  disp_drv.full_refresh = 0;  // Partial refresh
-  disp_drv.sw_rotate = 1;  // Enable software rotation for landscape
-  lv_disp_drv_register(&disp_drv);
+  lv_display_t *disp = lv_display_create(DISPLAY_H_RES, DISPLAY_V_RES);
+  lv_display_set_color_format(disp, LV_COLOR_FORMAT_RGB565);
+  lv_display_set_buffers(disp, buf1, buf2, buf_bytes, LV_DISPLAY_RENDER_MODE_PARTIAL);
+  lv_display_set_flush_cb(disp, lvgl_flush_cb);
+  // NO lv_display_set_rotation — manual rotation in flush callback
 
-  // Set 90° rotation for landscape (800×480)
-  lv_disp_t *display = lv_disp_get_next(NULL);
-  lv_disp_set_rotation(display, LV_DISP_ROT_90);
+  display_register_lvgl_vsync(disp);
 
-  // CRITICAL: Register vsync callback for MIPI DSI Video Mode
-  // lv_disp_flush_ready() will be called by hardware when frame transfer completes
-  display_register_lvgl_vsync(&disp_drv);
-
-  LOG_I("LVGL display driver registered: %dx%d → 90° rotation → %dx%d landscape, RGB565",
-        DISPLAY_H_RES_NATIVE, DISPLAY_V_RES_NATIVE, DISPLAY_V_RES_NATIVE, DISPLAY_H_RES_NATIVE);
+  LOG_I("LVGL display driver registered: %dx%d landscape, manual rotation to %dx%d physical, RGB565",
+        DISPLAY_H_RES, DISPLAY_V_RES, DISPLAY_H_RES_NATIVE, DISPLAY_V_RES_NATIVE);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // REGISTER INPUT DEVICE (GT911 touch via LVGL 8.x API)
+  // REGISTER INPUT DEVICE (GT911 touch)
   // ─────────────────────────────────────────────────────────────────────────
-  static lv_indev_drv_t indev_drv;
-  lv_indev_drv_init(&indev_drv);
-  indev_drv.type = LV_INDEV_TYPE_POINTER;
-  indev_drv.read_cb = lvgl_touchpad_read_cb;
-  lv_indev_drv_register(&indev_drv);
+  lv_indev_t *indev = lv_indev_create();
+  lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
+  lv_indev_set_read_cb(indev, lvgl_touchpad_read_cb);
 
-  LOG_I("LVGL touch input registered (GT911)");
+  LOG_I("LVGL touch input registered (GT911, manual coordinate swap)");
 
   // ─────────────────────────────────────────────────────────────────────────
   // CREATE 1MS TICK TIMER

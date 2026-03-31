@@ -2,6 +2,8 @@
 // TIG Welding Rotator Controller - Hardware Configuration
 // Waveshare/Guition ESP32-P4 4.3" Touch Display Dev Board
 
+#define FW_VERSION "v1.3.0"
+
 // ───────────────────────────────────────────────────────────────────────────────
 // GPIO HEADER PINS (2×13 pin header)
 // Available GPIOs: 28–35, 49–52 (see board pin diagram)
@@ -12,7 +14,8 @@
 #define PIN_STEP        50   // Step pulse output (FastAccelStepper RMT)
 #define PIN_DIR         51   // Direction: CW=HIGH, CCW=LOW
 #define PIN_ENA         52   // Enable: Active LOW to TB6600
-#define PIN_ESTOP       33   // Emergency Stop: Active LOW, NC contact
+#define PIN_ESTOP       34   // Emergency Stop: Active LOW, NC contact
+#define PIN_DIR_SWITCH  28   // CW/CCW direction switch (INPUT_PULLUP, LOW=CCW, HIGH=CW)
 #define PIN_SPARE       35   // Reserved for future encoder/expansion
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -34,28 +37,30 @@
 #define MIPI_DSI_LANE_BITRATE   (1000 * 1000 * 1000)  // 1 Gbps per lane
 
 // Display resolution
-#define DISPLAY_H_RES   800   // Landscape width (after rotation)
-#define DISPLAY_V_RES   480   // Landscape height (after rotation)
-#define DISPLAY_H_RES_NATIVE 480  // Native portrait width
-#define DISPLAY_V_RES_NATIVE 800  // Native portrait height
+// Physical panel: 480x800 portrait
+// Logical (LVGL): 800x480 landscape (manual rotation in flush callback)
+#define DISPLAY_H_RES   800   // Logical landscape width
+#define DISPLAY_V_RES   480   // Logical landscape height
+#define DISPLAY_H_RES_NATIVE 480  // Physical panel width (portrait)
+#define DISPLAY_V_RES_NATIVE 800  // Physical panel height (portrait)
 
 // ───────────────────────────────────────────────────────────────────────────────
 // MOTOR & MECHANICAL PARAMETERS
 // ───────────────────────────────────────────────────────────────────────────────
-#define MIN_RPM         0.1f   // Minimum workpiece RPM
-#define MAX_RPM         3.0f   // Maximum workpiece RPM (6000 Hz — safe under TIG EMI with 40% margin)
-                                // Raise to 5.0 in Settings only in clean environments
-#define MICROSTEPS      8      // 1/8 microstepping (matches TB6600 DIP)
+#define MIN_RPM         0.1f      // Minimum workpiece RPM
+#define MAX_RPM         3.0f      // Maximum workpiece RPM
+
+#define MICROSTEPS      8         // 1/8 microstepping (TB6600 DIP)
 #define STEPS_PER_REV   (200 * MICROSTEPS)   // 1600 steps/rev motor
 
-#define GEAR_RATIO      60.0f   // 60:1 worm gear
-#define D_EMNE          0.300f  // Workpiece diameter: 300mm
-#define D_RULLE         0.080f  // Roller diameter: 80mm
+// GEAR & ROLLER SYSTEM
+#define GEAR_RATIO      108.0f    // 1:108 worm gear
+#define D_EMNE          0.300f    // Workpiece diameter: 300mm
+#define D_RULLE         0.080f    // Roller diameter: 80mm
 
-// Motor: NEMA 23 (3 Nm)
-// 60:1 worm gear provides excellent holding torque and self-locking
-#define ACCELERATION    5000   // Stepper acceleration (steps/s²)
-                                // 5000 = ~1s ramp to max speed. Lower for smoother starts.
+// SPEED CHARACTERISTICS
+#define START_SPEED     80        // Hz — low start for smooth 0.1 RPM
+#define ACCELERATION    7000      // steps/s²
 
 // ───────────────────────────────────────────────────────────────────────────────
 // BUILD CONFIGURATION
@@ -79,7 +84,7 @@
   #define LOG_D(...) do{}while(0)
   #define LOG_I(...) do{}while(0)
   #define LOG_W(...) do{}while(0)
-  #define LOG_E(f,...) Serial.printf("[E] " f "\n", ##__VA_ARGS__)  // Always active
+  #define LOG_E(f,...) do{}while(0)  // Suppress in release build
 #endif
 
 // ───────────────────────────────────────────────────────────────────────────────

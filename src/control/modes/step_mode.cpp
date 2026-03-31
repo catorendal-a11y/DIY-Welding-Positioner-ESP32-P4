@@ -21,17 +21,8 @@ void step_execute(float angle_deg) {
   SystemState state = control_get_state();
   if (state != STATE_IDLE && state != STATE_STEP) return;
 
-  // Validate angle (use epsilon for float comparison)
-  const float validAngles[] = {5.0f, 10.0f, 15.0f, 30.0f, 45.0f, 90.0f};
-  bool isValid = false;
-  for (int i = 0; i < 6; i++) {
-    if (fabsf(angle_deg - validAngles[i]) < 0.01f) {
-      isValid = true;
-      angle_deg = validAngles[i];  // Snap to exact value
-      break;
-    }
-  }
-  if (!isValid) {
+  // Validate angle range
+  if (angle_deg <= 0.0f || angle_deg > 3600.0f) {
     LOG_W("Invalid step angle: %.1f", angle_deg);
     return;
   }

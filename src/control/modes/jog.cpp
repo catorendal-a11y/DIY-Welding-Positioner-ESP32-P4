@@ -57,7 +57,7 @@ void jog_stop() {
 // JOG SPEED SET
 // ───────────────────────────────────────────────────────────────────────────────
 void jog_set_speed(float rpm) {
-  jogRPM = constrain(rpm, 0.1f, 2.0f);
+  jogRPM = constrain(rpm, MIN_RPM, MAX_RPM);
 
   // Update speed if currently jogging
   if (control_get_state() == STATE_JOG) {

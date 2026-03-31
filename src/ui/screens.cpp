@@ -7,10 +7,12 @@
 #include "../config.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
+// GLOBALS
+// ───────────────────────────────────────────────────────────────────────────────
 // STATE
 // ───────────────────────────────────────────────────────────────────────────────
 static ScreenId currentScreen = SCREEN_NONE;
-lv_obj_t* screenRoots[SCREEN_CONFIRM + 1] = { nullptr };  // Extern for screen files
+lv_obj_t* screenRoots[SCREEN_COUNT] = { nullptr };  // Extern for screen files
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN INITIALIZATION
@@ -19,14 +21,20 @@ void screens_init() {
   LOG_I("Screens init: creating all screens");
 
   // Create all screen roots
-  for (int i = 0; i <= SCREEN_CONFIRM; i++) {
+  for (int i = 0; i < SCREEN_COUNT; i++) {
     screenRoots[i] = lv_obj_create(nullptr);
     lv_obj_set_size(screenRoots[i], SCREEN_W, SCREEN_H);
     lv_obj_set_style_bg_color(screenRoots[i], COL_BG, 0);
     lv_obj_set_style_bg_opa(screenRoots[i], LV_OPA_COVER, 0);
+    // CRITICAL: Remove default theme styling that causes bleed-through
+    lv_obj_set_style_border_width(screenRoots[i], 0, 0);
+    lv_obj_set_style_pad_all(screenRoots[i], 0, 0);
+    lv_obj_set_style_radius(screenRoots[i], 0, 0);
+    lv_obj_remove_flag(screenRoots[i], LV_OBJ_FLAG_SCROLLABLE);
   }
 
   // Initialize individual screens
+  screen_boot_create();
   screen_main_create();
   screen_menu_create();
   screen_pulse_create();
@@ -37,6 +45,11 @@ void screens_init() {
   screen_settings_create();
   screen_confirm_create_static();  // Static init for confirm dialog
   estop_overlay_create();
+  // Initialize edit screens
+  screen_edit_pulse_create();
+  screen_edit_step_create();
+  screen_edit_timer_create();
+  screen_edit_cont_create();
 
   LOG_I("Screens init complete");
 }
@@ -45,11 +58,11 @@ void screens_init() {
 // SCREEN NAVIGATION
 // ───────────────────────────────────────────────────────────────────────────────
 void screens_show(ScreenId id) {
-  if (id < 0 || id > SCREEN_CONFIRM) return;
+  if (id < 0 || id >= SCREEN_COUNT) return;
   if (screenRoots[id] == nullptr) return;
 
   currentScreen = id;
-  lv_scr_load(screenRoots[id]);
+  lv_screen_load(screenRoots[id]);
 
   LOG_D("Screen show: %d", id);
 }
@@ -76,11 +89,26 @@ void screens_update_current() {
     case SCREEN_STEP:
       screen_step_update();
       break;
+    case SCREEN_JOG:
+      screen_jog_update();
+      break;
     case SCREEN_TIMER:
       screen_timer_update();
       break;
     case SCREEN_PROGRAMS:
       screen_programs_update();
+      break;
+    case SCREEN_EDIT_PULSE:
+      screen_edit_pulse_update();
+      break;
+    case SCREEN_EDIT_STEP:
+      screen_edit_step_update();
+      break;
+    case SCREEN_EDIT_TIMER:
+      screen_edit_timer_update();
+      break;
+    case SCREEN_EDIT_CONT:
+      screen_edit_cont_update();
       break;
     default:
       break;

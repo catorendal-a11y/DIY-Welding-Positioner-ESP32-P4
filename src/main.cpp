@@ -47,12 +47,41 @@ void lvglTask(void* pvParameters) {
   // Initialize screens after LVGL is ready
   screens_init();
 
-  // Show main screen
+  // Show boot screen during initialization
+  screens_show(SCREEN_BOOT);
+  screen_boot_update(10, "INITIALIZING HARDWARE...");
+
+  // Give LVGL time to render boot screen
+  for (int i = 0; i < 5; i++) {
+    lv_timer_handler();
+    vTaskDelay(pdMS_TO_TICKS(50));  // Increased from 20 to 50
+  }
+
+  // Continue initialization with progress updates
+  screen_boot_update(30, "LOADING CONFIGURATION...");
+  lv_timer_handler();
+  vTaskDelay(pdMS_TO_TICKS(500));  // Increased from 100 to 500
+
+  screen_boot_update(50, "CHECKING MOTOR SYSTEMS...");
+  lv_timer_handler();
+  vTaskDelay(pdMS_TO_TICKS(700));  // Increased from 100 to 700
+
+  screen_boot_update(80, "STARTING UI SYSTEM...");
+  lv_timer_handler();
+  vTaskDelay(pdMS_TO_TICKS(700));  // Increased from 100 to 700
+
+  screen_boot_update(100, "READY");
+  lv_timer_handler();
+  vTaskDelay(pdMS_TO_TICKS(1000));  // Increased from 500 to 1000
+
+  // Transition to main screen
   screens_show(SCREEN_MAIN);
 
   TickType_t t = xTaskGetTickCount();
   for (;;) {
     lv_timer_handler();
+
+    dim_update();
 
     // Update current screen (200ms interval for smooth UI)
     static uint32_t lastScreenUpdate = 0;
@@ -105,6 +134,8 @@ void storageTask(void* pvParameters) {
   for (;;) {
     esp_task_wdt_reset();
 
+    storage_flush();
+
     // Health monitoring every 30 seconds (FIX-09)
     if (millis() - lastHealthCheck >= 30000) {
       lastHealthCheck = millis();
@@ -117,8 +148,8 @@ void storageTask(void* pvParameters) {
           uxTaskGetStackHighWaterMark(lvglHandle)    * 4);
       LOG_I("Heap: %lu B free   PSRAM: %lu B free",
           ESP.getFreeHeap(), ESP.getFreePsram());
-      lv_mem_monitor_t m; lv_mem_monitor(&m);
-      LOG_I("LVGL: %u%% heap used", m.used_pct);
+      lv_mem_monitor_t m; lv_mem_monitor_core(&m);
+      LOG_I("LVGL: %u%% heap used", (unsigned)m.used_pct);
       if (uxTaskGetStackHighWaterMark(safetyHandle)  * 4 < 256) LOG_E("SAFETY STACK LOW");
       if (uxTaskGetStackHighWaterMark(motorHandle)   * 4 < 512) LOG_E("MOTOR STACK LOW");
       if (uxTaskGetStackHighWaterMark(lvglHandle)    * 4 < 512) LOG_E("LVGL STACK LOW");
@@ -186,7 +217,7 @@ void setup() {
   xTaskCreatePinnedToCore(safetyTask,  "safety",  2048,  nullptr, 5, &safetyHandle,  0);
   xTaskCreatePinnedToCore(motorTask,   "motor",   5120,  nullptr, 4, &motorHandle,   0);
   xTaskCreatePinnedToCore(controlTask, "control", 4096,  nullptr, 3, &controlHandle, 0);
-  xTaskCreatePinnedToCore(lvglTask,    "lvgl",    12288, nullptr, 1, &lvglHandle,    1);
+  xTaskCreatePinnedToCore(lvglTask,    "lvgl",    65536, nullptr, 1, &lvglHandle,    1);  // 64KB: LVGL 9 rotation + arc rendering needs large stack
   xTaskCreatePinnedToCore(storageTask, "storage", 4096,  nullptr, 1, &storageHandle, 1);
 
   LOG_I("All FreeRTOS tasks started");

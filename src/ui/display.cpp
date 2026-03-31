@@ -5,6 +5,7 @@
 #include "display.h"
 #include <Arduino.h>
 #include "../config.h"
+#include "../storage/storage.h"
 
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_mipi_dsi.h"
@@ -12,6 +13,7 @@
 #include "esp_lcd_touch.h"
 #include "esp_lcd_touch_gt911.h"
 #include "driver/i2c_master.h"
+#include "driver/ledc.h"
 #include "esp_log.h"
 #include "lvgl.h"
 
@@ -98,14 +100,36 @@ static esp_lcd_panel_io_handle_t    dsi_io     = nullptr;
 // ───────────────────────────────────────────────────────────────────────────────
 #define BL_GPIO         23    // Backlight GPIO (JC4880P433)
 #define LCD_RST         5     // Reset pin (JC4880P433)
+#define BL_LEDC_CHANNEL LEDC_CHANNEL_0
+#define BL_LEDC_TIMER   LEDC_TIMER_0
+#define BL_LEDC_FREQ    5000
+#define BL_MAX_DUTY     1023
 
 static void backlight_init() {
-  gpio_set_direction((gpio_num_t)BL_GPIO, GPIO_MODE_OUTPUT);
-  gpio_set_level((gpio_num_t)BL_GPIO, 0);  // OFF first
+  ledc_timer_config_t timer = {
+    .speed_mode      = LEDC_LOW_SPEED_MODE,
+    .duty_resolution = LEDC_TIMER_10_BIT,
+    .timer_num       = BL_LEDC_TIMER,
+    .freq_hz         = BL_LEDC_FREQ,
+    .clk_cfg         = LEDC_AUTO_CLK,
+  };
+  ledc_timer_config(&timer);
+
+  ledc_channel_config_t channel = {
+    .gpio_num   = BL_GPIO,
+    .speed_mode = LEDC_LOW_SPEED_MODE,
+    .channel    = BL_LEDC_CHANNEL,
+    .timer_sel  = BL_LEDC_TIMER,
+    .duty       = 0,
+    .hpoint     = 0,
+  };
+  ledc_channel_config(&channel);
 }
 
 void display_set_brightness(uint8_t brightness) {
-  gpio_set_level((gpio_num_t)BL_GPIO, brightness > 0 ? 1 : 0);
+  uint32_t duty = (uint32_t)brightness * BL_MAX_DUTY / 255;
+  ledc_set_duty(LEDC_LOW_SPEED_MODE, BL_LEDC_CHANNEL, duty);
+  ledc_update_duty(LEDC_LOW_SPEED_MODE, BL_LEDC_CHANNEL);
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -180,14 +204,14 @@ void display_init() {
   // ─────────────────────────────────────────────────────────────────────────
   LOG_I("  [4/6] ST7701S panel...");
 
-  // DPI timing for 480x800 @ 60Hz - matching JC4880P433C BSP exactly
-  // BSP uses: RGB565, 34MHz pixel clock, 2-lane DSI, DMA2D enabled, 2 framebuffers
+  // DPI timing for 480x800 @ 60Hz (physical panel is portrait)
+  // LVGL handles 90° rotation to 800x480 landscape in software
   esp_lcd_dpi_panel_config_t dpi_cfg = {
     .virtual_channel    = 0,
     .dpi_clk_src        = MIPI_DSI_DPI_CLK_SRC_DEFAULT,
-    .dpi_clock_freq_mhz = 34,  // BSP uses 34MHz for 60Hz
+    .dpi_clock_freq_mhz = 34,
     .pixel_format       = LCD_COLOR_PIXEL_FORMAT_RGB565,
-    .num_fbs            = 2,   // BSP uses 2 framebuffers
+    .num_fbs            = 2,
     .video_timing = {
       .h_size            = 480,
       .v_size            = 800,
@@ -198,7 +222,7 @@ void display_init() {
       .vsync_back_porch  = 8,
       .vsync_front_porch = 166,
     },
-    .flags = { .use_dma2d = false }  // DISABLE: causing memory corruption/noise
+    .flags = { .use_dma2d = false }
   };
 
   st7701_vendor_config_t vendor_cfg = {
@@ -303,11 +327,10 @@ void display_init() {
       LOG_W("       Touch IO init failed: %s", esp_err_to_name(touch_ret));
     } else {
       // Initialize GT911 touch controller
-      // Use BSP default settings (swap_xy=0 for portrait)
-      // LVGL sw_rotate will handle coordinate transformation for landscape
+      // Physical touch is 480x800, no swap — LVGL callback handles rotation
       esp_lcd_touch_config_t tp_cfg = {
-        .x_max = 480,  // Native width
-        .y_max = 800,  // Native height
+        .x_max = 480,
+        .y_max = 800,
         .rst_gpio_num = GPIO_NUM_NC,
         .int_gpio_num = GPIO_NUM_NC,
         .levels = {
@@ -315,7 +338,7 @@ void display_init() {
           .interrupt = 0,
         },
         .flags = {
-          .swap_xy = 0,  // Let LVGL handle rotation via sw_rotate
+          .swap_xy = 0,  // No swap — callback handles coordinate transform
           .mirror_x = 0,
           .mirror_y = 0,
         },
@@ -334,7 +357,7 @@ void display_init() {
   // ─────────────────────────────────────────────────────────────────────────
   LOG_I("  [6/6] Backlight ON...");
   delay(100);
-  display_set_brightness(150);
+  display_set_brightness(g_settings.brightness);
 
   LOG_I("Display init complete: %dx%d", DISPLAY_H_RES, DISPLAY_V_RES);
 }
@@ -343,15 +366,15 @@ void display_init() {
 // LVGL VSYNC CALLBACK — Called by MIPI DPI hardware when frame transfer complete
 // CRITICAL for MIPI DSI Video Mode: flush_ready MUST be called from here, not flush_cb!
 // ───────────────────────────────────────────────────────────────────────────────
-extern "C" bool IRAM_ATTR display_lvgl_vsync_callback(
+extern "C" bool display_lvgl_vsync_callback(
     esp_lcd_panel_handle_t panel,
     esp_lcd_dpi_panel_event_data_t *edata,
     void *user_ctx)
 {
-    lv_disp_drv_t *disp_drv = (lv_disp_drv_t *)user_ctx;
-    if (disp_drv) {
-        lv_disp_flush_ready(disp_drv);
-    }
+    // OBSOLETE IN LVGL 9: We do NOT call lv_display_flush_ready here!
+    // Since esp_lcd_panel_draw_bitmap for ST7701S performs a synchronous memcpy to the DPI buffer,
+    // calling flush_ready here (60 times a second) corrupts LVGL's internal buffer state machine
+    // causing a Load access fault. flush_ready is now safely called at the end of lvgl_flush_cb.
     return false;
 }
 

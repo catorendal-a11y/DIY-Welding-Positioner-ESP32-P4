@@ -31,7 +31,14 @@ void pulse_start(uint32_t on_ms, uint32_t off_ms) {
   // Start motor
   digitalWrite(PIN_ENA, LOW);
   digitalWrite(PIN_DIR, (speed_get_direction() == DIR_CW) ? HIGH : LOW);
-  speed_apply();
+
+  FastAccelStepper* stepper = motor_get_stepper();
+  if (stepper != nullptr) {
+    uint32_t hz = (uint32_t)rpmToStepHz(speed_get_target_rpm());
+    stepper->setSpeedInHz(hz);
+    if (speed_get_direction() == DIR_CW) stepper->runForward();
+    else stepper->runBackward();
+  }
 
   control_transition_to(STATE_PULSE);
 }
@@ -51,9 +58,16 @@ void pulse_update() {
     pulseStateStartMs = millis();
 
     if (pulseIsOn) {
-      // Start ON phase
+      // Start ON phase — restart motor
       digitalWrite(PIN_ENA, LOW);
-      speed_apply();
+      digitalWrite(PIN_DIR, (speed_get_direction() == DIR_CW) ? HIGH : LOW);
+      FastAccelStepper* s = motor_get_stepper();
+      if (s != nullptr) {
+        uint32_t hz = (uint32_t)rpmToStepHz(speed_get_target_rpm());
+        s->setSpeedInHz(hz);
+        if (speed_get_direction() == DIR_CW) s->runForward();
+        else s->runBackward();
+      }
       LOG_D("Pulse: ON");
     } else {
       // Start OFF phase (motor holds position)

@@ -1,72 +1,197 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480">
   <defs>
-    <style>
-      .screen-bg  { fill: #000000; }
-      .header-bg  { fill: #0A0A0A; }
-      .btn-bg     { fill: #1A1A1C; }
-      .btn-active { fill: #0C1A1C; }
-      .panel-bg   { fill: #1A1A1C; }
-      .sep        { fill: #1A1A1A; }
-    </style>
+    <filter id="arcGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="textGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="dotGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="indicatorGrad" gradientUnits="userSpaceOnUse" x1="270" y1="245" x2="339" y2="33">
+      <stop offset="0%" stop-color="#CC7700"/>
+      <stop offset="100%" stop-color="#FFB84D"/>
+    </linearGradient>
+    <radialGradient id="gaugeDepth" cx="50%" cy="50%" r="50%">
+      <stop offset="70%" stop-color="#080808" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#050505" stop-opacity="0.6"/>
+    </radialGradient>
   </defs>
 
-  <!-- Full screen background -->
-  <rect width="800" height="480" class="screen-bg"/>
+  <!-- ==================== BACKGROUND ==================== -->
+  <rect width="800" height="480" fill="#050505"/>
 
-  <!-- ─── HEADER BAR ─────────────────────────────────── -->
-  <rect width="800" height="48" class="header-bg"/>
-  <text x="24" y="30" font-family="sans-serif" font-size="14" fill="#555555" font-weight="bold" letter-spacing="2">TIG ROTATOR</text>
-  <text x="400" y="30" font-family="sans-serif" font-size="14" fill="#00E676" text-anchor="middle" font-weight="bold">● RUNNING</text>
-  <text x="776" y="30" font-family="sans-serif" font-size="14" fill="#555555" text-anchor="end">24.5V</text>
-  <rect y="48" width="800" height="2" class="sep"/>
+  <!-- ==================== HEADER BAR ==================== -->
+  <rect x="0" y="0" width="800" height="30" fill="#090909"/>
+  <line x1="0" y1="30" x2="800" y2="30" stroke="#2E2E2E" stroke-width="0.5"/>
+  <text x="16" y="21" fill="#FF9500" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="bold" letter-spacing="1.5">TIG-ROTATOR</text>
+  <rect x="148" y="8" width="4" height="4" rx="2" fill="#00C853" opacity="0.8"/>
+  <text x="160" y="21" fill="#00C853" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold">IDLE</text>
 
-  <!-- ─── GAUGE (270° arc, centre of screen) ─────────── -->
-  <!-- Background arc -->
-  <path d="M 238 380 A 180 180 0 1 1 562 380" fill="none" stroke="#1A1A1A" stroke-width="18"/>
-  <!-- Active arc (small segment to show ~1.8/6.0 ≈ 30%) -->
-  <path d="M 238 380 A 180 180 0 0 1 195 273" fill="none" stroke="#00E5FF" stroke-width="14" stroke-linecap="round"/>
+  <!-- ==================== SEPARATORS ==================== -->
+  <line x1="186" y1="36" x2="186" y2="410" stroke="#1A1A1A" stroke-width="0.5"/>
+  <line x1="614" y1="36" x2="614" y2="410" stroke="#1A1A1A" stroke-width="0.5"/>
+  <line x1="0" y1="414" x2="800" y2="414" stroke="#1A1A1A" stroke-width="0.5"/>
 
-  <!-- RPM value -->
-  <text x="400" y="320" font-family="sans-serif" font-size="90" fill="#FFFFFF" text-anchor="middle" font-weight="bold">1.8</text>
-  <text x="400" y="360" font-family="sans-serif" font-size="22" fill="#00E5FF" text-anchor="middle" letter-spacing="4">RPM</text>
+  <!-- ==================== LEFT SIDEBAR BUTTONS ==================== -->
+  <!-- JOG -->
+  <rect x="8" y="36" width="170" height="72" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+  <text x="93" y="78" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">JOG</text>
 
-  <!-- Gauge labels -->
-  <g font-family="sans-serif" font-size="14" fill="#444444" text-anchor="middle" font-weight="bold">
-    <text x="228" y="405">0</text>
-    <text x="175" y="185">2.0</text>
-    <text x="400" y="72">3.0</text>
-    <text x="625" y="185">4.0</text>
-    <text x="572" y="405">6.0</text>
+  <!-- CW (active) -->
+  <rect x="8" y="118" width="170" height="72" rx="2" fill="#1A1600" stroke="#FF9500" stroke-width="1.5"/>
+  <text x="93" y="160" fill="#FF9500" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">CW</text>
+
+  <!-- PULSE -->
+  <rect x="8" y="200" width="170" height="72" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+  <text x="93" y="242" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">PULSE</text>
+
+  <!-- ==================== RIGHT SIDEBAR BUTTONS ==================== -->
+  <!-- STEP -->
+  <rect x="622" y="36" width="170" height="72" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+  <text x="707" y="78" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">STEP</text>
+
+  <!-- TIMER -->
+  <rect x="622" y="118" width="170" height="72" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+  <text x="707" y="160" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">TIMER</text>
+
+  <!-- MENU -->
+  <rect x="622" y="200" width="170" height="72" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+  <text x="707" y="242" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">MENU</text>
+
+  <!-- ==================== CENTER GAUGE ==================== -->
+  <g id="gauge">
+    <!-- Subtle depth circle -->
+    <circle cx="400" cy="170" r="170" fill="url(#gaugeDepth)"/>
+
+    <!-- Background arc: 240 deg sweep from 150 deg to 390 deg, r=160 -->
+    <path d="M 261.4 250 A 160 160 0 1 1 538.6 250"
+          fill="none" stroke="#111111" stroke-width="12" stroke-linecap="round"/>
+
+    <!-- ===== MAJOR TICK MARKS (every 25% = 60 deg) ===== -->
+    <!-- 0% at 150 deg -->
+    <line x1="278.8" y1="240" x2="261.4" y2="250" stroke="#4A4A4A" stroke-width="2" stroke-linecap="round"/>
+    <!-- 25% at 210 deg -->
+    <line x1="278.8" y1="100" x2="261.4" y2="90" stroke="#4A4A4A" stroke-width="2" stroke-linecap="round"/>
+    <!-- 50% at 270 deg -->
+    <line x1="400" y1="30" x2="400" y2="10" stroke="#4A4A4A" stroke-width="2" stroke-linecap="round"/>
+    <!-- 75% at 330 deg -->
+    <line x1="521.2" y1="100" x2="538.6" y2="90" stroke="#4A4A4A" stroke-width="2" stroke-linecap="round"/>
+    <!-- 100% at 390 deg -->
+    <line x1="521.2" y1="240" x2="538.6" y2="250" stroke="#4A4A4A" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- ===== MINOR TICK MARKS (every 10% = 24 deg, excluding majors) ===== -->
+    <!-- 10% at 162 deg -->
+    <line x1="259.2" y1="215.7" x2="250.7" y2="218.5" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
+    <!-- 20% at 186 deg -->
+    <line x1="252.8" y1="185.5" x2="243.9" y2="186.4" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
+    <!-- 30% at 198 deg -->
+    <line x1="252.8" y1="154.5" x2="243.9" y2="153.6" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
+    <!-- 40% at 222 deg -->
+    <line x1="259.2" y1="124.3" x2="250.7" y2="121.5" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
+    <!-- 40% at 234 deg -->
+    <line x1="271.0" y1="97.0" x2="263.3" y2="92.0" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
+    <!-- 50% at 246 deg -->
+    <line x1="289.8" y1="74.8" x2="284.1" y2="67.5" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
+    <!-- 60% at 258 deg -->
+    <line x1="313.0" y1="57.0" x2="309.3" y2="48.4" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
+    <!-- 60% at 282 deg -->
+    <line x1="431.0" y1="57.0" x2="434.7" y2="48.4" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
+    <!-- 70% at 294 deg -->
+    <line x1="448.0" y1="74.8" x2="453.7" y2="67.5" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
+    <!-- 70% at 306 deg -->
+    <line x1="465.0" y1="97.0" x2="472.7" y2="92.0" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
+    <!-- 80% at 318 deg -->
+    <line x1="477.0" y1="124.3" x2="485.5" y2="121.5" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
+    <!-- 80% at 342 deg -->
+    <line x1="487.2" y1="154.5" x2="496.1" y2="153.6" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
+    <!-- 90% at 354 deg -->
+    <line x1="493.2" y1="185.5" x2="502.1" y2="186.4" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
+    <!-- 90% at 366 deg -->
+    <line x1="497.0" y1="215.7" x2="505.5" y2="218.5" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
+    <!-- 100% at 378 deg -->
+    <line x1="487.2" y1="244.3" x2="496.1" y2="247.5" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
+
+    <!-- ===== INDICATOR ARC: 40% of 240 deg = 96 deg, from 150 deg to 246 deg, r=150 ===== -->
+    <path d="M 270.1 245 A 150 150 0 0 1 339 33"
+          fill="none" stroke="url(#indicatorGrad)" stroke-width="8" stroke-linecap="round" filter="url(#arcGlow)"/>
+
+    <!-- Indicator dot at arc end -->
+    <circle cx="339" cy="33" r="5" fill="#FFB84D" filter="url(#dotGlow)"/>
+
+    <!-- Center reference dot -->
+    <circle cx="400" cy="170" r="3" fill="#333333"/>
+    <circle cx="400" cy="170" r="1.5" fill="#4A4A4A"/>
+
+    <!-- RPM value -->
+    <text x="400" y="150" fill="#FF9500" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="40" font-weight="bold" text-anchor="middle" filter="url(#textGlow)">1.2</text>
+
+    <!-- RPM label -->
+    <text x="400" y="190" fill="#4A4A4A" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="24" font-weight="500" text-anchor="middle" letter-spacing="3">RPM</text>
+
+    <!-- Scale labels (subtle) -->
+    <text x="252" y="264" fill="#333333" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="10" text-anchor="middle">0</text>
+    <text x="252" y="86" fill="#333333" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="10" text-anchor="middle">1.3</text>
+    <text x="400" y="8" fill="#333333" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="10" text-anchor="middle">2.5</text>
+    <text x="548" y="86" fill="#333333" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="10" text-anchor="middle">3.8</text>
+    <text x="548" y="264" fill="#333333" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="10" text-anchor="middle">5.0</text>
   </g>
 
-  <!-- ─── LEFT BUTTONS ────────────────────────────────── -->
-  <rect x="24" y="70"  width="110" height="64" rx="10" class="btn-active" stroke="#00E5FF" stroke-width="2"/>
-  <text x="79" y="111" font-family="sans-serif" font-size="18" fill="#FFFFFF" text-anchor="middle" font-weight="bold">ON</text>
+  <!-- ==================== PULSE CONTROLS ==================== -->
+  <g id="pulse-controls">
+    <!-- Subtle section background -->
+    <rect x="4" y="276" width="178" height="102" rx="2" fill="#0A0A0A" stroke="#1A1A1A" stroke-width="0.5"/>
 
-  <rect x="24" y="146" width="110" height="64" rx="10" class="btn-bg" stroke="#666666" stroke-width="2"/>
-  <text x="79" y="187" font-family="sans-serif" font-size="18" fill="#FFFFFF" text-anchor="middle">STOP</text>
+    <!-- ON row -->
+    <text x="12" y="302" fill="#4A4A4A" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="11" font-weight="500" letter-spacing="0.5">ON</text>
+    <rect x="36" y="284" width="48" height="36" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+    <text x="60" y="308" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="22" font-weight="400" text-anchor="middle">-</text>
+    <text x="92" y="307" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="14" font-weight="500" text-anchor="middle">0.5s</text>
+    <rect x="118" y="284" width="48" height="36" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+    <text x="142" y="308" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="22" font-weight="400" text-anchor="middle">+</text>
 
-  <rect x="24" y="222" width="110" height="64" rx="10" class="btn-bg" stroke="#666666" stroke-width="2"/>
-  <text x="79" y="263" font-family="sans-serif" font-size="18" fill="#FFFFFF" text-anchor="middle">JOG</text>
+    <!-- Separator between ON and OFF rows -->
+    <line x1="12" y1="326" x2="170" y2="326" stroke="#1A1A1A" stroke-width="0.5"/>
 
-  <!-- ─── RIGHT BUTTONS ───────────────────────────────── -->
-  <rect x="666" y="70"  width="110" height="64" rx="10" class="btn-active" stroke="#00E5FF" stroke-width="2"/>
-  <text x="721" y="111" font-family="sans-serif" font-size="18" fill="#FFFFFF" text-anchor="middle" font-weight="bold">CW</text>
+    <!-- OFF row -->
+    <text x="12" y="352" fill="#4A4A4A" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="11" font-weight="500" letter-spacing="0.5">OFF</text>
+    <rect x="36" y="334" width="48" height="36" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+    <text x="60" y="358" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="22" font-weight="400" text-anchor="middle">-</text>
+    <text x="92" y="357" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="14" font-weight="500" text-anchor="middle">0.5s</text>
+    <rect x="118" y="334" width="48" height="36" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+    <text x="142" y="358" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="22" font-weight="400" text-anchor="middle">+</text>
+  </g>
 
-  <rect x="666" y="146" width="110" height="64" rx="10" class="btn-bg" stroke="#666666" stroke-width="2"/>
-  <text x="721" y="187" font-family="sans-serif" font-size="18" fill="#FFFFFF" text-anchor="middle">CCW</text>
+  <!-- ==================== RPM +/- BUTTONS ==================== -->
+  <g id="rpm-controls">
+    <rect x="280" y="310" width="120" height="56" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+    <text x="340" y="344" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="20" font-weight="600" text-anchor="middle">-</text>
 
-  <rect x="666" y="222" width="110" height="64" rx="10" class="btn-bg" stroke="#666666" stroke-width="2"/>
-  <text x="721" y="263" font-family="sans-serif" font-size="18" fill="#FFFFFF" text-anchor="middle">MENU</text>
+    <rect x="410" y="310" width="120" height="56" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+    <text x="470" y="344" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="20" font-weight="600" text-anchor="middle">+</text>
+  </g>
 
-  <!-- ─── BOTTOM SEPARATOR ────────────────────────────── -->
-  <rect x="0" y="418" width="800" height="2" class="sep"/>
+  <!-- ==================== BOTTOM BAR ==================== -->
+  <g id="bottom-bar">
+    <!-- START button (active green style) -->
+    <rect x="4" y="420" width="392" height="56" rx="2" fill="#1A1600" stroke="#00C853" stroke-width="1.5"/>
+    <text x="200" y="454" fill="#00C853" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="700" text-anchor="middle" letter-spacing="1">&#9654; START</text>
 
-  <!-- ─── RPM BUTTONS (bottom center) ────────────────── -->
-  <rect x="280" y="428" width="108" height="40" rx="8" class="btn-bg" stroke="#666666" stroke-width="2"/>
-  <text x="334" y="454" font-family="sans-serif" font-size="16" fill="#FFFFFF" text-anchor="middle">− RPM</text>
-
-  <rect x="412" y="428" width="108" height="40" rx="8" class="btn-bg" stroke="#666666" stroke-width="2"/>
-  <text x="466" y="454" font-family="sans-serif" font-size="16" fill="#FFFFFF" text-anchor="middle">+ RPM</text>
-
+    <!-- STOP button (danger style) -->
+    <rect x="404" y="420" width="392" height="56" rx="2" fill="#1A0A0A" stroke="#FF1744" stroke-width="1.5"/>
+    <text x="600" y="454" fill="#FF1744" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="700" text-anchor="middle" letter-spacing="1">&#9632; STOP</text>
+  </g>
 </svg>

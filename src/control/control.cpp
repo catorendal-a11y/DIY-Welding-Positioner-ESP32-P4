@@ -155,32 +155,52 @@ const char* control_state_name(SystemState s) {
 // MODE CONTROL FUNCTIONS
 // ───────────────────────────────────────────────────────────────────────────────
 void control_start_continuous() {
+  if (currentState != STATE_IDLE) control_stop();
+  // Wait for STOPPING -> IDLE transition (max 500ms)
+  for (int i = 0; i < 50 && currentState != STATE_IDLE; i++) delay(10);
   continuous_start();
 }
 
 void control_stop() {
+  if (currentState == STATE_IDLE || currentState == STATE_STOPPING || currentState == STATE_ESTOP) {
+    return;
+  }
   if (currentState == STATE_RUNNING) {
     continuous_stop();
   } else if (currentState == STATE_PULSE) {
     pulse_stop();
+  } else if (currentState == STATE_JOG) {
+    jog_stop();
   } else if (currentState == STATE_TIMER) {
     timer_stop();
+  } else if (currentState == STATE_STEP) {
+    // Step mode: force stop motor and go to STOPPING
+    motor_stop();
+    control_transition_to(STATE_STOPPING);
   }
 }
 
 void control_start_pulse(uint32_t on_ms, uint32_t off_ms) {
+  if (currentState != STATE_IDLE) control_stop();
+  for (int i = 0; i < 50 && currentState != STATE_IDLE; i++) delay(10);
   pulse_start(on_ms, off_ms);
 }
 
 void control_start_step(float angle_deg) {
+  if (currentState != STATE_IDLE) control_stop();
+  for (int i = 0; i < 50 && currentState != STATE_IDLE; i++) delay(10);
   step_execute(angle_deg);
 }
 
 void control_start_jog_cw() {
+  if (currentState != STATE_IDLE && currentState != STATE_JOG) control_stop();
+  for (int i = 0; i < 50 && currentState != STATE_IDLE; i++) delay(10);
   jog_start(DIR_CW);
 }
 
 void control_start_jog_ccw() {
+  if (currentState != STATE_IDLE && currentState != STATE_JOG) control_stop();
+  for (int i = 0; i < 50 && currentState != STATE_IDLE; i++) delay(10);
   jog_start(DIR_CCW);
 }
 
@@ -189,6 +209,8 @@ void control_stop_jog() {
 }
 
 void control_start_timer(uint32_t duration_sec) {
+  if (currentState != STATE_IDLE) control_stop();
+  for (int i = 0; i < 50 && currentState != STATE_IDLE; i++) delay(10);
   timer_start(duration_sec);
 }
 
@@ -233,6 +255,7 @@ void controlTask(void* pvParameters) {
     // Check if motor has stopped (STOPPING -> IDLE transition)
     if (currentState == STATE_STOPPING) {
       if (!motor_is_running()) {
+        motor_disable();  // Disable motor (ENA HIGH) after smooth stop
         control_transition_to(STATE_IDLE);
       }
     }

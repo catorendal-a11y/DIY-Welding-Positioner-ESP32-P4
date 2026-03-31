@@ -3,6 +3,7 @@
 
 #pragma once
 #include "lvgl.h"
+#include "../storage/storage.h"  // For Preset type
 
 // ───────────────────────────────────────────────────────────────────────────────
 // GLOBAL SCREEN ROOTS ARRAY
@@ -23,7 +24,13 @@ typedef enum {
   SCREEN_PROGRAMS,       // Programs list
   SCREEN_PROGRAM_EDIT,   // Program edit
   SCREEN_SETTINGS,       // Settings
-  SCREEN_CONFIRM         // Confirmation dialog
+  SCREEN_CONFIRM,        // Confirmation dialog
+  SCREEN_BOOT,           // Boot screen
+  SCREEN_EDIT_PULSE,     // Pulse edit (preset quick edit)
+  SCREEN_EDIT_STEP,      // Step edit (preset quick edit)
+  SCREEN_EDIT_TIMER,     // Timer edit (preset quick edit)
+  SCREEN_EDIT_CONT,      // Continuous edit (preset quick edit)
+  SCREEN_COUNT           // MUST be last — total number of screens
 } ScreenId;
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -47,9 +54,30 @@ void screen_timer_create();
 void screen_programs_create();
 void screen_program_edit_create(int slot);
 void screen_settings_create();
+void screen_boot_create();
 void screen_confirm_create_static();  // Static init
 void screen_confirm_create(const char* title, const char* message,
                            void (*on_confirm)(), void (*on_cancel)());
+
+// Boot screen
+void screen_boot_update(int percent, const char* status);
+
+// Jog screen update
+void screen_jog_update();
+
+// ───────────────────────────────────────────────────────────────────────────────
+// EDIT SCREENS (mode-specific preset editing)
+// ───────────────────────────────────────────────────────────────────────────────
+void screen_edit_pulse_create();
+void screen_edit_step_create();
+void screen_edit_timer_create();
+void screen_edit_cont_create();
+
+// Update functions (called when returning to these screens)
+void screen_edit_pulse_update();
+void screen_edit_step_update();
+void screen_edit_timer_update();
+void screen_edit_cont_update();
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN UPDATE FUNCTIONS
@@ -73,3 +101,5 @@ bool estop_overlay_visible();  // Check if overlay is visible
 // HELPERS
 // ───────────────────────────────────────────────────────────────────────────────
 void screens_set_back_button(lv_obj_t* btn, ScreenId dest);  // Configure back button
+Preset* screen_program_edit_get_preset();  // Get current preset being edited
+void screen_program_edit_update_ui();  // Update UI with current preset values

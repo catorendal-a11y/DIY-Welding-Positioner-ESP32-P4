@@ -16,8 +16,10 @@ void motor_run_cw();      // Run clockwise
 void motor_run_ccw();     // Run counter-clockwise
 void motor_stop();        // Smooth deceleration to stop
 void motor_halt();        // Immediate stop (emergency)
+void motor_disable();     // Disable motor (ENA HIGH) after stopped
 
 // Status queries
 bool motor_is_running();
 uint32_t motor_get_current_hz();  // Current step frequency
 FastAccelStepper* motor_get_stepper();  // Get stepper instance (for mode files)
+void motor_apply_settings();  // Apply acceleration from g_settings

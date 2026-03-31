@@ -27,7 +27,7 @@ void display_init();
 void display_set_brightness(uint8_t brightness);  // 0–255
 
 // Vsync callback for LVGL flush ready (MIPI DSI Video Mode requirement)
-extern "C" bool IRAM_ATTR display_lvgl_vsync_callback(
+extern "C" bool display_lvgl_vsync_callback(
     esp_lcd_panel_handle_t panel,
     esp_lcd_dpi_panel_event_data_t *edata,
     void *user_ctx);

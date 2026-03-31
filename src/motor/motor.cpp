@@ -2,6 +2,8 @@
 // TB6600 stepper driver + FastAccelStepper library
 
 #include "motor.h"
+#include "../storage/storage.h"
+#include "speed.h"
 #include "../config.h"
 #include <FastAccelStepper.h>
 
@@ -15,8 +17,10 @@ static FastAccelStepper* stepper = nullptr;
 // GPIO INITIALIZATION — ENA MUST BE HIGH BEFORE CALLING
 // ───────────────────────────────────────────────────────────────────────────────
 void motor_gpio_init() {
-  // CRITICAL: ENA must already be HIGH when this is called
-  assert(digitalRead(PIN_ENA) == HIGH && "ENA must be HIGH before motor_gpio_init()");
+  // ENA pin — output, start HIGH (motor disabled)
+  // Wiring: ENA+ → 5V, ENA- → GPIO52. LOW = enable, HIGH = disable (active LOW)
+  pinMode(PIN_ENA, OUTPUT);
+  digitalWrite(PIN_ENA, HIGH);  // Motor disabled on boot
 
   // Direction pin
   pinMode(PIN_DIR, OUTPUT);
@@ -28,15 +32,12 @@ void motor_gpio_init() {
 
   // ESTOP input (will be moved to safety module in Phase 3)
   pinMode(PIN_ESTOP, INPUT_PULLUP);
-
-  // Potentiometer ADC
-  analogReadResolution(12);  // 12-bit ADC (0–4095)
-  analogSetPinAttenuation(PIN_POT, ADC_11db);  // Full range 0–3.3V
+  pinMode(PIN_DIR_SWITCH, INPUT_PULLUP);
 
   LOG_I("Motor GPIO init OK");
   LOG_I("  ENA=%d (must be HIGH)", digitalRead(PIN_ENA));
   LOG_I("  DIR=%d STEP=%d", digitalRead(PIN_DIR), digitalRead(PIN_STEP));
-  LOG_I("  ESTOP=%d", digitalRead(PIN_ESTOP));
+  LOG_I("  ESTOP=%d DIR_SW=%d", digitalRead(PIN_ESTOP), digitalRead(PIN_DIR_SWITCH));
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -57,16 +58,18 @@ void motor_init() {
 
   // Configure stepper
   stepper->setDirectionPin(PIN_DIR);
-  stepper->setEnablePin(PIN_ENA, false);  // false = active LOW
-  stepper->setAutoEnable(false);  // Manual enable control
+  // NOTE: Do NOT call setEnablePin() — ENA is controlled manually via digitalWrite()
+  // Wiring: ENA+→5V, ENA-→GPIO52. LOW=enable, HIGH=disable (active LOW)
+  // FastAccelStepper's setEnablePin conflicts with manual control.
 
-  // Set acceleration and initial speed
-  stepper->setAcceleration(ACCELERATION);   // steps/s² from config.h
-  stepper->setSpeedInHz(10000);            // 10 kHz = 5 RPM workpiece (for testing)
+  // Set acceleration and start speed
+  stepper->setAcceleration(ACCELERATION);
+  stepper->setSpeedInHz(START_SPEED);
 
   LOG_I("FastAccelStepper init OK");
   LOG_I("  Steps/rev: %d", STEPS_PER_REV);
-  LOG_I("  Initial speed: 10000 Hz (5 RPM workpiece)");
+  LOG_I("  Accel: %d steps/s2", ACCELERATION);
+  LOG_I("  Start speed: %d Hz", START_SPEED);
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -97,6 +100,11 @@ void motor_halt() {
   LOG_I("Motor: HALT");
 }
 
+void motor_disable() {
+  digitalWrite(PIN_ENA, HIGH);   // Disable motor (ENA HIGH = disabled)
+  LOG_I("Motor: disabled");
+}
+
 // ───────────────────────────────────────────────────────────────────────────────
 // STATUS QUERIES
 // ───────────────────────────────────────────────────────────────────────────────
@@ -106,7 +114,15 @@ bool motor_is_running() {
 
 uint32_t motor_get_current_hz() {
   if (stepper == nullptr) return 0;
-  return stepper->getCurrentSpeedInMilliHz() / 1000;
+  int32_t mhZ = stepper->getCurrentSpeedInMilliHz();
+  return (mhZ >= 0) ? (uint32_t)mhZ / 1000 : (uint32_t)(-mhZ) / 1000;
+}
+
+void motor_apply_settings() {
+  if (stepper != nullptr) {
+    stepper->setAcceleration(g_settings.acceleration);
+    LOG_I("Motor: acceleration set to %d", g_settings.acceleration);
+  }
 }
 
 FastAccelStepper* motor_get_stepper() {

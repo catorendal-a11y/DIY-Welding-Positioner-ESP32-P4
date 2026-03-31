@@ -6,7 +6,7 @@
 **Firmware Version:** v0.3.0-beta
 *(See Git tags for release history)*
 
-<img src="docs/images/ui_mockup.svg" width="600" alt="DIY Welding Positioner UI Design">
+<img src="docs/images/main_screen.svg" width="800" alt="TIG Rotator Controller — Main Screen">
 
 **Open-source ESP32-P4 based welding positioner controller designed for rotary welding tables, pipe welding rotators, and automated fabrication systems.**
 
@@ -56,6 +56,12 @@ pio run -t upload -e esp32p4-debug
 
 Watch the system in action: **UI interaction, Motor rotation, and Simulated welding passes.**  
 *(Demo video link coming soon - Insert YouTube link here)*
+
+## 🖥️ UI Screen Overview
+
+<div align="center">
+<img src="docs/images/ui_screens.svg" width="1440" alt="All UI Screens">
+</div>
 
 ---
 
@@ -138,12 +144,6 @@ graph TD
 - **Hardware safety:** Dedicated NC E-STOP interrupt and software watchdog.
 - **Smooth motion:** FastAccelStepper utilizing RMT hardware pulses for micro-stepping control.
 - **Program Presets:** Save and load custom welding parameters to onboard LittleFS flash memory.
-
-### 🖥️ All UI Screens
-
-<div align="center">
-  <img src="docs/images/ui_all_screens.svg" width="900" alt="All UI Screens Overview">
-</div>
 
 ---
 

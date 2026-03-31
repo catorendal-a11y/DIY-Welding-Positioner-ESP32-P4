@@ -1,95 +1,141 @@
 // TIG Rotator Controller - UI Theme
-// Pixel-perfect match to ui_mockup.svg
-// ESP32-P4 4.3" Touch Display: 800×480 landscape
+// Brutalist v2.0 design matching new_ui.svg
+// ESP32-P4 4.3" Touch Display: 800x480 landscape
 
 #pragma once
 #include "lvgl.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
-// BACKGROUND COLORS (from SVG)
+// BACKGROUND COLORS (from new_ui.svg)
 // ───────────────────────────────────────────────────────────────────────────────
-#define COL_BG          lv_color_hex(0x0A0A0A)   // Dark background (SVG: near black)
-#define COL_BG_CARD     lv_color_hex(0x121212)   // SVG: #121212 inactive button fill
-#define COL_BG_INPUT    lv_color_hex(0x1A1A1A)   // Input fields
-#define COL_BG_ACTIVE   lv_color_hex(0x0C1A1C)   // SVG: #0c1a1c active button fill (dark teal)
+#define COL_BG          lv_color_hex(0x050505)   // SVG: #050505 screen background
+#define COL_BG_HEADER   lv_color_hex(0x090909)   // SVG: #090909 header bar (.hd)
+#define COL_BG_CARD     lv_color_hex(0x0D0D0D)   // SVG: #0D0D0D card background
+#define COL_BG_DIM      lv_color_hex(0x080808)   // SVG: #080808 dim area (.dim)
+#define COL_BG_ROW      lv_color_hex(0x0E0E0E)   // SVG: #0E0E0E setting rows
+#define COL_BTN_BG      lv_color_hex(0x141414)   // SVG: #141414 button fill (.b, .sm)
+#define COL_BG_ACTIVE   lv_color_hex(0x1A1600)   // SVG: #1A1600 active button (.ba)
+#define COL_BG_DANGER   lv_color_hex(0x1A0A0A)   // SVG: #1A0A0A danger/stop (.br)
+#define COL_PANEL_BG    lv_color_hex(0x141414)   // Panel background
+#define COL_SEPARATOR   lv_color_hex(0x1A1A1A)   // SVG: separator line color
+#define COL_BG_INPUT    lv_color_hex(0x0A0A0A)   // Input field background
+#define COL_GAUGE_BG    lv_color_hex(0x111111)   // SVG: #111 gauge track
 
 // ───────────────────────────────────────────────────────────────────────────────
-// ACCENT COLORS
+// ACCENT COLORS (from new_ui.svg)
 // ───────────────────────────────────────────────────────────────────────────────
-#define COL_ACCENT      lv_color_hex(0x00E5FF)   // SVG: #00E5FF neon cyan - gauge arc, active borders
-#define COL_ACCENT_DIM  lv_color_hex(0x005566)   // Dimmed accent
-#define COL_ACCENT_DARK lv_color_hex(0x003344)   // Darker accent for button backgrounds
+#define COL_ACCENT      lv_color_hex(0xFF9500)   // SVG: #FF9500 orange accent
+#define COL_GREEN       lv_color_hex(0x00C853)   // SVG: #00C853 green (run, OK)
+#define COL_RED         lv_color_hex(0xFF1744)   // SVG: #FF1744 red (stop, danger)
+#define COL_AMBER       lv_color_hex(0xFF9500)   // Same as accent in v2.0
 
 // ───────────────────────────────────────────────────────────────────────────────
-// STATUS COLORS
+// TEXT COLORS (from new_ui.svg)
 // ───────────────────────────────────────────────────────────────────────────────
-#define COL_GREEN       lv_color_hex(0x00E676)   // SVG: #00E676 "RUNNING" badge
-#define COL_GREEN_DARK  lv_color_hex(0x004D26)
-#define COL_RED         lv_color_hex(0xFF1744)   // ESTOP
-#define COL_RED_DARK    lv_color_hex(0x5E0D1B)
-#define COL_AMBER       lv_color_hex(0xFF9100)   // Warning / JOG
-#define COL_PURPLE      lv_color_hex(0xD500F9)   // Pulse mode
-#define COL_TEAL        lv_color_hex(0x1DE9B6)   // Step mode
+#define COL_TEXT        lv_color_hex(0xAAAAAA)   // SVG: #AAA value text
+#define COL_TEXT_BRIGHT lv_color_hex(0xCCCCCC)   // SVG: #CCC bright text
+#define COL_TEXT_WHITE  lv_color_hex(0xD0D0D0)   // SVG: #D0D0D0 large values
+#define COL_TEXT_DIM    lv_color_hex(0x4A4A4A)   // SVG: #4A4A4A label text (.lbl)
+#define COL_TEXT_VDIM   lv_color_hex(0x333333)   // SVG: #333 very dim text
+#define COL_TEXT_TITLE  lv_color_hex(0x555555)   // Title text
 
 // ───────────────────────────────────────────────────────────────────────────────
-// TEXT COLORS (from SVG)
+// BORDER COLORS (from new_ui.svg)
 // ───────────────────────────────────────────────────────────────────────────────
-#define COL_TEXT        lv_color_hex(0xFFFFFF)   // SVG: #FFF primary
-#define COL_TEXT_DIM    lv_color_hex(0x555555)   // SVG: #555 inactive button text
-#define COL_TEXT_LABEL  lv_color_hex(0x444444)   // SVG: #444 "TIG ROTATOR" title, scale labels
-#define COL_TEXT_SCALE  lv_color_hex(0x555555)   // SVG: #555 gauge scale numbers
+#define COL_BORDER      lv_color_hex(0x2E2E2E)   // SVG: #2E2E2E inactive border (.b)
+#define COL_BORDER_ACT  lv_color_hex(0xFF9500)   // SVG: #FF9500 active border (.ba)
+#define COL_BORDER_SM   lv_color_hex(0x333333)   // SVG: #333 small button border (.sm)
+#define COL_BORDER_ROW  lv_color_hex(0x1E1E1E)   // SVG: #1E1E1E row border
+#define COL_BORDER_DNG  lv_color_hex(0xFF1744)   // SVG: #FF1744 danger border (.br)
+#define COL_GAUGE_TICK  lv_color_hex(0x444444)   // SVG: #444 gauge tick marks
+#define COL_GAUGE_MINOR lv_color_hex(0x2A2A2A)   // SVG: #2A2A2A minor ticks
 
 // ───────────────────────────────────────────────────────────────────────────────
-// UI ELEMENT COLORS (from SVG)
+// BUTTON STYLES (from new_ui.svg)
 // ───────────────────────────────────────────────────────────────────────────────
-#define COL_BORDER      lv_color_hex(0x222222)   // SVG: #222 inactive button stroke
-#define COL_BORDER_SPD  lv_color_hex(0x333333)   // SVG: #333 speed button border
-#define COL_BTN_NORMAL  lv_color_hex(0x121212)   // SVG: #121212 inactive button bg
-#define COL_BTN_PRESS   lv_color_hex(0x2A2A2A)   // Button pressed bg
-#define COL_GAUGE_TRACK lv_color_hex(0x111111)   // SVG: #111 gauge background arc
-#define COL_GAUGE_TICK  lv_color_hex(0x222222)   // SVG: #222 gauge tick marks
+// Active: .ba { fill:#1A1600; stroke:#FF9500; stroke-width:2 }
+// Normal: .b  { fill:#141414; stroke:#2E2E2E; stroke-width:1.5 }
+// Danger: .br { fill:#1A0A0A; stroke:#FF1744; stroke-width:2 }
+// Small:  .sm { fill:#141414; stroke:#333;    stroke-width:1.5 }
+#define COL_BTN_NORMAL  COL_BTN_BG              // Normal button fill
+#define COL_BTN_ACTIVE  COL_BG_ACTIVE           // Active button fill
+#define COL_BTN_DANGER  COL_BG_DANGER           // Danger button fill
 
 // ───────────────────────────────────────────────────────────────────────────────
-// SIZING CONSTANTS (pixel-matched to ui_mockup.svg)
+// RADIUS CONSTANTS (from new_ui.svg — mostly rx=2 or rx=4)
 // ───────────────────────────────────────────────────────────────────────────────
-
-// Side panel buttons (SVG: width=130 height=75 rx=12)
-#define BTN_W           130
-#define BTN_H           75
-#define BTN_H_SM        55    // Speed buttons (SVG: height=55)
-#define BTN_W_SM        95    // Speed buttons (SVG: width=95)
-#define RADIUS_BTN      12    // SVG: rx=12
-#define RADIUS_BTN_SM   10    // SVG: rx=10 for speed buttons
-#define RADIUS_CARD     12
-#define PAD_SCREEN      16
+#define RADIUS_BTN      2      // Standard button radius (SVG: rx=2)
+#define RADIUS_BTN_SM   2      // Small button radius
+#define RADIUS_CARD     4      // Card/dialog radius (SVG: rx=4)
+#define RADIUS_ROW      0      // Setting rows (no radius)
 
 // ───────────────────────────────────────────────────────────────────────────────
-// SCREEN COORDINATES (800 × 480 landscape)
+// SCREEN DIMENSIONS
 // ───────────────────────────────────────────────────────────────────────────────
 #define SCREEN_W        800
 #define SCREEN_H        480
 
-// Status bar (SVG: top row at y=35)
-#define STATUS_BAR_H    45
-#define STATUS_BAR_Y    0
+// ───────────────────────────────────────────────────────────────────────────────
+// LAYOUT CONSTANTS (from new_ui.svg)
+// ───────────────────────────────────────────────────────────────────────────────
 
-// Side button absolute positions from SVG
-#define LEFT_BTN_X      35     // SVG: translate(35, ...)
-#define RIGHT_BTN_X     635    // SVG: translate(635, ...)
-#define BTN_ROW_1_Y     120    // SVG: first button row
-#define BTN_ROW_2_Y     210    // SVG: second button row
-#define BTN_ROW_3_Y     300    // SVG: third button row
+// Header bar (SVG: height=30)
+#define HEADER_H        30
 
-// Speed buttons (SVG: y=400)
-#define SPD_BTN_Y       400
-#define SPD_BTN_L_X     295    // SVG: translate(295, 400)
-#define SPD_BTN_R_X     410    // SVG: translate(410, 400)
+// Standard button sizes (from SVG specs bar)
+// BTN: 152x36 (bottom row on main), CARD: 784x56, GRID: 380x170
+// ACTION: 260x52, STOP: 300x60
+#define BTN_W_BOTTOM    152    // Bottom row button width
+#define BTN_H_BOTTOM    36     // Bottom row button height
+#define BTN_W_ACTION    260    // Action button (SAVE/CANCEL)
+#define BTN_H_ACTION    52     // Action button height
+#define BTN_W_STOP      180    // Stop button width
+#define BTN_W_START     180    // Start button width
+#define BTN_H_STOP      42     // Stop/start button height
 
-// Gauge center (SVG: centered at 400, 240 with radius 160)
+// Small +/- buttons
+#define BTN_W_PM        44     // Plus/minus button width
+#define BTN_H_PM        30     // Plus/minus button height
+
+// Menu grid items
+#define GRID_W          380    // Menu grid item width
+#define GRID_H          170    // Menu grid item height
+
+// Program cards
+#define CARD_W          784    // Program card width
+#define CARD_H          56     // Program card height
+
+// Side padding
+#define PAD_X           16     // Standard X padding
+#define PAD_X2          12     // Tight X padding (SVG: 12)
+
+// ───────────────────────────────────────────────────────────────────────────────
+// MAIN SCREEN CONSTANTS (from new_ui.svg SCREEN_MAIN)
+// ───────────────────────────────────────────────────────────────────────────────
+// Gauge: semicircle from M220,370 to A190,190 with center ~400,270
 #define GAUGE_CX        400
-#define GAUGE_CY        240
-#define GAUGE_R         160
+#define GAUGE_CY        270    // Approximate center of semicircle arc
+#define GAUGE_R         190    // Arc radius
 
-// Main UI Layout Areas
-#define PANEL_SIDE_W    150
-#define CENTER_W        (SCREEN_W - (2 * PANEL_SIDE_W))
+// RPM +/- buttons (SVG: x=330/404, y=388, 66x36)
+#define RPM_BTN_W       66
+#define RPM_BTN_H       36
+#define RPM_BTN_Y       388
+#define RPM_MINUS_X     330
+#define RPM_PLUS_X      404
+
+// Bottom button row (SVG: y=436, buttons 152x36 or similar)
+#define BOTTOM_ROW_Y    436
+#define BOTTOM_ROW_H    36
+
+// ───────────────────────────────────────────────────────────────────────────────
+// FONT SIZES — Montserrat (closest match to Courier New monospace)
+// ───────────────────────────────────────────────────────────────────────────────
+#define FONT_TINY           &lv_font_montserrat_10
+#define FONT_SMALL          &lv_font_montserrat_10
+#define FONT_NORMAL         &lv_font_montserrat_14
+#define FONT_BODY           &lv_font_montserrat_12
+#define FONT_MED            &lv_font_montserrat_14
+#define FONT_LARGE          &lv_font_montserrat_20
+#define FONT_HUGE           &lv_font_montserrat_40  // 48 causes crash on ESP32-P4
+#define FONT_XXL            &lv_font_montserrat_40

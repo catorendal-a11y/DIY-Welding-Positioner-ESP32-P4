@@ -22,3 +22,7 @@ CONFIG_USB_OTG_SUPPORTED=y
 
 # Arduino main task stack size - increased for MIPI-DSI init
 CONFIG_ARDUINO_LOOP_STACK_SIZE=32768
+
+# ISR IRAM-safe flags for PSRAM cache coherency
+CONFIG_RMT_ISR_IRAM_SAFE=y
+CONFIG_GPTIMER_ISR_IRAM_SAFE=y

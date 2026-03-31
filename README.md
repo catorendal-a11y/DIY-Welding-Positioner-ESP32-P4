@@ -215,7 +215,7 @@ All components have been validated on real hardware.
 ## 🔌 Wiring Diagram
 
 <div align="center">
-  <img src="docs/images/wiring_diagram.v2.svg" width="800" alt="Wiring Diagram">
+  <img src="docs/images/Wiring_diagram.v2.svg" width="800" alt="Wiring Diagram">
 </div>
 
 > **See also:** [Detailed Hardware Setup Guide](docs/HARDWARE_SETUP.md) · [EMI Mitigation Guide](docs/EMI_MITIGATION.md) · [Safety System](docs/SAFETY_SYSTEM.md)

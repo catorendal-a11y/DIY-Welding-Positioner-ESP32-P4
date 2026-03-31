@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🔧 DIY Welding Positioner Controller (ESP32-P4)
+# DIY Welding Positioner Controller (ESP32-P4/C6-GUITION)
 **Precision Multi-Mode Welding Rotator for TIG, MIG, and Pipe Welding**
 
 **Firmware Version:** v0.4.0

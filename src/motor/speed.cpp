@@ -17,11 +17,12 @@
 // STATE VARIABLES
 // ───────────────────────────────────────────────────────────────────────────────
 static float adcFiltered = 2047.5f;     // Filtered ADC value (center of 0–4095)
-static float sliderRPM = MIN_RPM;       // Speed set by GUI slider
+static volatile float sliderRPM = MIN_RPM;       // Speed set by GUI slider (Core 0/1 shared)
 static uint32_t lastSliderMs = 0;       // Last time slider was used
 static Direction currentDir = DIR_CW;   // Current direction
-static bool buttonsActive = false;      // Buttons have control, pot locked out
-static float lastPotAdc = 2047.5f;      // Last ADC when buttons took over
+static volatile bool buttonsActive = false;      // Buttons have control, pot locked out
+static volatile float lastPotAdc = 2047.5f;      // Last ADC when buttons took over
+static volatile bool speedUpdatePending = false;
 
 // ───────────────────────────────────────────────────────────────────────────────
 // CONVERSION FUNCTIONS
@@ -55,29 +56,29 @@ void speed_init() {
 void speed_update_adc() {
   float raw = (float)analogRead(PIN_POT);
   adcFiltered = IIR_ALPHA * raw + (1.0f - IIR_ALPHA) * adcFiltered;
-  LOG_D("ADC raw=%.0f filtered=%.0f rpm=%.2f", raw, adcFiltered, speed_get_target_rpm());
 }
 
 void speed_slider_set(float rpm) {
   sliderRPM = constrain(rpm, MIN_RPM, MAX_RPM);
   lastSliderMs = millis();
-  if (g_settings.rpm_buttons_enabled) {
-    buttonsActive = true;
-    lastPotAdc = adcFiltered;
-  }
+  buttonsActive = true;
+  lastPotAdc = adcFiltered;
 }
 
 float speed_get_target_rpm() {
   float adc = constrain(adcFiltered, 0.0f, 4095.0f);
-  float normalized = (3000.0f - adc) / 3000.0f;
+  float normalized = (3315.0f - adc) / 3315.0f;
   float pot_rpm = MIN_RPM + constrain(normalized, 0.0f, 1.0f) * (MAX_RPM - MIN_RPM);
 
-  if (buttonsActive) {
-    if (fabs(adcFiltered - lastPotAdc) > 80.0f) {
+  bool active = buttonsActive;
+  float srpm = sliderRPM;
+
+  if (active) {
+    if (fabs(adcFiltered - lastPotAdc) > 200.0f) {
       buttonsActive = false;
       sliderRPM = pot_rpm;
     } else {
-      return sliderRPM;
+      return srpm;
     }
   }
 
@@ -96,29 +97,24 @@ bool speed_using_slider() {
   return (millis() - lastSliderMs < SLIDER_TIMEOUT_MS);
 }
 
-static Direction lastAppliedDir = DIR_CW;
-
 void speed_apply() {
   if (!motor_is_running()) return;
   SystemState state = control_get_state();
   if (state == STATE_JOG || state == STATE_STEP || state == STATE_PULSE || state == STATE_TIMER || state == STATE_STOPPING) return;
 
   float rpm = speed_get_target_rpm();
-  uint32_t hz = (uint32_t)rpmToStepHz(rpm);
-  Direction dir = speed_get_direction();
+  uint32_t mhz = (uint32_t)(rpmToStepHz(rpm) * 1000);
 
   FastAccelStepper* stepper = motor_get_stepper();
   if (stepper != nullptr) {
-    stepper->setSpeedInHz(hz);
-    if (dir != lastAppliedDir) {
-      lastAppliedDir = dir;
-    }
-    if (dir == DIR_CW) {
-      stepper->runForward();
-    } else {
-      stepper->runBackward();
-    }
+    stepper->setSpeedInMilliHz(mhz);
+    stepper->applySpeedAcceleration();
   }
+  speedUpdatePending = false;
+}
+
+void speed_request_update() {
+  speedUpdatePending = true;
 }
 
 // ───────────────────────────────────────────────────────────────────────────────

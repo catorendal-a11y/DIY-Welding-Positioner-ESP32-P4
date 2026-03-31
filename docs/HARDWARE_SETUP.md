@@ -15,7 +15,7 @@ Before powering on, configure the DIP switches on the side of your TB6600.
 
 | Setting | Value | Required for firmware |
 |---------|-------|-----------------------|
-| **Microsteps** | 8 (1600 pulse/rev) | Matches `MOTOR_MICROSTEPS 8` in `config.h` |
+| **Microsteps** | Selectable: 1/4, 1/8, 1/16, 1/32 | Must match Settings > Microstepping in UI |
 | **Current** | Match your NEMA 23 rating | Typically 2.5A - 3.0A |
 
 ## 3. Wiring Connections
@@ -48,3 +48,22 @@ _Note: The NC E-STOP button connects `GPIO 33` to GND constantly. When pressed, 
 ## 4. Safety & Thermal Management
 - **Heat Sinking:** Stepper drivers get hot during long welding runs. Mount the TB6600 to the metal enclosure for thermal dissipation or add a 40mm fan.
 - **Power Sequencing:** Always power the logic (USB-C or DC-DC) first, then the motor 24V supply. The firmware holds the motor ENA pin HIGH (Disabled) on boot for safety.
+
+## 5. Validated Hardware
+
+The following configuration has been tested and confirmed working on real hardware:
+
+| Component | Tested Model | Status |
+|-----------|-------------|--------|
+| **MCU Board** | Waveshare ESP32-P4 4.3" Display | Tested |
+| **Stepper Driver** | TB6600 | Tested (1/4 and 1/8 microstepping) |
+| **Stepper Motor** | NEMA 23 (3 Nm) | Tested |
+| **Gearbox** | 108:1 Worm Gear | Tested |
+| **Power Supply** | 24V DC | Tested |
+| **Potentiometer** | 10k (LA42DWQ-22) | Tested (ADC range 0-3315) |
+| **E-STOP** | NC Button | Tested |
+
+### Known Limitations with TB6600
+- Motor resonance at 100-300 motor RPM causes stalling at coarse microstepping (1/4)
+- Recommended to use 1/8 microstepping or finer for stable operation
+- DM542T upgrade planned for anti-resonance DSP support

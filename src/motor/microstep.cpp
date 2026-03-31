@@ -21,7 +21,7 @@ void microstep_init() {
   EEPROM.get(EEPROM_MICROSTEP_ADDR, value);
 
   // Validate loaded value
-  if (value == 8 || value == 16 || value == 32) {
+  if (value == 4 || value == 8 || value == 16 || value == 32) {
     currentMicrostep = (MicrostepSetting)value;
     LOG_I("Microstep loaded: %s", microstep_get_string());
   } else {
@@ -38,7 +38,7 @@ MicrostepSetting microstep_get() {
 }
 
 void microstep_set(MicrostepSetting setting) {
-  if (setting == MICROSTEP_8 || setting == MICROSTEP_16 || setting == MICROSTEP_32) {
+  if (setting == MICROSTEP_4 || setting == MICROSTEP_8 || setting == MICROSTEP_16 || setting == MICROSTEP_32) {
     currentMicrostep = setting;
     LOG_I("Microstep set to: %s", microstep_get_string());
   }
@@ -46,6 +46,7 @@ void microstep_set(MicrostepSetting setting) {
 
 const char* microstep_get_string() {
   switch (currentMicrostep) {
+    case MICROSTEP_4:  return "1/4";
     case MICROSTEP_8:  return "1/8";
     case MICROSTEP_16: return "1/16";
     case MICROSTEP_32: return "1/32";

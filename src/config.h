@@ -47,8 +47,8 @@
 // ───────────────────────────────────────────────────────────────────────────────
 // MOTOR & MECHANICAL PARAMETERS
 // ───────────────────────────────────────────────────────────────────────────────
-#define MIN_RPM         0.1f      // Minimum workpiece RPM
-#define MAX_RPM         3.0f      // Maximum workpiece RPM
+#define MIN_RPM         0.05f     // Minimum workpiece RPM
+#define MAX_RPM         1.0f      // Maximum workpiece RPM (temporary until DM542T)
 
 #define MICROSTEPS      8         // 1/8 microstepping (TB6600 DIP)
 #define STEPS_PER_REV   (200 * MICROSTEPS)   // 1600 steps/rev motor

@@ -3,7 +3,7 @@
 **Board**: GUITION JC4880P433 ESP32-P4 4.3" Touch Display Dev Board
 **Display**: ST7701S 480×800 MIPI-DSI (rotated to 800×480 landscape)
 **Touch**: GT911 capacitive touch controller
-**Firmware**: v0.3.0-beta
+**Firmware**: v0.4.0
 
 ---
 
@@ -13,6 +13,8 @@
 3. [Programs Screen Redesign](#3-programs-screen-redesign)
 4. [Custom Program Presets from UI](#4-custom-program-presets-from-ui)
 5. [Theme Enhancements](#5-theme-enhancements)
+6. [Motor Control & Live Speed Adjustment](#6-motor-control--live-speed-adjustment)
+7. [PSRAM ISR Cache Coherency](#7-psram-isr-cache-coherency)
 
 ---
 
@@ -460,6 +462,78 @@ Added to [src/ui/theme.h](src/ui/theme.h):
 | `src/ui/screens/screen_program_edit.cpp` | **NEW** - Full program editor |
 | `src/ui/screens.h` | Added SCREEN_PROGRAM_EDIT enum and declarations |
 | `STATUS.md` | Updated with all completed features |
+
+---
+
+## 6. Motor Control & Live Speed Adjustment
+
+### Problem
+RPM could not be adjusted while the motor was running. Pressing +/- buttons or turning the potentiometer had no effect until the motor was stopped and restarted.
+
+### Root Causes Identified
+
+#### 6.1 Missing `applySpeedAcceleration()`
+FastAccelStepper 0.33.x requires `applySpeedAcceleration()` after `setSpeedInMilliHz()` for speed changes to take effect during ongoing rotation. Without it, `setSpeedInMilliHz()` only updated internal state but never pushed the new speed to the ramp generator.
+
+**Fix in `speed_apply()`:**
+```cpp
+stepper->setSpeedInMilliHz(mhz);
+stepper->applySpeedAcceleration();  // Required for live speed changes
+```
+
+#### 6.2 Cross-Core Cache Coherency
+`speed_slider_set()` is called from Core 1 (LVGL/UI thread), but `speed_get_target_rpm()` reads the values from Core 0 (motorTask). Without `volatile`, the compiler cached values in Core 0 registers and never saw updates from Core 1.
+
+**Fix:** Marked shared variables as `volatile`:
+```cpp
+static volatile float sliderRPM = MIN_RPM;
+static volatile bool buttonsActive = false;
+static volatile float lastPotAdc = 2047.5f;
+```
+
+#### 6.3 Thread Safety
+Direct `speed_apply()` calls from UI callbacks could race with motorTask. Introduced a request flag pattern:
+```cpp
+// UI thread (Core 1) — safe to call from any LVGL callback
+void speed_request_update() {
+  speedUpdatePending = true;  // volatile bool
+}
+
+// motorTask (Core 0) — already runs every 5ms
+void speed_apply() {
+  // ... existing logic ...
+  speedUpdatePending = false;
+}
+```
+
+#### 6.4 `buttonsActive` Guard
+`speed_slider_set()` had a guard checking `g_settings.rpm_buttons_enabled` before setting `buttonsActive = true`. If the stored setting was `false`, button presses were silently ignored.
+
+**Fix:** Removed the guard — buttons always activate on press.
+
+### Files Modified
+- `src/motor/speed.cpp` — volatile variables, applySpeedAcceleration(), request flag
+- `src/motor/speed.h` — added `speed_request_update()` declaration
+- `src/ui/screens/screen_main.cpp` — UI callbacks use `speed_request_update()`
+
+---
+
+## 7. PSRAM ISR Cache Coherency
+
+### Problem
+ESP32-P4 has PSRAM enabled by default. When RMT or GPTIMER interrupts fire and ISR code/data isn't in IRAM, a cache miss occurs, disrupting pulse timing and causing step loss.
+
+### Solution
+Added ISR IRAM-safe build flags in `platformio.ini`:
+```ini
+-DCONFIG_RMT_ISR_IRAM_SAFE=1
+-DCONFIG_GPTIMER_ISR_IRAM_SAFE=1
+```
+
+**Note:** `-mfix-esp32-psram-cache-issue` was NOT added — it's an Xtensa compiler flag and ESP32-P4 uses RISC-V.
+
+### Files Modified
+- `platformio.ini` — added ISR IRAM-safe flags
 
 ---
 

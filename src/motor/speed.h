@@ -23,6 +23,7 @@ float speed_get_target_rpm();           // Get current target RPM (pot or slider
 float speed_get_actual_rpm();           // Get actual measured RPM from motor
 bool speed_using_slider();              // Returns true if slider was used recently
 void speed_apply();                     // Apply speed to motor (call every 5ms)
+void speed_request_update();             // Request immediate speed update from UI thread
 
 // Direction control
 typedef enum { DIR_CW = 0, DIR_CCW = 1 } Direction;

@@ -3,7 +3,7 @@
 # 🔧 DIY Welding Positioner Controller (ESP32-P4)
 **Precision Multi-Mode Welding Rotator for TIG, MIG, and Pipe Welding**
 
-**Firmware Version:** v0.3.0-beta
+**Firmware Version:** v0.4.0
 *(See Git tags for release history)*
 
 <img src="docs/images/main_screen.svg" width="800" alt="TIG Rotator Controller — Main Screen">
@@ -14,7 +14,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform: ESP32-P4](https://img.shields.io/badge/Platform-ESP32--P4-blue.svg)](https://espressif.com/)
 [![Framework: ESP-IDF](https://img.shields.io/badge/Framework-ESP--IDF-green.svg)](https://docs.espressif.com/)
-[![Graphics: LVGL](https://img.shields.io/badge/LVGL-8.x-blue.svg)](https://lvgl.io/)
+[![Graphics: LVGL](https://img.shields.io/badge/LVGL-9.x-blue.svg)](https://lvgl.io/)
 [![PlatformIO](https://img.shields.io/badge/PlatformIO-Compatible-orange.svg)](https://platformio.org/)
 
 </div>
@@ -69,7 +69,7 @@ Watch the system in action: **UI interaction, Motor rotation, and Simulated weld
 
 This project is a **DIY welding positioner controller** built using the powerful **ESP32-P4 microcontroller**. It is designed to control rotary welding tables, welding turntables, pipe welding rotators, and automated fabrication systems. 
 
-Driven by a NEMA 23 stepper motor and a 60:1 worm gear, it ensures ultra-smooth low-RPM rotation ideal for circular weld seams and continuous TIG/MIG passes.
+Driven by a NEMA 23 stepper motor and a 108:1 worm gear, it ensures ultra-smooth low-RPM rotation ideal for circular weld seams and continuous TIG/MIG passes.
 
 ### 🎯 Project Goals
 - Build a reliable, industrial-grade DIY welding positioner.
@@ -86,7 +86,7 @@ This project is built on a professional dual-core **FreeRTOS** architecture, sep
 ```mermaid
 graph TD
     subgraph Core 1: User Interface
-        UI[LVGL 8.x GUI Task] -->|Events| Q[State Machine Queue]
+        UI[LVGL 9.x GUI Task] -->|Events| Q[State Machine Queue]
         Touch[GT911 I2C Touch] --> UI
         Disp[MIPI-DSI ST7701S] --- UI
     end
@@ -94,7 +94,7 @@ graph TD
     subgraph Core 0: Realtime Control
         SM[State Machine Task] -->|Target Hz| Motor[Motor Task]
         Q --> SM
-        Pot[ADC Potentiometer] --> SM
+        Pot[ADC Potentiometer] --> Motor
         
         subgraph Hardware Safety Layer
             ESTOP[NC E-STOP Button] -->|GPIO 33 ISR < 1ms| ENA[Hardware Disable]
@@ -106,7 +106,6 @@ graph TD
     Motor -->|RMT Hardware Pulses| TB[TB6600 Driver]
     ENA --> TB
     TB --> N23[NEMA 23 3Nm Stepper]
-    N23 --> GEAR{60:1 Worm Gear}
     GEAR --> TABLE((Rotary Table))
 
     style UI fill:#003366,stroke:#00E5FF,stroke-width:2px,color:#fff
@@ -123,7 +122,8 @@ graph TD
 1. **Task Isolation:** UI rendering (Core 1) cannot block motor pulses (Core 0).
 2. **Hardware Timers:** Motor steps are generated using the ESP32 RMT peripheral, ensuring jitter-free micro-stepping regardless of CPU load.
 3. **Fail-Safe Safety:** The Emergency Stop is tied directly to a zero-latency hardware interrupt (ISR) that cuts the driver's enable pin in <0.5ms. A 2.0-second hardware watchdog (TWDT) monitors the control tasks.
-4. **Acceleration Ramps:** Linear S-curve acceleration via `FastAccelStepper` prevents motor stalls and jerky weld starts.
+4. **Acceleration Ramps:** Linear acceleration via `FastAccelStepper` with `setLinearAcceleration()` for smooth resonance-zone traversal prevents motor stalls and jerky weld starts.
+5. **Live Speed Control:** RPM can be adjusted on-the-fly via potentiometer or touchscreen buttons during continuous rotation, using `applySpeedAcceleration()` for immediate effect.
 
 ---
 
@@ -139,11 +139,12 @@ graph TD
 ## ✨ Features
 
 - **Multi-mode rotation:** Continuous, Jog, Pulse, Step, and Timer modes.
-- **Speed control:** Precise on-the-fly RPM adjustment.
+- **Live speed control:** On-the-fly RPM adjustment via potentiometer and touchscreen buttons during rotation.
 - **LVGL touch interface:** Glove-safe, high-contrast industrial dark UI.
 - **Hardware safety:** Dedicated NC E-STOP interrupt and software watchdog.
-- **Smooth motion:** FastAccelStepper utilizing RMT hardware pulses for micro-stepping control.
+- **Smooth motion:** FastAccelStepper utilizing RMT hardware pulses with ISR IRAM-safe flags for PSRAM compatibility.
 - **Program Presets:** Save and load custom welding parameters to onboard LittleFS flash memory.
+- **Microstepping:** Supports 1/4, 1/8, 1/16, and 1/32 microstepping (configurable).
 
 ---
 
@@ -151,9 +152,9 @@ graph TD
 
 | Parameter | Value |
 |-----------|-------|
-| **Output RPM Range** | 0.1 – 3.0 RPM (safe default; up to 5.0 in clean environments) |
-| **Gear Ratio** | 60:1 Worm Gear |
-| **Microstepping** | 8x (Adjustable on driver) |
+| **Output RPM Range** | 0.05 – 5.0 RPM (current: 1.0 RPM max with TB6600, pending DM542T upgrade) |
+| **Gear Ratio** | 108:1 Worm Gear |
+| **Microstepping** | 1/4, 1/8, 1/16, 1/32 (Selectable in Settings) |
 | **Motor Torque** | 3.0 Nm (NEMA 23) |
 | **Control Resolution**| 0.01 RPM |
 | **Max Table Load** | Depends on bearing & frame design |
@@ -163,9 +164,9 @@ graph TD
 ## 🧩 Requirements
 
 - **PlatformIO:** Core 6.x or newer
-- **ESP-IDF:** v5.2+ (via pioarduino core, pinned release)
-- **LVGL:** 8.x
-- **FastAccelStepper:** ^0.31.3 (pinned)
+- **ESP-IDF:** v5.5+ (via pioarduino core, pinned release)
+- **LVGL:** 9.x
+- **FastAccelStepper:** 0.33.14 (pinned)
 - **Display:** ESP-IDF native MIPI-DSI panel driver (ST7701S-class). **Not LovyanGFX.**
 
 ### Hardware Check
@@ -181,9 +182,9 @@ graph TD
 | Component | Model / Specs | Qty |
 |-----------|---------------|-----|
 | **MCU Board** | Waveshare ESP32-P4 4.3" Display | 1 |
-| **Stepper Driver** | TB6600 (Set to 8 microsteps) | 1 |
+| **Stepper Driver** | TB6600 (DM542T planned upgrade) | 1 |
 | **Stepper Motor** | NEMA 23 (3 Nm torque) | 1 |
-| **Gearbox** | RV30 60:1 Worm Gear Reducer | 1 |
+| **Gearbox** | 108:1 Worm Gear Reducer | 1 |
 | **Power Supply** | 24V DC, ≥5A recommended for NEMA 23 (3Nm) | 1 |
 | **Controls** | 10k Potentiometer (Speed) & NC E-STOP Button | 1 |
 
@@ -192,12 +193,12 @@ graph TD
 ## 🎯 Target Hardware (Designed & Configured For)
 
 This firmware is designed and configured for the following hardware.
-Full validation is currently in progress.
+All components have been validated on real hardware.
 
 - Waveshare ESP32-P4 4.3" Touch Display
 - TB6600 Stepper Driver
 - NEMA 23 (3 Nm torque)
-- RV30 Worm Gear Reducer (60:1)
+- 108:1 Worm Gear Reducer
 - 24V / 5A DC Power Supply
 - 10k Potentiometer
 - NC Emergency Stop Button
@@ -230,7 +231,7 @@ DIY-Welding-Positioner-ESP32-P4/
 │   ├── motor/          # FastAccelStepper logic & RMT pulses
 │   ├── control/        # Welding modes (continuous, jog, pulse, step, timer)
 │   ├── safety/         # E-STOP interrupt & hardware watchdog
-│   ├── ui/             # LVGL 8.x dashboards & themes
+│   ├── ui/             # LVGL 9.x dashboards & themes
 │   └── config.h        # Pinouts & physical gear ratios
 ├── test/               # Logic verification & simulation suites
 ├── docs/
@@ -266,10 +267,11 @@ Key physical parameters can be adjusted right at the top of the header files to 
 Open `src/config.h` to tweak:
 
 ```cpp
-#define MOTOR_MICROSTEPS 8      // Must match dip-switches on your TB6600
-#define MOTOR_GEAR_RATIO 60     // e.g., 60:1 Worm Gear
-#define MAX_RPM 3.0             // Upper limit of the UI gauge
-#define ACCELERATION 5000       // Stepper acceleration (steps/s²)
+#define MICROSTEPS      8      // Must match dip-switches on your TB6600
+#define GEAR_RATIO      108    // Worm gear ratio
+#define MAX_RPM         1.0    // Upper limit of the UI gauge
+#define MIN_RPM         0.05   // Lower limit
+#define ACCELERATION    7000   // Stepper acceleration (steps/s²)
 ```
 
 ---
@@ -291,10 +293,13 @@ Open `src/config.h` to tweak:
 Before connecting mechanical load:
 
 - [ ] Display boots successfully
-- [ ] Touch input responds correctly
-- [ ] Motor rotates at 0.3 RPM
-- [ ] E-STOP halts motion immediately
-- [ ] No watchdog resets observed
+- [x] Touch input responds correctly
+- [x] Motor rotates at target RPM
+- [x] E-STOP halts motion immediately
+- [x] No watchdog resets observed
+- [x] Live RPM adjustment works (pot + buttons) during rotation
+- [x] All 5 welding modes tested (Continuous, Jog, Pulse, Step, Timer)
+- [x] Program preset save/load verified
 
 ---
 
@@ -327,6 +332,7 @@ Before connecting mechanical load:
 ## ⚠️ Known Limitations
 
 - Single-axis control only.
+- TB6600 driver has no anti-resonance DSP — motor may stall at certain RPM ranges due to resonance. DM542T upgrade recommended.
 - Requires manual configuration of your specific gear ratio in `config.h`.
 - Not tested with external servo motors (pure step/dir steppers only).
 
@@ -336,10 +342,16 @@ Before connecting mechanical load:
 
 - [x] Basic rotation and UI setup
 - [x] Speed control and Acceleration
+- [x] Live RPM adjustment (pot + buttons during rotation)
 - [x] Pulse and Step modes
 - [x] Program Preset Storage (LittleFS + ArduinoJson)
+- [x] ISR IRAM-safe RMT/GPTIMER flags for PSRAM cache coherency
+- [x] Microstepping selection (1/4, 1/8, 1/16, 1/32)
+- [x] Linear acceleration phase for resonance-zone traversal
+- [x] Thread-safe cross-core speed updates (volatile + request flag)
 - [ ] Wi-Fi / Web panel remote control (ESP32-C6)
 - [ ] OTA firmware updates
+- [ ] DM542T driver integration with anti-resonance DSP
 
 ---
 

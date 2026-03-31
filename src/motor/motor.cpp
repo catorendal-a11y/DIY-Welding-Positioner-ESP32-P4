@@ -49,7 +49,7 @@ void motor_init() {
   // Initialize engine
   engine.init();
 
-  // Connect stepper to step pin
+  // Connect stepper to step pin with RMT driver
   stepper = engine.stepperConnectToPin(PIN_STEP);
   if (stepper == nullptr) {
     LOG_E("FastAccelStepper init failed");
@@ -64,6 +64,9 @@ void motor_init() {
 
   // Set acceleration and start speed
   stepper->setAcceleration(ACCELERATION);
+  // Linear ramp through resonance zone (NEMA 23: 100-300 RPM)
+  // 200 steps linear phase → handover at ~sqrt(1.5 * 7000 * 200) = ~1449 Hz
+  stepper->setLinearAcceleration(200);
   stepper->setSpeedInHz(START_SPEED);
 
   LOG_I("FastAccelStepper init OK");
@@ -76,14 +79,12 @@ void motor_init() {
 // MOTOR CONTROL FUNCTIONS
 // ───────────────────────────────────────────────────────────────────────────────
 void motor_run_cw() {
-  digitalWrite(PIN_DIR, HIGH);   // CW direction
   digitalWrite(PIN_ENA, LOW);    // Enable motor
   stepper->runForward();
   LOG_I("Motor: CW");
 }
 
 void motor_run_ccw() {
-  digitalWrite(PIN_DIR, LOW);    // CCW direction
   digitalWrite(PIN_ENA, LOW);    // Enable motor
   stepper->runBackward();
   LOG_I("Motor: CCW");

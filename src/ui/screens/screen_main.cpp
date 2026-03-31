@@ -76,6 +76,7 @@ static void speed_down_cb(lv_event_t*) {
   rpm -= 0.1f;
   if (rpm < MIN_RPM) rpm = MIN_RPM;
   speed_slider_set(rpm);
+  speed_request_update();
   screen_main_update();
 }
 static void speed_up_cb(lv_event_t*) {
@@ -83,6 +84,7 @@ static void speed_up_cb(lv_event_t*) {
   rpm += 0.1f;
   if (rpm > MAX_RPM) rpm = MAX_RPM;
   speed_slider_set(rpm);
+  speed_request_update();
   screen_main_update();
 }
 static void pulse_on_down_cb(lv_event_t*) {
@@ -203,7 +205,7 @@ void screen_main_create() {
   lv_obj_set_pos(rpmIndicatorArc, arcCX - activeSize/2, arcCY - activeSize/2);
   lv_arc_set_rotation(rpmIndicatorArc, 135);
   lv_arc_set_bg_angles(rpmIndicatorArc, 0, 270);
-  lv_arc_set_range(rpmIndicatorArc, 0, 30);
+  lv_arc_set_range(rpmIndicatorArc, 0, (int32_t)(MAX_RPM * 100));
   lv_arc_set_value(rpmIndicatorArc, 0);
   lv_obj_remove_style(rpmIndicatorArc, nullptr, LV_PART_KNOB);
   lv_obj_remove_flag(rpmIndicatorArc, LV_OBJ_FLAG_CLICKABLE);
@@ -261,47 +263,47 @@ void screen_main_create() {
   lv_obj_add_event_cb(rpmUpBtn, speed_up_cb, LV_EVENT_CLICKED, nullptr);
 
   // ── Pulse time controls under PULSE button (left column x=8, w=170) ──
-  // PULSE btn bottom: y=272. Two rows: ON time, OFF time
-  // Row 1: ON  y=280
+  // Layout: [-]  value  [+] ON  — buttons left, label right towards center
   const int pCol = 8;
   const int pW = 170;
   const int pH = 44;
-  const int pBtnW = 52;
+  const int pBtnW = 44;
+
+  // Row 1: ON  y=290
+  lv_obj_t* pulseOnDownBtn = make_btn(mainScreenPtr, pCol + 2, 290, pBtnW, pH, "-", false);
+  lv_obj_add_event_cb(pulseOnDownBtn, pulse_on_down_cb, LV_EVENT_CLICKED, nullptr);
+
+  pulseOnLabel = lv_label_create(mainScreenPtr);
+  lv_obj_set_style_text_font(pulseOnLabel, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_color(pulseOnLabel, COL_TEXT, 0);
+  lv_obj_set_pos(pulseOnLabel, pCol + 50, 296);
+
+  lv_obj_t* pulseOnUpBtn = make_btn(mainScreenPtr, pCol + 116, 290, pBtnW, pH, "+", false);
+  lv_obj_add_event_cb(pulseOnUpBtn, pulse_on_up_cb, LV_EVENT_CLICKED, nullptr);
 
   lv_obj_t* onTag = lv_label_create(mainScreenPtr);
   lv_label_set_text(onTag, "ON");
   lv_obj_set_style_text_font(onTag, &lv_font_montserrat_14, 0);
   lv_obj_set_style_text_color(onTag, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(onTag, pCol + 2, 286);
+  lv_obj_set_pos(onTag, pCol + pW + 4, 302);
 
-  lv_obj_t* pulseOnDownBtn = make_btn(mainScreenPtr, pCol + 24, 280, pBtnW, pH, "-", false);
-  lv_obj_add_event_cb(pulseOnDownBtn, pulse_on_down_cb, LV_EVENT_CLICKED, nullptr);
+  // Row 2: OFF y=340
+  lv_obj_t* pulseOffDownBtn = make_btn(mainScreenPtr, pCol + 2, 340, pBtnW, pH, "-", false);
+  lv_obj_add_event_cb(pulseOffDownBtn, pulse_off_down_cb, LV_EVENT_CLICKED, nullptr);
 
-  pulseOnLabel = lv_label_create(mainScreenPtr);
-  lv_obj_set_style_text_font(pulseOnLabel, &lv_font_montserrat_16, 0);
-  lv_obj_set_style_text_color(pulseOnLabel, COL_TEXT, 0);
-  lv_obj_set_pos(pulseOnLabel, pCol + 80, 290);
+  pulseOffLabel = lv_label_create(mainScreenPtr);
+  lv_obj_set_style_text_font(pulseOffLabel, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_color(pulseOffLabel, COL_TEXT, 0);
+  lv_obj_set_pos(pulseOffLabel, pCol + 50, 346);
 
-  lv_obj_t* pulseOnUpBtn = make_btn(mainScreenPtr, pCol + pW - pBtnW, 280, pBtnW, pH, "+", false);
-  lv_obj_add_event_cb(pulseOnUpBtn, pulse_on_up_cb, LV_EVENT_CLICKED, nullptr);
+  lv_obj_t* pulseOffUpBtn = make_btn(mainScreenPtr, pCol + 116, 340, pBtnW, pH, "+", false);
+  lv_obj_add_event_cb(pulseOffUpBtn, pulse_off_up_cb, LV_EVENT_CLICKED, nullptr);
 
-  // Row 2: OFF y=330
   lv_obj_t* offTag = lv_label_create(mainScreenPtr);
   lv_label_set_text(offTag, "OFF");
   lv_obj_set_style_text_font(offTag, &lv_font_montserrat_14, 0);
   lv_obj_set_style_text_color(offTag, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(offTag, pCol + 2, 336);
-
-  lv_obj_t* pulseOffDownBtn = make_btn(mainScreenPtr, pCol + 24, 330, pBtnW, pH, "-", false);
-  lv_obj_add_event_cb(pulseOffDownBtn, pulse_off_down_cb, LV_EVENT_CLICKED, nullptr);
-
-  pulseOffLabel = lv_label_create(mainScreenPtr);
-  lv_obj_set_style_text_font(pulseOffLabel, &lv_font_montserrat_16, 0);
-  lv_obj_set_style_text_color(pulseOffLabel, COL_TEXT, 0);
-  lv_obj_set_pos(pulseOffLabel, pCol + 80, 340);
-
-  lv_obj_t* pulseOffUpBtn = make_btn(mainScreenPtr, pCol + pW - pBtnW, 330, pBtnW, pH, "+", false);
-  lv_obj_add_event_cb(pulseOffUpBtn, pulse_off_up_cb, LV_EVENT_CLICKED, nullptr);
+  lv_obj_set_pos(offTag, pCol + pW + 4, 352);
 
   // ── Bottom bar: START + STOP (y=420, h=56) ──
   const int botY = 420;
@@ -361,7 +363,7 @@ void screen_main_update() {
   } else {
     rpm = speed_get_target_rpm();
   }
-  int32_t val = (int32_t)(rpm * 10.0f);
+  int32_t val = (int32_t)(rpm * 100.0f);
 
   // Header state
   if (state < (int)(sizeof(state_strings) / sizeof(state_strings[0]))) {
@@ -370,7 +372,7 @@ void screen_main_update() {
   }
 
   // RPM in gauge
-  lv_label_set_text_fmt(rpmLabel, "%.1f", rpm);
+  lv_label_set_text_fmt(rpmLabel, "%.2f", rpm);
   lv_arc_set_value(rpmIndicatorArc, val);
 
   // START button: gray when idle, accent when running

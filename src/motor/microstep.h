@@ -7,6 +7,7 @@
 
 // Microstep options
 typedef enum {
+  MICROSTEP_4  = 4,
   MICROSTEP_8  = 8,
   MICROSTEP_16 = 16,
   MICROSTEP_32 = 32
@@ -16,6 +17,6 @@ typedef enum {
 void microstep_init();                          // Load from EEPROM
 MicrostepSetting microstep_get();               // Get current setting
 void microstep_set(MicrostepSetting setting);   // Set and save
-const char* microstep_get_string();             // Get "1/8", "1/16", or "1/32"
+const char* microstep_get_string();             // Get "1/4", "1/8", "1/16", or "1/32"
 uint32_t microstep_get_steps_per_rev();         // Get calculated steps per rev (200 * microstep)
 void microstep_save();                          // Save to EEPROM

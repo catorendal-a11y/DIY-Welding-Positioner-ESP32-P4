@@ -138,7 +138,7 @@ bool storage_load_settings() {
     g_settings.acceleration = doc["acceleration"] | 5000;
     g_settings.microstep = doc["microstep"] | 8;
     g_settings.calibration_factor = doc["calibration_factor"] | 1.0f;
-    g_settings.rpm_buttons_enabled = doc["rpm_buttons_enabled"] | false;
+    g_settings.rpm_buttons_enabled = doc["rpm_buttons_enabled"] | true;
     g_settings.brightness = doc["brightness"] | 150;
     g_settings.dim_timeout = doc["dim_timeout"] | 60;
     g_settings.dir_switch_enabled = doc["dir_switch_enabled"] | false;

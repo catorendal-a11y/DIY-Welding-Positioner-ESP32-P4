@@ -31,7 +31,7 @@ cd DIY-Welding-Positioner-ESP32-P4
 ```
 
 2. **Open in VS Code** with the **PlatformIO** extension installed.
-3. **Select board environment:** `esp32p4-release` (Waveshare ESP32-P4 4.3")
+3. **Select board environment:** `esp32p4-release` (GUITION JC4880P443C 4.3")
 4. **Build and flash:** Click the PlatformIO "Upload" button (➔), or run:
 
 ```bash
@@ -170,7 +170,7 @@ graph TD
 - **Display:** ESP-IDF native MIPI-DSI panel driver (ST7701S-class). **Not LovyanGFX.**
 
 ### Hardware Check
-- Waveshare / Guition ESP32-P4 4.3" Touch Display
+- GUITION JC4880P443C ESP32-P4 4.3" Touch Display (480x800, MIPI-DSI)
 - TB6600 stepper driver
 - NEMA 23 motor
 - 24–36V power supply
@@ -181,7 +181,7 @@ graph TD
 
 | Component | Model / Specs | Qty |
 |-----------|---------------|-----|
-| **MCU Board** | Waveshare ESP32-P4 4.3" Display | 1 |
+| **MCU Board** | GUITION JC4880P443C (480x800, ESP32-P4, MIPI-DSI) | 1 |
 | **Stepper Driver** | TB6600 (DM542T planned upgrade) | 1 |
 | **Stepper Motor** | NEMA 23 (3 Nm torque) | 1 |
 | **Gearbox** | 108:1 Worm Gear Reducer | 1 |
@@ -195,7 +195,7 @@ graph TD
 This firmware is designed and configured for the following hardware.
 All components have been validated on real hardware.
 
-- Waveshare ESP32-P4 4.3" Touch Display
+- GUITION JC4880P443C ESP32-P4 4.3" Touch Display (480x800)
 - TB6600 Stepper Driver
 - NEMA 23 (3 Nm torque)
 - 108:1 Worm Gear Reducer

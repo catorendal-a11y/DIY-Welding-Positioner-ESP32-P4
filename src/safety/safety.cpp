@@ -40,9 +40,10 @@ void IRAM_ATTR estopISR() {
   // CRITICAL: Minimum work, no FreeRTOS calls, no Serial prints
   // This runs at interrupt priority — must exit immediately
 
-  // Layer 1: Stop stepper immediately
-  // forceStop() is IRAM-safe and stops motion within ~1ms
-  // auto-enable will disable ENA automatically
+  // Layer 1: Disable motor NOW
+  digitalWrite(PIN_ENA, HIGH);   // Motor OFF — < 0.5 ms response
+
+  // Stop stepper (forceStop is IRAM-safe)
   if (estopStepper != nullptr) {
     estopStepper->forceStop();
   }
@@ -139,14 +140,7 @@ void safetyTask(void* pvParameters) {
       }
     }
 
-    // Auto-reset: If in ESTOP state and button is released, go to IDLE
-    if (control_get_state() == STATE_ESTOP && digitalRead(PIN_ESTOP) == HIGH) {
-      estopLocked = false;
-      control_transition_to(STATE_IDLE);
-      LOG_I("ESTOP released — Auto-reset to IDLE");
-    }
-
-    vTaskDelayUntil(&t, pdMS_TO_TICKS(10));  // 10ms cycle (was 1ms, no need for faster polling)
+    vTaskDelayUntil(&t, pdMS_TO_TICKS(1));  // 1ms cycle
   }
 }
 

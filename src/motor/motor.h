@@ -16,7 +16,6 @@ void motor_run_cw();      // Run clockwise
 void motor_run_ccw();     // Run counter-clockwise
 void motor_stop();        // Smooth deceleration to stop
 void motor_halt();        // Immediate stop (emergency)
-void motor_disable();     // Disable motor outputs (prevent vibration)
 
 // Status queries
 bool motor_is_running();

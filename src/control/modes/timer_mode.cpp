@@ -5,7 +5,6 @@
 #include "../../motor/motor.h"
 #include "../../motor/speed.h"
 #include "../../config.h"
-#include <FastAccelStepper.h>
 
 // ───────────────────────────────────────────────────────────────────────────────
 // TIMER MODE STATE
@@ -26,23 +25,10 @@ void timer_start(uint32_t duration_sec) {
 
   LOG_I("Timer mode: %lu seconds", timerDurationSec);
 
-  // Clear any forceStop state from ESTOP
-  FastAccelStepper* stepper = motor_get_stepper();
-  if (stepper != nullptr) {
-    stepper->stopMove();
-    delay(10);
-  }
-
-  // CRITICAL: Set speed BEFORE starting motor
+  // Start motor
+  digitalWrite(PIN_ENA, LOW);
+  digitalWrite(PIN_DIR, (speed_get_direction() == DIR_CW) ? HIGH : LOW);
   speed_apply();
-
-  // Start motor in current direction
-  Direction dir = speed_get_direction();
-  if (dir == DIR_CW) {
-    motor_run_cw();
-  } else {
-    motor_run_ccw();
-  }
 
   control_transition_to(STATE_TIMER);
 }

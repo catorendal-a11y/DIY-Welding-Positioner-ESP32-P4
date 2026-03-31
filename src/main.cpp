@@ -9,9 +9,6 @@
 #include "ui/screens.h"
 #include "motor/motor.h"
 #include "motor/speed.h"
-#include "motor/calibration.h"
-#include "motor/microstep.h"
-#include "motor/acceleration.h"
 #include "control/control.h"
 #include "safety/safety.h"
 #include "storage/storage.h"
@@ -49,29 +46,6 @@ void lvglTask(void* pvParameters) {
 
   // Initialize screens after LVGL is ready
   screens_init();
-
-  // Show boot screen during initialization
-  screens_show(SCREEN_BOOT);
-  screen_boot_set_progress(10, "INITIALIZING HARDWARE...");
-
-  // Give LVGL time to render boot screen
-  for (int i = 0; i < 5; i++) {
-    lv_timer_handler();
-    vTaskDelay(pdMS_TO_TICKS(20));
-  }
-
-  // Continue initialization...
-  screen_boot_set_progress(30, "LOADING CONFIGURATION...");
-  vTaskDelay(pdMS_TO_TICKS(100));
-
-  screen_boot_set_progress(50, "CHECKING MOTOR SYSTEMS...");
-  vTaskDelay(pdMS_TO_TICKS(100));
-
-  screen_boot_set_progress(80, "STARTING UI SYSTEM...");
-  vTaskDelay(pdMS_TO_TICKS(100));
-
-  screen_boot_set_progress(100, "READY");
-  vTaskDelay(pdMS_TO_TICKS(500));
 
   // Show main screen
   screens_show(SCREEN_MAIN);
@@ -184,15 +158,6 @@ void setup() {
 
   // Initialize speed control (ADC)
   speed_init();
-
-  // Initialize calibration (load from EEPROM)
-  calibration_init();
-
-  // Initialize microstep setting (load from EEPROM)
-  microstep_init();
-
-  // Initialize acceleration (load from EEPROM)
-  acceleration_init();
 
   // Initialize display (MIPI-DSI + GT911 touch)
   display_init();

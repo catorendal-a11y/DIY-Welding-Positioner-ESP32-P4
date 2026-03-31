@@ -22,17 +22,15 @@ void jog_start(Direction dir) {
   LOG_I("Jog mode: %s", (dir == DIR_CW) ? "CW" : "CCW");
 
   // Set direction
-  speed_set_direction(dir);
+  digitalWrite(PIN_DIR, (dir == DIR_CW) ? HIGH : LOW);
+
+  // Enable motor at jog speed
+  digitalWrite(PIN_ENA, LOW);
 
   FastAccelStepper* stepper = motor_get_stepper();
   if (stepper != nullptr) {
     uint32_t hz = (uint32_t)rpmToStepHz(jogRPM);
     stepper->setSpeedInHz(hz);
-
-    // Clear any forceStop state from ESTOP
-    stepper->stopMove();
-    delay(10);
-
     if (dir == DIR_CW) {
       stepper->runForward();
     } else {
@@ -47,22 +45,12 @@ void jog_start(Direction dir) {
 // JOG MODE STOP (immediate)
 // ───────────────────────────────────────────────────────────────────────────────
 void jog_stop() {
-  SystemState state = control_get_state();
-  LOG_I("jog_stop() called, state=%s", control_state_name(state));
+  if (control_get_state() != STATE_JOG) return;
 
-  if (state != STATE_JOG) {
-    LOG_W("jog_stop() called but not in JOG state!");
-    return;
-  }
+  LOG_D("Jog stop");
 
-  LOG_I("Jog stop - calling motor_halt()");
-
-  // For jog mode, use forceStop (immediate) instead of smooth deceleration
-  motor_halt();
-
-  // Transition directly to IDLE (now allowed by validation)
-  LOG_I("Transitioning to IDLE");
-  control_transition_to(STATE_IDLE);
+  // Transition through STOPPING (motor_stop triggers deceleration)
+  control_transition_to(STATE_STOPPING);
 }
 
 // ───────────────────────────────────────────────────────────────────────────────

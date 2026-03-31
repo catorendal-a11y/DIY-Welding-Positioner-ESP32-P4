@@ -6,11 +6,13 @@
 // GPIO HEADER PINS (2×13 pin header)
 // Available GPIOs: 28–35, 49–52 (see board pin diagram)
 // ───────────────────────────────────────────────────────────────────────────────
-#define PIN_POT         49   // ADC — Potentiometer speed input (left row 7)
-#define PIN_STEP        50   // Step pulse output → TB6600 PUL+ (left row 6)
-#define PIN_DIR         51   // Direction → TB6600 DIR+ (left row 5)
-#define PIN_ENA         52   // Enable → TB6600 ENA+ (left row 4)
-#define PIN_ESTOP       34   // Emergency Stop: Active LOW, NC contact
+#define PIN_POT         49   // ADC — Potentiometer speed input
+                              // NOTE: GPIO 49 ADC channel must be verified against
+                              // ESP32-P4 datasheet. High GPIOs (47-54) may be reserved.
+#define PIN_STEP        50   // Step pulse output (FastAccelStepper RMT)
+#define PIN_DIR         51   // Direction: CW=HIGH, CCW=LOW
+#define PIN_ENA         52   // Enable: Active LOW to TB6600
+#define PIN_ESTOP       33   // Emergency Stop: Active LOW, NC contact
 #define PIN_SPARE       35   // Reserved for future encoder/expansion
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -40,18 +42,18 @@
 // ───────────────────────────────────────────────────────────────────────────────
 // MOTOR & MECHANICAL PARAMETERS
 // ───────────────────────────────────────────────────────────────────────────────
-#define MIN_RPM         0.1f   // Minimum output RPM
-#define MAX_RPM         5.0f   // Maximum output RPM (1/108 gearing)
+#define MIN_RPM         0.1f   // Minimum workpiece RPM
+#define MAX_RPM         3.0f   // Maximum workpiece RPM (6000 Hz — safe under TIG EMI with 40% margin)
+                                // Raise to 5.0 in Settings only in clean environments
 #define MICROSTEPS      8      // 1/8 microstepping (matches TB6600 DIP)
 #define STEPS_PER_REV   (200 * MICROSTEPS)   // 1600 steps/rev motor
 
-// User's actual setup: 1/60 gearbox + additional gears = 1/108 total ratio
-#define GEAR_RATIO      108.0f // Total gear reduction (motor:output = 108:1)
-#define D_EMNE          0.300f  // Workpiece diameter: 300mm (not used, kept for ref)
-#define D_RULLE         0.080f  // Roller diameter: 80mm (not used, kept for ref)
+#define GEAR_RATIO      60.0f   // 60:1 worm gear
+#define D_EMNE          0.300f  // Workpiece diameter: 300mm
+#define D_RULLE         0.080f  // Roller diameter: 80mm
 
-// Motor: NEMA 23
-// 108:1 total gear ratio
+// Motor: NEMA 23 (3 Nm)
+// 60:1 worm gear provides excellent holding torque and self-locking
 #define ACCELERATION    5000   // Stepper acceleration (steps/s²)
                                 // 5000 = ~1s ramp to max speed. Lower for smoother starts.
 

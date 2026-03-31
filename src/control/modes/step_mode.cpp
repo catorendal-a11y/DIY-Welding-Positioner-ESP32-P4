@@ -39,26 +39,20 @@ void step_execute(float angle_deg) {
   stepCurrentAngle = angle_deg;
   long steps = angleToSteps(angle_deg);
 
-  // Respect direction setting: negate steps for CCW
-  Direction dir = speed_get_direction();
-  if (dir == DIR_CCW) {
-    steps = -steps;
-  }
+  LOG_I("Step mode: %.1f deg (%ld steps)", angle_deg, steps);
 
-  LOG_I("Step mode: %.1f deg (%ld steps, %s)", angle_deg, abs(steps),
-        (dir == DIR_CW) ? "CW" : "CCW");
+  // Set direction
+  digitalWrite(PIN_DIR, (speed_get_direction() == DIR_CW) ? HIGH : LOW);
 
+  // Enable and move at a default step speed
+  digitalWrite(PIN_ENA, LOW);
   FastAccelStepper* stepper = motor_get_stepper();
   if (stepper != nullptr) {
-    // Clear any forceStop state from ESTOP before moving
-    stepper->stopMove();
-    delay(10);
-
-    stepper->setSpeedInHz((uint32_t)rpmToStepHz(1.0f));  // 1 RPM output
+    stepper->setSpeedInHz((uint32_t)rpmToStepHz(0.5f));  // Default step speed
     stepper->move(steps);
   }
 
-  // Update accumulator (always positive for display)
+  // Update accumulator
   accumulatedAngle += angle_deg;
   stepsTaken++;
 
@@ -77,19 +71,6 @@ void step_update() {
     LOG_D("Step complete: %.1f deg", stepCurrentAngle);
     control_transition_to(STATE_IDLE);
   }
-}
-
-// ───────────────────────────────────────────────────────────────────────────────
-// ───────────────────────────────────────────────────────────────────────────────
-// STEP MODE STOP (manual)
-// ───────────────────────────────────────────────────────────────────────────────
-void step_stop() {
-  SystemState state = control_get_state();
-  if (state != STATE_STEP) return;
-
-  LOG_I("Step mode: manual stop");
-  motor_halt();  // Immediate stop
-  control_transition_to(STATE_IDLE);
 }
 
 // ───────────────────────────────────────────────────────────────────────────────

@@ -21,12 +21,6 @@
 
 ---
 
-## 🎬 Demo
-
-[![DIY Welding Positioner Controller Demo](https://img.youtube.com/vi/GygLl6XY-TM/maxresdefault.jpg)](https://youtu.be/GygLl6XY-TM)
-
----
-
 ## ⚡ Quick Start
 
 1. **Clone the repository:**
@@ -60,8 +54,9 @@ pio run -t upload -e esp32p4-debug
 
 ## 🎥 Demo
 
-Watch the system in action: **UI interaction, Motor rotation, and Simulated welding passes.**  
-*(Demo video link coming soon - Insert YouTube link here)*
+Watch the system in action: **UI interaction, Motor rotation, and Simulated welding passes.**
+
+[![DIY Welding Positioner Controller Demo](https://img.youtube.com/vi/GygLl6XY-TM/maxresdefault.jpg)](https://youtu.be/GygLl6XY-TM)
 
 ## 🖥️ UI Screen Overview
 

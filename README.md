@@ -21,6 +21,12 @@
 
 ---
 
+## 🎬 Demo
+
+[![DIY Welding Positioner Controller Demo](https://img.youtube.com/vi/GygLl6XY-TM/maxresdefault.jpg)](https://youtu.be/GygLl6XY-TM)
+
+---
+
 ## ⚡ Quick Start
 
 1. **Clone the repository:**

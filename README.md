@@ -54,7 +54,7 @@ pio run -t upload -e esp32p4-debug
 
 ## 🎥 Demo
 
-Watch the system in action: **UI interaction, Motor rotation, and Simulated welding passes.**
+Watch the system in action: **UI interaction, Motor rotation, Screen navigation, E-STOP, Direction switch, and Pot control.**
 
 [![DIY Welding Positioner Controller Demo](https://img.youtube.com/vi/GygLl6XY-TM/maxresdefault.jpg)](https://youtu.be/GygLl6XY-TM)
 

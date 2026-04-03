@@ -146,6 +146,8 @@ static RPMCallbacks rpmCb;
 void ble_init() {
   LOG_I("Initializing BLE...");
 
+  bleEnabled.store(g_settings.ble_enabled, std::memory_order_relaxed);
+
   if (!BLEDevice::init(BLE_DEVICE_NAME)) {
     LOG_E("BLE init failed — C6 co-processor may not be responding");
     return;
@@ -219,14 +221,17 @@ static DirectionCallbacks dirCb;
 
   service->start();
 
-  BLEAdvertising* advertising = BLEDevice::getAdvertising();
-  advertising->addServiceUUID(ROTATOR_SERVICE_UUID);
-  advertising->setScanResponse(true);
-  advertising->setMinPreferred(0x06);
-  advertising->setMaxPreferred(0x12);
-  BLEDevice::startAdvertising();
-
-  LOG_I("BLE advertising started");
+  if (bleEnabled.load(std::memory_order_relaxed)) {
+    BLEAdvertising* advertising = BLEDevice::getAdvertising();
+    advertising->addServiceUUID(ROTATOR_SERVICE_UUID);
+    advertising->setScanResponse(true);
+    advertising->setMinPreferred(0x06);
+    advertising->setMaxPreferred(0x12);
+    BLEDevice::startAdvertising();
+    LOG_I("BLE advertising started");
+  } else {
+    LOG_I("BLE initialized but disabled (saved setting)");
+  }
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -492,6 +497,8 @@ void ble_ota_update_c6() {
 
 void ble_set_enabled(bool enabled) {
   bleEnabled.store(enabled, std::memory_order_relaxed);
+  g_settings.ble_enabled = enabled;
+  storage_save_settings();
   if (bleServer) {
     if (enabled) {
       BLEDevice::startAdvertising();

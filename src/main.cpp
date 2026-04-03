@@ -20,6 +20,7 @@ extern std::atomic<bool> motorConfigApplyPending;
 #include "safety/safety.h"
 #include "storage/storage.h"
 #include "ble/ble.h"
+extern bool wifiEnabled;
 #include <esp_timer.h>
 #include "WiFi.h"
 #include "esp32-hal-hosted.h"
@@ -291,19 +292,23 @@ void setup() {
   control_init();
 
   // Initialize WiFi via C6 co-processor (non-blocking)
-  const char* ssid = g_settings.wifi_ssid[0] ? g_settings.wifi_ssid : WIFI_SSID;
-  const char* pass = g_settings.wifi_pass[0] ? g_settings.wifi_pass : WIFI_PASS;
-  LOG_I("Starting WiFi (non-blocking): %s", ssid);
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, pass);
-  if (WiFi.status() == WL_CONNECTED) {
-    LOG_I("WiFi already connected: %s", WiFi.localIP().toString().c_str());
-    if (hostedHasUpdate()) {
-      LOG_I("C6 co-processor firmware update available — auto-updating...");
-      ble_ota_update_c6();
+  if (g_settings.wifi_enabled) {
+    const char* ssid = g_settings.wifi_ssid[0] ? g_settings.wifi_ssid : WIFI_SSID;
+    const char* pass = g_settings.wifi_pass[0] ? g_settings.wifi_pass : WIFI_PASS;
+    LOG_I("Starting WiFi (non-blocking): %s", ssid);
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, pass);
+    if (WiFi.status() == WL_CONNECTED) {
+      LOG_I("WiFi already connected: %s", WiFi.localIP().toString().c_str());
+      if (hostedHasUpdate()) {
+        LOG_I("C6 co-processor firmware update available — auto-updating...");
+        ble_ota_update_c6();
+      }
+    } else {
+      LOG_I("WiFi connecting in background...");
     }
   } else {
-    LOG_I("WiFi connecting in background...");
+    LOG_I("WiFi disabled (saved setting)");
   }
 
   // Initialize BLE (ESP-Hosted via C6 co-processor)

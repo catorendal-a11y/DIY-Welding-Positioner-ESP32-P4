@@ -375,8 +375,7 @@ void screen_main_update() {
 
   float rpm;
   bool is_running = (state == STATE_RUNNING || state == STATE_PULSE ||
-                     state == STATE_STEP || state == STATE_TIMER ||
-                     state == STATE_JOG);
+                     state == STATE_STEP || state == STATE_JOG);
   if (is_running) {
     rpm = speed_get_actual_rpm();
     if (rpm < 0.01f) rpm = speed_get_target_rpm();

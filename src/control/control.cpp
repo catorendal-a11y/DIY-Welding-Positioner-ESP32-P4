@@ -23,7 +23,6 @@ static std::atomic<bool> pendingStop{false};
 static std::atomic<uint32_t> pendingPulseOnMs{0};
 static std::atomic<uint32_t> pendingPulseOffMs{0};
 static std::atomic<float> pendingStepAngle{0.0f};
-static std::atomic<uint32_t> pendingTimerDuration{0};
 static std::atomic<bool> pendingStopJog{false};
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -38,7 +37,6 @@ bool control_is_valid_transition(SystemState from, SystemState to) {
       case STATE_PULSE:
       case STATE_STEP:
       case STATE_JOG:
-      case STATE_TIMER:
       case STATE_ESTOP:
         return true;
       default:
@@ -48,7 +46,7 @@ bool control_is_valid_transition(SystemState from, SystemState to) {
   if (from == STATE_RUNNING) {
     return (to == STATE_STOPPING || to == STATE_ESTOP);
   }
-  if (from == STATE_PULSE || from == STATE_STEP || from == STATE_JOG || from == STATE_TIMER) {
+  if (from == STATE_PULSE || from == STATE_STEP || from == STATE_JOG) {
     return (to == STATE_STOPPING || to == STATE_ESTOP);
   }
   if (from == STATE_STOPPING) {
@@ -116,7 +114,6 @@ const char* control_state_name(SystemState s) {
     case STATE_PULSE:    return "PULSE";
     case STATE_STEP:     return "STEP";
     case STATE_JOG:      return "JOG";
-    case STATE_TIMER:    return "TIMER";
     case STATE_STOPPING: return "STOPPING";
     case STATE_ESTOP:    return "ESTOP";
     default:             return "UNKNOWN";
@@ -160,16 +157,6 @@ void control_start_jog_ccw() {
 
 void control_stop_jog() {
   pendingStopJog.store(true, std::memory_order_relaxed);
-}
-
-void control_start_timer(uint32_t duration_sec) {
-  if (safety_is_estop_active()) return;
-  pendingTimerDuration.store(duration_sec, std::memory_order_release);
-  pendingModeRequest.store(6, std::memory_order_relaxed);
-}
-
-uint32_t control_get_timer_remaining() {
-  return timer_get_remaining_sec();
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -218,8 +205,6 @@ static void process_pending_requests() {
         pulse_stop();
       } else if (cur == STATE_JOG) {
         jog_stop();
-      } else if (cur == STATE_TIMER) {
-        timer_stop();
       } else if (cur == STATE_STEP) {
         control_transition_to(STATE_STOPPING);
       }
@@ -237,8 +222,6 @@ static void process_pending_requests() {
         pulse_stop();
       } else if (cur == STATE_JOG) {
         jog_stop();
-      } else if (cur == STATE_TIMER) {
-        timer_stop();
       } else if (cur == STATE_STEP) {
         control_transition_to(STATE_STOPPING);
       }
@@ -264,9 +247,6 @@ static void process_pending_requests() {
       break;
     case 5:
       jog_start(DIR_CCW);
-      break;
-    case 6:
-      timer_start(pendingTimerDuration.load(std::memory_order_acquire));
       break;
   }
 }
@@ -306,9 +286,6 @@ void controlTask(void* pvParameters) {
         break;
       case STATE_STEP:
         step_update();
-        break;
-      case STATE_TIMER:
-        timer_update();
         break;
       case STATE_JOG:
         jog_update();

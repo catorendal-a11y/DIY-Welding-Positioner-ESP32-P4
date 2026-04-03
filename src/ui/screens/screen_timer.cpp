@@ -1,125 +1,65 @@
-// TIG Rotator Controller - Timer Mode Screen
-// Clean layout: timer ring top-center, controls below, big buttons
+// TIG Rotator Controller - Countdown Screen
+// 3-2-1 countdown before rotation starts, gives welder time to position
+// Visual: progress ring, pulsing number, color transition green->yellow->red
 
 #include <Arduino.h>
 #include "../screens.h"
 #include "../theme.h"
 #include "../../control/control.h"
 #include "../../motor/speed.h"
+#include "../../storage/storage.h"
 #include "../../config.h"
+#include "../../safety/safety.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STATE
 // ───────────────────────────────────────────────────────────────────────────────
-static uint32_t timerSeconds = 30;
-static lv_obj_t* timerLabel = nullptr;
-static lv_obj_t* rpmLabel = nullptr;
+static int countdownSec = 3;
+static volatile bool countingDown = false;
+static volatile bool startPending = false;
+static uint32_t countdownStartMs = 0;
+static int countdownRemaining = 0;
+static int lastDisplayedSec = -1;
+static uint32_t pulseStartMs = 0;
+
 static lv_obj_t* arcRing = nullptr;
-static lv_obj_t* progressBar = nullptr;
-static lv_obj_t* presetBtns[4] = {nullptr};
-static int activePreset = 1;  // 30s default
-static lv_obj_t* customNumpad = nullptr;
-static lv_obj_t* customTa = nullptr;
-static volatile bool numpadClosePending = false;
+static lv_obj_t* bigNumberLabel = nullptr;
+static lv_obj_t* statusLabel = nullptr;
+static lv_obj_t* rpmLabel = nullptr;
+static lv_obj_t* secLabel = nullptr;
 
 // ───────────────────────────────────────────────────────────────────────────────
-// HELPERS
+// COLOR HELPERS
 // ───────────────────────────────────────────────────────────────────────────────
-static void update_timer_display() {
-  if (!timerLabel) return;
-  uint32_t min = timerSeconds / 60;
-  uint32_t sec = timerSeconds % 60;
-  lv_label_set_text_fmt(timerLabel, "%02d:%02d", (int)min, (int)sec);
-}
-
-static void update_preset_styles() {
-  for (int i = 0; i < 4; i++) {
-    if (!presetBtns[i]) continue;
-    bool isActive = (i == activePreset);
-    lv_obj_set_style_bg_color(presetBtns[i], isActive ? COL_BG_ACTIVE : COL_BTN_BG, 0);
-    lv_obj_set_style_border_width(presetBtns[i], isActive ? 2 : 1, 0);
-    lv_obj_set_style_border_color(presetBtns[i], isActive ? COL_ACCENT : COL_BORDER, 0);
-    lv_obj_t* lbl = lv_obj_get_child(presetBtns[i], 0);
-    if (lbl) lv_obj_set_style_text_color(lbl, isActive ? COL_ACCENT : COL_TEXT, 0);
-  }
+static lv_color_t countdown_color(int remaining, int total) {
+  if (total <= 0) return COL_GREEN;
+  int pct = remaining * 100 / total;
+  if (pct > 66) return COL_GREEN;
+  if (pct > 33) return lv_color_hex(0xFFAA00);
+  return COL_RED;
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
 // EVENT HANDLERS
 // ───────────────────────────────────────────────────────────────────────────────
+static volatile bool backPending = false;
+
 static void back_event_cb(lv_event_t* e) {
-  if (customNumpad) { lv_obj_delete(customNumpad); customNumpad = nullptr; }
-  if (customTa) { lv_obj_delete(customTa); customTa = nullptr; }
-  screens_show(SCREEN_MAIN);
+  countingDown = false;
+  startPending = false;
+  g_settings.countdown_seconds = (uint8_t)countdownSec;
+  storage_save_settings();
+  backPending = true;
 }
 
-static void preset_event_cb(lv_event_t* e) {
-  int index = (int)(intptr_t)(lv_obj_t*)lv_event_get_user_data(e);
-  const uint32_t presets[] = {10, 30, 60};
-  if (index < 3) {
-    timerSeconds = presets[index];
-    activePreset = index;
-    update_timer_display();
-    update_preset_styles();
-  }
-}
-
-static void custom_keyboard_cb(lv_event_t* e) {
-  lv_event_code_t code = lv_event_get_code(e);
-  if (code == LV_EVENT_READY) {
-    if (customTa) {
-      const char* txt = lv_textarea_get_text(customTa);
-      int val = atoi(txt);
-      if (val > 0) {
-        if (val > 600) val = 600;
-        timerSeconds = (uint32_t)val;
-        activePreset = 3;
-        update_timer_display();
-        update_preset_styles();
-      }
-    }
-  }
-  if (code == LV_EVENT_READY || code == LV_EVENT_CANCEL) {
-    numpadClosePending = true;
-  }
-}
-
-static void custom_btn_cb(lv_event_t* e) {
-  if (!customNumpad) {
-    customTa = lv_textarea_create(screenRoots[SCREEN_TIMER]);
-    lv_obj_set_size(customTa, 200, 50);
-    lv_obj_align(customTa, LV_ALIGN_TOP_MID, 0, 50);
-    lv_textarea_set_one_line(customTa, true);
-    lv_textarea_set_accepted_chars(customTa, "0123456789");
-    lv_obj_set_style_bg_color(customTa, COL_BG, 0);
-    lv_obj_set_style_border_color(customTa, COL_ACCENT, 0);
-    lv_obj_set_style_border_width(customTa, 2, 0);
-    lv_obj_set_style_text_color(customTa, COL_TEXT, 0);
-
-    customNumpad = lv_keyboard_create(screenRoots[SCREEN_TIMER]);
-    lv_keyboard_set_mode(customNumpad, LV_KEYBOARD_MODE_NUMBER);
-    lv_keyboard_set_textarea(customNumpad, customTa);
-    lv_obj_set_style_bg_color(customNumpad, COL_BG, 0);
-    lv_obj_set_style_border_color(customNumpad, COL_ACCENT, 0);
-    lv_obj_set_style_border_width(customNumpad, 2, 0);
-    lv_obj_add_event_cb(customNumpad, custom_keyboard_cb, LV_EVENT_ALL, nullptr);
-  }
-}
-
-static void dur_adj_cb(lv_event_t* e) {
+static void sec_adj_cb(lv_event_t* e) {
+  if (countingDown) return;
   int delta = (int)(intptr_t)(lv_obj_t*)lv_event_get_user_data(e);
-  int32_t dur = (int32_t)timerSeconds + delta;
-  if (dur < 1) dur = 1;
-  if (dur > 600) dur = 600;
-  timerSeconds = (uint32_t)dur;
-
-  const uint32_t presets[] = {10, 30, 60};
-  activePreset = 3;
-  for (int i = 0; i < 3; i++) {
-    if (timerSeconds == presets[i]) { activePreset = i; break; }
-  }
-  update_timer_display();
-  update_preset_styles();
+  countdownSec += delta;
+  if (countdownSec < 1) countdownSec = 1;
+  if (countdownSec > 10) countdownSec = 10;
+  g_settings.countdown_seconds = (uint8_t)countdownSec;
+  if (secLabel) lv_label_set_text_fmt(secLabel, "%d sec", countdownSec);
 }
 
 static void rpm_adj_cb(lv_event_t* e) {
@@ -133,21 +73,27 @@ static void rpm_adj_cb(lv_event_t* e) {
 }
 
 static void start_event_cb(lv_event_t* e) {
-  SystemState state = control_get_state();
-  if (state == STATE_IDLE && timerSeconds > 0) {
-    speed_slider_set(speed_get_target_rpm());
-    control_start_timer(timerSeconds);
-  }
+  if (countingDown) return;
+  if (safety_is_estop_active()) return;
+  if (control_get_state() != STATE_IDLE) return;
+
+  countingDown = true;
+  countdownRemaining = countdownSec;
+  lastDisplayedSec = -1;
+  countdownStartMs = millis();
+  speed_slider_set(speed_get_target_rpm());
 }
 
 static void stop_event_cb(lv_event_t* e) {
-  if (control_get_state() == STATE_TIMER) {
+  countingDown = false;
+  startPending = false;
+  if (control_get_state() != STATE_IDLE && control_get_state() != STATE_ESTOP) {
     control_stop();
   }
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// Helper: create +/- button (56x48, glove-friendly)
+// Helper: create +/- button (64x52, glove-friendly)
 // ───────────────────────────────────────────────────────────────────────────────
 static lv_obj_t* create_pm_btn(lv_obj_t* parent, int16_t x, int16_t y,
                                 const char* text, lv_event_cb_t cb, void* user_data) {
@@ -172,12 +118,17 @@ static lv_obj_t* create_pm_btn(lv_obj_t* parent, int16_t x, int16_t y,
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN CREATE
-// Layout: Header(30) | Timer ring(180, centered) | Duration row(50) |
-//         Presets row(44) | RPM row(50) | Bottom bar(48) = 30+180+50+44+50+48=402+gaps
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_timer_create() {
   lv_obj_t* screen = screenRoots[SCREEN_TIMER];
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
+
+  countdownSec = g_settings.countdown_seconds;
+  if (countdownSec < 1) countdownSec = 3;
+  if (countdownSec > 10) countdownSec = 10;
+  countingDown = false;
+  startPending = false;
+  lastDisplayedSec = -1;
 
   // ── Header bar ──
   lv_obj_t* header = lv_obj_create(screen);
@@ -190,16 +141,15 @@ void screen_timer_create() {
   lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
 
   lv_obj_t* title = lv_label_create(header);
-  lv_label_set_text(title, "TIMER MODE");
+  lv_label_set_text(title, "COUNTDOWN");
   lv_obj_set_style_text_font(title, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(title, COL_ACCENT, 0);
   lv_obj_set_pos(title, PAD_X, 8);
 
-  // ── Timer ring (180x180, centered horizontally, y=36) ──
-  // Ring center: (400, 126)
-  const int ringSize = 180;
-  const int ringX = (SCREEN_W - ringSize) / 2;  // 310
-  const int ringY = 36;
+  // ── Arc ring (240x240, centered) ──
+  const int ringSize = 240;
+  const int ringX = (SCREEN_W - ringSize) / 2;
+  const int ringY = 30;
 
   arcRing = lv_arc_create(screen);
   lv_obj_set_size(arcRing, ringSize, ringSize);
@@ -209,133 +159,68 @@ void screen_timer_create() {
   lv_arc_set_bg_angles(arcRing, 0, 360);
   lv_arc_set_angles(arcRing, 0, 360);
   lv_obj_set_style_arc_color(arcRing, COL_GAUGE_BG, LV_PART_MAIN);
-  lv_obj_set_style_arc_width(arcRing, 6, LV_PART_MAIN);
-  lv_obj_set_style_arc_color(arcRing, COL_ACCENT, LV_PART_INDICATOR);
-  lv_obj_set_style_arc_width(arcRing, 6, LV_PART_INDICATOR);
+  lv_obj_set_style_arc_width(arcRing, 8, LV_PART_MAIN);
+  lv_obj_set_style_arc_color(arcRing, COL_GREEN, LV_PART_INDICATOR);
+  lv_obj_set_style_arc_width(arcRing, 8, LV_PART_INDICATOR);
   lv_obj_remove_flag(arcRing, LV_OBJ_FLAG_CLICKABLE);
   lv_obj_set_style_bg_opa(arcRing, 0, LV_PART_MAIN);
   lv_obj_set_style_arc_width(arcRing, 0, LV_PART_KNOB);
 
-  // Timer label centered INSIDE the ring
-  timerLabel = lv_label_create(screen);
-  update_timer_display();
-  lv_obj_set_style_text_font(timerLabel, FONT_HUGE, 0);
-  lv_obj_set_style_text_color(timerLabel, COL_ACCENT, 0);
-  lv_obj_set_style_text_align(timerLabel, LV_TEXT_ALIGN_CENTER, 0);
-  // Center in ring: ring center = (ringX + ringSize/2, ringY + ringSize/2)
-  // Use lv_obj_align to center on ring center
-  lv_obj_set_width(timerLabel, ringSize);
-  lv_obj_set_pos(timerLabel, ringX, ringY + (ringSize - 44) / 2 - 4);
+  // ── Big number label (centered inside arc) ──
+  bigNumberLabel = lv_label_create(screen);
+  lv_label_set_text(bigNumberLabel, "3");
+  lv_obj_set_style_text_font(bigNumberLabel, FONT_HUGE, 0);
+  lv_obj_set_style_text_color(bigNumberLabel, COL_GREEN, 0);
+  lv_obj_set_style_text_align(bigNumberLabel, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_width(bigNumberLabel, ringSize);
+  lv_obj_set_pos(bigNumberLabel, ringX, ringY + (ringSize - 44) / 2 - 4);
+  lv_obj_set_style_transform_pivot_x(bigNumberLabel, ringSize / 2, 0);
+  lv_obj_set_style_transform_pivot_y(bigNumberLabel, 22, 0);
 
-  // "REMAINING" label below timer value inside ring
-  lv_obj_t* remainTag = lv_label_create(screen);
-  lv_label_set_text(remainTag, "REMAINING");
-  lv_obj_set_style_text_font(remainTag, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(remainTag, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(remainTag, ringX + (ringSize - 54) / 2, ringY + ringSize / 2 + 16);
+  // ── Status label below arc ──
+  statusLabel = lv_label_create(screen);
+  lv_label_set_text(statusLabel, "READY");
+  lv_obj_set_style_text_font(statusLabel, FONT_LARGE, 0);
+  lv_obj_set_style_text_color(statusLabel, COL_TEXT_DIM, 0);
+  lv_obj_set_style_text_align(statusLabel, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_width(statusLabel, 400);
+  lv_obj_set_pos(statusLabel, 200, ringY + ringSize + 8);
 
-  // ── Progress bar (hidden — arc ring shows progress) ──
-  progressBar = lv_bar_create(screen);
-  lv_obj_set_size(progressBar, 400, 4);
-  lv_obj_set_pos(progressBar, 200, 224);
-  lv_bar_set_range(progressBar, 0, 100);
-  lv_bar_set_value(progressBar, 100, LV_ANIM_OFF);
-  lv_obj_set_style_bg_color(progressBar, COL_GAUGE_BG, 0);
-  lv_obj_set_style_border_width(progressBar, 0, 0);
-  lv_obj_set_style_pad_all(progressBar, 0, 0);
-  lv_obj_set_style_radius(progressBar, 2, 0);
-  lv_obj_set_style_bg_color(progressBar, COL_ACCENT, LV_PART_INDICATOR);
-  lv_obj_add_flag(progressBar, LV_OBJ_FLAG_HIDDEN);
+  // ── Controls row (y=310) ──
+  const int rowY = 320;
 
-  // ── Duration row (y=240, big buttons) ──
-  const int durY = 270;
-  lv_obj_t* durTitle = lv_label_create(screen);
-  lv_label_set_text(durTitle, "DURATION");
-  lv_obj_set_style_text_font(durTitle, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(durTitle, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(durTitle, 30, durY + 12);
+  lv_obj_t* secTitle = lv_label_create(screen);
+  lv_label_set_text(secTitle, "DELAY");
+  lv_obj_set_style_text_font(secTitle, FONT_SMALL, 0);
+  lv_obj_set_style_text_color(secTitle, COL_TEXT_DIM, 0);
+  lv_obj_set_pos(secTitle, 30, rowY + 12);
 
-  // Duration value label
-  lv_obj_t* durValLabel = lv_label_create(screen);
-  uint32_t dMin = timerSeconds / 60;
-  uint32_t dSec = timerSeconds % 60;
-  lv_label_set_text_fmt(durValLabel, "%02d:%02d", (int)dMin, (int)dSec);
-  lv_obj_set_style_text_font(durValLabel, FONT_LARGE, 0);
-  lv_obj_set_style_text_color(durValLabel, COL_TEXT_BRIGHT, 0);
-  lv_obj_set_pos(durValLabel, 130, durY + 10);
+  secLabel = lv_label_create(screen);
+  lv_label_set_text_fmt(secLabel, "%d sec", countdownSec);
+  lv_obj_set_style_text_font(secLabel, FONT_LARGE, 0);
+  lv_obj_set_style_text_color(secLabel, COL_TEXT_BRIGHT, 0);
+  lv_obj_set_pos(secLabel, 120, rowY + 10);
 
-  // Duration +/- buttons (56x48, glove-friendly)
-  create_pm_btn(screen, 220, durY, "-", dur_adj_cb, (void*)(intptr_t)(-5));
-  create_pm_btn(screen, 284, durY, "+", dur_adj_cb, (void*)(intptr_t)(5));
+  create_pm_btn(screen, 220, rowY, "-", sec_adj_cb, (void*)(intptr_t)(-1));
+  create_pm_btn(screen, 284, rowY, "+", sec_adj_cb, (void*)(intptr_t)(1));
 
-  // Range hint
-  lv_obj_t* rangeHint = lv_label_create(screen);
-  lv_label_set_text(rangeHint, "1-600s");
-  lv_obj_set_style_text_font(rangeHint, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(rangeHint, COL_TEXT_VDIM, 0);
-  lv_obj_set_pos(rangeHint, 350, durY + 16);
-
-  // ── RPM row (y=240, right side) ──
+  // ── RPM row (right side) ──
   lv_obj_t* rpmTitle = lv_label_create(screen);
   lv_label_set_text(rpmTitle, "RPM");
   lv_obj_set_style_text_font(rpmTitle, FONT_SMALL, 0);
   lv_obj_set_style_text_color(rpmTitle, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(rpmTitle, 460, durY + 12);
+  lv_obj_set_pos(rpmTitle, 460, rowY + 12);
 
   rpmLabel = lv_label_create(screen);
   lv_label_set_text_fmt(rpmLabel, "%.1f", speed_get_target_rpm());
   lv_obj_set_style_text_font(rpmLabel, FONT_LARGE, 0);
   lv_obj_set_style_text_color(rpmLabel, COL_TEXT_BRIGHT, 0);
-  lv_obj_set_pos(rpmLabel, 510, durY + 10);
+  lv_obj_set_pos(rpmLabel, 510, rowY + 10);
 
-  create_pm_btn(screen, 580, durY, "-", rpm_adj_cb, (void*)(intptr_t)(-1));
-  create_pm_btn(screen, 644, durY, "+", rpm_adj_cb, (void*)(intptr_t)(1));
+  create_pm_btn(screen, 580, rowY, "-", rpm_adj_cb, (void*)(intptr_t)(-1));
+  create_pm_btn(screen, 644, rowY, "+", rpm_adj_cb, (void*)(intptr_t)(1));
 
-  // ── Presets row (y=300) ──
-  const int presetY = 340;
-  const int presetW = 150;
-  const int presetH = 44;
-  const int presetGap = 10;
-  const int presetStartX = 40;
-
-  const uint32_t presets[] = {10, 30, 60};
-  const char* presetLabels[] = {"10s", "30s", "60s"};
-
-  for (int i = 0; i < 3; i++) {
-    presetBtns[i] = lv_button_create(screen);
-    lv_obj_set_size(presetBtns[i], presetW, presetH);
-    lv_obj_set_pos(presetBtns[i], presetStartX + i * (presetW + presetGap), presetY);
-    lv_obj_set_style_radius(presetBtns[i], RADIUS_BTN, 0);
-    lv_obj_add_event_cb(presetBtns[i], preset_event_cb, LV_EVENT_CLICKED, (void*)(intptr_t)i);
-
-    bool isActive = (i == activePreset);
-    lv_obj_set_style_bg_color(presetBtns[i], isActive ? COL_BG_ACTIVE : COL_BTN_BG, 0);
-    lv_obj_set_style_border_width(presetBtns[i], isActive ? 2 : 1, 0);
-    lv_obj_set_style_border_color(presetBtns[i], isActive ? COL_ACCENT : COL_BORDER, 0);
-
-    lv_obj_t* lbl = lv_label_create(presetBtns[i]);
-    lv_label_set_text(lbl, presetLabels[i]);
-    lv_obj_set_style_text_font(lbl, FONT_NORMAL, 0);
-    lv_obj_set_style_text_color(lbl, isActive ? COL_ACCENT : COL_TEXT, 0);
-    lv_obj_center(lbl);
-  }
-
-  // CUSTOM button
-  presetBtns[3] = lv_button_create(screen);
-  lv_obj_set_size(presetBtns[3], presetW, presetH);
-  lv_obj_set_pos(presetBtns[3], presetStartX + 3 * (presetW + presetGap), presetY);
-  lv_obj_set_style_bg_color(presetBtns[3], COL_BTN_BG, 0);
-  lv_obj_set_style_radius(presetBtns[3], RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(presetBtns[3], 1, 0);
-  lv_obj_set_style_border_color(presetBtns[3], COL_BORDER, 0);
-  lv_obj_add_event_cb(presetBtns[3], custom_btn_cb, LV_EVENT_CLICKED, nullptr);
-  lv_obj_t* customLbl = lv_label_create(presetBtns[3]);
-  lv_label_set_text(customLbl, "CUSTOM");
-  lv_obj_set_style_text_font(customLbl, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(customLbl, COL_TEXT, 0);
-  lv_obj_center(customLbl);
-
-  // ── Bottom bar: BACK + START + STOP (y=428, standard) ──
+  // ── Bottom bar: BACK + START + STOP ──
   const int barY = 428;
   const int barH = 48;
   const int barBtnW = 256;
@@ -384,42 +269,109 @@ void screen_timer_create() {
   lv_obj_set_style_text_color(stopLabel, COL_RED, 0);
   lv_obj_center(stopLabel);
 
-  LOG_I("Screen timer: clean layout created");
+  LOG_I("Screen countdown: created with progress ring");
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN UPDATE
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_timer_update() {
-  if (numpadClosePending) {
-    if (customNumpad) { lv_obj_delete(customNumpad); customNumpad = nullptr; }
-    if (customTa) { lv_obj_delete(customTa); customTa = nullptr; }
-    numpadClosePending = false;
-  }
   if (!screens_is_active(SCREEN_TIMER)) return;
 
-  uint32_t remaining = control_get_timer_remaining();
-  SystemState state = control_get_state();
-
-  if (state == STATE_TIMER && remaining > 0) {
-    uint32_t min = remaining / 60;
-    uint32_t sec = remaining % 60;
-    lv_label_set_text_fmt(timerLabel, "%02d:%02d", (int)min, (int)sec);
-
-    // Progress bar
-    uint32_t pct = (timerSeconds > 0) ? (remaining * 100 / timerSeconds) : 0;
-    lv_bar_set_value(progressBar, (int32_t)pct, LV_ANIM_OFF);
-
-    // Arc ring
-    lv_arc_set_value(arcRing, (int32_t)pct);
-    lv_arc_set_angles(arcRing, 0, pct * 360 / 100);
-  } else {
-    update_timer_display();
-    lv_bar_set_value(progressBar, 100, LV_ANIM_OFF);
-    lv_arc_set_value(arcRing, 100);
-    lv_arc_set_angles(arcRing, 0, 360);
+  if (backPending) {
+    backPending = false;
+    screens_show(SCREEN_MAIN);
+    return;
   }
 
-  // Update RPM display
+  // Handle pending start (countdown reached 0)
+  if (startPending) {
+    startPending = false;
+    countingDown = false;
+    control_start_continuous();
+    screens_show(SCREEN_MAIN);
+    return;
+  }
+
+  if (countingDown) {
+    uint32_t elapsed = (millis() - countdownStartMs) / 1000;
+    int remaining = countdownSec - (int)elapsed;
+
+    if (remaining <= 0) {
+      // GO!
+      if (bigNumberLabel) {
+        lv_label_set_text(bigNumberLabel, "GO");
+        lv_obj_set_style_text_color(bigNumberLabel, COL_GREEN, 0);
+        lv_obj_set_style_transform_zoom(bigNumberLabel, 384, 0);
+      }
+      if (statusLabel) {
+        lv_label_set_text(statusLabel, "STARTING");
+        lv_obj_set_style_text_color(statusLabel, COL_GREEN, 0);
+      }
+      if (arcRing) {
+        lv_arc_set_value(arcRing, 100);
+        lv_arc_set_angles(arcRing, 0, 360);
+        lv_obj_set_style_arc_color(arcRing, COL_GREEN, LV_PART_INDICATOR);
+      }
+      startPending = true;
+      return;
+    }
+
+    countdownRemaining = remaining;
+    lv_color_t col = countdown_color(remaining, countdownSec);
+
+    // Pulse on second change
+    if (remaining != lastDisplayedSec) {
+      lastDisplayedSec = remaining;
+      pulseStartMs = millis();
+    }
+
+    // Zoom: 150% for 150ms after change, then 100%
+    uint32_t pulseElapsed = millis() - pulseStartMs;
+    int zoom = (pulseElapsed < 150) ? 384 : 256;
+
+    if (bigNumberLabel) {
+      char buf[4];
+      snprintf(buf, sizeof(buf), "%d", remaining);
+      lv_label_set_text(bigNumberLabel, buf);
+      lv_obj_set_style_text_color(bigNumberLabel, col, 0);
+      lv_obj_set_style_transform_zoom(bigNumberLabel, zoom, 0);
+    }
+
+    if (statusLabel) {
+      lv_label_set_text(statusLabel, "GET READY");
+      lv_obj_set_style_text_color(statusLabel, col, 0);
+    }
+
+    if (arcRing) {
+      int pct = remaining * 100 / countdownSec;
+      lv_arc_set_value(arcRing, pct);
+      lv_arc_set_angles(arcRing, 0, pct * 360 / 100);
+      lv_obj_set_style_arc_color(arcRing, col, LV_PART_INDICATOR);
+    }
+  } else {
+    // Idle — show countdown value with green ring
+    if (lastDisplayedSec != -1) {
+      lastDisplayedSec = -1;
+    }
+
+    if (bigNumberLabel) {
+      char buf[4];
+      snprintf(buf, sizeof(buf), "%d", countdownSec);
+      lv_label_set_text(bigNumberLabel, buf);
+      lv_obj_set_style_text_color(bigNumberLabel, COL_GREEN, 0);
+      lv_obj_set_style_transform_zoom(bigNumberLabel, 256, 0);
+    }
+    if (statusLabel) {
+      lv_label_set_text(statusLabel, "READY");
+      lv_obj_set_style_text_color(statusLabel, COL_TEXT_DIM, 0);
+    }
+    if (arcRing) {
+      lv_arc_set_value(arcRing, 100);
+      lv_arc_set_angles(arcRing, 0, 360);
+      lv_obj_set_style_arc_color(arcRing, COL_GREEN, LV_PART_INDICATOR);
+    }
+  }
+
   if (rpmLabel) lv_label_set_text_fmt(rpmLabel, "%.1f", speed_get_target_rpm());
 }

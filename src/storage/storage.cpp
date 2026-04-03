@@ -5,7 +5,7 @@
 
 std::vector<Preset> g_presets;
 SemaphoreHandle_t g_presets_mutex;
-SystemSettings g_settings = { 5000, 8, 1.0f, true, 150, 60, true, 0, "", "", BLE_DEVICE_NAME_DEFAULT, 1 };
+SystemSettings g_settings = { 5000, 8, 1.0f, true, 150, 60, true, 0, "", "", BLE_DEVICE_NAME_DEFAULT, true, true, 1 };
 volatile bool g_dir_switch_cache = true;
 
 static volatile bool savePending = false;
@@ -185,6 +185,9 @@ bool storage_load_settings() {
     strlcpy(g_settings.wifi_ssid, doc["wifi_ssid"] | WIFI_SSID, sizeof(g_settings.wifi_ssid));
     strlcpy(g_settings.wifi_pass, doc["wifi_pass"] | WIFI_PASS, sizeof(g_settings.wifi_pass));
     strlcpy(g_settings.ble_name, doc["ble_name"] | BLE_DEVICE_NAME_DEFAULT, sizeof(g_settings.ble_name));
+    g_settings.ble_enabled = doc["ble_enabled"] | true;
+    g_settings.wifi_enabled = doc["wifi_enabled"] | true;
+    g_settings.countdown_seconds = constrain(doc["countdown_seconds"] | 3, (uint8_t)1, (uint8_t)10);
     g_settings.settings_version = doc["settings_version"] | 0;
 
     g_dir_switch_cache = g_settings.dir_switch_enabled;
@@ -212,6 +215,9 @@ static bool storage_save_settings_internal() {
     doc["wifi_ssid"] = g_settings.wifi_ssid;
     doc["wifi_pass"] = g_settings.wifi_pass;
     doc["ble_name"] = g_settings.ble_name;
+    doc["ble_enabled"] = g_settings.ble_enabled;
+    doc["wifi_enabled"] = g_settings.wifi_enabled;
+    doc["countdown_seconds"] = g_settings.countdown_seconds;
     doc["settings_version"] = g_settings.settings_version;
 
     if (serializeJson(doc, file) == 0) {
@@ -285,7 +291,7 @@ void storage_get_usage(size_t* used, size_t* total) {
 void storage_format() {
     xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
     g_presets.clear();
-    g_settings = { 5000, 8, 1.0f, true, 150, 60, false, 0, "", "", BLE_DEVICE_NAME_DEFAULT, 1 };
+    g_settings = { 5000, 8, 1.0f, true, 150, 60, false, 0, "", "", BLE_DEVICE_NAME_DEFAULT, true, true, 1 };
     LittleFS.format();
     xSemaphoreGive(g_presets_mutex);
     LOG_I("Storage formatted - all data erased");
@@ -306,7 +312,6 @@ volatile bool wifiIsConnected = false;
 char wifiConnectedSsid[33] = "";
 char wifiConnectedIp[16] = "";
 volatile int wifiConnectedRssi = 0;
-bool wifiEnabled = true;
 char wifiPendingSsid[33] = "";
 char wifiPendingPass[65] = "";
 
@@ -317,6 +322,7 @@ static uint32_t wifiLastStatusPoll = 0;
 
 void wifi_process_pending() {
     // Update cached connection status (every 2s to avoid SDIO bus blocking idle task)
+    if (!g_settings.wifi_enabled) return;
     uint32_t now = millis();
     if (now - wifiLastStatusPoll >= 2000) {
         wifiLastStatusPoll = now;
@@ -367,7 +373,7 @@ void wifi_process_pending() {
     // Process WiFi toggle
     if (wifiTogglePending) {
         wifiTogglePending = false;
-        if (wifiEnabled) {
+        if (g_settings.wifi_enabled) {
             WiFi.mode(WIFI_STA);
             WiFi.begin(g_settings.wifi_ssid, g_settings.wifi_pass);
             LOG_I("WiFi enabled");
@@ -379,7 +385,7 @@ void wifi_process_pending() {
     }
 
     // Auto-reconnect with exponential backoff
-    if (wifiEnabled && g_settings.wifi_ssid[0] != '\0' && !wifiIsConnected) {
+    if (g_settings.wifi_enabled && g_settings.wifi_ssid[0] != '\0' && !wifiIsConnected) {
         if (millis() - wifiLastReconnectAttempt > wifiReconnectInterval) {
             wifiLastReconnectAttempt = millis();
             WiFi.begin(g_settings.wifi_ssid, g_settings.wifi_pass);

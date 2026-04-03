@@ -174,6 +174,8 @@ static void network_click_cb(lv_event_t* e) {
 static void wifi_toggle_cb(lv_event_t* e) {
   wifiEnabled = !wifiEnabled;
   wifiTogglePending = true;
+  g_settings.wifi_enabled = wifiEnabled;
+  storage_save_settings();
   if (wifiEnabled) {
     lv_obj_set_style_bg_color(wifiToggleSw, COL_GREEN, 0);
     lv_label_set_text(wifiToggleLbl, "ON");

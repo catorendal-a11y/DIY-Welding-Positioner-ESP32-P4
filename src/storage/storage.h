@@ -24,6 +24,9 @@ struct SystemSettings {
     char wifi_ssid[33];    // WiFi SSID (max 32 chars + null)
     char wifi_pass[64];    // WiFi password (max 63 chars + null)
     char ble_name[33];     // BLE device name (max 32 chars + null)
+    bool ble_enabled;       // BLE on/off (persisted)
+    bool wifi_enabled;      // WiFi on/off (persisted)
+    uint8_t countdown_seconds; // Countdown before rotation start (1-10, default 3)
     uint8_t settings_version;
 };
 

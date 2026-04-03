@@ -1,11 +1,9 @@
 # Claude / AI settings
 .claude/
 .kilocode/
+.agents/
 CLAUDE.md
 AGENTS.md
-CLAUDE.md
-.agents/
-.kilocode/
 
 # PlatformIO
 .pio/

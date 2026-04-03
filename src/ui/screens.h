@@ -31,7 +31,6 @@ typedef enum {
   SCREEN_BOOT,           // Boot screen
   SCREEN_EDIT_PULSE,     // Pulse edit (preset quick edit)
   SCREEN_EDIT_STEP,      // Step edit (preset quick edit)
-  SCREEN_EDIT_TIMER,     // Timer edit (preset quick edit)
   SCREEN_EDIT_CONT,      // Continuous edit (preset quick edit)
   SCREEN_WIFI,         // WiFi + BLE connectivity settings
   SCREEN_BT,           // Bluetooth settings
@@ -82,7 +81,6 @@ void screen_jog_update();
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_edit_pulse_create();
 void screen_edit_step_create();
-void screen_edit_timer_create();
 void screen_edit_cont_create();
 
 void screen_wifi_create();
@@ -104,7 +102,6 @@ void screen_about_update();
 // Update functions (called when returning to these screens)
 void screen_edit_pulse_update();
 void screen_edit_step_update();
-void screen_edit_timer_update();
 void screen_edit_cont_update();
 
 // ───────────────────────────────────────────────────────────────────────────────

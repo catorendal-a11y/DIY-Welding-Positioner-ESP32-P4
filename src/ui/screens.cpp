@@ -48,7 +48,6 @@ static void create_screen(ScreenId id) {
     case SCREEN_ABOUT:       screen_about_create(); break;
     case SCREEN_EDIT_PULSE:  screen_edit_pulse_create(); break;
     case SCREEN_EDIT_STEP:   screen_edit_step_create(); break;
-    case SCREEN_EDIT_TIMER:  screen_edit_timer_create(); break;
     case SCREEN_PROGRAM_EDIT: screen_program_edit_create(pendingEditSlot); pendingEditSlot = -1; break;
     case SCREEN_EDIT_CONT:   screen_edit_cont_create(); break;
     default: break;
@@ -164,9 +163,6 @@ void screens_update_current() {
       break;
     case SCREEN_EDIT_STEP:
       screen_edit_step_update();
-      break;
-    case SCREEN_EDIT_TIMER:
-      screen_edit_timer_update();
       break;
     case SCREEN_EDIT_CONT:
       screen_edit_cont_update();

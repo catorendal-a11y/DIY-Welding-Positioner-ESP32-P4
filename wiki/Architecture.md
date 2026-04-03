@@ -16,6 +16,8 @@ controlTask (pri 3, 4KB)
 
 **WDT:** motorTask, controlTask, safetyTask are subscribed to TWDT. lvglTask and storageTask are NOT subscribed (they do blocking I/O that can exceed WDT timeout).
 
+**Flash safety:** `CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y` + `CONFIG_SPIRAM_RODATA=y` ensures code remains accessible when flash cache is disabled during LittleFS writes. All WiFi calls go through `wifi_process_pending()` (thread-safe). Storage uses .tmp + rename for atomic writes.
+
 ## State Machine
 
 State transitions use compare-and-swap (CAS) for race-free multi-core access:
@@ -108,7 +110,9 @@ Two-layer ESTOP architecture:
 - **ArduinoJson** for structured data serialization
 - 16 program presets max, system settings
 - Debounced writes: 500ms presets, 1000ms settings
-- `wifi_process_pending()` handles all WiFi API calls (thread-safe)
+- Atomic writes: .tmp + rename pattern prevents corruption on power failure
+- WiFi thread safety: all WiFi API calls via `wifi_process_pending()`, cached values for UI
+- storageTask NOT subscribed to WDT (does blocking I/O)
 
 ### `src/ble/` — Bluetooth
 
@@ -126,7 +130,7 @@ Two-layer ESTOP architecture:
 | `lvgl_hal.cpp` | LVGL display driver, flush callback, dim control |
 | `screens.cpp` | Screen registry, lazy creation, show/hide management |
 | `theme.h` | Color palette, font definitions, constants |
-| `screens/` | 23 screen files (main, settings, modes, etc.) |
+| `screens/` | 23 screen files (main, settings, modes, countdown, etc.) |
 
 ## Display Pipeline
 
@@ -150,5 +154,27 @@ UI (Core 1)                         Motor (Core 0)
 speed_slider_set(rpm)  ──────────>  speed_get_target_rpm() reads atomic
 speed_request_update() ──────────>  speed_apply() checks flag
 control_start_continuous() ──────>  controlTask transitions state (CAS)
-                                       motorTask applies speed
+                                        motorTask applies speed
 ```
+
+## Flash & Storage Safety
+
+ESP32-P4 executes code from external flash. LittleFS writes temporarily disable the flash cache:
+
+```
+LittleFS.write()  ──>  flash cache DISABLED  ──>  code in flash CRASHES
+                        (code in PSRAM OK)
+```
+
+Mitigations:
+1. **`CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y` + `CONFIG_SPIRAM_RODATA=y`** — moves instructions/rodata to PSRAM
+2. **Deferred UI saves** — never call `storage_save_*()` from LVGL event callbacks
+3. **storageTask not in WDT** — blocking I/O (flash, SDIO) can exceed 5s timeout
+4. **WiFi single-threaded** — all WiFi calls through `wifi_process_pending()` in storageTask
+
+## Timer Screen (Countdown)
+
+SCREEN_TIMER provides a visual countdown before rotation starts:
+- Configurable 1-10s delay with progress ring, pulsing number, color transition
+- Starts continuous rotation at countdown zero
+- Settings saved on screen exit only

@@ -13,7 +13,6 @@ typedef enum {
   STATE_PULSE,         // Pulse mode (rotate/pause cycles)
   STATE_STEP,          // Step mode (fixed angle steps)
   STATE_JOG,           // Jog mode (run while button held)
-  STATE_TIMER,         // Timer mode (run for duration)
   STATE_STOPPING,      // Decelerating to stop
   STATE_ESTOP          // Emergency stop activated
 } SystemState;
@@ -49,10 +48,6 @@ void control_start_jog_ccw();
 void control_stop_jog();
 void control_set_jog_speed(float rpm);
 float control_get_jog_speed();
-
-// Timer mode
-void control_start_timer(uint32_t duration_sec);
-uint32_t control_get_timer_remaining();
 
 // ───────────────────────────────────────────────────────────────────────────────
 // FREERTOS TASKS

@@ -82,11 +82,10 @@ static void restyle_mode_buttons() {
   } modes[] = {
     { "CONT",  STATE_RUNNING },
     { "PULSE", STATE_PULSE   },
-    { "STEP",  STATE_STEP    },
-    { "TIMER", STATE_TIMER   }
+    { "STEP",  STATE_STEP    }
   };
 
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 3; i++) {
     if (!modeBtns[i]) continue;
     bool active = (editPreset.mode == modes[i].mode);
 
@@ -121,10 +120,6 @@ static void update_mode_settings_text() {
     case STATE_STEP:
       modeName = "STEP";
       snprintf(details, sizeof(details), "ANGLE: %.0fdeg", editPreset.step_angle);
-      break;
-    case STATE_TIMER:
-      modeName = "TIMER";
-      snprintf(details, sizeof(details), "TIME: %us", (unsigned)(editPreset.timer_ms / 1000));
       break;
     default:
       modeName = "CONTINUOUS";
@@ -179,9 +174,6 @@ static void mode_settings_cb(lv_event_t* e) {
       break;
     case STATE_STEP:
       screens_show(SCREEN_EDIT_STEP);
-      break;
-    case STATE_TIMER:
-      screens_show(SCREEN_EDIT_TIMER);
       break;
     default:
       break;
@@ -334,8 +326,7 @@ void screen_program_edit_create(int slot) {
   } modes[] = {
     { "CONT",  STATE_RUNNING },
     { "PULSE", STATE_PULSE   },
-    { "STEP",  STATE_STEP    },
-    { "TIMER", STATE_TIMER   }
+    { "STEP",  STATE_STEP    }
   };
 
   const int modeY = 136;

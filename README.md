@@ -59,7 +59,7 @@ Watch the system in action: **UI interaction, Motor rotation, Screen navigation,
 
 ## Features
 
-- **5 welding modes:** Continuous, Jog, Pulse, Step, and Timer
+- **5 welding modes:** Continuous, Jog, Pulse, Step, and Countdown (3-2-1 before start)
 - **Live speed control:** On-the-fly RPM adjustment via potentiometer and touchscreen buttons
 - **Foot pedal support:** Analog speed + digital start switch
 - **Direction switch:** Physical CW/CCW toggle (GPIO29)
@@ -81,7 +81,8 @@ Watch the system in action: **UI interaction, Motor rotation, Screen navigation,
 |--------|-------------|
 | **Main** | RPM gauge, start/stop, mode quick-access |
 | **Menu** | Advanced mode selection and settings |
-| **Continuous / Jog / Pulse / Step / Timer** | Mode-specific controls |
+| **Continuous / Jog / Pulse / Step / Countdown** | Mode-specific controls |
+| | **Countdown** — visual 3-2-1 before rotation starts |
 | **Programs** | Preset list with save/load/delete |
 | **Program Edit** | Full preset editor with keyboard input |
 | **Settings** | Hub: WiFi, Bluetooth, Display, System Info, Calibration, Motor Config, About |
@@ -204,7 +205,7 @@ Connect via phone BLE apps (e.g., nRF Connect) using the Nordic UART Service:
 | **Jog** | Touch-and-hold rotation for manual positioning. |
 | **Pulse** | Rotate ON ms, pause OFF ms, repeat. For tack welding. |
 | **Step** | Rotate exact angle (e.g., 90 deg), then stop. |
-| **Timer** | Rotate at set speed for exact duration, then auto-stop. |
+| **Countdown** | Visual 3-2-1 countdown before rotation starts (configurable 1-10s) |
 
 ---
 

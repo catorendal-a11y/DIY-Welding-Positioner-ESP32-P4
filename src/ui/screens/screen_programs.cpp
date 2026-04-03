@@ -39,8 +39,8 @@ static void load_preset_cb(lv_event_t* e) {
       control_start_pulse(p.pulse_on_ms, p.pulse_off_ms);
     } else if (p.mode == STATE_STEP) {
       control_start_step(p.step_angle);
-    } else if (p.mode == STATE_TIMER) {
-      control_start_timer(p.timer_ms / 1000);
+    } else {
+      control_start_continuous();
     }
 
     screens_show(SCREEN_MAIN);
@@ -102,7 +102,6 @@ static void format_details(char* buf, size_t len, const Preset& p) {
     case STATE_RUNNING: mName = "CONT"; break;
     case STATE_PULSE:   mName = "PULSE"; break;
     case STATE_STEP:    mName = "STEP"; break;
-    case STATE_TIMER:   mName = "TIMER"; break;
     default:            mName = "CONT"; break;
   }
 
@@ -113,11 +112,6 @@ static void format_details(char* buf, size_t len, const Preset& p) {
              (unsigned)((p.pulse_on_ms + p.pulse_off_ms) / 1000));
   } else if (p.mode == STATE_STEP) {
     snprintf(buf, len, "%s . %.1fRPM . %.0fdeg", mName, p.rpm, p.step_angle);
-  } else if (p.mode == STATE_TIMER) {
-    unsigned secs = p.timer_ms / 1000;
-    unsigned mins = secs / 60;
-    secs = secs % 60;
-    snprintf(buf, len, "%s . %.1fRPM . %u:%02u", mName, p.rpm, mins, secs);
   } else {
     snprintf(buf, len, "%s . %.1fRPM", mName, p.rpm);
   }

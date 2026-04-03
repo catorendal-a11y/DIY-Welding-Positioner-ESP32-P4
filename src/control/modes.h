@@ -27,9 +27,3 @@ void jog_stop();
 void jog_update();
 void jog_set_speed(float rpm);
 float jog_get_speed();
-
-void timer_start(uint32_t duration_sec);
-void timer_stop();
-void timer_update();
-uint32_t timer_get_remaining_sec();
-uint32_t timer_get_duration();

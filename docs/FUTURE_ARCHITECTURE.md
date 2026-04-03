@@ -23,6 +23,7 @@ This document outlines planned features and their current status.
 - **C6 OTA**: Firmware update for C6 co-processor via HTTPS
 
 ### What's Planned
+- Countdown before start (3-2-1 on screen, gives welder time to position)
 - Web-based remote control panel (HTML/JS hosted on C6)
 - Bidirectional state sync (phone mirrors display)
 - WiFi SoftAP mode (standalone network without router)

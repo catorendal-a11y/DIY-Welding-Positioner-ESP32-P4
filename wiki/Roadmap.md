@@ -31,6 +31,7 @@
 
 ## Next
 
+- [ ] Countdown before start (3-2-1 on screen, gives welder time to position)
 - [ ] Increase MAX_RPM to 5.0 with DM542T
 - [ ] Enclosure design files (3D printable)
 - [ Assembly guide

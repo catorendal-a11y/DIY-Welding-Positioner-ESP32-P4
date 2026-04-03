@@ -80,6 +80,7 @@
 
 ## Planned
 
+- [ ] **Countdown before start** (3-2-1 on screen, gives welder time to position)
 - [ ] **Enclosure design** (3D printable)
 - [ ] **Assembly guide**
 - [ ] **WiFi SoftAP mode** (standalone network without router)

@@ -292,6 +292,7 @@ Settings can also be changed from the touchscreen via **Settings > Motor Config*
 - [x] System info screen (core load, heap, WiFi status)
 - [x] Motor configuration UI
 - [x] Thread-safe stepper access + atomic cross-core variables
+- [ ] Countdown before start (3-2-1 on screen, gives welder time to position)
 - [ ] Increase MAX_RPM to 5.0 with DM542T
 - [ ] Enclosure design (3D printable)
 - [ ] Assembly guide

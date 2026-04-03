@@ -3,9 +3,9 @@
 This guide details the physical electrical wiring and structural assembly required to build the welding positioner safely.
 
 ## 1. Electrical Component Selection
-- **ESP32-P4 Dev Board:** Must be the 4.3" Waveshare/Guition variant with MIPI-DSI interface.
-- **Micro-Stepper Driver:** TB6600 (or equivalent like DM542). Must be capable of handling 24V-36V and 3A-4A output for NEMA 23.
-- **Motor:** NEMA 23 Stepper Motor (approx 3.0 Nm holding torque recommended for welding tables).
+- **ESP32-P4 Dev Board:** GUITION JC4880P443C (4.3" MIPI-DSI display, ESP32-P4 + ESP32-C6 co-processor).
+- **Micro-Stepper Driver:** TB6600 (or equivalent like DM542). Must handle 24V-36V and 3A-4A output for NEMA 23.
+- **Motor:** NEMA 23 Stepper Motor (approx 3.0 Nm holding torque recommended).
 - **Power Supply (PSU):** 24V DC, minimum 5.0A (120W+). Dedicated for the stepper driver.
 - **DC-DC Converter:** Step-down buck converter (24V -> 5V 2A) to power the ESP32-P4 if not using USB-C.
 - **Enclosure:** **Metallic (Aluminum/Steel) grounded enclosure**. Essential for EMI mitigation.
@@ -34,16 +34,24 @@ The TB6600 uses optically isolated inputs. Wire them in a **Common Ground** conf
 4. Wire **ENA+ (Enable)** to `GPIO 52`.
 
 ### C. External Controls
-- **Speed Potentiometer (10k Linear):** 
+- **Speed Potentiometer (10k Linear):**
   - Pin 1 (CCW) -> GND
   - Pin 2 (Wiper) -> `GPIO 49`
   - Pin 3 (CW) -> 3.3V
 - **E-STOP (Normally Closed Button):**
-  - Pin 1 -> `GPIO 33`
+  - Pin 1 -> `GPIO 34`
   - Pin 2 -> GND
-  - **CRITICAL:** Add an external 10k pull-up resistor between 3.3V and `GPIO 33`.
+  - Uses internal INPUT_PULLUP. NC contact holds pin LOW. Press breaks circuit, pin goes HIGH, ISR fires.
+- **Direction Switch (CW/CCW Toggle):**
+  - Pin 1 -> `GPIO 29`
+  - Pin 2 -> GND
+  - Uses internal INPUT_PULLUP. Toggle via Settings > Motor Config > Direction Switch.
+- **Foot Pedal (Optional):**
+  - Potentiometer wiper -> `GPIO 35` (ADC speed input)
+  - Start switch -> `GPIO 33` (INPUT_PULLUP, LOW = pressed)
 
-_Note: The NC E-STOP button connects `GPIO 33` to GND constantly. When pressed, the circuit breaks, the external pull-up resistor pulls `GPIO 33` `HIGH`, and the hardware interrupt fires instantly._
+### D. Reserved Pins (Do Not Use)
+- **GPIO 28** (C6_U0TXD) and **GPIO 32** (C6_U0RXD) are PCB-routed to the ESP32-C6 co-processor for WiFi/BLE via esp-hosted SDIO transport. They cannot be used as general-purpose I/O when WiFi or BLE is active.
 
 ## 4. Safety & Thermal Management
 - **Heat Sinking:** Stepper drivers get hot during long welding runs. Mount the TB6600 to the metal enclosure for thermal dissipation or add a 40mm fan.
@@ -51,19 +59,19 @@ _Note: The NC E-STOP button connects `GPIO 33` to GND constantly. When pressed, 
 
 ## 5. Validated Hardware
 
-The following configuration has been tested and confirmed working on real hardware:
-
 | Component | Tested Model | Status |
 |-----------|-------------|--------|
-| **MCU Board** | Waveshare ESP32-P4 4.3" Display | Tested |
+| **MCU Board** | GUITION JC4880P443C (ESP32-P4 + C6) | Tested |
 | **Stepper Driver** | TB6600 | Tested (1/4 and 1/8 microstepping) |
 | **Stepper Motor** | NEMA 23 (3 Nm) | Tested |
-| **Gearbox** | 200:1 Worm Gear | Tested |
+| **Gearbox** | Worm gear (~200:1) | Tested |
 | **Power Supply** | 24V DC | Tested |
 | **Potentiometer** | 10k (LA42DWQ-22) | Tested (ADC range 0-3315) |
 | **E-STOP** | NC Button | Tested |
+| **Direction Switch** | SPDT toggle on GPIO 29 | Tested |
+| **Foot Pedal** | Analog pot + momentary switch | Tested |
 
 ### Known Limitations with TB6600
 - Motor resonance at 100-300 motor RPM causes stalling at coarse microstepping (1/4)
 - Recommended to use 1/8 microstepping or finer for stable operation
-- DM542T upgrade planned for anti-resonance DSP support
+- DM542T upgrade planned for anti-resonance DSP support and higher RPM

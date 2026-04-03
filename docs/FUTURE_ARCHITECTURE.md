@@ -1,94 +1,61 @@
-# 🚀 Future Architecture: The Next Generation
+# Future Architecture
 
-This document outlines the architectural blueprints for the three major upcoming features in the TIG Rotator Controller project. These features elevate the system from a precision DIY controller to a fully-fledged industrial product.
+This document outlines planned features and their current status.
 
 ---
 
 ## 1. Closed-Loop Encoder Feedback
 
-> **❌ STATUS: CANCELLED**
-> *Etter nærmere vurdering har vi besluttet at dette trinnmotoroppsettet er kraftig og presist nok (open-loop) til at vi ikke trenger å innføre kompleksiteten med en fysisk enkoder.*
-
-### Hardware Pipeline
-- **Sensor:** A magnetic absolute encoder (e.g., **AS5600** via I2C) or a high-resolution optical quadrature encoder attached to the main drive shaft or motor shaft.
-- **Connection:** Wired to the ESP32-P4 using dedicated GPIO pins with hardware pull-ups.
-
-### Software Architecture (ESP-IDF PCNT)
-- **Zero-CPU Counting:** Instead of using software interrupts (which steal CPU time and can crash the LVGL UI), we will utilize the ESP32-P4's **Pulse Counter (PCNT)** hardware peripheral.
-- **Background Task:** A new `encoderTask` running on Core 0 (alongside `motorTask`) will periodically read the PCNT hardware registry.
-- **Validation Logic:** 
-  The task compares the expected steps (from `FastAccelStepper`) against the physical rotation (from the PCNT).
-  ```cpp
-  int32_t expected_pos = stepper->getCurrentPosition();
-  int16_t actual_pos = pcnt_get_count(unit);
-  
-  if (abs(expected_pos - actual_pos) > TOLERANCE_STEPS) {
-      control_transition_to(STATE_FAULT);
-      ui_show_error_dialog("POSITION LOSS: MECHANICAL BINDING DETECTED");
-  }
-  ```
+> **STATUS: CANCELLED**
+> The open-loop stepper setup is precise enough for welding applications. Encoder feedback adds complexity without meaningful benefit.
 
 ---
 
-## 2. Wi-Fi / Web Panel Remote Control (ESP32-C6)
+## 2. WiFi & BLE Remote Control
 
-The ESP32-P4 lacks integrated Wi-Fi and Bluetooth to dedicate silicon entirely to processing power and high-speed I/O. To add wireless control, we use an affordable **ESP32-C6** as a Network Co-Processor (NCP).
+> **STATUS: IMPLEMENTED (v2.0.0)**
+> WiFi and BLE are available via the on-board ESP32-C6 co-processor using ESP-Hosted SDIO transport.
 
-### Hardware Pipeline
-- **Component:** A standard ESP32-C6 SuperMini or DevKit.
-- **Interconnect:** High-speed Hardware UART (e.g., `UART2` on P4 connected to `UART1` on C6) running at a baud rate of `921600` or higher, or a dedicated SPI bus.
+### What's Implemented
+- **BLE**: Nordic UART Service (NUS) with arm/start/stop/direction/RPM commands
+- **WiFi**: STA mode with network scanning, credential storage, on-screen keyboard
+- **Thread safety**: All WiFi/BLE calls routed through storageTask
+- **C6 OTA**: Firmware update for C6 co-processor via HTTPS
 
-### Software Architecture
-- **ESP32-C6 Role (Web Server):**
-  - Connects to the local shop Wi-Fi (or broadcasts its own Access Point).
-  - Runs an `AsyncWebServer`.
-  - Hosts a modern single-page web app (React, Vue, or clean HTML/JS) compiled into a compressed gzip file stored in the C6's flash.
-  - Maintains a full-duplex **WebSocket** connection with the operator's phone/tablet.
-- **Protocol (ArduinoJson):**
-  When the operator changes the RPM slider on their phone, the C6 receives the WebSocket message and forwards a JSON packet over UART to the P4:
-  `{"cmd": "set_rpm", "val": 12.5}`
-- **ESP32-P4 Role:**
-  A new `networkTask` (Core 1) constantly listens to the UART buffer. Upon receiving a valid JSON object, it calls the existing, thread-safe API:
-  `speed_set_target_rpm(doc["val"]);`
-  This enables bidirectional state syncing — the LVGL display on the console and the phone screen will perfectly mirror each other in real-time.
+### What's Planned
+- Web-based remote control panel (HTML/JS hosted on C6)
+- Bidirectional state sync (phone mirrors display)
+- WiFi SoftAP mode (standalone network without router)
 
 ---
 
-## 3. Program Preset Storage (LittleFS + ArduinoJson)
+## 3. Program Preset Storage
 
-> **✅ STATUS: IMPLEMENTED**
-> *This feature has been successfully integrated into the main branch. The documentation below reflects the active implementation.*
-
-Operators frequently perform repetitive welds. Setting the exact RPM, pulse timing, and step angles manually each time is inefficient.
-
-### Memory Architecture
-- **Partition Table:** Modify the PlatformIO `partitions.csv` to reserve 2MB of the ESP32-P4's onboard flash memory for **LittleFS** (a flash-wear leveling file system infinitely superior to SPIFFS).
-- **Data Structure:** Presets will be serialized as JSON using the `ArduinoJson` library, allowing for massive flexibility if we add new parameters in the future without breaking old save files.
-
-### Implementation Flow
-1. **The Save File (`/littlefs/presets.json`):**
-   ```json
-   [
-     {
-       "id": 1,
-       "name": "3-inch SS Pulse",
-       "mode": "PULSE",
-       "rpm": 5.5,
-       "pulse_on_ms": 800,
-       "pulse_off_ms": 500,
-       "dir": "CW"
-     }
-   ]
-   ```
-2. **Boot Sequence:** 
-   During `setup()`, the ESP32 mounts LittleFS, reads the JSON file into a C++ `std::vector<Preset>`, and injects the array into `screen_programs.cpp` to populate the LVGL roller/list UI.
-3. **Saving a Program:** 
-   When the user edits a program and taps "Save" on the LVGL touchscreen, the firmware updates the C++ struct, calls `serializeJson()`, overwrites `/littlefs/presets.json`, and flashes a minimal "Program Saved" toast notification.
+> **STATUS: IMPLEMENTED**
+> Up to 16 presets saved to LittleFS flash with full CRUD from UI.
 
 ---
 
-### Implementation Phasing
-When we are ready to code these, they should be implemented completely independently in this logical order:
-1. **Phase 1: LittleFS Presets** (✅ IMPLEMENTED - Software update, highly visible UI improvement).
-2. **Phase 2: Closed-Loop PCNT** (❌ CANCELLED).
-3. **Phase 3: C6 Web Remote** (Requires flashing a secondary MCU and writing an asynchronous web frontend).
+## 4. DM542T Driver Support
+
+> **STATUS: PARTIAL**
+> Motor config UI supports microstepping up to 1/32. MAX_RPM limited to 1.0 with TB6600.
+
+### What's Needed
+- Increase MAX_RPM to 5.0 when DM542T is connected
+- Test anti-resonance DSP at higher microstepping
+- Validate step accuracy at higher speeds
+
+---
+
+## 5. Enclosure & Assembly
+
+> **STATUS: PLANNED**
+> 3D-printable enclosure design files and assembly guide.
+
+---
+
+## 6. Higher RPM
+
+> **STATUS: PLANNED**
+> Requires DM542T driver upgrade. Current TB6600 limits to ~1.0 RPM workpiece speed.

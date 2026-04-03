@@ -1,41 +1,34 @@
 # ESTOP Timing Verification
 
-## Hardware: WT32-SC01 Plus (ESP32-S3-WROVER-N16R2) PRD v7.0
+## Hardware: GUITION JC4880P443C (ESP32-P4 + ESP32-C6)
+## Firmware: v2.0.0
 ## Test Date: [FILL IN AFTER HARDWARE TEST]
 
 ---
 
-## Required Hardware RC Filter
+## Hardware Configuration
 
-**IMPORTANT:** Install this RC filter on the Extended IO header before final testing.
+- **E-STOP Pin**: GPIO 34 (INPUT_PULLUP, NC contact)
+- **ENA Pin**: GPIO 52 (Output, active LOW)
+- **Internal Pull-up**: Enabled (no external resistor needed)
 
 ```
-  3.3V ──[10 kΩ]──[GPIO 14]──[NC ESTOP contact]──[GND]
-                       └──[100 nF ceramic]──[GND]
+  3.3V (internal pull-up)──[GPIO 34]──[NC ESTOP contact]──[GND]
 ```
 
-**RC time constant:** 10 kΩ × 100 nF = 1 ms
-
-**Effect:**
-- Blocks TIG HF glitches (2–3 MHz) ← eliminated
-- Blocks contact bounce (< 1 ms)    ← eliminated
-- Passes real ESTOP press (> 5 ms)  ← confirmed by SW debounce
-
-**Without this filter,** a TIG arc start within 30 cm of the ESTOP cable can trigger a false emergency stop.
-
-**Components:**
-- Resistor: 10 kΩ, 1/4W, 5% (carbon film or metal film)
-- Capacitor: 100 nF (0.1 µF), ceramic, 50V+, X7R or better
-
-**Installation location:** On the Extended IO header (GPIO 10-14), as close to the ESP32-S3 pins as possible.
+**Optional RC Filter** (for EMI-prone environments):
+```
+  [GPIO 34]──[100 nF ceramic]──[GND]
+```
+RC time constant: ~1 ms. Blocks TIG HF glitches and contact bounce.
 
 ---
 
 ## Test Setup
 
-- **Oscilloscope:** Channel 1 = GPIO 14 (ESTOP signal), Channel 2 = GPIO 13 (ENA)
-- **ESTOP Configuration:** Active LOW, NC contact, 10kΩ pull-up
-- **Target:** GPIO 14 falling → GPIO 13 rising < 1.0 ms
+- **Oscilloscope:** Channel 1 = GPIO 34 (ESTOP signal), Channel 2 = GPIO 52 (ENA)
+- **ESTOP Configuration:** Active LOW, NC contact, internal pull-up
+- **Target:** GPIO 34 rising (ESTOP press) -> GPIO 52 rising (motor disabled) < 1.0 ms
 
 ---
 
@@ -52,15 +45,21 @@ void IRAM_ATTR estopISR() {
 
 ### Layer 2: State Transition (< 5 ms)
 ```cpp
-// safetyTask checks g_estopPending every 1ms
-// After 5ms debounce, transitions to STATE_ESTOP
+// safetyTask (priority 5) checks g_estopPending every 1ms
+// After 5ms debounce, transitions to STATE_ESTOP via CAS
+```
+
+### Layer 3: UI Overlay (< 200 ms)
+```cpp
+// lvglTask detects STATE_ESTOP, shows full-screen red overlay
+// Reset via g_uiResetPending flag processed in controlTask
 ```
 
 ---
 
 ## Test Measurements
 
-| Test # | GPIO 14→13 (µs) | Result | Notes |
+| Test # | GPIO 34->52 (us) | Result | Notes |
 |--------|-----------------|--------|-------|
 | 1 | ___ | ___ | |
 | 2 | ___ | ___ | |
@@ -74,26 +73,17 @@ void IRAM_ATTR estopISR() {
 | 10 | ___ | ___ | |
 
 ### Worst-Case Latency
-- **Measured:** ___ µs
-- **Requirement:** < 1000 µs (1 ms)
+- **Measured:** ___ us
+- **Requirement:** < 1000 us (1 ms)
 - **Result:** [PASS / FAIL]
 
 ---
 
 ## NC Cable-Cut Test
 
-- [ ] ESTOP cable cut → Motor disabled
+- [ ] ESTOP cable cut -> Motor disabled
 - [ ] STATE_ESTOP reached within 5 ms
 - [ ] No false triggers during normal operation
-
----
-
-## Phase 3 Gate
-
-- [ ] docs/estop_timing.md — PASS
-- [ ] Worst-case ESTOP latency < 1.0 ms
-- [ ] NC cable-cut test passes
-- [ ] WDT resets in < 2 s, boot is fail-safe
 
 ---
 

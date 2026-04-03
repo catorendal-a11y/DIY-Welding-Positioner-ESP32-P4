@@ -1,6 +1,6 @@
 # TIG High Frequency (HF) EMI Mitigation Guide
 
-High Frequency (HF) start on TIG welders emits massive amounts of Electromagnetic Interference (EMI). 
+High Frequency (HF) start on TIG welders emits massive amounts of Electromagnetic Interference (EMI).
 This EMI can easily reset microcontrollers, freeze I2C touch screens, or cause random stepper motor jitter.
 
 To ensure your ESP32-P4 positioner runs flawlessly in an industrial welding environment, implement these hardware isolation techniques:
@@ -26,8 +26,14 @@ Snap-on ferrite bead chokes absorb high-frequency EMI spikes.
 - Place a ferrite choke on the E-STOP logic wire to prevent the long wire from acting as an antenna and triggering false E-STOPS.
 
 ## 5. E-STOP Hardware Filtering (RC Filter)
-If EMI causes false E-STOP triggers on `GPIO 33`, adding a hardware RC (Resistor-Capacitor) low-pass filter to the pin is highly recommended.
-- Place a `100nF` ceramic capacitor between `GPIO 33` and `GND`, physically as close to the ESP32 pin as possible.
+If EMI causes false E-STOP triggers on `GPIO 34`, adding a hardware RC (Resistor-Capacitor) low-pass filter to the pin is highly recommended.
+- Place a `100nF` ceramic capacitor between `GPIO 34` and `GND`, physically as close to the ESP32 pin as possible.
 
 ## 6. Transient Voltage Suppression (TVS)
 For maximum reliability, add **TVS Diodes** (e.g., SMF3.3) on the E-STOP and Potentiometer wiper lines. These shunt high-voltage transients to ground before they can reach the ESP32-P4's internal junction.
+
+## 7. C6 Co-Processor Considerations
+The ESP32-P4 communicates with the ESP32-C6 co-processor over SDIO for WiFi and BLE. This shared bus is sensitive to EMI:
+- Keep SDIO traces (GPIO 14-19) short and away from motor power cables.
+- EMI-induced SDIO errors can cause WiFi disconnections or BLE data corruption.
+- If WiFi/BLE becomes unstable during welding, add additional ferrite chokes near the ESP32-P4 board.

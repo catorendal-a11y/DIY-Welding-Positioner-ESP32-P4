@@ -1,6 +1,7 @@
 # EMI Test — TIG Welder HF Arc Start
 
-## Hardware: WT32-SC01 Plus (ESP32-S3-WROVER-N16R2) PRD v7.0
+## Hardware: GUITION JC4880P443C (ESP32-P4 + ESP32-C6)
+## Firmware: v2.0.0
 ## Test Date: [FILL IN AFTER HARDWARE TEST]
 
 ---
@@ -10,7 +11,7 @@
 - **TIG Welder:** [Fill in model]
 - **HF Arc Start:** Enabled
 - **Distance:** < 50 cm from controller
-- **Controller State:** Running at 3 RPM
+- **Controller State:** Running at 0.5 RPM
 - **Grounding:** Controller ground connected to welder ground
 
 ---
@@ -21,28 +22,37 @@
 |---|------|---------------|--------|
 | 1 | No system reset during HF arc start | No ESP_RST_WDT | [ ] |
 | 2 | No GUI freeze during welding | Touch responsive | [ ] |
-| 3 | STEP jitter < 1 µs during welding | Oscilloscope verified | [ ] |
-| 4 | ADC variation < ±0.05 RPM | Stable speed | [ ] |
+| 3 | STEP jitter < 1 us during welding | Oscilloscope verified | [ ] |
+| 4 | ADC variation < +/-0.05 RPM | Stable speed | [ ] |
+| 5 | WiFi/BLE remains connected | No disconnection | [ ] |
 
 ---
 
 ## Measurements
 
-### STEP Signal Stability (GPIO 11)
+### STEP Signal Stability (GPIO 50)
 
-| Condition | Jitter (µs) | Result |
+| Condition | Jitter (us) | Result |
 |-----------|-------------|--------|
 | Idle (no weld) | ___ | |
 | HF Arc Start | ___ | |
 | During Weld | ___ | |
 
-### ADC Noise (GPIO 10 - Potentiometer)
+### ADC Noise (GPIO 49 - Potentiometer)
 
 | Condition | RPM Variation | Result |
 |-----------|---------------|--------|
-| Idle (no weld) | ± ___ | |
-| HF Arc Start | ± ___ | |
-| During Weld | ± ___ | |
+| Idle (no weld) | +/- ___ | |
+| HF Arc Start | +/- ___ | |
+| During Weld | +/- ___ | |
+
+### SDIO Stability (WiFi/BLE)
+
+| Condition | WiFi Status | BLE Status | Result |
+|-----------|-------------|------------|--------|
+| Idle (no weld) | Connected | Connected | |
+| HF Arc Start | ___ | ___ | |
+| During Weld | ___ | ___ | |
 
 ---
 
@@ -51,16 +61,8 @@
 - [ ] Shielded cables for all motor connections
 - [ ] Ferrite beads on ESTOP lines
 - [ ] Proper grounding chassis to welder ground
-- [ ] PSRAM/cache fix enabled in platformio.ini
-
----
-
-## Phase 6 Gate
-
-- [ ] docs/emi_test.md — PASS
-- [ ] No system reset during HF arc start
-- [ ] GUI responsive during welding
-- [ ] STEP jitter < 1 µs maintained
+- [ ] Metal enclosure
+- [ ] RC filter on GPIO 34 (100nF)
 
 ---
 

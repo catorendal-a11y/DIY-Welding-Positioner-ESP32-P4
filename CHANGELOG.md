@@ -5,39 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.1.0] - 2026-04-03 (Reliability & Thread Safety)
+## [2.0.1] - 2026-04-03
 
 ### Added
-- **Countdown screen** — replaces Timer mode screen with visual countdown-before-start feature
-  - Configurable delay (1-10 seconds, default 3) with progress ring, pulsing number, color transition
-  - Green → yellow → red color transition as countdown progresses
-  - "GO" animation at countdown zero, auto-starts continuous rotation
-- **`CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y` + `CONFIG_SPIRAM_RODATA=y`** — moves code/rodata to PSRAM, prevents "Cache disabled but cached memory region accessed" crash during LittleFS writes
-- **Atomic settings save** — `storage_save_settings_internal()` uses .tmp + rename pattern for power-failure-safe writes
-- **Delta-based core load measurement** — `screen_sysinfo_update()` computes CPU load from delta between samples, not cumulative counters
+- **Invert Direction** — Motor Config INVERT DIRECTION toggle persists in settings and applies in `speed_get_direction()` for all modes (continuous, jog, pulse, step)
 
 ### Changed
-- **Cross-core variables** — `sliderRPM`, `cachedTargetRpm`, `jogRPM`, `pendingJogSpeed` upgraded from `volatile` to `std::atomic<float>` with explicit `.load()`/`.store()`
-- **`motorConfigApplyPending`** — upgraded from `volatile bool` to `std::atomic<bool>`
-- **WiFi status polling** — reduced from 100ms to 2s to prevent SDIO bus blocking idle task
-- **WiFi state** — `wifiEnabled` local variable replaced with `g_settings.wifi_enabled` checks throughout
-- **`screen_sysinfo_create()`** — removed direct WiFi API calls, uses cached values from storage.cpp
-- **`screen_wifi_update()`** — removed direct WiFi API calls, uses cached values and volatile flags
-- **`screen_confirm`** — deferred execution pattern: event callbacks set pending flags, actual callback runs in `screen_confirm_update()`
-- **Direction switch toggle** — `screen_motor_config.cpp` now initializes from `g_settings.dir_switch_enabled` (was always false)
-- **LVGL tick timer** — kept as `ESP_TIMER_TASK` dispatch (already `IRAM_ATTR`, `ESP_TIMER_ISR` not available on ESP-IDF 5.x for P4)
+- **Jog screen redesign** — replaced single JOG button with CW/CCW hold buttons and RPM progress bar
+- **Display Settings scaling** — rows 40→52px, buttons 28→36px, fonts bumped up for readability
+- **Motor Config** — renamed ENABLE ON IDLE to DIR SWITCH
+- **UI polish** — consistent fonts/sizes across all settings sub-screens
 
 ### Fixed
-- **Bluescreen on all save operations** — storageTask was incorrectly subscribed to WDT (5s timeout). Blocking I/O (LittleFS, WiFi SDIO) exceeded timeout → panic → reboot. Removed WDT subscription.
-- **Bluescreen on LittleFS write** — flash cache disabled during write, code in flash crashed. Fixed with SPIRAM_FETCH_INSTRUCTIONS/RODATA.
-- **Bluescreen on confirm dialog** — callback + screens_show() called directly from LVGL event handler caused use-after-free. Fixed with deferred execution pattern.
-- **Direction switch not working** — `enableIdle` variable (always false) was used for `dir_switch_enabled` setting. Renamed to `dirSwitchEnabled`, initialized from settings.
-- **Core load showing 100%** — cumulative `ulRunTimeCounter` gave all-time average. Changed to delta-based calculation.
-- **`step_mode.cpp`** — `move()` + `motor_run_cw()` bug: `move()` auto-starts, `runForward()` overrides to continuous. Fixed: direction via sign of steps, removed `motor_run_cw()`/`motor_run_ccw()`.
-- **FastAccelStepper thread safety** — all stepper calls (`setSpeedInHz`, `move`, `isRunning`, `stopMove`) wrapped in `g_stepperMutex`
-- **`motor_disable()`** — ENA pin write now mutex-protected
-- **`lvgl_hal.cpp`** — removed `delay(1)` from flush callback (ST7701S uses synchronous memcpy)
-- **Brownout detector** — set to 2.8V via `board_build.vdd = 2800` (display backlight + motor + WiFi transients)
+- **Countdown back button** — removed unnecessary pending pattern that could cause blue flash on screen switch
 
 ## [2.0.0] - 2026-04-03 (BLE, WiFi, Full UI Redesign)
 

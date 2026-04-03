@@ -12,11 +12,11 @@
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
     <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-      <path d="M40 0L0 0 0 40" fill="none" stroke="#0E1515" stroke-width="0.5"/>
+      <path d="M40 0L0 0 0 40" fill="none" stroke="#151b22" stroke-width="0.5"/>
     </pattern>
     <linearGradient id="bg-grad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#0A1010"/>
-      <stop offset="100%" stop-color="#060A0A"/>
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#080b0f"/>
     </linearGradient>
   </defs>
 

@@ -104,13 +104,15 @@
       <text x="90" y="358" font-family="sans-serif" font-size="16" fill="#AAAAAA">0.5s</text>
       <rect x="126" y="330" width="52" height="44" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
       <text x="152" y="358" font-family="sans-serif" font-size="16" fill="#AAAAAA" text-anchor="middle">+</text>
-      <!-- Right side buttons: STEP, TIMER, MENU -->
+      <!-- Right side buttons: STEP, 3-2-1, MENU, PEDAL -->
       <rect x="622" y="36" width="170" height="72" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
       <text x="707" y="78" font-family="sans-serif" font-size="16" fill="#AAAAAA" text-anchor="middle">STEP</text>
       <rect x="622" y="118" width="170" height="72" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="707" y="160" font-family="sans-serif" font-size="16" fill="#AAAAAA" text-anchor="middle">TIMER</text>
+      <text x="707" y="160" font-family="sans-serif" font-size="16" fill="#AAAAAA" text-anchor="middle">3-2-1</text>
       <rect x="622" y="200" width="170" height="72" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
       <text x="707" y="242" font-family="sans-serif" font-size="16" fill="#AAAAAA" text-anchor="middle">MENU</text>
+      <rect x="622" y="280" width="170" height="72" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+      <text x="707" y="322" font-family="sans-serif" font-size="16" fill="#AAAAAA" text-anchor="middle">PEDAL</text>
       <!-- Gauge semicircle: center (400, 170), R=150 -->
       <!-- Track arc (background) -->
       <path d="M 265 275 A 150 150 0 1 1 535 275" fill="none" stroke="#111111" stroke-width="12" stroke-linecap="round"/>
@@ -154,9 +156,9 @@
       <!-- Bottom-left: JOG -->
       <rect x="12" y="166" width="380" height="110" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
       <text x="202" y="228" font-family="sans-serif" font-size="24" fill="#AAAAAA" text-anchor="middle">JOG</text>
-      <!-- Bottom-right: TIMER -->
+      <!-- Bottom-right: 3-2-1 COUNTDOWN -->
       <rect x="408" y="166" width="380" height="110" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="598" y="228" font-family="sans-serif" font-size="24" fill="#AAAAAA" text-anchor="middle">TIMER</text>
+      <text x="598" y="228" font-family="sans-serif" font-size="24" fill="#AAAAAA" text-anchor="middle">3-2-1</text>
       <!-- PROGRAMS button -->
       <rect x="12" y="300" width="776" height="52" rx="4" fill="#1A1600" stroke="#FF9500" stroke-width="2"/>
       <text x="400" y="332" font-family="sans-serif" font-size="16" fill="#FF9500" text-anchor="middle">PROGRAMS</text>
@@ -343,44 +345,35 @@
   </g>
 
   <!-- ============================================================ -->
-  <!-- SCREEN 7: TIMER (Col 3, Row 2) x=720, y=280 -->
+  <!-- SCREEN 7: COUNTDOWN (Col 3, Row 2) x=720, y=280 -->
   <!-- ============================================================ -->
   <g transform="translate(720, 280)">
     <rect width="320" height="192" rx="4" fill="#050505" stroke="#2E2E2E" stroke-width="1"/>
     <g transform="scale(0.4)">
       <!-- Header -->
       <rect width="800" height="30" fill="#090909"/>
-      <text x="12" y="20" font-family="sans-serif" font-size="14" fill="#FF9500">TIMER MODE</text>
-      <!-- Timer ring 180x180 centered at (400, 126) -->
-      <circle cx="400" cy="126" r="90" fill="none" stroke="#111111" stroke-width="6"/>
-      <circle cx="400" cy="126" r="90" fill="none" stroke="#FF9500" stroke-width="6" stroke-dasharray="565 0" stroke-dashoffset="0"/>
-      <!-- Timer label -->
-      <text x="400" y="122" font-family="sans-serif" font-size="40" fill="#FF9500" text-anchor="middle">00:30</text>
-      <text x="400" y="146" font-family="sans-serif" font-size="14" fill="#4A4A4A" text-anchor="middle">REMAINING</text>
-      <!-- Duration row y=270 -->
-      <text x="30" y="294" font-family="sans-serif" font-size="14" fill="#4A4A4A">DURATION</text>
-      <text x="130" y="292" font-family="sans-serif" font-size="20" fill="#CCCCCC">00:30</text>
-      <rect x="220" y="278" width="64" height="52" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="252" y="310" font-family="sans-serif" font-size="20" fill="#AAAAAA" text-anchor="middle">-</text>
-      <rect x="284" y="278" width="64" height="52" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="316" y="310" font-family="sans-serif" font-size="20" fill="#AAAAAA" text-anchor="middle">+</text>
-      <text x="350" y="294" font-family="sans-serif" font-size="14" fill="#333333">1-600s</text>
+      <text x="12" y="20" font-family="sans-serif" font-size="14" fill="#FF9500">COUNTDOWN</text>
+      <!-- Progress ring 240x240 centered at (400, 150) -->
+      <circle cx="400" cy="150" r="120" fill="none" stroke="#111111" stroke-width="8"/>
+      <circle cx="400" cy="150" r="120" fill="none" stroke="#00FF00" stroke-width="8" stroke-dasharray="754 0" stroke-dashoffset="0"/>
+      <!-- Big number -->
+      <text x="400" y="148" font-family="sans-serif" font-size="72" fill="#00FF00" text-anchor="middle">3</text>
+      <!-- Status -->
+      <text x="400" y="290" font-family="sans-serif" font-size="18" fill="#4A4A4A" text-anchor="middle">READY</text>
+      <!-- DELAY row y=320 -->
+      <text x="30" y="332" font-family="sans-serif" font-size="14" fill="#4A4A4A">DELAY</text>
+      <text x="130" y="330" font-family="sans-serif" font-size="20" fill="#CCCCCC">3 sec</text>
+      <rect x="220" y="318" width="64" height="52" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+      <text x="252" y="350" font-family="sans-serif" font-size="20" fill="#AAAAAA" text-anchor="middle">-</text>
+      <rect x="284" y="318" width="64" height="52" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+      <text x="316" y="350" font-family="sans-serif" font-size="20" fill="#AAAAAA" text-anchor="middle">+</text>
       <!-- RPM row -->
-      <text x="460" y="294" font-family="sans-serif" font-size="14" fill="#4A4A4A">RPM</text>
-      <text x="510" y="292" font-family="sans-serif" font-size="20" fill="#CCCCCC">2.0</text>
-      <rect x="580" y="278" width="64" height="52" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="612" y="310" font-family="sans-serif" font-size="20" fill="#AAAAAA" text-anchor="middle">-</text>
-      <rect x="644" y="278" width="64" height="52" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="676" y="310" font-family="sans-serif" font-size="20" fill="#AAAAAA" text-anchor="middle">+</text>
-      <!-- Presets row y=340 -->
-      <rect x="40" y="340" width="150" height="44" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="115" y="368" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">10s</text>
-      <rect x="200" y="340" width="150" height="44" rx="4" fill="#1A1600" stroke="#FF9500" stroke-width="2"/>
-      <text x="275" y="368" font-family="sans-serif" font-size="14" fill="#FF9500" text-anchor="middle">30s</text>
-      <rect x="360" y="340" width="150" height="44" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="435" y="368" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">60s</text>
-      <rect x="520" y="340" width="150" height="44" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="595" y="368" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">CUSTOM</text>
+      <text x="460" y="332" font-family="sans-serif" font-size="14" fill="#4A4A4A">RPM</text>
+      <text x="510" y="330" font-family="sans-serif" font-size="20" fill="#CCCCCC">2.0</text>
+      <rect x="580" y="318" width="64" height="52" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+      <text x="612" y="350" font-family="sans-serif" font-size="20" fill="#AAAAAA" text-anchor="middle">-</text>
+      <rect x="644" y="318" width="64" height="52" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+      <text x="676" y="350" font-family="sans-serif" font-size="20" fill="#AAAAAA" text-anchor="middle">+</text>
       <!-- Bottom bar -->
       <rect x="8" y="428" width="256" height="48" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
       <text x="136" y="458" font-family="sans-serif" font-size="16" fill="#AAAAAA" text-anchor="middle">&lt;  BACK</text>
@@ -389,7 +382,7 @@
       <rect x="536" y="428" width="256" height="48" rx="4" fill="#1A0A0A" stroke="#FF1744" stroke-width="2"/>
       <text x="664" y="458" font-family="sans-serif" font-size="16" fill="#FF1744" text-anchor="middle">[] STOP</text>
     </g>
-    <text x="160" y="208" class="label">7. TIMER</text>
+    <text x="160" y="208" class="label">7. COUNTDOWN</text>
   </g>
 
   <!-- ============================================================ -->
@@ -538,7 +531,7 @@
       <rect x="402" y="136" width="185" height="38" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
       <text x="494" y="161" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">STEP</text>
       <rect x="593" y="136" width="185" height="38" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="685" y="161" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">TIMER</text>
+      <text x="685" y="161" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">3-2-1</text>
       <!-- RPM section label -->
       <text x="20" y="198" font-family="sans-serif" font-size="12" fill="#4A4A4A">RPM</text>
       <!-- RPM value -->
@@ -768,14 +761,14 @@
   </g>
 
   <!-- ============================================================ -->
-  <!-- SCREEN 14: EDIT TIMER (Col 2, Row 4) x=370, y=720 -->
+  <!-- SCREEN 14: EDIT TIMER (REMOVED) (Col 2, Row 4) x=370, y=720 -->
   <!-- ============================================================ -->
   <g transform="translate(370, 720)">
     <rect width="320" height="192" rx="4" fill="#050505" stroke="#2E2E2E" stroke-width="1"/>
     <g transform="scale(0.4)">
       <!-- Header -->
       <rect width="800" height="30" fill="#090909"/>
-      <text x="16" y="20" font-family="sans-serif" font-size="14" fill="#FF9500">EDIT TIMER</text>
+      <text x="16" y="20" font-family="sans-serif" font-size="14" fill="#FF9500">EDIT TIMER (removed)</text>
       <rect x="728" y="3" width="60" height="24" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
       <text x="758" y="20" font-family="sans-serif" font-size="14" fill="#4A4A4A" text-anchor="middle">[ESC]</text>
       <!-- DURATION label -->
@@ -835,7 +828,7 @@
       <rect x="668" y="434" width="100" height="32" rx="4" fill="#1A1600" stroke="#FF9500" stroke-width="2"/>
       <text x="718" y="456" font-family="sans-serif" font-size="14" fill="#FF9500" text-anchor="middle">SAVE</text>
     </g>
-    <text x="160" y="208" class="label">14. EDIT TIMER</text>
+    <text x="160" y="208" class="label">14. EDIT TIMER (removed)</text>
   </g>
 
   <!-- ============================================================ -->

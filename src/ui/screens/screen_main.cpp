@@ -41,7 +41,7 @@ static lv_obj_t* pedalLabel = nullptr;
 // STATE
 // ───────────────────────────────────────────────────────────────────────────────
 static const char* state_strings[] = {
-  "IDLE", "RUN", "PULSE", "STEP", "JOG", "TIMER", "STOP", "E-STOP"
+  "IDLE", "RUN", "PULSE", "STEP", "JOG", "3-2-1", "STOP", "E-STOP"
 };
 static SystemState prevState = STATE_IDLE;
 static Direction prevDir = DIR_CW;
@@ -266,7 +266,7 @@ void screen_main_create() {
   lv_obj_t* stepBtn = make_btn(mainScreenPtr, rightX, 36, sideW, sideH, "STEP", false);
   lv_obj_add_event_cb(stepBtn, [](lv_event_t*) { screens_show(SCREEN_STEP); }, LV_EVENT_CLICKED, nullptr);
 
-  lv_obj_t* timerBtn = make_btn(mainScreenPtr, rightX, 36 + sideH + sideGap, sideW, sideH, "TIMER", false);
+  lv_obj_t* timerBtn = make_btn(mainScreenPtr, rightX, 36 + sideH + sideGap, sideW, sideH, "3-2-1", false);
   lv_obj_add_event_cb(timerBtn, [](lv_event_t*) { screens_show(SCREEN_TIMER); }, LV_EVENT_CLICKED, nullptr);
 
   lv_obj_t* menuBtn = make_btn(mainScreenPtr, rightX, 36 + (sideH + sideGap) * 2, sideW, sideH, "MENU", false);

@@ -64,13 +64,17 @@
   <rect x="622" y="36" width="170" height="72" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
   <text x="707" y="78" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">STEP</text>
 
-  <!-- TIMER -->
+  <!-- 3-2-1 COUNTDOWN -->
   <rect x="622" y="118" width="170" height="72" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-  <text x="707" y="160" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">TIMER</text>
+  <text x="707" y="160" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">3-2-1</text>
 
   <!-- MENU -->
   <rect x="622" y="200" width="170" height="72" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
   <text x="707" y="242" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">MENU</text>
+
+  <!-- PEDAL -->
+  <rect x="622" y="280" width="170" height="72" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+  <text x="707" y="322" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">PEDAL</text>
 
   <!-- ==================== CENTER GAUGE ==================== -->
   <!-- Arc: 270 deg sweep from 135 deg to 405 deg, center (400,170), R=150 -->

@@ -15,8 +15,8 @@
       <path d="M40 0L0 0 0 40" fill="none" stroke="#151b22" stroke-width="0.5"/>
     </pattern>
     <linearGradient id="bg-grad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#0d1117"/>
-      <stop offset="100%" stop-color="#080b0f"/>
+      <stop offset="0%" stop-color="#010409"/>
+      <stop offset="100%" stop-color="#000204"/>
     </linearGradient>
   </defs>
 

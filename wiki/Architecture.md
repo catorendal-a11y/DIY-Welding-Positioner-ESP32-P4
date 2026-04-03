@@ -2,19 +2,23 @@
 
 ## Dual-Core FreeRTOS Design
 
-The controller runs on ESP32-P4's dual-core RISC-V processor, separating real-time motor control from the heavy UI rendering.
+The controller runs on ESP32-P4's dual-core RISC-V processor, with an ESP32-C6 co-processor connected via SDIO for WiFi and BLE.
 
 ```
 CORE 0 (Real-time)              CORE 1 (UI)
 ========================         ========================
-safetyTask  (pri 5, 2KB)        lvglTask    (pri 1, 64KB)
-motorTask   (pri 4, 5KB)        storageTask (pri 1, 4KB)
+safetyTask  (pri 5, 2KB)        lvglTask    (pri 2, 64KB)
+motorTask   (pri 4, 5KB)        storageTask (pri 1, 12KB)
 controlTask (pri 3, 4KB)
 ```
 
 **Critical rule:** All `lv_*` calls must come from `lvglTask` on Core 1 only. Motor control functions on Core 0 must never call LVGL directly.
 
+**WDT:** motorTask, controlTask, safetyTask are subscribed to TWDT. lvglTask and storageTask are NOT subscribed (they do blocking I/O that can exceed WDT timeout).
+
 ## State Machine
+
+State transitions use compare-and-swap (CAS) for race-free multi-core access:
 
 ```
 IDLE ──> RUNNING ──> STOPPING ──> IDLE
@@ -22,7 +26,7 @@ IDLE ──> PULSE   ──> STOPPING ──> IDLE
 IDLE ──> STEP    ──> STOPPING ──> IDLE
 IDLE ──> JOG     ──> STOPPING ──> IDLE
 IDLE ──> TIMER   ──> STOPPING ──> IDLE
-Any  ──> ESTOP   ──> IDLE (manual reset)
+Any  ──> ESTOP   ──> IDLE (manual reset via Core 0)
 ```
 
 | State | Description |
@@ -36,6 +40,40 @@ Any  ──> ESTOP   ──> IDLE (manual reset)
 | `STATE_STOPPING` | Decelerating to stop (smooth ramp) |
 | `STATE_ESTOP` | Emergency stop, motor halted instantly |
 
+## Thread Safety Patterns
+
+### Pending-Flag Pattern (UI -> Core 0)
+UI callbacks on Core 1 set volatile flags. Core 0 tasks check and execute within their cycle:
+```
+UI callback (Core 1)              Core 0 task (every 5ms)
+─────────────────              ────────────────────────
+speed_slider_set(rpm)  ──>
+  sets std::atomic sliderRPM
+  speed_request_update()  ──>  speed_apply()
+  sets speedUpdatePending         checks flag, applies speed
+```
+
+### CAS State Transition
+```
+bool control_transition_to(SystemState newState) {
+  SystemState expected = currentState.load();
+  if (!control_is_valid_transition(expected, newState)) return false;
+  return currentState.compare_exchange_strong(expected, newState);
+}
+```
+
+### Mutex-Protected Stepper
+All FastAccelStepper calls wrapped in `g_stepperMutex`:
+```
+xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
+stepper->setSpeedInMilliHz(mhz);
+stepper->applySpeedAcceleration();
+xSemaphoreGive(g_stepperMutex);
+```
+
+### Storage Mutex
+Preset vector access protected by `g_presets_mutex` semaphore. Copy-based API: `storage_get_preset()` returns a copy, never a pointer.
+
 ## Module Breakdown
 
 ### `src/motor/` — Motor Control
@@ -44,60 +82,51 @@ Any  ──> ESTOP   ──> IDLE (manual reset)
 |------|---------------|
 | `motor.cpp` | FastAccelStepper init, enable/disable, direction, ESTOP halt |
 | `motor.h` | Public API: `motor_init()`, `motor_get_stepper()`, `motor_is_running()` |
-| `speed.cpp` | RPM-to-Hz conversion, ADC pot filtering, live speed apply |
-| `speed.h` | `speed_apply()`, `speed_request_update()`, `speed_slider_set()` |
-| `microstep.cpp` | EEPROM persistence of microstepping setting |
-
-**Speed control flow:**
-```
-UI callback (Core 1)              motorTask (Core 0, every 5ms)
-─────────────────────             ─────────────────────────────
-speed_slider_set(rpm)  ──>
-  sets volatile sliderRPM
-  sets volatile buttonsActive
-  speed_request_update()  ──>    speed_apply()
-  sets speedUpdatePending           reads volatile sliderRPM
-                                     setSpeedInMilliHz()
-                                     applySpeedAcceleration()
-```
-
-**Thread safety:** `sliderRPM`, `buttonsActive`, `lastPotAdc` are `volatile` for cross-core visibility. UI never calls `speed_apply()` directly — uses `speed_request_update()` flag instead.
+| `speed.cpp` | RPM-to-Hz conversion, ADC pot filtering, direction switch, pedal |
+| `microstep.cpp` | Microstepping config persistence |
+| `calibration.cpp` | Calibration factor validation |
 
 ### `src/control/` — State Machine
 
 | File | Responsibility |
 |------|---------------|
-| `control.cpp` | State transitions, mode dispatch, controlTask (10ms cycle) |
+| `control.cpp` | State transitions (CAS), mode dispatch, controlTask cycle |
 | `control.h` | `SystemState` enum, mode control functions |
-| `modes/continuous.cpp` | Continuous rotation start/stop |
-| `modes/pulse.cpp` | Pulse mode timing logic |
-| `modes/step.cpp` | Step mode angle accumulation |
-| `modes/jog.cpp` | Jog mode (press-and-hold) |
-| `modes/timer.cpp` | Timer mode countdown |
+| `modes/` | continuous, jog, pulse, step_mode, timer |
 
 ### `src/safety/` — Emergency Stop
 
 Two-layer ESTOP architecture:
-1. **ISR layer (<0.5ms):** GPIO 33 falling-edge interrupt calls `stepper->forceStop()` and sets ENA HIGH
-2. **Task layer:** `safetyTask` monitors ESTOP pin state, transitions to `STATE_ESTOP`, updates UI
+1. **ISR layer (<0.5ms):** GPIO 34 interrupt calls `stepper->forceStop()` and sets ENA HIGH
+2. **Task layer (<5ms):** `safetyTask` debounces and transitions to STATE_ESTOP
+3. **UI layer:** `lvglTask` shows/hides red overlay based on current state
+4. **Reset:** UI sets `g_uiResetPending`, Core 0 processes via `controlTask`
 
 ### `src/storage/` — Persistence
 
 - **LittleFS** filesystem for non-volatile storage
 - **ArduinoJson** for structured data serialization
-- 16 program presets max
-- System settings (microstepping, button enable, etc.)
+- 16 program presets max, system settings
+- Debounced writes: 500ms presets, 1000ms settings
+- `wifi_process_pending()` handles all WiFi API calls (thread-safe)
+
+### `src/ble/` — Bluetooth
+
+- **NimBLE** via Arduino BLE (baked into arduino-esp32 3.3.x)
+- **ESP-Hosted** SDIO transport to ESP32-C6 co-processor
+- **NUS service:** Command (RX), State+RPM+Direction (TX)
+- **Rate limiting:** Notify at 500ms max to avoid SDIO saturation
+- **Pending flags:** Write callbacks set flags, processed in `ble_update()`
 
 ### `src/ui/` — User Interface
 
 | File | Responsibility |
 |------|---------------|
-| `display.cpp` | MIPI-DSI ST7701S init, GT911 touch init |
-| `lvgl_hal.cpp` | LVGL display driver, flush callback with manual rotation |
-| `screens.cpp` | Screen registry, show/hide management |
+| `display.cpp` | MIPI-DSI ST7701S init, GT911 touch, LEDC backlight |
+| `lvgl_hal.cpp` | LVGL display driver, flush callback, dim control |
+| `screens.cpp` | Screen registry, lazy creation, show/hide management |
 | `theme.h` | Color palette, font definitions, constants |
-| `screens/screen_main.cpp` | Main screen: gauge, buttons, pulse controls |
-| `screens/screen_*.cpp` | 12+ additional screens |
+| `screens/` | 23 screen files (main, settings, modes, etc.) |
 
 ## Display Pipeline
 
@@ -109,23 +138,17 @@ LVGL (800x480) --> flush_cb rotates pixels --> DPI panel (480x800)
 Rotation formula:
   portrait_x = landscape_y
   portrait_y = 799 - landscape_x
-
-Touch inverse:
-  landscape_x = 799 - portrait_y
-  landscape_y = portrait_x
 ```
 
-**Do NOT use `lv_display_set_rotation()`** — it causes Load access fault on ESP32-P4.
+**Do NOT use `lv_display_set_rotation()`** — it crashes ESP32-P4.
 
 ## Task Communication
 
 ```
 UI (Core 1)                         Motor (Core 0)
 ─────────────                        ─────────────
-speed_slider_set(rpm)  ──────────>  speed_get_target_rpm() reads volatile
+speed_slider_set(rpm)  ──────────>  speed_get_target_rpm() reads atomic
 speed_request_update() ──────────>  speed_apply() checks flag
-control_start_continuous() ──────>  controlTask transitions state
-                                      motorTask applies speed
+control_start_continuous() ──────>  controlTask transitions state (CAS)
+                                       motorTask applies speed
 ```
-
-No mutexes needed — worst case is one 5ms tick delay for speed updates.

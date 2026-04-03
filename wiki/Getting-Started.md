@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - **PlatformIO** Core 6.x or newer (VS Code extension recommended)
-- **Python** 3.11 (PlatformIO's bundled Python — system Python 3.14 is incompatible)
+- **Python** PlatformIO bundled Python (system Python 3.14 is incompatible)
 - **GUITION JC4880P443C** ESP32-P4 4.3" Touch Display dev board
 - **USB-C cable** for power and serial
 - **Hardware:** TB6600 driver, NEMA 23 motor, 24V PSU, 10k pot, NC E-STOP button
@@ -35,6 +35,11 @@ pio run -e esp32p4-debug
 pio run --target upload
 ```
 
+**Note:** If esptool crashes with Unicode encoding error on Windows, set `PYTHONUTF8=1`:
+```bash
+set PYTHONUTF8=1 && pio run --target upload
+```
+
 ## 4. Serial Monitor
 
 ```bash
@@ -62,23 +67,27 @@ Expected boot output:
 - [ ] Press START — motor rotates at set RPM
 - [ ] Turn potentiometer — RPM changes during rotation
 - [ ] Press +/- buttons — RPM changes during rotation
+- [ ] Toggle direction switch — motor reverses
 - [ ] Press STOP — motor decelerates and stops
-- [ ] Press E-STOP — motor halts instantly
+- [ ] Press E-STOP — motor halts instantly, red overlay appears
+- [ ] Reset E-STOP — tap overlay to dismiss
 - [ ] Try each mode: JOG, PULSE, STEP, TIMER
+- [ ] Navigate to Settings > Motor Config — enable direction switch
+- [ ] Navigate to Settings > Display — adjust brightness
 
 ## Configuration
 
 All parameters are in `src/config.h`:
 
 ```cpp
-#define MIN_RPM         0.05f     // Minimum workpiece RPM
+#define MIN_RPM         0.02f     // Minimum workpiece RPM
 #define MAX_RPM         1.0f      // Maximum workpiece RPM (temporary)
-#define GEAR_RATIO      200       // Worm gear ratio
-#define MICROSTEPS      8         // Default microstepping
-#define ACCELERATION    7000      // Steps/s^2
+#define GEAR_RATIO      199.5f    // Worm gear ratio (60 * 133 / 40)
+#define ACCELERATION    10000     // Steps/s^2
+#define START_SPEED     100       // Hz minimum for motor start
 ```
 
-**Microstepping** can also be changed from the Settings screen on the device. Remember to set the TB6600 DIP switches to match.
+Settings can also be changed from the touchscreen via **Settings > Motor Config** and are persisted to LittleFS.
 
 ## Wiring Summary
 
@@ -86,11 +95,15 @@ All parameters are in `src/config.h`:
 |-----------|----------|------------|
 | GPIO 50 | STEP (Output) | TB6600 PUL+ |
 | GPIO 51 | DIR (Output) | TB6600 DIR+ |
-| GPIO 52 | ENABLE (Output) | TB6600 EN+ |
-| GPIO 49 | ADC (Input) | 10k Pot wiper |
-| GPIO 33 | E-STOP (Input) | NC E-STOP button |
-| GPIO 28 | DIR SW (Input) | CW/CCW toggle switch |
+| GPIO 52 | ENABLE (Output) | TB6600 ENA- |
+| GPIO 49 | POT (ADC Input) | 10k Pot wiper |
+| GPIO 29 | DIR SW (Input) | CW/CCW toggle |
+| GPIO 34 | E-STOP (Input, ISR) | NC E-STOP button |
+| GPIO 35 | PEDAL POT (ADC) | Foot pedal pot (optional) |
+| GPIO 33 | PEDAL SW (Input) | Foot pedal switch (optional) |
 
-All TB6600 minus pins (PUL-, DIR-, EN-) connect to ESP32 GND.
+**Reserved pins (do NOT use):** GPIO 28 (C6_U0TXD), GPIO 32 (C6_U0RXD) — PCB-routed to C6 co-processor for WiFi/BLE.
+
+All TB6600 minus pins (PUL-, DIR-, ENA-) connect to ESP32 GND.
 
 See [[Hardware Setup]] for full details with diagrams.

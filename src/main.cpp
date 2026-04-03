@@ -18,6 +18,8 @@
 
 extern std::atomic<bool> motorConfigApplyPending;
 #include "safety/safety.h"
+
+volatile bool g_wakePending = false;
 #include "storage/storage.h"
 #include "ble/ble.h"
 extern bool wifiEnabled;

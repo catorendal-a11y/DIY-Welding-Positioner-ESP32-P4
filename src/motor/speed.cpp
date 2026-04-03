@@ -34,6 +34,8 @@ static volatile float lastPotAdc = 2047.5f;      // Last ADC when buttons took o
 static volatile bool pedalEnabled = false;
 static float pedalFiltered = 2047.5f;
 static std::atomic<float> cachedTargetRpm{0.0f};
+static uint8_t lastDirSwitchState = 1;  // Cached dir switch for change detection
+#define POT_WAKE_THRESHOLD 30  // ADC counts change to trigger wake
 
 // ───────────────────────────────────────────────────────────────────────────────
 // CONVERSION FUNCTIONS
@@ -65,16 +67,29 @@ void speed_init() {
   delay(10);
   adcFiltered = (float)analogRead(PIN_POT);
   pedalFiltered = (float)analogRead(PIN_PEDAL);
+  lastDirSwitchState = digitalRead(PIN_DIR_SWITCH);
   LOG_I("Speed control init: pot=%.0f pedal=%.0f", adcFiltered, pedalFiltered);
 }
 
 void speed_update_adc() {
   float raw = (float)analogRead(PIN_POT);
+  float prev = adcFiltered;
   adcFiltered = IIR_ALPHA * raw + (1.0f - IIR_ALPHA) * adcFiltered;
+  if (fabsf(adcFiltered - prev) > POT_WAKE_THRESHOLD) {
+    g_wakePending = true;
+  }
 
   if (pedalEnabled) {
     float praw = (float)analogRead(PIN_PEDAL);
     pedalFiltered = IIR_ALPHA * praw + (1.0f - IIR_ALPHA) * pedalFiltered;
+  }
+
+  if (g_dir_switch_cache) {
+    uint8_t state = digitalRead(PIN_DIR_SWITCH);
+    if (state != lastDirSwitchState) {
+      lastDirSwitchState = state;
+      g_wakePending = true;
+    }
   }
 }
 

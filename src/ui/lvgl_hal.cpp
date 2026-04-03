@@ -29,6 +29,12 @@ void dim_reset_activity() {
 void dim_update() {
   if (g_settings.dim_timeout == 0) return;
 
+  if (g_wakePending) {
+    g_wakePending = false;
+    dim_reset_activity();
+    return;
+  }
+
   if (isDimmed) {
     if (display_touch) {
       uint16_t tx[1], ty[1], ts[1];

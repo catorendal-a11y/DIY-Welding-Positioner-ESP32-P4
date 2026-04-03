@@ -104,6 +104,11 @@
 #define WIFI_PASS ""
 
 // ───────────────────────────────────────────────────────────────────────────────
+// CROSS-CORE FLAGS
+// ───────────────────────────────────────────────────────────────────────────────
+volatile extern bool g_wakePending;  // Set by Core 0 (pot/dir change), cleared by Core 1 (dim_update)
+
+// ───────────────────────────────────────────────────────────────────────────────
 // PROTECTED GPIO — NEVER USE (ESP32-P4 specific)
 // ───────────────────────────────────────────────────────────────────────────────
 // GPIO used by MIPI-DSI interface: reserved by hardware

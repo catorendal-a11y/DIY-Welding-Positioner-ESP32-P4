@@ -15,8 +15,8 @@
       <path d="M40 0L0 0 0 40" fill="none" stroke="#151b22" stroke-width="0.5"/>
     </pattern>
     <linearGradient id="bg-grad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#010409"/>
-      <stop offset="100%" stop-color="#000204"/>
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#0a0e14"/>
     </linearGradient>
   </defs>
 
@@ -43,8 +43,8 @@
     .pot-glow { animation: potWiper 3s ease-in-out infinite; }
   </style>
 
-  <rect x="0" y="0" width="1340" height="1250" fill="url(#bg-grad)"/>
-  <rect x="0" y="0" width="1340" height="1250" fill="url(#grid)" opacity="0.4"/>
+  <rect x="0" y="0" width="1340" height="1250" fill="#0d1117" stroke="#30363d" stroke-width="2" rx="6"/>
+  <rect x="0" y="0" width="1340" height="1250" fill="url(#grid)" opacity="0.3"/>
 
 <g transform="translate(50,0)">
 

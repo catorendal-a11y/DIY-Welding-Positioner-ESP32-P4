@@ -68,7 +68,7 @@ static lv_obj_t* make_footer_btn(lv_obj_t* parent, int x, int y, int w, int h,
   lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, nullptr);
   lv_obj_t* lbl = lv_label_create(btn);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_font(lbl, SET_BTN_FONT, 0);
   lv_obj_set_style_text_color(lbl, COL_TEXT, 0);
   lv_obj_center(lbl);
   return btn;
@@ -88,7 +88,7 @@ static lv_obj_t* make_accent_btn(lv_obj_t* parent, int x, int y, int w, int h,
   lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, nullptr);
   lv_obj_t* lbl = lv_label_create(btn);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_font(lbl, SET_BTN_FONT, 0);
   lv_obj_set_style_text_color(lbl, COL_ACCENT, 0);
   lv_obj_center(lbl);
   return btn;
@@ -123,7 +123,7 @@ static lv_obj_t* make_sep(lv_obj_t* parent, int x, int y, int w) {
 static lv_obj_t* make_key_label(lv_obj_t* parent, int x, int y, const char* text) {
   lv_obj_t* lbl = lv_label_create(parent);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, FONT_NORMAL, 0);
+  lv_obj_set_style_text_font(lbl, SET_KEY_FONT, 0);
   lv_obj_set_style_text_color(lbl, COL_TEXT_DIM, 0);
   lv_obj_set_pos(lbl, x, y);
   return lbl;
@@ -132,7 +132,7 @@ static lv_obj_t* make_key_label(lv_obj_t* parent, int x, int y, const char* text
 static lv_obj_t* make_val_label(lv_obj_t* parent, int x, int y, const char* text) {
   lv_obj_t* lbl = lv_label_create(parent);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_font(lbl, SET_VAL_FONT, 0);
   lv_obj_set_style_text_color(lbl, COL_TEXT, 0);
   lv_obj_set_pos(lbl, x, y);
   return lbl;
@@ -156,7 +156,7 @@ static lv_obj_t* make_bar(lv_obj_t* parent, int x, int y, int w, int h, lv_color
 static lv_obj_t* make_section_label(lv_obj_t* parent, int x, int y, const char* text) {
   lv_obj_t* lbl = lv_label_create(parent);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, FONT_BODY, 0);
+  lv_obj_set_style_text_font(lbl, SET_SECTION_FONT, 0);
   lv_obj_set_style_text_color(lbl, COL_TEXT_VDIM, 0);
   lv_obj_set_pos(lbl, x, y);
   return lbl;
@@ -222,7 +222,7 @@ void screen_sysinfo_create() {
   int heapPct = totalHeap > 0 ? (int)((uint64_t)freeHeap * 100 / totalHeap) : 0;
   snprintf(buf, sizeof(buf), "%u KB", (unsigned)(freeHeap / 1024));
   heapValueLabel = make_val_label(screen, valX, y, buf);
-  heapBar = make_bar(screen, barX, y + 3, barW, 10, COL_GREEN);
+  heapBar = make_bar(screen, barX, y + 3, barW, SET_BAR_H, COL_GREEN);
   lv_bar_set_value(heapBar, heapPct, LV_ANIM_OFF);
   y += rowH;
 
@@ -233,7 +233,7 @@ void screen_sysinfo_create() {
   int psramPct = psramTotal > 0 ? (int)((uint64_t)heap_caps_get_free_size(MALLOC_CAP_SPIRAM) * 100 / psramTotal) : 0;
   snprintf(buf, sizeof(buf), "%.1f MB", (double)psramSize / (1024.0 * 1024.0));
   psramValueLabel = make_val_label(screen, valX, y, buf);
-  psramBar = make_bar(screen, barX, y + 3, barW, 10, COL_GREEN);
+  psramBar = make_bar(screen, barX, y + 3, barW, SET_BAR_H, COL_GREEN);
   lv_bar_set_value(psramBar, psramPct, LV_ANIM_OFF);
   y += rowH;
 
@@ -248,7 +248,7 @@ void screen_sysinfo_create() {
   int flashPct = appTotal > 0 ? (int)((uint64_t)appUsed * 100 / appTotal) : 0;
   snprintf(buf, sizeof(buf), "%.1f MB", (double)flashTotal / (1024.0 * 1024.0));
   flashValueLabel = make_val_label(screen, valX, y, buf);
-  flashBar = make_bar(screen, barX, y + 3, barW, 10, lv_color_hex(0xFF9500));
+  flashBar = make_bar(screen, barX, y + 3, barW, SET_BAR_H, lv_color_hex(0xFF9500));
   lv_bar_set_value(flashBar, flashPct, LV_ANIM_OFF);
   y += rowH + 4;
 
@@ -294,20 +294,20 @@ void screen_sysinfo_create() {
   int smallBarW = 100;
   make_key_label(screen, keyX, y, "Core 0");
   core0Label = make_val_label(screen, valX, y, "--");
-  core0Bar = make_bar(screen, valX + 80, y + 3, smallBarW, 10, COL_GREEN);
+  core0Bar = make_bar(screen, valX + 80, y + 3, smallBarW, SET_BAR_H, COL_GREEN);
   y += rowH;
 
   make_key_label(screen, keyX, y, "Core 1");
   core1Label = make_val_label(screen, valX, y, "--");
-  core1Bar = make_bar(screen, valX + 80, y + 3, smallBarW, 10, COL_GREEN);
+  core1Bar = make_bar(screen, valX + 80, y + 3, smallBarW, SET_BAR_H, COL_GREEN);
   y += rowH;
 
   make_key_label(screen, keyX, y, "Temperature");
   tempLabel = make_val_label(screen, valX, y, "-- C");
 
-  int footerY = 440;
-  int footerH = 36;
-  int btnW = 120;
+  int footerY = SET_FOOTER_Y;
+  int footerH = SET_FOOTER_H;
+  int btnW = SET_BTN_MIN_W;
   int gap = 8;
   make_footer_btn(screen, PX, footerY, btnW, footerH, "BACK", back_cb);
   make_footer_btn(screen, PX + btnW + gap, footerY, btnW, footerH, "REBOOT", reboot_cb);

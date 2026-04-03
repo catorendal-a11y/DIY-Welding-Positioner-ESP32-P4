@@ -22,13 +22,13 @@ static lv_obj_t* make_info_row(lv_obj_t* parent, int x, int y, int w, int h,
 
   lv_obj_t* keyLbl = lv_label_create(row);
   lv_label_set_text(keyLbl, key);
-  lv_obj_set_style_text_font(keyLbl, FONT_NORMAL, 0);
+  lv_obj_set_style_text_font(keyLbl, SET_KEY_FONT, 0);
   lv_obj_set_style_text_color(keyLbl, COL_TEXT_DIM, 0);
   lv_obj_align(keyLbl, LV_ALIGN_LEFT_MID, 12, 0);
 
   lv_obj_t* valLbl = lv_label_create(row);
   lv_label_set_text(valLbl, value);
-  lv_obj_set_style_text_font(valLbl, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_font(valLbl, SET_VAL_FONT, 0);
   lv_obj_set_style_text_color(valLbl, COL_TEXT, 0);
   lv_obj_align(valLbl, LV_ALIGN_LEFT_MID, 160, 0);
 
@@ -113,8 +113,8 @@ void screen_about_create() {
   make_info_row(screen, PX, y, CW, 32, "MOTOR", "TB6600 + NEMA 23, 200:1 worm gear");
   y += 36;
 
-  int footerY = 440;
-  int footerH = 36;
+  int footerY = SET_FOOTER_Y;
+  int footerH = SET_FOOTER_H;
   int btnW = 160;
 
   lv_obj_t* backFooter = lv_button_create(screen);

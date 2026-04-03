@@ -262,7 +262,7 @@ static lv_obj_t* make_footer_btn(lv_obj_t* parent, int x, int y, int w, int h,
   lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, nullptr);
   lv_obj_t* lbl = lv_label_create(btn);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_font(lbl, SET_BTN_FONT, 0);
   lv_obj_set_style_text_color(lbl, COL_TEXT, 0);
   lv_obj_center(lbl);
   return btn;
@@ -282,7 +282,7 @@ static lv_obj_t* make_accent_btn(lv_obj_t* parent, int x, int y, int w, int h,
   lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, nullptr);
   lv_obj_t* lbl = lv_label_create(btn);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_font(lbl, SET_BTN_FONT, 0);
   lv_obj_set_style_text_color(lbl, COL_ACCENT, 0);
   lv_obj_center(lbl);
   return btn;
@@ -315,7 +315,7 @@ void screen_wifi_create() {
   const int CONTENT_W = SCREEN_W - 2 * PX;
 
   lv_obj_t* header = lv_obj_create(screen);
-  lv_obj_set_size(header, SCREEN_W, 34);
+  lv_obj_set_size(header, SCREEN_W, SET_HEADER_H);
   lv_obj_set_pos(header, 0, 0);
   lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
   lv_obj_set_style_pad_all(header, 0, 0);
@@ -327,12 +327,12 @@ void screen_wifi_create() {
   lv_label_set_text(title, "WIFI");
   lv_obj_set_style_text_font(title, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(title, COL_ACCENT, 0);
-  lv_obj_set_pos(title, PX, 8);
+  lv_obj_set_pos(title, PX, 6);
 
-  int y = 34;
+  int y = SET_HEADER_H;
 
   lv_obj_t* toggleRow = lv_obj_create(screen);
-  lv_obj_set_size(toggleRow, CONTENT_W, 62);
+  lv_obj_set_size(toggleRow, CONTENT_W, SET_ROW_H);
   lv_obj_set_pos(toggleRow, PX, y);
   lv_obj_set_style_bg_color(toggleRow, COL_BG, 0);
   lv_obj_set_style_border_width(toggleRow, 0, 0);
@@ -348,9 +348,9 @@ void screen_wifi_create() {
   lv_obj_align(wifiLabel, LV_ALIGN_LEFT_MID, 8, 0);
 
   wifiToggleSw = lv_button_create(toggleRow);
-  lv_obj_set_size(wifiToggleSw, 96, 48);
+  lv_obj_set_size(wifiToggleSw, SET_TOGGLE_W, SET_TOGGLE_H);
   lv_obj_align(wifiToggleSw, LV_ALIGN_RIGHT_MID, -8, 0);
-  lv_obj_set_style_radius(wifiToggleSw, 12, 0);
+  lv_obj_set_style_radius(wifiToggleSw, SET_TOGGLE_R, 0);
   lv_obj_set_style_border_width(wifiToggleSw, 0, 0);
   lv_obj_set_style_shadow_width(wifiToggleSw, 0, 0);
   lv_obj_set_style_pad_all(wifiToggleSw, 0, 0);
@@ -360,15 +360,15 @@ void screen_wifi_create() {
 
   wifiToggleLbl = lv_label_create(wifiToggleSw);
   lv_label_set_text(wifiToggleLbl, wifiEnabled ? "ON" : "OFF");
-  lv_obj_set_style_text_font(wifiToggleLbl, &lv_font_montserrat_18, 0);
+  lv_obj_set_style_text_font(wifiToggleLbl, FONT_BTN, 0);
   lv_obj_set_style_text_color(wifiToggleLbl, lv_color_white(), 0);
   lv_obj_center(wifiToggleLbl);
 
-  y += 62;
+  y += SET_ROW_H;
 
   lv_obj_t* connSecLabel = lv_label_create(screen);
   lv_label_set_text(connSecLabel, "CONNECTED");
-  lv_obj_set_style_text_font(connSecLabel, FONT_BODY, 0);
+  lv_obj_set_style_text_font(connSecLabel, SET_SECTION_FONT, 0);
   lv_obj_set_style_text_color(connSecLabel, COL_TEXT_VDIM, 0);
   lv_obj_set_pos(connSecLabel, PX, y + 3);
   y += 16;
@@ -410,12 +410,12 @@ void screen_wifi_create() {
 
   lv_obj_t* availSecLabel = lv_label_create(screen);
   lv_label_set_text(availSecLabel, "AVAILABLE");
-  lv_obj_set_style_text_font(availSecLabel, FONT_BODY, 0);
+  lv_obj_set_style_text_font(availSecLabel, SET_SECTION_FONT, 0);
   lv_obj_set_style_text_color(availSecLabel, COL_TEXT_VDIM, 0);
   lv_obj_set_pos(availSecLabel, PX, y + 3);
   y += 16;
 
-  int listH = 436 - y - 4;
+  int listH = SET_FOOTER_Y - y - 4;
   networkList = lv_obj_create(screen);
   lv_obj_set_size(networkList, CONTENT_W, listH);
   lv_obj_set_pos(networkList, PX, y);
@@ -428,9 +428,9 @@ void screen_wifi_create() {
   lv_obj_add_flag(networkList, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_scrollbar_mode(networkList, LV_SCROLLBAR_MODE_OFF);
 
-  int footerY = 434;
-  int footerH = 40;
-  int btnW = 144;
+  int footerY = SET_FOOTER_Y;
+  int footerH = SET_FOOTER_H;
+  int btnW = SET_BTN_MIN_W;
   int gap = 10;
 
   make_footer_btn(screen, PX, footerY, btnW, footerH, "BACK", back_cb);

@@ -13,7 +13,7 @@ static void nav_click_cb(lv_event_t* e) {
 
 static void create_nav_item(lv_obj_t* parent, int y, const char* label, ScreenId dest) {
   lv_obj_t* row = lv_obj_create(parent);
-  lv_obj_set_size(row, 776, 52);
+  lv_obj_set_size(row, 776, SET_ROW_H);
   lv_obj_set_pos(row, 12, y);
   lv_obj_set_style_bg_color(row, lv_color_hex(0x181818), 0);
   lv_obj_set_style_border_color(row, lv_color_hex(0x1E1E1E), 0);
@@ -33,7 +33,7 @@ static void create_nav_item(lv_obj_t* parent, int y, const char* label, ScreenId
   lv_obj_t* chevron = lv_label_create(row);
   lv_label_set_text(chevron, ">");
   lv_obj_set_style_text_font(chevron, FONT_BTN, 0);
-  lv_obj_set_style_text_color(chevron, lv_color_hex(0x1A1A1A), 0);
+  lv_obj_set_style_text_color(chevron, SET_CHEVRON_COL, 0);
   lv_obj_align(chevron, LV_ALIGN_RIGHT_MID, -16, 0);
 }
 
@@ -43,7 +43,7 @@ void screen_settings_create() {
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
   lv_obj_t* header = lv_obj_create(screen);
-  lv_obj_set_size(header, SCREEN_W, 28);
+  lv_obj_set_size(header, SCREEN_W, SET_HEADER_H);
   lv_obj_set_pos(header, 0, 0);
   lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
   lv_obj_set_style_pad_all(header, 0, 0);
@@ -53,13 +53,13 @@ void screen_settings_create() {
 
   lv_obj_t* title = lv_label_create(header);
   lv_label_set_text(title, "SETTINGS");
-  lv_obj_set_style_text_font(title, FONT_NORMAL, 0);
+  lv_obj_set_style_text_font(title, SET_HEADER_FONT, 0);
   lv_obj_set_style_text_color(title, COL_ACCENT, 0);
-  lv_obj_set_pos(title, PAD_X, 7);
+  lv_obj_set_pos(title, PAD_X, 6);
 
-  const int itemH = 52;
+  const int itemH = SET_ROW_H;
   const int gap = 5;
-  const int startY = 36;
+  const int startY = SET_HEADER_H + 8;
 
   create_nav_item(screen, startY, "WiFi Settings", SCREEN_WIFI);
   create_nav_item(screen, startY + (itemH + gap) * 1, "Bluetooth Settings", SCREEN_BT);
@@ -69,8 +69,8 @@ void screen_settings_create() {
   create_nav_item(screen, startY + (itemH + gap) * 5, "System Info", SCREEN_SYSINFO);
   create_nav_item(screen, startY + (itemH + gap) * 6, "About", SCREEN_ABOUT);
 
-  int footerY = 440;
-  int footerH = 36;
+  int footerY = SET_FOOTER_Y;
+  int footerH = SET_FOOTER_H;
   int btnW = 160;
 
   lv_obj_t* backFooter = lv_button_create(screen);

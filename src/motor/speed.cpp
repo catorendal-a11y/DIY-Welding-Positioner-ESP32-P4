@@ -145,10 +145,16 @@ void speed_request_update() {
 // DIRECTION CONTROL
 // ───────────────────────────────────────────────────────────────────────────────
 Direction speed_get_direction() {
+  Direction dir;
   if (g_dir_switch_cache) {
-    return digitalRead(PIN_DIR_SWITCH) ? DIR_CW : DIR_CCW;
+    dir = digitalRead(PIN_DIR_SWITCH) ? DIR_CW : DIR_CCW;
+  } else {
+    dir = currentDir;
   }
-  return currentDir;
+  if (g_settings.invert_direction) {
+    dir = (dir == DIR_CW) ? DIR_CCW : DIR_CW;
+  }
+  return dir;
 }
 
 void speed_set_direction(Direction dir) {

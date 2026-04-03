@@ -5,7 +5,7 @@
 
 std::vector<Preset> g_presets;
 SemaphoreHandle_t g_presets_mutex;
-SystemSettings g_settings = { 5000, 8, 1.0f, true, 150, 60, true, 0, "", "", BLE_DEVICE_NAME_DEFAULT, true, true, 1 };
+SystemSettings g_settings = { 5000, 8, 1.0f, true, 150, 60, true, false, 0, "", "", BLE_DEVICE_NAME_DEFAULT, true, true, 3, 1 };
 volatile bool g_dir_switch_cache = true;
 
 static volatile bool savePending = false;
@@ -181,6 +181,7 @@ bool storage_load_settings() {
     g_settings.brightness = constrain(doc["brightness"] | 150, (uint8_t)10, (uint8_t)255);
     g_settings.dim_timeout = doc["dim_timeout"] | 60;
     g_settings.dir_switch_enabled = doc["dir_switch_enabled"] | true;
+    g_settings.invert_direction = doc["invert_direction"] | false;
     g_settings.accent_color = constrain(doc["accent_color"] | 0, (uint8_t)0, (uint8_t)7);
     strlcpy(g_settings.wifi_ssid, doc["wifi_ssid"] | WIFI_SSID, sizeof(g_settings.wifi_ssid));
     strlcpy(g_settings.wifi_pass, doc["wifi_pass"] | WIFI_PASS, sizeof(g_settings.wifi_pass));
@@ -211,6 +212,7 @@ static bool storage_save_settings_internal() {
     doc["brightness"] = g_settings.brightness;
     doc["dim_timeout"] = g_settings.dim_timeout;
     doc["dir_switch_enabled"] = g_settings.dir_switch_enabled;
+    doc["invert_direction"] = g_settings.invert_direction;
     doc["accent_color"] = g_settings.accent_color;
     doc["wifi_ssid"] = g_settings.wifi_ssid;
     doc["wifi_pass"] = g_settings.wifi_pass;
@@ -291,7 +293,7 @@ void storage_get_usage(size_t* used, size_t* total) {
 void storage_format() {
     xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
     g_presets.clear();
-    g_settings = { 5000, 8, 1.0f, true, 150, 60, false, 0, "", "", BLE_DEVICE_NAME_DEFAULT, true, true, 1 };
+    g_settings = SystemSettings{ 5000, 8, 1.0f, true, 150, 60, false, false, 0, "", "", BLE_DEVICE_NAME_DEFAULT, true, true, 3, 1 };
     LittleFS.format();
     xSemaphoreGive(g_presets_mutex);
     LOG_I("Storage formatted - all data erased");

@@ -141,6 +141,28 @@ uint8_t theme_get_count();
 #define BOTTOM_ROW_H    36
 
 // ───────────────────────────────────────────────────────────────────────────────
+// SETTINGS SCREEN LAYOUT (shared across all settings sub-screens)
+// ───────────────────────────────────────────────────────────────────────────────
+#define SET_HEADER_H       28
+#define SET_HEADER_FONT    FONT_SUBTITLE
+#define SET_ROW_H          48
+#define SET_TOGGLE_W       80
+#define SET_TOGGLE_H       40
+#define SET_TOGGLE_R       12
+#define SET_FOOTER_Y       440
+#define SET_FOOTER_H       36
+#define SET_BTN_MIN_W      140
+#define SET_CYCLE_W        110
+#define SET_CYCLE_H        36
+#define SET_SLIDER_H       20
+#define SET_BAR_H          10
+#define SET_SECTION_FONT   FONT_NORMAL
+#define SET_KEY_FONT       FONT_NORMAL
+#define SET_VAL_FONT       FONT_SUBTITLE
+#define SET_BTN_FONT       FONT_SUBTITLE
+#define SET_CHEVRON_COL    COL_TEXT_VDIM
+
+// ───────────────────────────────────────────────────────────────────────────────
 // FONT SIZES — Montserrat (closest match to Courier New monospace)
 // ───────────────────────────────────────────────────────────────────────────────
 #define FONT_TINY           &lv_font_montserrat_12

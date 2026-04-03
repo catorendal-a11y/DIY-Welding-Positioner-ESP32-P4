@@ -107,7 +107,7 @@ void screen_calibration_create() {
 
   lv_obj_t* encSecLabel = lv_label_create(leftCard);
   lv_label_set_text(encSecLabel, "ENCODER ZERO");
-  lv_obj_set_style_text_font(encSecLabel, FONT_BODY, 0);
+  lv_obj_set_style_text_font(encSecLabel, SET_KEY_FONT, 0);
   lv_obj_set_style_text_color(encSecLabel, COL_TEXT_VDIM, 0);
   lv_obj_set_pos(encSecLabel, 12, 8);
 
@@ -131,7 +131,7 @@ void screen_calibration_create() {
 
   lv_obj_t* spdSecLabel = lv_label_create(rightCard);
   lv_label_set_text(spdSecLabel, "STEPS/DEGREE");
-  lv_obj_set_style_text_font(spdSecLabel, FONT_BODY, 0);
+  lv_obj_set_style_text_font(spdSecLabel, SET_KEY_FONT, 0);
   lv_obj_set_style_text_color(spdSecLabel, COL_TEXT_VDIM, 0);
   lv_obj_set_pos(spdSecLabel, 12, 8);
 
@@ -206,7 +206,7 @@ void screen_calibration_create() {
 
   lv_obj_t* errLabel = lv_label_create(infoBar);
   lv_label_set_text(errLabel, "ERROR:");
-  lv_obj_set_style_text_font(errLabel, FONT_BODY, 0);
+  lv_obj_set_style_text_font(errLabel, SET_KEY_FONT, 0);
   lv_obj_set_style_text_color(errLabel, COL_TEXT_DIM, 0);
   lv_obj_set_pos(errLabel, 12, 6);
 
@@ -218,7 +218,7 @@ void screen_calibration_create() {
 
   lv_obj_t* tolLabel = lv_label_create(infoBar);
   lv_label_set_text(tolLabel, "TOLERANCE:");
-  lv_obj_set_style_text_font(tolLabel, FONT_BODY, 0);
+  lv_obj_set_style_text_font(tolLabel, SET_KEY_FONT, 0);
   lv_obj_set_style_text_color(tolLabel, COL_TEXT_DIM, 0);
   lv_obj_set_pos(tolLabel, 200, 6);
 
@@ -230,7 +230,7 @@ void screen_calibration_create() {
 
   lv_obj_t* resLabel = lv_label_create(infoBar);
   lv_label_set_text(resLabel, "RESULT:");
-  lv_obj_set_style_text_font(resLabel, FONT_BODY, 0);
+  lv_obj_set_style_text_font(resLabel, SET_KEY_FONT, 0);
   lv_obj_set_style_text_color(resLabel, COL_TEXT_DIM, 0);
   lv_obj_set_pos(resLabel, 430, 6);
 
@@ -251,8 +251,8 @@ void screen_calibration_create() {
   lv_obj_set_style_radius(progressBar, 2, 0);
   lv_obj_remove_flag(progressBar, LV_OBJ_FLAG_CLICKABLE);
 
-  int footerY = 440;
-  int footerH = 36;
+  int footerY = SET_FOOTER_Y;
+  int footerH = SET_FOOTER_H;
   int btnW = 160;
   int gap = 8;
 

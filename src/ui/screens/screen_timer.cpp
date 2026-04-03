@@ -21,6 +21,7 @@ static uint32_t countdownStartMs = 0;
 static int countdownRemaining = 0;
 static int lastDisplayedSec = -1;
 static uint32_t pulseStartMs = 0;
+static volatile bool backPending = false;
 
 static lv_obj_t* arcRing = nullptr;
 static lv_obj_t* bigNumberLabel = nullptr;
@@ -45,9 +46,7 @@ static lv_color_t countdown_color(int remaining, int total) {
 static void back_event_cb(lv_event_t* e) {
   countingDown = false;
   startPending = false;
-  g_settings.countdown_seconds = (uint8_t)countdownSec;
-  storage_save_settings();
-  screens_show(SCREEN_MAIN);
+  backPending = true;
 }
 
 static void sec_adj_cb(lv_event_t* e) {
@@ -275,6 +274,16 @@ void screen_timer_create() {
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_timer_update() {
   if (!screens_is_active(SCREEN_TIMER)) return;
+
+  if (backPending) {
+    backPending = false;
+    countingDown = false;
+    startPending = false;
+    g_settings.countdown_seconds = (uint8_t)countdownSec;
+    storage_save_settings();
+    screens_show(SCREEN_MAIN);
+    return;
+  }
 
   // Handle pending start (countdown reached 0)
   if (startPending) {

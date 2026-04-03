@@ -111,7 +111,7 @@ static lv_obj_t* make_cycle_btn(lv_obj_t* parent, int x, int y, int w, int h,
   lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, nullptr);
   lv_obj_t* lbl = lv_label_create(btn);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_font(lbl, FONT_BTN, 0);
   lv_obj_set_style_text_color(lbl, COL_TEXT, 0);
   lv_obj_center(lbl);
   return btn;
@@ -151,22 +151,22 @@ void screen_display_create() {
 
   lv_obj_t* brightTitleLbl = lv_label_create(screen);
   lv_label_set_text(brightTitleLbl, "BRIGHTNESS");
-  lv_obj_set_style_text_font(brightTitleLbl, FONT_NORMAL, 0);
+  lv_obj_set_style_text_font(brightTitleLbl, SET_KEY_FONT, 0);
   lv_obj_set_style_text_color(brightTitleLbl, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(brightTitleLbl, PX + 8, y + 12);
+  lv_obj_set_pos(brightTitleLbl, PX + 8, y + 14);
 
   int brightPct = (int)((uint32_t)g_settings.brightness * 100 / 255);
   brightnessValueLabel = lv_label_create(screen);
   char brightBuf[16];
   snprintf(brightBuf, sizeof(brightBuf), "%d%%", brightPct);
   lv_label_set_text(brightnessValueLabel, brightBuf);
-  lv_obj_set_style_text_font(brightnessValueLabel, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_font(brightnessValueLabel, FONT_BTN, 0);
   lv_obj_set_style_text_color(brightnessValueLabel, COL_TEXT_WHITE, 0);
-  lv_obj_set_pos(brightnessValueLabel, PX + 120, y + 10);
+  lv_obj_set_pos(brightnessValueLabel, PX + 120, y + 12);
 
   brightnessSlider = lv_slider_create(screen);
-  lv_obj_set_size(brightnessSlider, 300, 20);
-  lv_obj_set_pos(brightnessSlider, PX + 200, y + 10);
+  lv_obj_set_size(brightnessSlider, 300, 24);
+  lv_obj_set_pos(brightnessSlider, PX + 200, y + 12);
   lv_slider_set_range(brightnessSlider, 20, 100);
   int initPct = brightPct < 20 ? 20 : brightPct;
   lv_slider_set_value(brightnessSlider, initPct, LV_ANIM_OFF);
@@ -188,7 +188,7 @@ void screen_display_create() {
   y += 48;
 
   lv_obj_t* dimRow = lv_obj_create(screen);
-  lv_obj_set_size(dimRow, CONTENT_W, 40);
+  lv_obj_set_size(dimRow, CONTENT_W, SET_ROW_H);
   lv_obj_set_pos(dimRow, PX, y);
   lv_obj_set_style_bg_color(dimRow, COL_BG_ROW, 0);
   lv_obj_set_style_border_color(dimRow, COL_BORDER_ROW, 0);
@@ -201,18 +201,18 @@ void screen_display_create() {
 
   lv_obj_t* dimTitleLbl = lv_label_create(dimRow);
   lv_label_set_text(dimTitleLbl, "DIM TIMEOUT");
-  lv_obj_set_style_text_font(dimTitleLbl, FONT_NORMAL, 0);
+  lv_obj_set_style_text_font(dimTitleLbl, SET_KEY_FONT, 0);
   lv_obj_set_style_text_color(dimTitleLbl, COL_TEXT_DIM, 0);
   lv_obj_align(dimTitleLbl, LV_ALIGN_LEFT_MID, 12, 0);
 
-  dimBtn = make_cycle_btn(dimRow, CONTENT_W - 120, 6, 100, 28,
+  dimBtn = make_cycle_btn(dimRow, CONTENT_W - 130, 8, 110, 36,
                            dimStrings[currentDimIdx], dim_cycle_cb);
   dimBtnLabel = lv_obj_get_child(dimBtn, 0);
 
-  y += 48;
+  y += SET_ROW_H + 10;
 
   lv_obj_t* themeRow = lv_obj_create(screen);
-  lv_obj_set_size(themeRow, CONTENT_W, 40);
+  lv_obj_set_size(themeRow, CONTENT_W, SET_ROW_H);
   lv_obj_set_pos(themeRow, PX, y);
   lv_obj_set_style_bg_color(themeRow, COL_BG, 0);
   lv_obj_set_style_border_width(themeRow, 0, 0);
@@ -223,18 +223,18 @@ void screen_display_create() {
 
   lv_obj_t* themeTitleLbl = lv_label_create(themeRow);
   lv_label_set_text(themeTitleLbl, "ACCENT COLOR");
-  lv_obj_set_style_text_font(themeTitleLbl, FONT_NORMAL, 0);
+  lv_obj_set_style_text_font(themeTitleLbl, SET_KEY_FONT, 0);
   lv_obj_set_style_text_color(themeTitleLbl, COL_TEXT_DIM, 0);
-  lv_obj_align(themeTitleLbl, LV_ALIGN_LEFT_MID, 8, 0);
+  lv_obj_align(themeTitleLbl, LV_ALIGN_LEFT_MID, 12, 0);
 
-  themeBtn = make_cycle_btn(themeRow, CONTENT_W - 120, 6, 100, 28,
-                             theme_get_name(g_settings.accent_color), theme_cycle_cb);
+  themeBtn = make_cycle_btn(themeRow, CONTENT_W - 130, 8, 110, 36,
+                              theme_get_name(g_settings.accent_color), theme_cycle_cb);
   themeBtnLabel = lv_obj_get_child(themeBtn, 0);
 
-  y += 48;
+  y += SET_ROW_H + 10;
 
   lv_obj_t* infoBar = lv_obj_create(screen);
-  lv_obj_set_size(infoBar, CONTENT_W, 28);
+  lv_obj_set_size(infoBar, CONTENT_W, 36);
   lv_obj_set_pos(infoBar, PX, y);
   lv_obj_set_style_bg_color(infoBar, COL_BG_DIM, 0);
   lv_obj_set_style_border_width(infoBar, 0, 0);
@@ -244,13 +244,13 @@ void screen_display_create() {
   lv_obj_remove_flag(infoBar, LV_OBJ_FLAG_CLICKABLE);
 
   infoLabel = lv_label_create(infoBar);
-  lv_obj_set_style_text_font(infoLabel, FONT_BODY, 0);
+  lv_obj_set_style_text_font(infoLabel, SET_KEY_FONT, 0);
   lv_obj_set_style_text_color(infoLabel, COL_TEXT_DIM, 0);
   lv_obj_align(infoLabel, LV_ALIGN_LEFT_MID, 8, 0);
   update_info_text();
 
-  int footerY = 440;
-  int footerH = 36;
+  int footerY = SET_FOOTER_Y;
+  int footerH = SET_FOOTER_H;
   int btnW = 160;
   int gap = 8;
 

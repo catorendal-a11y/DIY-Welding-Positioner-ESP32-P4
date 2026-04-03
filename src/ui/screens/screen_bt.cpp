@@ -172,7 +172,7 @@ static lv_obj_t* make_footer_btn(lv_obj_t* parent, int x, int y, int w, int h,
   lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, nullptr);
   lv_obj_t* lbl = lv_label_create(btn);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_font(lbl, SET_BTN_FONT, 0);
   lv_obj_set_style_text_color(lbl, COL_TEXT, 0);
   lv_obj_center(lbl);
   return btn;
@@ -192,7 +192,7 @@ static lv_obj_t* make_accent_btn(lv_obj_t* parent, int x, int y, int w, int h,
   lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, nullptr);
   lv_obj_t* lbl = lv_label_create(btn);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_font(lbl, SET_BTN_FONT, 0);
   lv_obj_set_style_text_color(lbl, COL_ACCENT, 0);
   lv_obj_center(lbl);
   return btn;
@@ -241,7 +241,7 @@ void screen_bt_create() {
   int y = 28;
 
   lv_obj_t* toggleRow = lv_obj_create(screen);
-  lv_obj_set_size(toggleRow, CW, 52);
+  lv_obj_set_size(toggleRow, CW, SET_ROW_H);
   lv_obj_set_pos(toggleRow, PX, y);
   lv_obj_set_style_bg_color(toggleRow, COL_BG, 0);
   lv_obj_set_style_border_width(toggleRow, 0, 0);
@@ -270,14 +270,14 @@ void screen_bt_create() {
 
   bleToggleLbl = lv_label_create(bleToggleSw);
   lv_label_set_text(bleToggleLbl, bleEnabled ? "ON" : "OFF");
-  lv_obj_set_style_text_font(bleToggleLbl, &lv_font_montserrat_18, 0);
+  lv_obj_set_style_text_font(bleToggleLbl, FONT_BTN, 0);
   lv_obj_set_style_text_color(bleToggleLbl, lv_color_white(), 0);
   lv_obj_center(bleToggleLbl);
 
-  y += 52;
+  y += SET_ROW_H;
 
   lv_obj_t* nameRow = lv_obj_create(screen);
-  lv_obj_set_size(nameRow, CW, 36);
+  lv_obj_set_size(nameRow, CW, SET_ROW_H);
   lv_obj_set_pos(nameRow, PX, y);
   lv_obj_set_style_bg_color(nameRow, COL_BG_ROW, 0);
   lv_obj_set_style_border_color(nameRow, COL_BORDER_ROW, 0);
@@ -301,10 +301,10 @@ void screen_bt_create() {
   lv_obj_set_style_text_color(bleNameValueLbl, COL_TEXT, 0);
   lv_obj_align(bleNameValueLbl, LV_ALIGN_LEFT_MID, 8, 8);
 
-  y += 36;
+  y += SET_ROW_H;
 
   lv_obj_t* statusRow = lv_obj_create(screen);
-  lv_obj_set_size(statusRow, CW, 30);
+  lv_obj_set_size(statusRow, CW, SET_ROW_H);
   lv_obj_set_pos(statusRow, PX, y);
   lv_obj_set_style_bg_color(statusRow, COL_BG, 0);
   lv_obj_set_style_border_width(statusRow, 0, 0);
@@ -329,14 +329,14 @@ void screen_bt_create() {
   lv_obj_set_style_text_color(statusLabel, ble_is_connected() ? COL_GREEN : COL_TEXT_DIM, 0);
   lv_obj_align(statusLabel, LV_ALIGN_LEFT_MID, 22, 0);
 
-  y += 30;
+  y += SET_ROW_H;
 
-  make_accent_btn(screen, PX, y, CW, 40, "SCAN BLE", scan_cb);
-  y += 44;
+  make_accent_btn(screen, PX, y, CW, SET_ROW_H, "SCAN BLE", scan_cb);
+  y += SET_ROW_H + 4;
 
   lv_obj_t* pairedSecLabel = lv_label_create(screen);
   lv_label_set_text(pairedSecLabel, "PAIRED");
-  lv_obj_set_style_text_font(pairedSecLabel, FONT_BODY, 0);
+  lv_obj_set_style_text_font(pairedSecLabel, SET_SECTION_FONT, 0);
   lv_obj_set_style_text_color(pairedSecLabel, COL_TEXT_VDIM, 0);
   lv_obj_set_pos(pairedSecLabel, PX, y + 2);
   y += 16;
@@ -357,7 +357,7 @@ void screen_bt_create() {
 
   lv_obj_t* discSecLabel = lv_label_create(screen);
   lv_label_set_text(discSecLabel, "DISCOVERED");
-  lv_obj_set_style_text_font(discSecLabel, FONT_BODY, 0);
+  lv_obj_set_style_text_font(discSecLabel, SET_SECTION_FONT, 0);
   lv_obj_set_style_text_color(discSecLabel, COL_TEXT_VDIM, 0);
   lv_obj_set_pos(discSecLabel, PX, y + 2);
   y += 16;
@@ -375,9 +375,9 @@ void screen_bt_create() {
   lv_obj_add_flag(discoveredList, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_scrollbar_mode(discoveredList, LV_SCROLLBAR_MODE_OFF);
 
-  int footerY = 440;
-  int footerH = 36;
-  int btnW = 120;
+  int footerY = SET_FOOTER_Y;
+  int footerH = SET_FOOTER_H;
+  int btnW = SET_BTN_MIN_W;
   int gap = 8;
   make_footer_btn(screen, PX, footerY, btnW, footerH, "BACK", back_cb);
   make_accent_btn(screen, PX + btnW + gap, footerY, btnW, footerH, "SCAN", scan_cb);

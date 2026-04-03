@@ -169,18 +169,18 @@ void estop_overlay_create() {
     // Label name (dim)
     lv_obj_t* nameLbl = lv_label_create(infoPanel);
     lv_label_set_text(nameLbl, info_names[i]);
-    lv_obj_set_style_text_font(nameLbl, FONT_SMALL, 0);
+    lv_obj_set_style_text_font(nameLbl, FONT_NORMAL, 0);
     lv_obj_set_style_text_color(nameLbl, COL_RED, 0);
-    lv_obj_set_style_text_opa(nameLbl, LV_OPA_40, 0);
+    lv_obj_set_style_text_opa(nameLbl, LV_OPA_60, 0);
     lv_obj_set_pos(nameLbl, col_x[col] + 4, row * 44 + 2);
     lv_obj_remove_flag(nameLbl, LV_OBJ_FLAG_SCROLLABLE);
 
     // Value placeholder (dimmer)
     lv_obj_t* valLbl = lv_label_create(infoPanel);
     lv_label_set_text(valLbl, "---");
-    lv_obj_set_style_text_font(valLbl, FONT_MED, 0);
+    lv_obj_set_style_text_font(valLbl, FONT_SUBTITLE, 0);
     lv_obj_set_style_text_color(valLbl, COL_RED, 0);
-    lv_obj_set_style_text_opa(valLbl, LV_OPA_30, 0);
+    lv_obj_set_style_text_opa(valLbl, LV_OPA_50, 0);
     lv_obj_set_pos(valLbl, col_x[col] + 4, row * 44 + 16);
     lv_obj_remove_flag(valLbl, LV_OBJ_FLAG_SCROLLABLE);
 
@@ -210,9 +210,9 @@ void estop_overlay_create() {
   // ── Bottom text: "Release physical E-STOP button first" at (400,448), opacity=40% ──
   lv_obj_t* bottomLabel = lv_label_create(estopOverlay);
   lv_label_set_text(bottomLabel, "Release physical E-STOP button first");
-  lv_obj_set_style_text_font(bottomLabel, FONT_SMALL, 0);
+  lv_obj_set_style_text_font(bottomLabel, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(bottomLabel, COL_RED, 0);
-  lv_obj_set_style_text_opa(bottomLabel, LV_OPA_40, 0);
+  lv_obj_set_style_text_opa(bottomLabel, LV_OPA_60, 0);
   lv_obj_set_style_text_align(bottomLabel, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_width(bottomLabel, SCREEN_W);
   lv_obj_set_pos(bottomLabel, 0, 448);

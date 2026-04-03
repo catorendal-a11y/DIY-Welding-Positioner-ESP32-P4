@@ -16,6 +16,8 @@
 [![Graphics: LVGL](https://img.shields.io/badge/LVGL-9.x-blue.svg)](https://lvgl.io/)
 [![PlatformIO](https://img.shields.io/badge/PlatformIO-Compatible-orange.svg)](https://platformio.org/)
 
+If this project helped you build something, consider giving it a star.
+
 </div>
 
 ---

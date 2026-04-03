@@ -7,6 +7,8 @@
 
 <img src="docs/images/main_screen.svg" width="800" alt="TIG Rotator Controller - Main Screen">
 
+<img src="docs/images/ui_screens.svg" width="800" alt="TIG Rotator Controller - All Screens">
+
 **Open-source ESP32-P4 based welding positioner controller with BLE remote, WiFi connectivity, and a glove-safe industrial touch UI.**
 
 [![Status](https://img.shields.io/badge/Status-Active%20Development-brightgreen)](#)

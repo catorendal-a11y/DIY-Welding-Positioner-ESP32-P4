@@ -2,20 +2,57 @@
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+| Version | Supported |
+| ------- | --------- |
+| 2.0.x   | Yes |
+| 1.x.x   | No |
+| < 1.0   | No |
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+## Hardware Safety
+
+This project controls a motorized welding positioner. Safety is critical.
+
+### E-STOP System
+- Hardware NC contact on GPIO34 triggers interrupt in <0.5ms
+- ISR immediately cuts ENA pin (HIGH = motor disabled)
+- Software state machine enforces ESTOP as highest-priority state
+- All state transitions validated via compare-and-swap (CAS) pattern
+- UI overlay blocks all interaction during ESTOP
+
+### Motor Safety
+- ENA pin defaults HIGH (motor disabled) on boot
+- ENA never driven LOW without ESTOP check
+- Task Watchdog Timer (TWDT) on motor and safety tasks
+- Stepper access protected by FreeRTOS mutex
+
+### BLE Security
+- BLE uses passkey pairing (default: `123456`)
+- ARM command required within 5 seconds before START
+- BLE write callbacks use pending flags — no direct motor control from BLE thread
+- Notify rate limited to 500ms to prevent SDIO bus saturation
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+If you discover a safety-critical bug or security vulnerability:
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+1. **Do not open a public GitHub issue** for safety-critical problems
+2. Email the maintainer directly or use [GitHub Security Advisories](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/security/advisories/new)
+3. Include: firmware version, reproduction steps, hardware configuration, serial log output (debug build)
+
+### What to Report
+- E-STOP bypass or failure to stop motor
+- BLE command injection allowing motor start without ARM
+- State machine corruption allowing unsafe transitions
+- WiFi/BLE vulnerabilities exposing motor control
+
+### Response Timeline
+- Safety-critical: response within 24 hours, fix within 1 week
+- Non-critical: response within 1 week
+
+## Embedded Security Considerations
+
+- **No OTA for P4 firmware** — only C6 co-processor receives OTA updates
+- **WiFi credentials stored in LittleFS** — plaintext on flash (no encryption on ESP32-P4 Arduino framework)
+- **BLE passkey is hardcoded** — change in `src/ble/ble.cpp` before deployment in sensitive environments
+- **No TLS/HTTPS** — WiFi remote does not use encrypted transport
+- **LittleFS has no encryption** — settings and presets stored in plaintext

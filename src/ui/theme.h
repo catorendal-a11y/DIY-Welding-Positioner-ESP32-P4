@@ -47,9 +47,9 @@ uint8_t theme_get_count();
 #define COL_TEXT        lv_color_hex(0xAAAAAA)   // SVG: #AAA value text
 #define COL_TEXT_BRIGHT lv_color_hex(0xCCCCCC)   // SVG: #CCC bright text
 #define COL_TEXT_WHITE  lv_color_hex(0xD0D0D0)   // SVG: #D0D0D0 large values
-#define COL_TEXT_DIM    lv_color_hex(0x4A4A4A)   // SVG: #4A4A4A label text (.lbl)
-#define COL_TEXT_VDIM   lv_color_hex(0x333333)   // SVG: #333 very dim text
-#define COL_TEXT_TITLE  lv_color_hex(0x555555)   // Title text
+#define COL_TEXT_DIM    lv_color_hex(0x666666)   // Label text (was #4A4A4A)
+#define COL_TEXT_VDIM   lv_color_hex(0x555555)   // Very dim text (was #333333)
+#define COL_TEXT_TITLE  lv_color_hex(0x777777)   // Title text (was #555555)
 
 // ───────────────────────────────────────────────────────────────────────────────
 // BORDER COLORS (from new_ui.svg)
@@ -143,11 +143,14 @@ uint8_t theme_get_count();
 // ───────────────────────────────────────────────────────────────────────────────
 // FONT SIZES — Montserrat (closest match to Courier New monospace)
 // ───────────────────────────────────────────────────────────────────────────────
-#define FONT_TINY           &lv_font_montserrat_10
-#define FONT_SMALL          &lv_font_montserrat_10
+#define FONT_TINY           &lv_font_montserrat_12
+#define FONT_SMALL          &lv_font_montserrat_12
 #define FONT_NORMAL         &lv_font_montserrat_14
 #define FONT_BODY           &lv_font_montserrat_12
 #define FONT_MED            &lv_font_montserrat_14
+#define FONT_SUBTITLE       &lv_font_montserrat_16
+#define FONT_BTN            &lv_font_montserrat_18
 #define FONT_LARGE          &lv_font_montserrat_20
-#define FONT_HUGE           &lv_font_montserrat_40  // 48 causes crash on ESP32-P4
-#define FONT_XXL            &lv_font_montserrat_40
+#define FONT_XL             &lv_font_montserrat_24
+#define FONT_XXL            &lv_font_montserrat_28
+#define FONT_HUGE           &lv_font_montserrat_40

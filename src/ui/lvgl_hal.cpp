@@ -28,7 +28,22 @@ void dim_reset_activity() {
 
 void dim_update() {
   if (g_settings.dim_timeout == 0) return;
-  if (isDimmed) return;
+
+  if (isDimmed) {
+    if (display_touch) {
+      uint16_t tx[1], ty[1], ts[1];
+      uint8_t tc = 0;
+      esp_lcd_touch_read_data(display_touch);
+      esp_lcd_touch_get_coordinates(display_touch, tx, ty, ts, &tc, 1);
+      if (tc > 0) {
+        isDimmed = false;
+        display_set_brightness(g_settings.brightness);
+        lastActivityMs = millis();
+      }
+    }
+    return;
+  }
+
   if (millis() - lastActivityMs > (uint32_t)g_settings.dim_timeout * 1000) {
     isDimmed = true;
     display_set_brightness(dimBrightness);

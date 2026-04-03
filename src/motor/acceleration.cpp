@@ -1,56 +1,39 @@
-// TIG Rotator Controller - Acceleration Control Implementation
-// EEPROM storage for motor acceleration
-
+// Acceleration - Motor acceleration/deceleration control
 #include "acceleration.h"
 #include "../config.h"
-#include <EEPROM.h>
+#include "../storage/storage.h"
 
-// ───────────────────────────────────────────────────────────────────────────────
-// STATE
-// ───────────────────────────────────────────────────────────────────────────────
-static uint32_t accelerationValue = 5000;  // Default steps/s²
+#define ACCEL_MIN  1000
+#define ACCEL_MAX  20000
 
-// EEPROM addresses (offset from others)
-#define EEPROM_ACCEL_ADDR   20  // Separate from calibration (0-2), microstep (10), brightness (15)
-
-// Valid acceleration range
-#define ACCEL_MIN  1000   // Smooth start
-#define ACCEL_MAX  20000  // Fast start
-
-// ───────────────────────────────────────────────────────────────────────────────
-// INITIALIZATION
-// ───────────────────────────────────────────────────────────────────────────────
 void acceleration_init() {
-  uint32_t value;
-  EEPROM.get(EEPROM_ACCEL_ADDR, value);
-
-  // Validate loaded value
-  if (value >= ACCEL_MIN && value <= ACCEL_MAX) {
-    accelerationValue = value;
-    LOG_I("Acceleration loaded: %u", accelerationValue);
-  } else {
-    accelerationValue = 5000;  // Default
-    LOG_I("Acceleration: default (%u)", accelerationValue);
+  if (g_settings.acceleration < ACCEL_MIN || g_settings.acceleration > ACCEL_MAX) {
+    g_settings.acceleration = 5000;
   }
+  LOG_I("Acceleration: %u", g_settings.acceleration);
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// GET/SET
-// ───────────────────────────────────────────────────────────────────────────────
+static volatile bool accelApplyPending = false;
+
 void acceleration_set(uint32_t accel) {
-  accelerationValue = constrain(accel, ACCEL_MIN, ACCEL_MAX);
-  LOG_I("Acceleration set to: %u", accelerationValue);
+  g_settings.acceleration = constrain(accel, ACCEL_MIN, ACCEL_MAX);
+  accelApplyPending = true;
+  LOG_I("Acceleration set to: %u", g_settings.acceleration);
+}
+
+bool acceleration_has_pending_apply() {
+  return accelApplyPending;
+}
+
+void acceleration_clear_pending() {
+  accelApplyPending = false;
 }
 
 uint32_t acceleration_get() {
-  return accelerationValue;
+  return g_settings.acceleration;
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// EEPROM STORAGE
-// ───────────────────────────────────────────────────────────────────────────────
 void acceleration_save() {
-  EEPROM.put(EEPROM_ACCEL_ADDR, accelerationValue);
-  EEPROM.commit();
-  LOG_I("Acceleration saved: %u", accelerationValue);
+  storage_save_settings();
+  LOG_I("Acceleration saved: %u", g_settings.acceleration);
 }

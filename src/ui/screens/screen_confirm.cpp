@@ -9,6 +9,7 @@
 // ───────────────────────────────────────────────────────────────────────────────
 static void (*onConfirmCallback)() = nullptr;
 static void (*onCancelCallback)() = nullptr;
+static ScreenId returnScreen = SCREEN_PROGRAMS;
 
 // ───────────────────────────────────────────────────────────────────────────────
 // WIDGETS
@@ -24,13 +25,10 @@ static void confirm_event_cb(lv_event_t* e) {
   auto cb = onConfirmCallback;
   onConfirmCallback = nullptr;
   onCancelCallback = nullptr;
-  // Execute data operation (erase, save) while programs data is still valid
   if (cb) {
     cb();
   }
-  // Switch back to programs screen and refresh
-  screens_show(SCREEN_PROGRAMS);
-  screen_programs_update();
+  screens_show(returnScreen);
 }
 
 static void cancel_event_cb(lv_event_t* e) {
@@ -40,7 +38,7 @@ static void cancel_event_cb(lv_event_t* e) {
   }
   onConfirmCallback = nullptr;
   onCancelCallback = nullptr;
-  screens_show(SCREEN_PROGRAMS);
+  screens_show(returnScreen);
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -139,7 +137,7 @@ void screen_confirm_create_static() {
   lv_obj_add_event_cb(cancelBtn, cancel_event_cb, LV_EVENT_CLICKED, nullptr);
 
   lv_obj_t* cancelLabel = lv_label_create(cancelBtn);
-  lv_label_set_text(cancelLabel, "# CANCEL");
+  lv_label_set_text(cancelLabel, "CANCEL");
   lv_obj_set_style_text_font(cancelLabel, FONT_LARGE, 0);
   lv_obj_set_style_text_color(cancelLabel, COL_TEXT, 0);
   lv_obj_center(cancelLabel);
@@ -158,7 +156,7 @@ void screen_confirm_create_static() {
   lv_obj_add_event_cb(deleteBtn, confirm_event_cb, LV_EVENT_CLICKED, nullptr);
 
   lv_obj_t* deleteLabel = lv_label_create(deleteBtn);
-  lv_label_set_text(deleteLabel, "DELETE");
+  lv_label_set_text(deleteLabel, "CONFIRM");
   lv_obj_set_style_text_font(deleteLabel, FONT_LARGE, 0);
   lv_obj_set_style_text_color(deleteLabel, COL_RED, 0);
   lv_obj_center(deleteLabel);
@@ -187,6 +185,7 @@ void screen_confirm_create(const char* title, const char* message,
 
   onConfirmCallback = on_confirm;
   onCancelCallback = on_cancel;
+  returnScreen = screens_get_current();
 
   lv_label_set_text(titleLabel, title);
   lv_label_set_text(warnLabel, message);

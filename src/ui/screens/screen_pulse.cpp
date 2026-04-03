@@ -8,13 +8,14 @@
 #include "../../control/control.h"
 #include "../../motor/speed.h"
 #include "../../config.h"
+#include "../../motor/microstep.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STATE
 // ───────────────────────────────────────────────────────────────────────────────
 static uint32_t pulseOnMs = 500;
 static uint32_t pulseOffMs = 500;
-static float targetRpm = 1.2f;
+static float targetRpm = 0.5f;
 static lv_obj_t* onTimeLabel = nullptr;
 static lv_obj_t* offTimeLabel = nullptr;
 static lv_obj_t* rpmLabel = nullptr;
@@ -43,7 +44,7 @@ static void update_computed_info() {
   float duty = (cycleSec > 0.0f) ? (onSec / cycleSec * 100.0f) : 0.0f;
   float freq = (cycleSec > 0.0f) ? (1.0f / cycleSec) : 0.0f;
   // steps/s = RPM * gear_ratio * steps_per_rev / 60
-  float stepsPerSec = targetRpm * GEAR_RATIO * STEPS_PER_REV / 60.0f;
+  float stepsPerSec = targetRpm * GEAR_RATIO * microstep_get_steps_per_rev() / 60.0f;
 
   if (infoDutyLabel)
     lv_label_set_text_fmt(infoDutyLabel, "DUTY %d%%", (int)(duty + 0.5f));
@@ -109,7 +110,7 @@ static void update_waveform() {
 // ───────────────────────────────────────────────────────────────────────────────
 // EVENT HANDLERS
 // ───────────────────────────────────────────────────────────────────────────────
-static void back_event_cb(lv_event_t* e) { screens_show(SCREEN_MENU); }
+static void back_event_cb(lv_event_t* e) { screens_show(SCREEN_MAIN); }
 
 static void on_time_adj_cb(lv_event_t* e) {
   int delta = (intptr_t)(lv_obj_t*)lv_event_get_user_data(e);
@@ -174,7 +175,7 @@ static lv_obj_t* create_pm_btn(lv_obj_t* parent, int16_t x, int16_t y,
 
   lv_obj_t* lbl = lv_label_create(btn);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_font(lbl, FONT_XL, 0);
   lv_obj_set_style_text_color(lbl, COL_TEXT, 0);
   lv_obj_center(lbl);
   return btn;
@@ -338,7 +339,7 @@ void screen_pulse_create() {
 
   // Range hint
   lv_obj_t* rpmHint = lv_label_create(screen);
-  lv_label_set_text(rpmHint, "0.1-3.0");
+  lv_label_set_text(rpmHint, "0.02-1.0");
   lv_obj_set_style_text_font(rpmHint, FONT_SMALL, 0);
   lv_obj_set_style_text_color(rpmHint, COL_TEXT_VDIM, 0);
   lv_obj_set_pos(rpmHint, 710, rpmY);
@@ -455,7 +456,7 @@ void screen_pulse_create() {
 
   lv_obj_t* backLabel = lv_label_create(backBtn);
   lv_label_set_text(backLabel, "<  BACK");
-  lv_obj_set_style_text_font(backLabel, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(backLabel, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(backLabel, COL_TEXT, 0);
   lv_obj_center(backLabel);
 
@@ -473,7 +474,7 @@ void screen_pulse_create() {
 
   lv_obj_t* startLabel = lv_label_create(startBtn);
   lv_label_set_text(startLabel, "> START");
-  lv_obj_set_style_text_font(startLabel, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(startLabel, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(startLabel, COL_ACCENT, 0);
   lv_obj_center(startLabel);
 
@@ -491,7 +492,7 @@ void screen_pulse_create() {
 
   lv_obj_t* stopLabel = lv_label_create(stopBtn);
   lv_label_set_text(stopLabel, "[] STOP");
-  lv_obj_set_style_text_font(stopLabel, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(stopLabel, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(stopLabel, COL_RED, 0);
   lv_obj_center(stopLabel);
 

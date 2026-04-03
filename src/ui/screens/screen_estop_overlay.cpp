@@ -7,6 +7,7 @@
 #include "../../config.h"
 #include "../../control/control.h"
 #include "../../safety/safety.h"
+#include "../../motor/motor.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // WIDGETS
@@ -18,6 +19,7 @@ static lv_obj_t* infoLabels[6]  = {nullptr};
 static bool estopVisible = false;
 static lv_timer_t* blinkTimer = nullptr;
 static bool blinkState = false;
+static uint32_t lastOverlayUpdate = 0;
 
 // ───────────────────────────────────────────────────────────────────────────────
 // BLINK TIMER CALLBACK (1 Hz)
@@ -33,11 +35,8 @@ static void blink_timer_cb(lv_timer_t* timer) {
 // RESET BUTTON EVENT
 // ───────────────────────────────────────────────────────────────────────────────
 static void reset_event_cb(lv_event_t* e) {
-  // Only allow reset if physical ESTOP is released
   if (digitalRead(PIN_ESTOP) == HIGH) {
-    safety_reset_estop();
-    control_transition_to(STATE_IDLE);
-    estop_overlay_hide();
+    g_uiResetPending = true;
   }
 }
 
@@ -259,11 +258,58 @@ bool estop_overlay_visible() {
   return estopVisible;
 }
 
+void estop_overlay_destroy() {
+  if (blinkTimer != nullptr) {
+    lv_timer_delete(blinkTimer);
+    blinkTimer = nullptr;
+  }
+  if (estopOverlay != nullptr) {
+    lv_obj_delete(estopOverlay);
+    estopOverlay = nullptr;
+  }
+  resetBtn = nullptr;
+  warningLabel = nullptr;
+  estopVisible = false;
+  blinkState = false;
+  for (int i = 0; i < 6; i++) infoLabels[i] = nullptr;
+}
+
 // ───────────────────────────────────────────────────────────────────────────────
 // OVERLAY UPDATE
 // ───────────────────────────────────────────────────────────────────────────────
 void estop_overlay_update() {
   if (!estopVisible) return;
+
+  uint32_t now = millis();
+  if (now - lastOverlayUpdate < 500) return;
+  lastOverlayUpdate = now;
+
+  // Update info labels
+  if (infoLabels[0]) {
+    lv_label_set_text(infoLabels[0], control_get_state_string());
+  }
+  if (infoLabels[1]) {
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%u Hz", motor_get_current_hz());
+    lv_label_set_text(infoLabels[1], buf);
+  }
+  if (infoLabels[2]) {
+    lv_label_set_text(infoLabels[2], "--");
+  }
+  if (infoLabels[3]) {
+    lv_label_set_text(infoLabels[3], "--");
+  }
+  if (infoLabels[4]) {
+    uint32_t elapsed = millis() / 1000;
+    uint32_t m = elapsed / 60;
+    uint32_t s = elapsed % 60;
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%u:%02u", (unsigned)m, (unsigned)s);
+    lv_label_set_text(infoLabels[4], buf);
+  }
+  if (infoLabels[5]) {
+    lv_label_set_text(infoLabels[5], "-- C");
+  }
 
   // Enable/disable reset button based on ESTOP state
   bool estopPressed = safety_is_estop_active();

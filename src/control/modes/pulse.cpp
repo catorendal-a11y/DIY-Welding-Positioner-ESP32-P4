@@ -28,17 +28,16 @@ void pulse_start(uint32_t on_ms, uint32_t off_ms) {
 
   LOG_I("Pulse mode: ON=%lu OFF=%lu", pulseOnMs, pulseOffMs);
 
-  // Start motor
-  digitalWrite(PIN_ENA, LOW);
-  digitalWrite(PIN_DIR, (speed_get_direction() == DIR_CW) ? HIGH : LOW);
-
+  portENTER_CRITICAL(&g_stepperMutex);
   FastAccelStepper* stepper = motor_get_stepper();
   if (stepper != nullptr) {
     uint32_t hz = (uint32_t)rpmToStepHz(speed_get_target_rpm());
     stepper->setSpeedInHz(hz);
-    if (speed_get_direction() == DIR_CW) stepper->runForward();
-    else stepper->runBackward();
   }
+  portEXIT_CRITICAL(&g_stepperMutex);
+
+  if (speed_get_direction() == DIR_CW) motor_run_cw();
+  else motor_run_ccw();
 
   control_transition_to(STATE_PULSE);
 }
@@ -58,22 +57,21 @@ void pulse_update() {
     pulseStateStartMs = millis();
 
     if (pulseIsOn) {
-      // Start ON phase — restart motor
-      digitalWrite(PIN_ENA, LOW);
-      digitalWrite(PIN_DIR, (speed_get_direction() == DIR_CW) ? HIGH : LOW);
+      portENTER_CRITICAL(&g_stepperMutex);
       FastAccelStepper* s = motor_get_stepper();
       if (s != nullptr) {
         uint32_t hz = (uint32_t)rpmToStepHz(speed_get_target_rpm());
         s->setSpeedInHz(hz);
-        if (speed_get_direction() == DIR_CW) s->runForward();
-        else s->runBackward();
       }
+      portEXIT_CRITICAL(&g_stepperMutex);
+      if (speed_get_direction() == DIR_CW) motor_run_cw();
+      else motor_run_ccw();
       LOG_D("Pulse: ON");
     } else {
-      // Start OFF phase (motor holds position)
-      // ENA stays LOW to maintain holding torque
+      portENTER_CRITICAL(&g_stepperMutex);
       FastAccelStepper* stepper = motor_get_stepper();
       if (stepper != nullptr) stepper->stopMove();
+      portEXIT_CRITICAL(&g_stepperMutex);
       LOG_D("Pulse: OFF");
     }
   }

@@ -77,13 +77,13 @@ void screen_boot_create() {
 
     lv_obj_t* title = lv_label_create(header);
     lv_label_set_text(title, "TIG-ROTATOR " FW_VERSION);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(title, FONT_LARGE, 0);
     lv_obj_set_style_text_color(title, COL_GREEN, 0);
     lv_obj_set_pos(title, PAD_X, 8);
 
     lv_obj_t* bootTag = lv_label_create(header);
     lv_label_set_text(bootTag, "BOOT");
-    lv_obj_set_style_text_font(bootTag, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(bootTag, FONT_SUBTITLE, 0);
     lv_obj_set_style_text_color(bootTag, COL_TEXT_DIM, 0);
     lv_obj_set_pos(bootTag, SCREEN_W - 70, 10);
 
@@ -107,8 +107,8 @@ void screen_boot_create() {
 
         logLabels[i] = lv_label_create(screen);
         lv_label_set_text(logLabels[i], recolorLine);
-        lv_obj_set_style_text_font(logLabels[i], &lv_font_montserrat_14, 0);
-        lv_obj_set_style_text_color(logLabels[i], lv_color_hex(0x3A3A3A), 0);
+        lv_obj_set_style_text_font(logLabels[i], FONT_NORMAL, 0);
+        lv_obj_set_style_text_color(logLabels[i], COL_TEXT_DIM, 0);
         lv_label_set_recolor(logLabels[i], true);
         lv_obj_set_pos(logLabels[i], 24, 48 + i * 32);
     }
@@ -119,6 +119,7 @@ void screen_boot_create() {
     lv_obj_set_pos(progressBar, 24, 310);
     lv_bar_set_range(progressBar, 0, 100);
     lv_bar_set_value(progressBar, 0, LV_ANIM_OFF);
+    lv_obj_set_style_base_dir(progressBar, LV_BASE_DIR_LTR, 0);
     lv_obj_set_style_pad_all(progressBar, 0, 0);
     lv_obj_set_style_bg_color(progressBar, lv_color_hex(0x0A0A0A), LV_PART_MAIN);
     lv_obj_set_style_radius(progressBar, 0, LV_PART_MAIN);
@@ -128,14 +129,14 @@ void screen_boot_create() {
     // ── Status line "> SYSTEM READY" (y=326) ──
     statusLabel = lv_label_create(screen);
     lv_label_set_text(statusLabel, "> SYSTEM READY");
-    lv_obj_set_style_text_font(statusLabel, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(statusLabel, FONT_SUBTITLE, 0);
     lv_obj_set_style_text_color(statusLabel, COL_ACCENT, 0);
     lv_obj_set_pos(statusLabel, 24, 326);
 
     // ── Percent label (right of progress bar) ──
     percentLabel = lv_label_create(screen);
     lv_label_set_text(percentLabel, "0%");
-    lv_obj_set_style_text_font(percentLabel, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(percentLabel, FONT_LARGE, 0);
     lv_obj_set_style_text_color(percentLabel, COL_TEXT_DIM, 0);
     lv_obj_set_pos(percentLabel, 640, 306);
 
@@ -175,13 +176,13 @@ void screen_boot_create() {
     for (int i = 0; i < 4; i++) {
         lv_obj_t* lL = lv_label_create(infoPanel);
         lv_label_set_text(lL, specsLeft[i]);
-        lv_obj_set_style_text_font(lL, &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_font(lL, FONT_NORMAL, 0);
         lv_obj_set_style_text_color(lL, COL_TEXT_VDIM, 0);
         lv_obj_set_pos(lL, 8, 4 + i * 26);
 
         lv_obj_t* lR = lv_label_create(infoPanel);
         lv_label_set_text(lR, specsRight[i]);
-        lv_obj_set_style_text_font(lR, &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_font(lR, FONT_NORMAL, 0);
         lv_obj_set_style_text_color(lR, COL_TEXT_VDIM, 0);
         lv_obj_set_pos(lR, 420, 4 + i * 26);
     }

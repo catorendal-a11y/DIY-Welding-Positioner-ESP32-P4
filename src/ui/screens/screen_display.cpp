@@ -1,0 +1,297 @@
+// TIG Rotator Controller - Display Settings Screen
+// Brightness, dim timeout, accent color selection
+#include "../screens.h"
+#include "../theme.h"
+#include "../display.h"
+#include "../../config.h"
+#include "../../storage/storage.h"
+
+static lv_obj_t* brightnessSlider = nullptr;
+static lv_obj_t* brightnessValueLabel = nullptr;
+static lv_obj_t* dimBtn = nullptr;
+static lv_obj_t* dimBtnLabel = nullptr;
+static lv_obj_t* themeBtn = nullptr;
+static lv_obj_t* themeBtnLabel = nullptr;
+static lv_obj_t* infoLabel = nullptr;
+
+static const int dimTimeouts[] = { 0, 30, 60, 120, 300 };
+static const char* dimStrings[] = { "OFF", "30s", "1m", "2m", "5m" };
+static const int dimCount = 5;
+static int currentDimIdx = 0;
+
+static bool displayScreenActive = false;
+static bool ignoreSliderCb = false;
+static void update_info_text();
+
+void screen_display_mark_dirty() {
+  displayScreenActive = true;
+}
+
+static void update_slider_from_settings() {
+  if (!brightnessSlider || !brightnessValueLabel) return;
+  ignoreSliderCb = true;
+  int brightPct = (int)((uint32_t)g_settings.brightness * 100 / 255);
+  if (brightPct < 20) brightPct = 20;
+  lv_slider_set_value(brightnessSlider, brightPct, LV_ANIM_OFF);
+  char buf[16];
+  snprintf(buf, sizeof(buf), "%d%%", brightPct);
+  lv_label_set_text(brightnessValueLabel, buf);
+  ignoreSliderCb = false;
+}
+
+static void back_cb(lv_event_t* e) {
+  screens_show(SCREEN_SETTINGS);
+}
+
+static void brightness_slider_cb(lv_event_t* e) {
+  if (ignoreSliderCb) return;
+  if (!brightnessValueLabel || !brightnessSlider) return;
+  int val = lv_slider_get_value(brightnessSlider);
+  char buf[16];
+  snprintf(buf, sizeof(buf), "%d%%", val);
+  lv_label_set_text(brightnessValueLabel, buf);
+  g_settings.brightness = (uint8_t)(val * 255 / 100);
+  display_set_brightness(g_settings.brightness);
+}
+
+static void dim_cycle_cb(lv_event_t* e) {
+  currentDimIdx = (currentDimIdx + 1) % dimCount;
+  if (dimBtnLabel) {
+    lv_label_set_text(dimBtnLabel, dimStrings[currentDimIdx]);
+  }
+  update_info_text();
+}
+
+static void theme_cycle_cb(lv_event_t* e) {
+  uint8_t count = theme_get_count();
+  g_settings.accent_color = (g_settings.accent_color + 1) % count;
+  theme_set_color(g_settings.accent_color);
+  theme_refresh();
+}
+
+static void save_cb(lv_event_t* e) {
+  g_settings.dim_timeout = dimTimeouts[currentDimIdx];
+  storage_save_settings();
+}
+
+static void update_info_text() {
+  if (!infoLabel) return;
+  char buf[64];
+  if (dimTimeouts[currentDimIdx] == 0) {
+    snprintf(buf, sizeof(buf), "Auto-dim is disabled");
+  } else {
+    snprintf(buf, sizeof(buf), "Display dims after %s of inactivity", dimStrings[currentDimIdx]);
+  }
+  lv_label_set_text(infoLabel, buf);
+}
+
+static void style_slider(lv_obj_t* slider) {
+  lv_obj_set_style_bg_color(slider, lv_color_hex(0x444444), 0);
+  lv_obj_set_style_bg_color(slider, COL_ACCENT, LV_PART_INDICATOR);
+  lv_obj_set_style_bg_color(slider, COL_ACCENT, LV_PART_KNOB);
+  lv_obj_set_style_bg_opa(slider, LV_OPA_COVER, LV_PART_KNOB);
+  lv_obj_set_style_border_color(slider, lv_color_hex(0x666666), 0);
+  lv_obj_set_style_border_color(slider, COL_ACCENT, LV_PART_INDICATOR);
+  lv_obj_set_style_border_width(slider, 2, 0);
+  lv_obj_set_style_radius(slider, 8, 0);
+  lv_obj_set_style_pad_all(slider, 0, 0);
+}
+
+static lv_obj_t* make_cycle_btn(lv_obj_t* parent, int x, int y, int w, int h,
+                                const char* text, lv_event_cb_t cb) {
+  lv_obj_t* btn = lv_button_create(parent);
+  lv_obj_set_size(btn, w, h);
+  lv_obj_set_pos(btn, x, y);
+  lv_obj_set_style_bg_color(btn, COL_BTN_BG, 0);
+  lv_obj_set_style_radius(btn, RADIUS_BTN, 0);
+  lv_obj_set_style_border_width(btn, 1, 0);
+  lv_obj_set_style_border_color(btn, COL_BORDER, 0);
+  lv_obj_set_style_shadow_width(btn, 0, 0);
+  lv_obj_set_style_pad_all(btn, 0, 0);
+  lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, nullptr);
+  lv_obj_t* lbl = lv_label_create(btn);
+  lv_label_set_text(lbl, text);
+  lv_obj_set_style_text_font(lbl, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_color(lbl, COL_TEXT, 0);
+  lv_obj_center(lbl);
+  return btn;
+}
+
+void screen_display_create() {
+  lv_obj_t* screen = screenRoots[SCREEN_DISPLAY];
+  lv_obj_clean(screen);
+  lv_obj_set_style_bg_color(screen, COL_BG, 0);
+
+  const int PX = 16;
+  const int CONTENT_W = SCREEN_W - 2 * PX;
+
+  for (int i = 0; i < dimCount; i++) {
+    if (dimTimeouts[i] == g_settings.dim_timeout) {
+      currentDimIdx = i;
+      break;
+    }
+  }
+
+  lv_obj_t* header = lv_obj_create(screen);
+  lv_obj_set_size(header, SCREEN_W, 28);
+  lv_obj_set_pos(header, 0, 0);
+  lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
+  lv_obj_set_style_pad_all(header, 0, 0);
+  lv_obj_set_style_border_width(header, 0, 0);
+  lv_obj_set_style_radius(header, 0, 0);
+  lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
+
+  lv_obj_t* title = lv_label_create(header);
+  lv_label_set_text(title, "DISPLAY SETTINGS");
+  lv_obj_set_style_text_font(title, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_color(title, COL_ACCENT, 0);
+  lv_obj_set_pos(title, PX, 6);
+
+  int y = 40;
+
+  lv_obj_t* brightTitleLbl = lv_label_create(screen);
+  lv_label_set_text(brightTitleLbl, "BRIGHTNESS");
+  lv_obj_set_style_text_font(brightTitleLbl, FONT_NORMAL, 0);
+  lv_obj_set_style_text_color(brightTitleLbl, COL_TEXT_DIM, 0);
+  lv_obj_set_pos(brightTitleLbl, PX + 8, y + 12);
+
+  int brightPct = (int)((uint32_t)g_settings.brightness * 100 / 255);
+  brightnessValueLabel = lv_label_create(screen);
+  char brightBuf[16];
+  snprintf(brightBuf, sizeof(brightBuf), "%d%%", brightPct);
+  lv_label_set_text(brightnessValueLabel, brightBuf);
+  lv_obj_set_style_text_font(brightnessValueLabel, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_color(brightnessValueLabel, COL_TEXT_WHITE, 0);
+  lv_obj_set_pos(brightnessValueLabel, PX + 120, y + 10);
+
+  brightnessSlider = lv_slider_create(screen);
+  lv_obj_set_size(brightnessSlider, 300, 20);
+  lv_obj_set_pos(brightnessSlider, PX + 200, y + 10);
+  lv_slider_set_range(brightnessSlider, 20, 100);
+  int initPct = brightPct < 20 ? 20 : brightPct;
+  lv_slider_set_value(brightnessSlider, initPct, LV_ANIM_OFF);
+  lv_obj_set_style_bg_color(brightnessSlider, lv_color_hex(0x1A1A1A), 0);
+  lv_obj_set_style_bg_color(brightnessSlider, COL_ACCENT, LV_PART_INDICATOR);
+  lv_obj_set_style_bg_color(brightnessSlider, COL_ACCENT, LV_PART_KNOB);
+  lv_obj_set_style_border_color(brightnessSlider, lv_color_hex(0x555555), 0);
+  lv_obj_set_style_border_color(brightnessSlider, lv_color_hex(0xFFFFFF), LV_PART_KNOB);
+  lv_obj_set_style_border_width(brightnessSlider, 2, 0);
+  lv_obj_set_style_border_width(brightnessSlider, 2, LV_PART_KNOB);
+  lv_obj_set_style_border_width(brightnessSlider, 0, LV_PART_INDICATOR);
+  lv_obj_set_style_radius(brightnessSlider, 4, 0);
+  lv_obj_set_style_radius(brightnessSlider, 9, LV_PART_KNOB);
+  lv_obj_set_style_pad_top(brightnessSlider, -4, LV_PART_KNOB);
+  lv_obj_set_style_pad_bottom(brightnessSlider, -4, LV_PART_KNOB);
+  lv_obj_set_style_pad_all(brightnessSlider, 0, 0);
+  lv_obj_add_event_cb(brightnessSlider, brightness_slider_cb, LV_EVENT_VALUE_CHANGED, nullptr);
+
+  y += 48;
+
+  lv_obj_t* dimRow = lv_obj_create(screen);
+  lv_obj_set_size(dimRow, CONTENT_W, 40);
+  lv_obj_set_pos(dimRow, PX, y);
+  lv_obj_set_style_bg_color(dimRow, COL_BG_ROW, 0);
+  lv_obj_set_style_border_color(dimRow, COL_BORDER_ROW, 0);
+  lv_obj_set_style_border_width(dimRow, 1, 0);
+  lv_obj_set_style_radius(dimRow, RADIUS_ROW, 0);
+  lv_obj_set_style_shadow_width(dimRow, 0, 0);
+  lv_obj_set_style_pad_all(dimRow, 0, 0);
+  lv_obj_remove_flag(dimRow, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_remove_flag(dimRow, LV_OBJ_FLAG_CLICKABLE);
+
+  lv_obj_t* dimTitleLbl = lv_label_create(dimRow);
+  lv_label_set_text(dimTitleLbl, "DIM TIMEOUT");
+  lv_obj_set_style_text_font(dimTitleLbl, FONT_NORMAL, 0);
+  lv_obj_set_style_text_color(dimTitleLbl, COL_TEXT_DIM, 0);
+  lv_obj_align(dimTitleLbl, LV_ALIGN_LEFT_MID, 12, 0);
+
+  dimBtn = make_cycle_btn(dimRow, CONTENT_W - 120, 6, 100, 28,
+                           dimStrings[currentDimIdx], dim_cycle_cb);
+  dimBtnLabel = lv_obj_get_child(dimBtn, 0);
+
+  y += 48;
+
+  lv_obj_t* themeRow = lv_obj_create(screen);
+  lv_obj_set_size(themeRow, CONTENT_W, 40);
+  lv_obj_set_pos(themeRow, PX, y);
+  lv_obj_set_style_bg_color(themeRow, COL_BG, 0);
+  lv_obj_set_style_border_width(themeRow, 0, 0);
+  lv_obj_set_style_radius(themeRow, 0, 0);
+  lv_obj_set_style_pad_all(themeRow, 0, 0);
+  lv_obj_remove_flag(themeRow, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_remove_flag(themeRow, LV_OBJ_FLAG_CLICKABLE);
+
+  lv_obj_t* themeTitleLbl = lv_label_create(themeRow);
+  lv_label_set_text(themeTitleLbl, "ACCENT COLOR");
+  lv_obj_set_style_text_font(themeTitleLbl, FONT_NORMAL, 0);
+  lv_obj_set_style_text_color(themeTitleLbl, COL_TEXT_DIM, 0);
+  lv_obj_align(themeTitleLbl, LV_ALIGN_LEFT_MID, 8, 0);
+
+  themeBtn = make_cycle_btn(themeRow, CONTENT_W - 120, 6, 100, 28,
+                             theme_get_name(g_settings.accent_color), theme_cycle_cb);
+  themeBtnLabel = lv_obj_get_child(themeBtn, 0);
+
+  y += 48;
+
+  lv_obj_t* infoBar = lv_obj_create(screen);
+  lv_obj_set_size(infoBar, CONTENT_W, 28);
+  lv_obj_set_pos(infoBar, PX, y);
+  lv_obj_set_style_bg_color(infoBar, COL_BG_DIM, 0);
+  lv_obj_set_style_border_width(infoBar, 0, 0);
+  lv_obj_set_style_radius(infoBar, 0, 0);
+  lv_obj_set_style_pad_all(infoBar, 0, 0);
+  lv_obj_remove_flag(infoBar, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_remove_flag(infoBar, LV_OBJ_FLAG_CLICKABLE);
+
+  infoLabel = lv_label_create(infoBar);
+  lv_obj_set_style_text_font(infoLabel, FONT_BODY, 0);
+  lv_obj_set_style_text_color(infoLabel, COL_TEXT_DIM, 0);
+  lv_obj_align(infoLabel, LV_ALIGN_LEFT_MID, 8, 0);
+  update_info_text();
+
+  int footerY = 440;
+  int footerH = 36;
+  int btnW = 160;
+  int gap = 8;
+
+  lv_obj_t* backFooter = lv_button_create(screen);
+  lv_obj_set_size(backFooter, btnW, footerH);
+  lv_obj_set_pos(backFooter, PX, footerY);
+  lv_obj_set_style_bg_color(backFooter, COL_BTN_BG, 0);
+  lv_obj_set_style_radius(backFooter, RADIUS_BTN, 0);
+  lv_obj_set_style_border_width(backFooter, 1, 0);
+  lv_obj_set_style_border_color(backFooter, COL_BORDER, 0);
+  lv_obj_set_style_shadow_width(backFooter, 0, 0);
+  lv_obj_set_style_pad_all(backFooter, 0, 0);
+  lv_obj_add_event_cb(backFooter, back_cb, LV_EVENT_CLICKED, nullptr);
+  lv_obj_t* bLbl = lv_label_create(backFooter);
+  lv_label_set_text(bLbl, "BACK");
+  lv_obj_set_style_text_font(bLbl, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_color(bLbl, COL_TEXT, 0);
+  lv_obj_center(bLbl);
+
+  lv_obj_t* saveBtn = lv_button_create(screen);
+  lv_obj_set_size(saveBtn, btnW + 60, footerH);
+  lv_obj_set_pos(saveBtn, PX + btnW + gap, footerY);
+  lv_obj_set_style_bg_color(saveBtn, COL_BG_ACTIVE, 0);
+  lv_obj_set_style_radius(saveBtn, RADIUS_BTN, 0);
+  lv_obj_set_style_border_width(saveBtn, 2, 0);
+  lv_obj_set_style_border_color(saveBtn, COL_ACCENT, 0);
+  lv_obj_set_style_shadow_width(saveBtn, 0, 0);
+  lv_obj_set_style_pad_all(saveBtn, 0, 0);
+  lv_obj_add_event_cb(saveBtn, save_cb, LV_EVENT_CLICKED, nullptr);
+  lv_obj_t* sLbl = lv_label_create(saveBtn);
+  lv_label_set_text(sLbl, "SAVE");
+  lv_obj_set_style_text_font(sLbl, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_color(sLbl, COL_ACCENT, 0);
+  lv_obj_center(sLbl);
+
+  LOG_I("Screen display: created");
+}
+
+void screen_display_update() {
+  if (displayScreenActive) {
+    displayScreenActive = false;
+    update_slider_from_settings();
+  }
+}

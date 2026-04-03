@@ -2,7 +2,7 @@
 // TIG Welding Rotator Controller - Hardware Configuration
 // Waveshare/Guition ESP32-P4 4.3" Touch Display Dev Board
 
-#define FW_VERSION "v1.3.0"
+#define FW_VERSION "v2.0.0"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // GPIO HEADER PINS (2×13 pin header)
@@ -16,7 +16,8 @@
 #define PIN_ENA         52   // Enable: Active LOW to TB6600
 #define PIN_ESTOP       34   // Emergency Stop: Active LOW, NC contact
 #define PIN_DIR_SWITCH  28   // CW/CCW direction switch (INPUT_PULLUP, LOW=CCW, HIGH=CW)
-#define PIN_SPARE       35   // Reserved for future encoder/expansion
+#define PIN_PEDAL       35   // ADC — Foot pedal potentiometer
+#define PIN_PEDAL_SW    33   // Foot pedal start switch (INPUT_PULLUP, LOW=pressed)
 
 // ───────────────────────────────────────────────────────────────────────────────
 // DISPLAY & TOUCH — MIPI-DSI (handled by ESP-IDF native drivers)
@@ -47,11 +48,8 @@
 // ───────────────────────────────────────────────────────────────────────────────
 // MOTOR & MECHANICAL PARAMETERS
 // ───────────────────────────────────────────────────────────────────────────────
-#define MIN_RPM         0.01f     // Minimum workpiece RPM
+#define MIN_RPM         0.02f     // Minimum workpiece RPM
 #define MAX_RPM         1.0f      // Maximum workpiece RPM (temporary until DM542T)
-
-#define MICROSTEPS      8         // 1/8 microstepping (TB6600 DIP)
-#define STEPS_PER_REV   (200 * MICROSTEPS)   // 1600 steps/rev motor
 
 // GEAR & ROLLER SYSTEM
 #define GEAR_RATIO      (60.0f * 133.0f / 40.0f)   // = 199.5 (worm gear)
@@ -60,7 +58,6 @@
 
 // SPEED CHARACTERISTICS
 #define START_SPEED     100       // Hz — under 199 Hz min for 0.01 RPM
-#define ACCELERATION    2000      // steps/s² — safe ramp through resonance
 
 // ───────────────────────────────────────────────────────────────────────────────
 // BUILD CONFIGURATION
@@ -86,6 +83,25 @@
   #define LOG_W(...) do{}while(0)
   #define LOG_E(f,...) do{}while(0)  // Suppress in release build
 #endif
+
+// ───────────────────────────────────────────────────────────────────────────────
+// ESP-Hosted SDIO (P4 -> C6 co-processor for BLE)
+// ───────────────────────────────────────────────────────────────────────────────
+#define SDIO_CLK    18
+#define SDIO_CMD    19
+#define SDIO_D0     14
+#define SDIO_D1     15
+#define SDIO_D2     16
+#define SDIO_D3     17
+#define SDIO_RESET  54
+
+// BLE device name
+#define BLE_DEVICE_NAME "TIG Rotator"
+#define BLE_DEVICE_NAME_DEFAULT "TIG Rotator"
+
+// Default WiFi credentials (override via settings screen)
+#define WIFI_SSID ""
+#define WIFI_PASS ""
 
 // ───────────────────────────────────────────────────────────────────────────────
 // PROTECTED GPIO — NEVER USE (ESP32-P4 specific)

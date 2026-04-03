@@ -15,13 +15,14 @@ static lv_obj_t* jogBtn = nullptr;
 static lv_obj_t* cwBtn = nullptr;
 static lv_obj_t* ccwBtn = nullptr;
 static lv_obj_t* rpmLabel = nullptr;
+static lv_obj_t* dirLabel = nullptr;
 
 // ───────────────────────────────────────────────────────────────────────────────
 // EVENT HANDLERS
 // ───────────────────────────────────────────────────────────────────────────────
 static void back_event_cb(lv_event_t* e) {
   control_stop_jog();
-  screens_show(SCREEN_MENU);
+  screens_show(SCREEN_MAIN);
 }
 
 static void rpm_adj_cb(lv_event_t* e) {
@@ -60,9 +61,13 @@ static void cw_event_cb(lv_event_t* e) {
   lv_obj_set_style_border_width(ccwBtn, 1, 0);
 
   // Update direction label
-  lv_obj_t* dirLabel = lv_obj_get_child(ccwBtn, 0);
-  lv_label_set_text(dirLabel, "CCW " LV_SYMBOL_DOWN);
-  lv_obj_set_style_text_color(dirLabel, COL_TEXT_DIM, 0);
+  lv_obj_t* btnLabel = lv_obj_get_child(ccwBtn, 0);
+  lv_label_set_text(btnLabel, "CCW (D)");
+  lv_obj_set_style_text_color(btnLabel, COL_TEXT_DIM, 0);
+  if (dirLabel) {
+    lv_label_set_text(dirLabel, "CW (R)");
+    lv_obj_set_style_text_color(dirLabel, COL_TEXT, 0);
+  }
 }
 
 static void ccw_event_cb(lv_event_t* e) {
@@ -73,9 +78,13 @@ static void ccw_event_cb(lv_event_t* e) {
   lv_obj_set_style_border_width(cwBtn, 1, 0);
 
   // Update direction label
-  lv_obj_t* dirLabel = lv_obj_get_child(cwBtn, 0);
-  lv_label_set_text(dirLabel, "CW " LV_SYMBOL_UP);
-  lv_obj_set_style_text_color(dirLabel, COL_TEXT_DIM, 0);
+  lv_obj_t* btnLabel = lv_obj_get_child(cwBtn, 0);
+  lv_label_set_text(btnLabel, "CW (U)");
+  lv_obj_set_style_text_color(btnLabel, COL_TEXT_DIM, 0);
+  if (dirLabel) {
+    lv_label_set_text(dirLabel, "CCW (D)");
+    lv_obj_set_style_text_color(dirLabel, COL_TEXT, 0);
+  }
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -146,8 +155,8 @@ void screen_jog_create() {
   lv_obj_set_style_text_color(dirTitle, COL_TEXT_DIM, 0);
   lv_obj_align(dirTitle, LV_ALIGN_TOP_MID, 0, 8);
 
-  lv_obj_t* dirLabel = lv_label_create(dirPanel);
-  lv_label_set_text(dirLabel, "CW " LV_SYMBOL_LOOP);
+  dirLabel = lv_label_create(dirPanel);
+  lv_label_set_text(dirLabel, "CW (R)");
   lv_obj_set_style_text_font(dirLabel, FONT_LARGE, 0);
   lv_obj_set_style_text_color(dirLabel, COL_TEXT, 0);
   lv_obj_align(dirLabel, LV_ALIGN_BOTTOM_MID, 0, -8);
@@ -165,7 +174,7 @@ void screen_jog_create() {
   lv_obj_add_event_cb(jogBtn, jog_event_cb, LV_EVENT_PRESS_LOST, nullptr);
 
   lv_obj_t* jogSymbol = lv_label_create(jogBtn);
-  lv_label_set_text(jogSymbol, LV_SYMBOL_LEFT " JOG " LV_SYMBOL_RIGHT);
+  lv_label_set_text(jogSymbol, "< JOG >");
   lv_obj_set_style_text_font(jogSymbol, FONT_LARGE, 0);
   lv_obj_set_style_text_color(jogSymbol, COL_AMBER, 0);
   lv_obj_align(jogSymbol, LV_ALIGN_CENTER, 0, -8);
@@ -203,7 +212,7 @@ void screen_jog_create() {
   lv_obj_add_event_cb(rpmMinusBtn, rpm_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)(-1));
 
   lv_obj_t* rpmMinusLabel = lv_label_create(rpmMinusBtn);
-  lv_label_set_text(rpmMinusLabel, "RPM " LV_SYMBOL_MINUS);
+  lv_label_set_text(rpmMinusLabel, "RPM -");
   lv_obj_set_style_text_font(rpmMinusLabel, FONT_MED, 0);
   lv_obj_set_style_text_color(rpmMinusLabel, COL_TEXT, 0);
   lv_obj_center(rpmMinusLabel);
@@ -218,7 +227,7 @@ void screen_jog_create() {
   lv_obj_add_event_cb(rpmPlusBtn, rpm_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)1);
 
   lv_obj_t* rpmPlusLabel = lv_label_create(rpmPlusBtn);
-  lv_label_set_text(rpmPlusLabel, "RPM " LV_SYMBOL_PLUS);
+  lv_label_set_text(rpmPlusLabel, "RPM +");
   lv_obj_set_style_text_font(rpmPlusLabel, FONT_MED, 0);
   lv_obj_set_style_text_color(rpmPlusLabel, COL_TEXT, 0);
   lv_obj_center(rpmPlusLabel);
@@ -234,7 +243,7 @@ void screen_jog_create() {
   lv_obj_add_event_cb(cwBtn, cw_event_cb, LV_EVENT_CLICKED, nullptr);
 
   lv_obj_t* cwLabel = lv_label_create(cwBtn);
-  lv_label_set_text(cwLabel, "CW " LV_SYMBOL_UP);
+  lv_label_set_text(cwLabel, "CW (U)");
   lv_obj_set_style_text_font(cwLabel, FONT_MED, 0);
   lv_obj_set_style_text_color(cwLabel, COL_ACCENT, 0);
   lv_obj_center(cwLabel);
@@ -249,7 +258,7 @@ void screen_jog_create() {
   lv_obj_add_event_cb(ccwBtn, ccw_event_cb, LV_EVENT_CLICKED, nullptr);
 
   lv_obj_t* ccwLabel = lv_label_create(ccwBtn);
-  lv_label_set_text(ccwLabel, "CCW " LV_SYMBOL_DOWN);
+  lv_label_set_text(ccwLabel, "CCW (D)");
   lv_obj_set_style_text_font(ccwLabel, FONT_MED, 0);
   lv_obj_set_style_text_color(ccwLabel, COL_TEXT_DIM, 0);
   lv_obj_center(ccwLabel);
@@ -268,7 +277,7 @@ void screen_jog_create() {
 
   lv_obj_t* backLabel = lv_label_create(backBtn);
   lv_label_set_text(backLabel, "<  BACK");
-  lv_obj_set_style_text_font(backLabel, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(backLabel, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(backLabel, COL_TEXT, 0);
   lv_obj_center(backLabel);
 

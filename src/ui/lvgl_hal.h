@@ -1,5 +1,5 @@
 // TIG Rotator Controller - LVGL Hardware Abstraction Layer
-// ESP32-P4: LVGL 8.x RGB565 with PSRAM buffers, MIPI-DSI DPI panel flush
+// ESP32-P4: LVGL 9.x RGB565 with PSRAM buffers, MIPI-DSI DPI panel flush
 // Matches JC4880P433C BSP configuration
 
 #pragma once

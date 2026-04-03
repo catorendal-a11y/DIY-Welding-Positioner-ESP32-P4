@@ -43,7 +43,7 @@
 #define LV_FONT_MONTSERRAT_28    1
 #define LV_FONT_MONTSERRAT_32    1
 #define LV_FONT_MONTSERRAT_40    1
-#define LV_FONT_MONTSERRAT_48    1
+#define LV_FONT_MONTSERRAT_48    0
 #define LV_FONT_DEFAULT          &lv_font_montserrat_14
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -84,7 +84,7 @@
 // LVGL 9 SPECIFIC FEATURES
 // ───────────────────────────────────────────────────────────────────────────────
 #define LV_USE_OBJ_PROPERTIES    0
-#define LV_USE_FLEX              1
-#define LV_USE_GRID              1
+#define LV_USE_FLEX              1     // Used for dynamic list containers only (wifi/BLE scan results)
+#define LV_USE_GRID              0
 
 #endif /* LV_CONF_H */

@@ -1,54 +1,34 @@
-// TIG Rotator Controller - State Machine Implementation
-// Controls mode transitions and coordinates all subsystems
-
+// Control - State machine core with pending request pattern
 #include "control.h"
+#include "modes.h"
 #include "../config.h"
 #include "../motor/motor.h"
 #include "../motor/speed.h"
+#include "../safety/safety.h"
 #include "esp_task_wdt.h"
-
-// ───────────────────────────────────────────────────────────────────────────────
-// MODE IMPLEMENTATION FUNCTIONS (from modes/*.cpp)
-// ───────────────────────────────────────────────────────────────────────────────
-extern void continuous_start();
-extern void continuous_stop();
-extern void pulse_start(uint32_t on_ms, uint32_t off_ms);
-extern void pulse_stop();
-extern void pulse_update();
-extern void step_execute(float angle_deg);
-extern void step_reset_accumulator();
-extern void step_update();
-extern void jog_start(Direction dir);
-extern void jog_stop();
-extern void jog_set_speed(float rpm);
-extern void timer_start(uint32_t duration_sec);
-extern void timer_stop();
-extern void timer_update();
-
-// Mode getters
-extern float step_get_accumulated();
-extern long step_get_count();
-extern float jog_get_speed();
-extern uint32_t timer_get_remaining_sec();
-extern uint32_t timer_get_duration();
+#include <atomic>
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STATE VARIABLES
 // ───────────────────────────────────────────────────────────────────────────────
-static SystemState currentState = STATE_IDLE;
-static SystemState previousState = STATE_IDLE;
+static std::atomic<SystemState> currentState{STATE_IDLE};
+static std::atomic<SystemState> previousState{STATE_IDLE};
+
+// Pending request pattern — UI callbacks set flags, controlTask executes
+static std::atomic<uint8_t> pendingModeRequest{0};
+static std::atomic<bool> pendingStop{false};
+static std::atomic<uint32_t> pendingPulseOnMs{0};
+static std::atomic<uint32_t> pendingPulseOffMs{0};
+static std::atomic<float> pendingStepAngle{0.0f};
+static std::atomic<uint32_t> pendingTimerDuration{0};
+static std::atomic<bool> pendingStopJog{false};
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STATE TRANSITION VALIDATION
 // ───────────────────────────────────────────────────────────────────────────────
 bool control_is_valid_transition(SystemState from, SystemState to) {
-  // ESTOP can be reached from any state
   if (to == STATE_ESTOP) return true;
-
-  // From ESTOP, only IDLE is allowed (requires manual reset)
   if (from == STATE_ESTOP) return (to == STATE_IDLE);
-
-  // From IDLE, can go to any active mode or ESTOP
   if (from == STATE_IDLE) {
     switch (to) {
       case STATE_RUNNING:
@@ -62,22 +42,15 @@ bool control_is_valid_transition(SystemState from, SystemState to) {
         return false;
     }
   }
-
-  // From RUNNING, can only go to STOPPING or ESTOP
   if (from == STATE_RUNNING) {
     return (to == STATE_STOPPING || to == STATE_ESTOP);
   }
-
-  // From PULSE/STEP/JOG/TIMER, can go to STOPPING or ESTOP
   if (from == STATE_PULSE || from == STATE_STEP || from == STATE_JOG || from == STATE_TIMER) {
     return (to == STATE_STOPPING || to == STATE_ESTOP);
   }
-
-  // From STOPPING, can go to IDLE or ESTOP
   if (from == STATE_STOPPING) {
     return (to == STATE_IDLE || to == STATE_ESTOP);
   }
-
   return false;
 }
 
@@ -85,56 +58,52 @@ bool control_is_valid_transition(SystemState from, SystemState to) {
 // STATE MACHINE CORE
 // ───────────────────────────────────────────────────────────────────────────────
 void control_init() {
-  currentState = STATE_IDLE;
-  previousState = STATE_IDLE;
+  currentState.store(STATE_IDLE, std::memory_order_relaxed);
+  previousState.store(STATE_IDLE, std::memory_order_relaxed);
   LOG_I("Control init: state=IDLE");
 }
 
 void control_transition_to(SystemState newState) {
-  // Validate transition
-  if (!control_is_valid_transition(currentState, newState)) {
+  SystemState expected = currentState.load(std::memory_order_relaxed);
+  if (!control_is_valid_transition(expected, newState)) {
     LOG_W("Invalid transition: %s -> %s",
-          control_get_state_string(),
+          control_state_name(expected),
           control_state_name(newState));
     return;
   }
+  if (!currentState.compare_exchange_strong(expected, newState)) {
+    LOG_W("Race in transition: %s -> %s (state changed to %s)", control_state_name(expected), control_state_name(newState), control_state_name(currentState.load(std::memory_order_relaxed)));
+    return;
+  }
 
-  previousState = currentState;
-  currentState = newState;
+  previousState.store(expected, std::memory_order_relaxed);
 
   LOG_I("State: %s -> %s",
         control_state_name(previousState),
         control_state_name(newState));
 
-  // Handle state entry actions
   switch (newState) {
     case STATE_IDLE:
-      // Motor should already be stopped from STOPPING or ESTOP
       break;
-
     case STATE_RUNNING:
-      // Continuous mode - speed applied by motorTask
       break;
-
     case STATE_STOPPING:
       motor_stop();
       break;
-
     case STATE_ESTOP:
       motor_halt();
       break;
-
     default:
       break;
   }
 }
 
 SystemState control_get_state() {
-  return currentState;
+  return currentState.load(std::memory_order_relaxed);
 }
 
 const char* control_get_state_string() {
-  return control_state_name(currentState);
+  return control_state_name(currentState.load(std::memory_order_relaxed));
 }
 
 const char* control_state_name(SystemState s) {
@@ -152,66 +121,48 @@ const char* control_state_name(SystemState s) {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// MODE CONTROL FUNCTIONS
+// MODE CONTROL FUNCTIONS (non-blocking — set flags for controlTask)
 // ───────────────────────────────────────────────────────────────────────────────
 void control_start_continuous() {
-  if (currentState != STATE_IDLE) control_stop();
-  // Wait for STOPPING -> IDLE transition (max 500ms)
-  for (int i = 0; i < 50 && currentState != STATE_IDLE; i++) delay(10);
-  continuous_start();
+  if (safety_is_estop_active()) return;
+  pendingModeRequest.store(1, std::memory_order_relaxed);
 }
 
 void control_stop() {
-  if (currentState == STATE_IDLE || currentState == STATE_STOPPING || currentState == STATE_ESTOP) {
-    return;
-  }
-  if (currentState == STATE_RUNNING) {
-    continuous_stop();
-  } else if (currentState == STATE_PULSE) {
-    pulse_stop();
-  } else if (currentState == STATE_JOG) {
-    jog_stop();
-  } else if (currentState == STATE_TIMER) {
-    timer_stop();
-  } else if (currentState == STATE_STEP) {
-    // Step mode: force stop motor and go to STOPPING
-    motor_stop();
-    control_transition_to(STATE_STOPPING);
-  }
+  pendingStop.store(true, std::memory_order_relaxed);
 }
 
 void control_start_pulse(uint32_t on_ms, uint32_t off_ms) {
-  if (currentState != STATE_IDLE) control_stop();
-  for (int i = 0; i < 50 && currentState != STATE_IDLE; i++) delay(10);
-  pulse_start(on_ms, off_ms);
+  if (safety_is_estop_active()) return;
+  pendingPulseOnMs.store(on_ms, std::memory_order_release);
+  pendingPulseOffMs.store(off_ms, std::memory_order_release);
+  pendingModeRequest.store(2, std::memory_order_relaxed);
 }
 
 void control_start_step(float angle_deg) {
-  if (currentState != STATE_IDLE) control_stop();
-  for (int i = 0; i < 50 && currentState != STATE_IDLE; i++) delay(10);
-  step_execute(angle_deg);
+  if (safety_is_estop_active()) return;
+  pendingStepAngle.store(angle_deg, std::memory_order_release);
+  pendingModeRequest.store(3, std::memory_order_relaxed);
 }
 
 void control_start_jog_cw() {
-  if (currentState != STATE_IDLE && currentState != STATE_JOG) control_stop();
-  for (int i = 0; i < 50 && currentState != STATE_IDLE; i++) delay(10);
-  jog_start(DIR_CW);
+  if (safety_is_estop_active()) return;
+  pendingModeRequest.store(4, std::memory_order_relaxed);
 }
 
 void control_start_jog_ccw() {
-  if (currentState != STATE_IDLE && currentState != STATE_JOG) control_stop();
-  for (int i = 0; i < 50 && currentState != STATE_IDLE; i++) delay(10);
-  jog_start(DIR_CCW);
+  if (safety_is_estop_active()) return;
+  pendingModeRequest.store(5, std::memory_order_relaxed);
 }
 
 void control_stop_jog() {
-  jog_stop();
+  pendingStopJog.store(true, std::memory_order_relaxed);
 }
 
 void control_start_timer(uint32_t duration_sec) {
-  if (currentState != STATE_IDLE) control_stop();
-  for (int i = 0; i < 50 && currentState != STATE_IDLE; i++) delay(10);
-  timer_start(duration_sec);
+  if (safety_is_estop_active()) return;
+  pendingTimerDuration.store(duration_sec, std::memory_order_release);
+  pendingModeRequest.store(6, std::memory_order_relaxed);
 }
 
 uint32_t control_get_timer_remaining() {
@@ -242,26 +193,111 @@ void control_reset_step_accumulator() {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
+// PENDING REQUEST PROCESSOR (runs in controlTask on Core 0)
+// ───────────────────────────────────────────────────────────────────────────────
+static void process_pending_requests() {
+  SystemState cur = currentState.load(std::memory_order_relaxed);
+
+  if (pendingStopJog.load(std::memory_order_relaxed)) {
+    pendingStopJog.store(false, std::memory_order_relaxed);
+    if (cur == STATE_JOG) {
+      jog_stop();
+    }
+  }
+
+  if (pendingStop.load(std::memory_order_relaxed)) {
+    pendingStop.store(false, std::memory_order_relaxed);
+    pendingModeRequest.store(0, std::memory_order_relaxed);
+    if (cur != STATE_IDLE && cur != STATE_STOPPING && cur != STATE_ESTOP) {
+      if (cur == STATE_RUNNING) {
+        continuous_stop();
+      } else if (cur == STATE_PULSE) {
+        pulse_stop();
+      } else if (cur == STATE_JOG) {
+        jog_stop();
+      } else if (cur == STATE_TIMER) {
+        timer_stop();
+      } else if (cur == STATE_STEP) {
+        control_transition_to(STATE_STOPPING);
+      }
+    }
+    return;
+  }
+
+  if (pendingModeRequest.load(std::memory_order_relaxed) == 0) return;
+
+  if (cur != STATE_IDLE) {
+    if (cur != STATE_STOPPING && cur != STATE_ESTOP) {
+      if (cur == STATE_RUNNING) {
+        continuous_stop();
+      } else if (cur == STATE_PULSE) {
+        pulse_stop();
+      } else if (cur == STATE_JOG) {
+        jog_stop();
+      } else if (cur == STATE_TIMER) {
+        timer_stop();
+      } else if (cur == STATE_STEP) {
+        control_transition_to(STATE_STOPPING);
+      }
+    }
+    return;
+  }
+
+  uint8_t req = pendingModeRequest.load(std::memory_order_relaxed);
+  pendingModeRequest.store(0, std::memory_order_relaxed);
+
+  switch (req) {
+    case 1:
+      continuous_start();
+      break;
+    case 2:
+      pulse_start(pendingPulseOnMs.load(std::memory_order_acquire), pendingPulseOffMs.load(std::memory_order_acquire));
+      break;
+    case 3:
+      step_execute(pendingStepAngle.load(std::memory_order_acquire));
+      break;
+    case 4:
+      jog_start(DIR_CW);
+      break;
+    case 5:
+      jog_start(DIR_CCW);
+      break;
+    case 6:
+      timer_start(pendingTimerDuration.load(std::memory_order_acquire));
+      break;
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
 // CONTROL TASK — Main state machine loop
 // ───────────────────────────────────────────────────────────────────────────────
 void controlTask(void* pvParameters) {
   LOG_I("Control task started on Core %d", xPortGetCoreID());
-  esp_task_wdt_add(NULL);  // Register with watchdog
+  esp_task_wdt_add(NULL);
 
   TickType_t t = xTaskGetTickCount();
   for (;;) {
-    esp_task_wdt_reset();  // Feed watchdog
+    esp_task_wdt_reset();
 
-    // Check if motor has stopped (STOPPING -> IDLE transition)
-    if (currentState == STATE_STOPPING) {
-      if (!motor_is_running()) {
-        motor_disable();  // Disable motor (ENA HIGH) after smooth stop
+    process_pending_requests();
+
+    if (currentState.load(std::memory_order_relaxed) == STATE_ESTOP) {
+      if (safety_check_ui_reset()) {
         control_transition_to(STATE_IDLE);
       }
     }
 
-    // Mode-specific updates
-    switch (currentState) {
+    if (currentState.load(std::memory_order_relaxed) == STATE_STOPPING) {
+      if (!motor_is_running()) {
+        motor_disable();
+        control_transition_to(STATE_IDLE);
+      }
+    }
+
+    switch (currentState.load(std::memory_order_relaxed)) {
+      case STATE_RUNNING:
+        continuous_update();
+        break;
       case STATE_PULSE:
         pulse_update();
         break;
@@ -271,10 +307,13 @@ void controlTask(void* pvParameters) {
       case STATE_TIMER:
         timer_update();
         break;
+      case STATE_JOG:
+        jog_update();
+        break;
       default:
         break;
     }
 
-    vTaskDelayUntil(&t, pdMS_TO_TICKS(10));  // 10ms cycle
+    vTaskDelayUntil(&t, pdMS_TO_TICKS(10));
   }
 }

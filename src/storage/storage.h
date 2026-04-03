@@ -21,6 +21,10 @@ struct SystemSettings {
     uint8_t dim_timeout;   // Seconds before auto-dim (0=off, 30, 60, 120, 300)
     bool dir_switch_enabled; // CW/CCW hardware switch on GPIO28
     uint8_t accent_color;  // Index into theme palette (0=Orange, 1=Cyan, etc.)
+    char wifi_ssid[33];    // WiFi SSID (max 32 chars + null)
+    char wifi_pass[64];    // WiFi password (max 63 chars + null)
+    char ble_name[33];     // BLE device name (max 32 chars + null)
+    uint8_t settings_version;
 };
 
 // Preset struct matching the system's control capabilities
@@ -51,9 +55,11 @@ struct Preset {
 
 // Global active preset list loaded from flash
 extern std::vector<Preset> g_presets;
+extern SemaphoreHandle_t g_presets_mutex;
 
 // Global settings
 extern SystemSettings g_settings;
+extern volatile bool g_dir_switch_cache;
 
 // Core functions
 void storage_init();
@@ -63,8 +69,15 @@ bool storage_load_settings();
 void storage_save_settings();
 void storage_flush();
 
+// WiFi pending request processing (called from storageTask only)
+// ESP-Hosted WiFi API is NOT thread-safe — all WiFi calls must go through here
+void wifi_process_pending();
+
 // Helper functions
-Preset* storage_get_preset(uint8_t id);
+bool storage_get_preset(uint8_t id, Preset* out);
 bool storage_delete_preset(uint8_t id);
 void storage_get_usage(size_t* used, size_t* total);
 void storage_format();
+
+// FreeRTOS task
+void storageTask(void* pvParameters);  // Program save/load task (Core 1, priority 1)

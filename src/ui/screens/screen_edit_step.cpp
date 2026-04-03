@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include "../screens.h"
 #include "../theme.h"
+#include "../../config.h"
+#include "../../motor/microstep.h"
 #include <cstdio>
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -53,7 +55,7 @@ static void update_computed() {
   }
 
   // Total steps
-  long totalSteps = (long)(editAngle * editRepeats * (200.0f * 8.0f * 200.0f / 360.0f));
+  long totalSteps = (long)(editAngle * editRepeats * ((float)microstep_get_steps_per_rev() * GEAR_RATIO / 360.0f));
   if (stepsLabel) lv_label_set_text_fmt(stepsLabel, "%ld", totalSteps);
 }
 
@@ -169,7 +171,7 @@ static void create_adj_row(lv_obj_t* parent, int y,
   lv_obj_add_event_cb(minusBtn, minusCb, LV_EVENT_CLICKED, minusData);
 
   lv_obj_t* minusLbl = lv_label_create(minusBtn);
-  lv_label_set_text(minusLbl, LV_SYMBOL_MINUS);
+  lv_label_set_text(minusLbl, "-");
   lv_obj_set_style_text_font(minusLbl, FONT_MED, 0);
   lv_obj_set_style_text_color(minusLbl, COL_TEXT, 0);
   lv_obj_center(minusLbl);
@@ -201,7 +203,7 @@ static void create_adj_row(lv_obj_t* parent, int y,
   lv_obj_add_event_cb(plusBtn, plusCb, LV_EVENT_CLICKED, plusData);
 
   lv_obj_t* plusLbl = lv_label_create(plusBtn);
-  lv_label_set_text(plusLbl, LV_SYMBOL_PLUS);
+  lv_label_set_text(plusLbl, "+");
   lv_obj_set_style_text_font(plusLbl, FONT_MED, 0);
   lv_obj_set_style_text_color(plusLbl, COL_TEXT, 0);
   lv_obj_center(plusLbl);
@@ -329,7 +331,7 @@ void screen_edit_step_create() {
     lv_obj_add_event_cb(rpmMinus, rpm_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)(-1));
 
     lv_obj_t* rpmMinusLbl = lv_label_create(rpmMinus);
-    lv_label_set_text(rpmMinusLbl, LV_SYMBOL_MINUS);
+    lv_label_set_text(rpmMinusLbl, "-");
     lv_obj_set_style_text_font(rpmMinusLbl, FONT_MED, 0);
     lv_obj_set_style_text_color(rpmMinusLbl, COL_TEXT, 0);
     lv_obj_center(rpmMinusLbl);
@@ -362,7 +364,7 @@ void screen_edit_step_create() {
     lv_obj_add_event_cb(rpmPlus, rpm_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)1);
 
     lv_obj_t* rpmPlusLbl = lv_label_create(rpmPlus);
-    lv_label_set_text(rpmPlusLbl, LV_SYMBOL_PLUS);
+    lv_label_set_text(rpmPlusLbl, "+");
     lv_obj_set_style_text_font(rpmPlusLbl, FONT_MED, 0);
     lv_obj_set_style_text_color(rpmPlusLbl, COL_TEXT, 0);
     lv_obj_center(rpmPlusLbl);
@@ -439,7 +441,7 @@ void screen_edit_step_create() {
     lv_obj_add_event_cb(repMinus, repeats_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)(-1));
 
     lv_obj_t* repMinusLbl = lv_label_create(repMinus);
-    lv_label_set_text(repMinusLbl, LV_SYMBOL_MINUS);
+    lv_label_set_text(repMinusLbl, "-");
     lv_obj_set_style_text_font(repMinusLbl, FONT_MED, 0);
     lv_obj_set_style_text_color(repMinusLbl, COL_TEXT, 0);
     lv_obj_center(repMinusLbl);
@@ -472,7 +474,7 @@ void screen_edit_step_create() {
     lv_obj_add_event_cb(repPlus, repeats_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)1);
 
     lv_obj_t* repPlusLbl = lv_label_create(repPlus);
-    lv_label_set_text(repPlusLbl, LV_SYMBOL_PLUS);
+    lv_label_set_text(repPlusLbl, "+");
     lv_obj_set_style_text_font(repPlusLbl, FONT_MED, 0);
     lv_obj_set_style_text_color(repPlusLbl, COL_TEXT, 0);
     lv_obj_center(repPlusLbl);
@@ -501,7 +503,7 @@ void screen_edit_step_create() {
     lv_obj_add_event_cb(dwellMinus, dwell_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)(-1));
 
     lv_obj_t* dwellMinusLbl = lv_label_create(dwellMinus);
-    lv_label_set_text(dwellMinusLbl, LV_SYMBOL_MINUS);
+    lv_label_set_text(dwellMinusLbl, "-");
     lv_obj_set_style_text_font(dwellMinusLbl, FONT_MED, 0);
     lv_obj_set_style_text_color(dwellMinusLbl, COL_TEXT, 0);
     lv_obj_center(dwellMinusLbl);
@@ -534,7 +536,7 @@ void screen_edit_step_create() {
     lv_obj_add_event_cb(dwellPlus, dwell_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)1);
 
     lv_obj_t* dwellPlusLbl = lv_label_create(dwellPlus);
-    lv_label_set_text(dwellPlusLbl, LV_SYMBOL_PLUS);
+    lv_label_set_text(dwellPlusLbl, "+");
     lv_obj_set_style_text_font(dwellPlusLbl, FONT_MED, 0);
     lv_obj_set_style_text_color(dwellPlusLbl, COL_TEXT, 0);
     lv_obj_center(dwellPlusLbl);

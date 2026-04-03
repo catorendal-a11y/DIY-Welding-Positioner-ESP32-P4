@@ -22,9 +22,6 @@ void continuous_start() {
     motor_run_ccw();
   }
 
-  // Apply target speed from pot/slider
-  speed_apply();
-
   // Transition to RUNNING state
   control_transition_to(STATE_RUNNING);
 }

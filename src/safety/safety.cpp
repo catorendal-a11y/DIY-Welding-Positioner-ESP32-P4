@@ -6,15 +6,16 @@
 #include "../motor/motor.h"
 #include "../control/control.h"
 #include <esp_task_wdt.h>
-#include <esp_timer.h>
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SAFETY GLOBALS
 // ───────────────────────────────────────────────────────────────────────────────
 volatile bool g_estopPending = false;
-volatile int64_t g_estopTriggerUs = 0;  // microseconds, ISR-safe (esp_timer_get_time)
+volatile uint32_t g_estopTriggerMs = 0;
 static bool estopLocked = false;
-static FastAccelStepper* estopStepper = nullptr;  // Cached for ISR use
+static FastAccelStepper* estopStepper = nullptr;
+static volatile bool estopResetPending = false;
+volatile bool g_uiResetPending = false;
 
 #if DEBUG_BUILD
 static uint32_t g_estopISRCount  = 0;
@@ -40,8 +41,9 @@ void IRAM_ATTR estopISR() {
   // CRITICAL: Minimum work, no FreeRTOS calls, no Serial prints
   // This runs at interrupt priority — must exit immediately
 
-  // Layer 1: Disable motor NOW
-  digitalWrite(PIN_ENA, HIGH);   // Motor OFF — < 0.5 ms response
+  // Layer 1: Disable motor NOW (direct register - IRAM-safe, no flash/PSRAM)
+  // GPIO 52 is in high bank (32-63): use out1_w1ts to set HIGH
+  GPIO.out1_w1ts.val = (1UL << (PIN_ENA - 32));
 
   // Stop stepper (forceStop is IRAM-safe)
   if (estopStepper != nullptr) {
@@ -50,7 +52,7 @@ void IRAM_ATTR estopISR() {
 
   // Signal safety task for Layer 2 (state transition)
   g_estopPending = true;
-  g_estopTriggerUs = esp_timer_get_time();  // ISR-safe, microseconds
+  g_estopTriggerMs = millis();
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -63,6 +65,13 @@ void safety_init() {
   // Verify ESTOP is not pressed at boot (NC contact = HIGH when released)
   bool estopPressed = (digitalRead(PIN_ESTOP) == LOW);
   LOG_I("Safety init: ESTOP=%s", estopPressed ? "PRESSED" : "OK");
+
+  if (estopPressed) {
+    LOG_W("ESTOP pressed at boot — system locked");
+    estopLocked = true;
+    g_estopPending = true;
+  g_estopTriggerMs = millis();
+  }
 
   // Initialize watchdog
   safety_init_watchdog();
@@ -86,14 +95,28 @@ bool safety_is_estop_locked() {
 }
 
 void safety_reset_estop() {
-  // Only allow reset if physical ESTOP is released
+  estopResetPending = true;
+}
+
+static void safety_handle_reset() {
   if (digitalRead(PIN_ESTOP) == HIGH) {
     estopLocked = false;
     g_estopPending = false;
     LOG_I("ESTOP reset");
   } else {
-    LOG_W("ESTOP reset failed — button still pressed");
+    LOG_W("ESTOP reset failed - button still pressed");
   }
+}
+
+bool safety_check_ui_reset() {
+  if (g_uiResetPending && digitalRead(PIN_ESTOP) == HIGH) {
+    g_uiResetPending = false;
+    estopLocked = false;
+    g_estopPending = false;
+    return true;
+  }
+  g_uiResetPending = false;
+  return false;
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -112,11 +135,16 @@ void safetyTask(void* pvParameters) {
     safety_feed_watchdog();
 
     // Check for pending ESTOP from ISR
-    if (g_estopPending) {
-      int64_t elapsedUs = esp_timer_get_time() - g_estopTriggerUs;
+    if (estopResetPending) {
+      estopResetPending = false;
+      safety_handle_reset();
+    }
 
-      // Debounce: Wait 5ms before state transition (5000 µs)
-      if (elapsedUs >= 5000) {
+    if (g_estopPending) {
+      uint32_t elapsedMs = millis() - g_estopTriggerMs;
+
+      // Debounce: Wait 5ms before state transition
+      if (elapsedMs >= 5) {
         // Verify ESTOP is still pressed (not a glitch)
         if (digitalRead(PIN_ESTOP) == LOW) {
           // Layer 2: State transition to ESTOP
@@ -145,18 +173,18 @@ void safetyTask(void* pvParameters) {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// HARDWARE WATCHDOG — 2 second timeout
+// HARDWARE WATCHDOG — 5 second timeout
 // ───────────────────────────────────────────────────────────────────────────────
 void safety_init_watchdog() {
   // ESP32-P4 watchdog reconfiguration (ESP-IDF 5.x API)
   // Arduino framework already inits the watchdog, so we reconfigure it
   esp_task_wdt_config_t wdt_cfg = {
-    .timeout_ms       = 2000,
+    .timeout_ms       = 5000,
     .idle_core_mask   = 0,        // Don't watch idle tasks
     .trigger_panic    = true,     // Panic on timeout
   };
   esp_task_wdt_reconfigure(&wdt_cfg);
-  LOG_I("Watchdog reconfigured: 2000ms timeout, panic on timeout");
+  LOG_I("Watchdog reconfigured: 5000ms timeout, panic on timeout");
 }
 
 void safety_feed_watchdog() {

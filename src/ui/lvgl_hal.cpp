@@ -228,7 +228,14 @@ void lvgl_hal_init() {
   lv_display_set_color_format(disp, LV_COLOR_FORMAT_RGB565);
   lv_display_set_buffers(disp, buf1, buf2, buf_bytes, LV_DISPLAY_RENDER_MODE_PARTIAL);
   lv_display_set_flush_cb(disp, lvgl_flush_cb);
-  // NO lv_display_set_rotation — manual rotation in flush callback
+  // NO lv_display_set_rotation() — causes Load access fault on ESP32-P4.
+  // lv_display_set_rotation() triggers LVGL's internal buffer rearrangement
+  // which conflicts with the ESP32-P4 MIPI-DSI DMA pipeline. The DPI panel
+  // expects pixels in physical portrait order (480×800), but LVGL's software
+  // rotation reorders the draw buffers in a way that causes the DMA controller
+  // to read from unmapped memory. Manual pixel rotation in lvgl_flush_cb is
+  // the only safe approach — it keeps LVGL rendering in native landscape
+  // (800×480) and rotates only during the memcpy to the physical framebuffer.
 
   display_register_lvgl_vsync(disp);
 

@@ -15,7 +15,7 @@
 #define PIN_DIR         51   // Direction: CW=HIGH, CCW=LOW
 #define PIN_ENA         52   // Enable: Active LOW to TB6600
 #define PIN_ESTOP       34   // Emergency Stop: Active LOW, NC contact
-#define PIN_DIR_SWITCH  28   // CW/CCW direction switch (INPUT_PULLUP, LOW=CCW, HIGH=CW)
+#define PIN_DIR_SWITCH  29   // CW/CCW direction switch (INPUT_PULLUP, LOW=CCW, HIGH=CW)
 #define PIN_PEDAL       35   // ADC — Foot pedal potentiometer
 #define PIN_PEDAL_SW    33   // Foot pedal start switch (INPUT_PULLUP, LOW=pressed)
 

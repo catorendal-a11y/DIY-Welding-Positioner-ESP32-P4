@@ -426,8 +426,8 @@ void screen_wifi_create() {
   lv_obj_add_flag(networkList, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_scrollbar_mode(networkList, LV_SCROLLBAR_MODE_OFF);
 
-  int footerY = 438;
-  int footerH = 44;
+  int footerY = 434;
+  int footerH = 40;
   int btnW = 144;
   int gap = 10;
 

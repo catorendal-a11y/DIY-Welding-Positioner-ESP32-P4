@@ -340,6 +340,7 @@ void ble_notify_state() {
 // ───────────────────────────────────────────────────────────────────────────────
 // C6 co-processor OTA update
 // Connects WiFi via C6, downloads firmware from Espressif, flashes C6
+// BLE is paused during OTA — both share the SDIO bus to C6 co-processor
 // ───────────────────────────────────────────────────────────────────────────────
 void ble_ota_update_c6() {
   LOG_I("=== C6 OTA Update Start ===");
@@ -349,9 +350,24 @@ void ble_ota_update_c6() {
     return;
   }
 
+  // Pause BLE — WiFi and BLE share the SDIO bus to the C6 co-processor.
+  // Running both simultaneously causes SDIO bus contention and dropped packets.
+  bool wasAdvertising = bleEnabled.load(std::memory_order_relaxed) && bleServer;
+  if (wasAdvertising) {
+    LOG_I("Pausing BLE for OTA (shared SDIO bus)");
+    BLEDevice::stopAdvertising();
+    if (bleConnected.load(std::memory_order_relaxed)) {
+      bleServer->disconnect(0);
+    }
+  }
+
   char* updateUrl = hostedGetUpdateURL();
   if (!updateUrl || strlen(updateUrl) == 0) {
     LOG_E("No OTA update URL available");
+    if (wasAdvertising) {
+      BLEDevice::startAdvertising();
+      LOG_I("BLE resumed (no OTA URL)");
+    }
     return;
   }
 
@@ -465,6 +481,13 @@ void ble_ota_update_c6() {
   https.end();
   WiFi.STA.disconnect();
   WiFi.mode(WIFI_OFF);
+
+  // Resume BLE after WiFi is off — SDIO bus is free again
+  if (wasAdvertising) {
+    delay(500);  // Wait for C6 to reboot and SDIO to settle
+    BLEDevice::startAdvertising();
+    LOG_I("BLE resumed after OTA");
+  }
 }
 
 void ble_set_enabled(bool enabled) {

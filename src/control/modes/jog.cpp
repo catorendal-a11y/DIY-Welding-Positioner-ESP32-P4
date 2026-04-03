@@ -5,6 +5,9 @@
 #include "../../config.h"
 #include <atomic>
 
+static_assert(std::atomic<float>::is_always_lock_free,
+              "std::atomic<float> must be lock-free for inter-core jog speed sharing");
+
 static std::atomic<float> jogRPM{0.5f};
 static std::atomic<float> pendingJogSpeed{-1.0f};
 

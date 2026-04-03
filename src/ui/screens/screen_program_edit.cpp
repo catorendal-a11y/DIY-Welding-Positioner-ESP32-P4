@@ -286,24 +286,6 @@ void screen_program_edit_create(int slot) {
   lv_obj_set_style_text_color(title, COL_ACCENT, 0);
   lv_obj_set_pos(title, 12, 7);
 
-  // [ESC] button at right of header
-  lv_obj_t* escBtn = lv_button_create(header);
-  lv_obj_set_size(escBtn, 60, 24);
-  lv_obj_set_pos(escBtn, SCREEN_W - 60 - PAD_X, 4);
-  lv_obj_set_style_bg_color(escBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(escBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(escBtn, 1, 0);
-  lv_obj_set_style_border_color(escBtn, COL_BORDER, 0);
-  lv_obj_set_style_shadow_width(escBtn, 0, 0);
-  lv_obj_set_style_pad_all(escBtn, 0, 0);
-  lv_obj_add_event_cb(escBtn, back_event_cb, LV_EVENT_CLICKED, nullptr);
-
-  lv_obj_t* escLbl = lv_label_create(escBtn);
-  lv_label_set_text(escLbl, "[ESC]");
-  lv_obj_set_style_text_font(escLbl, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(escLbl, COL_TEXT_DIM, 0);
-  lv_obj_center(escLbl);
-
   // ── Separator line at y=32 ──
   lv_obj_t* line1 = lv_obj_create(screen);
   lv_obj_set_size(line1, SCREEN_W, 1);

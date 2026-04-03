@@ -10,6 +10,8 @@
 static void (*onConfirmCallback)() = nullptr;
 static void (*onCancelCallback)() = nullptr;
 static ScreenId returnScreen = SCREEN_PROGRAMS;
+static volatile bool confirmPending = false;
+static volatile bool cancelPending = false;
 
 // ───────────────────────────────────────────────────────────────────────────────
 // WIDGETS
@@ -21,24 +23,35 @@ static lv_obj_t* warnLabel = nullptr;
 // EVENT HANDLERS
 // ───────────────────────────────────────────────────────────────────────────────
 static void confirm_event_cb(lv_event_t* e) {
-  LOG_I("Confirm dialog: CONFIRM pressed");
-  auto cb = onConfirmCallback;
-  onConfirmCallback = nullptr;
-  onCancelCallback = nullptr;
-  if (cb) {
-    cb();
-  }
-  screens_show(returnScreen);
+  confirmPending = true;
 }
 
 static void cancel_event_cb(lv_event_t* e) {
-  LOG_I("Confirm dialog: CANCEL pressed");
-  if (onCancelCallback) {
-    onCancelCallback();
+  cancelPending = true;
+}
+
+void screen_confirm_update() {
+  if (confirmPending) {
+    confirmPending = false;
+    auto cb = onConfirmCallback;
+    onConfirmCallback = nullptr;
+    onCancelCallback = nullptr;
+    if (cb) {
+      cb();
+    }
+    screens_show(returnScreen);
+    return;
   }
-  onConfirmCallback = nullptr;
-  onCancelCallback = nullptr;
-  screens_show(returnScreen);
+  if (cancelPending) {
+    cancelPending = false;
+    if (onCancelCallback) {
+      onCancelCallback();
+    }
+    onConfirmCallback = nullptr;
+    onCancelCallback = nullptr;
+    screens_show(returnScreen);
+    return;
+  }
 }
 
 // ───────────────────────────────────────────────────────────────────────────────

@@ -69,6 +69,7 @@ void screen_boot_create();
 void screen_confirm_create_static();  // Static init
 void screen_confirm_create(const char* title, const char* message,
                            void (*on_confirm)(), void (*on_cancel)());
+void screen_confirm_update();
 
 // Boot screen
 void screen_boot_update(int percent, const char* status);

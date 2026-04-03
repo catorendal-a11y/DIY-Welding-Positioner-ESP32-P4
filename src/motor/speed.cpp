@@ -10,6 +10,12 @@
 #include "../control/control.h"
 #include <atomic>
 
+// Verify std::atomic<float> is lock-free on this target.
+// On ESP32-P4 (Xtensa LX7), 32-bit atomics are natively lock-free.
+// If this fails on another platform, switch to std::atomic<int32_t> with ×1000 fixed-point.
+static_assert(std::atomic<float>::is_always_lock_free,
+              "std::atomic<float> must be lock-free for inter-core RPM sharing");
+
 // ───────────────────────────────────────────────────────────────────────────────
 // CONSTANTS
 // ───────────────────────────────────────────────────────────────────────────────

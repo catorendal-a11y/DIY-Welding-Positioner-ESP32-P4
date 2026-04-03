@@ -5,8 +5,8 @@
 
 std::vector<Preset> g_presets;
 SemaphoreHandle_t g_presets_mutex;
-SystemSettings g_settings = { 5000, 8, 1.0f, true, 150, 60, false, 0, "", "", BLE_DEVICE_NAME_DEFAULT, 1 };
-volatile bool g_dir_switch_cache = false;
+SystemSettings g_settings = { 5000, 8, 1.0f, true, 150, 60, true, 0, "", "", BLE_DEVICE_NAME_DEFAULT, 1 };
+volatile bool g_dir_switch_cache = true;
 
 static volatile bool savePending = false;
 static uint32_t lastSaveMs = 0;
@@ -180,7 +180,7 @@ bool storage_load_settings() {
     g_settings.rpm_buttons_enabled = doc["rpm_buttons_enabled"] | true;
     g_settings.brightness = constrain(doc["brightness"] | 150, (uint8_t)10, (uint8_t)255);
     g_settings.dim_timeout = doc["dim_timeout"] | 60;
-    g_settings.dir_switch_enabled = doc["dir_switch_enabled"] | false;
+    g_settings.dir_switch_enabled = doc["dir_switch_enabled"] | true;
     g_settings.accent_color = constrain(doc["accent_color"] | 0, (uint8_t)0, (uint8_t)7);
     strlcpy(g_settings.wifi_ssid, doc["wifi_ssid"] | WIFI_SSID, sizeof(g_settings.wifi_ssid));
     strlcpy(g_settings.wifi_pass, doc["wifi_pass"] | WIFI_PASS, sizeof(g_settings.wifi_pass));
@@ -194,9 +194,9 @@ bool storage_load_settings() {
 }
 
 static bool storage_save_settings_internal() {
-    File file = LittleFS.open(SETTINGS_FILE, FILE_WRITE);
+    File file = LittleFS.open(SETTINGS_FILE ".tmp", FILE_WRITE);
     if (!file) {
-        LOG_E("Failed to open settings file for writing");
+        LOG_E("Failed to open settings temp file for writing");
         return false;
     }
 
@@ -215,12 +215,15 @@ static bool storage_save_settings_internal() {
     doc["settings_version"] = g_settings.settings_version;
 
     if (serializeJson(doc, file) == 0) {
-        LOG_E("Failed to write JSON to settings file");
+        LOG_E("Failed to write JSON to settings temp file");
         file.close();
+        LittleFS.remove(SETTINGS_FILE ".tmp");
         return false;
     }
 
     file.close();
+    LittleFS.remove(SETTINGS_FILE);
+    LittleFS.rename(SETTINGS_FILE ".tmp", SETTINGS_FILE);
     LOG_I("Successfully saved settings to LittleFS.");
     g_dir_switch_cache = g_settings.dir_switch_enabled;
     return true;
@@ -310,19 +313,24 @@ char wifiPendingPass[65] = "";
 static bool wifiScanStarted = false;
 static uint32_t wifiReconnectInterval = 30000;
 static uint32_t wifiLastReconnectAttempt = 0;
+static uint32_t wifiLastStatusPoll = 0;
 
 void wifi_process_pending() {
-    // Update cached connection status
-    bool connected = (WiFi.status() == WL_CONNECTED);
-    wifiIsConnected = connected;
-    if (connected) {
-        strlcpy(wifiConnectedSsid, WiFi.SSID().c_str(), sizeof(wifiConnectedSsid));
-        strlcpy(wifiConnectedIp, WiFi.localIP().toString().c_str(), sizeof(wifiConnectedIp));
-        wifiConnectedRssi = WiFi.RSSI();
-    } else {
-        wifiConnectedSsid[0] = '\0';
-        wifiConnectedIp[0] = '\0';
-        wifiConnectedRssi = 0;
+    // Update cached connection status (every 2s to avoid SDIO bus blocking idle task)
+    uint32_t now = millis();
+    if (now - wifiLastStatusPoll >= 2000) {
+        wifiLastStatusPoll = now;
+        bool connected = (WiFi.status() == WL_CONNECTED);
+        wifiIsConnected = connected;
+        if (connected) {
+            strlcpy(wifiConnectedSsid, WiFi.SSID().c_str(), sizeof(wifiConnectedSsid));
+            strlcpy(wifiConnectedIp, WiFi.localIP().toString().c_str(), sizeof(wifiConnectedIp));
+            wifiConnectedRssi = WiFi.RSSI();
+        } else {
+            wifiConnectedSsid[0] = '\0';
+            wifiConnectedIp[0] = '\0';
+            wifiConnectedRssi = 0;
+        }
     }
 
     // Process WiFi scan
@@ -371,14 +379,14 @@ void wifi_process_pending() {
     }
 
     // Auto-reconnect with exponential backoff
-    if (wifiEnabled && g_settings.wifi_ssid[0] != '\0' && !connected) {
+    if (wifiEnabled && g_settings.wifi_ssid[0] != '\0' && !wifiIsConnected) {
         if (millis() - wifiLastReconnectAttempt > wifiReconnectInterval) {
             wifiLastReconnectAttempt = millis();
             WiFi.begin(g_settings.wifi_ssid, g_settings.wifi_pass);
             wifiReconnectInterval = (wifiReconnectInterval < 300000) ? wifiReconnectInterval * 2 : 300000;
         }
     }
-    if (connected) {
+    if (wifiIsConnected) {
         wifiReconnectInterval = 30000;
     }
 }

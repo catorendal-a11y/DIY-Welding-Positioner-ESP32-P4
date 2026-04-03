@@ -195,15 +195,13 @@ void motorTask(void* pvParameters) {
 }
 
 // Storage task (Core 1, priority 1) — program save/load + health monitoring
+// NOT subscribed to WDT — does blocking I/O (LittleFS, WiFi SDIO, BLE SDIO)
 void storageTask(void* pvParameters) {
   LOG_I("Storage task started on Core %d", xPortGetCoreID());
-  esp_task_wdt_add(NULL);
   TickType_t t = xTaskGetTickCount();
 
   static uint32_t lastHealthCheck = 0;
   for (;;) {
-    esp_task_wdt_reset();
-
     storage_flush();
 
     wifi_process_pending();

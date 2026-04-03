@@ -25,7 +25,7 @@ static lv_obj_t* holdLabel = nullptr;
 static bool invertDir = false;
 static lv_obj_t* invertToggle = nullptr;
 static lv_obj_t* invertToggleLbl = nullptr;
-static bool enableIdle = false;
+static bool dirSwitchEnabled = false;
 static lv_obj_t* idleToggle = nullptr;
 static lv_obj_t* idleToggleLbl = nullptr;
 static lv_obj_t* statusLabel = nullptr;
@@ -69,16 +69,16 @@ static void invert_toggle_cb(lv_event_t* e) {
 
 static void idle_toggle_cb(lv_event_t* e) {
   (void)e;
-  enableIdle = !enableIdle;
-  lv_obj_set_style_bg_color(idleToggle, enableIdle ? COL_GREEN : lv_color_hex(0x333333), 0);
-  lv_label_set_text(idleToggleLbl, enableIdle ? "ON" : "OFF");
+  dirSwitchEnabled = !dirSwitchEnabled;
+  lv_obj_set_style_bg_color(idleToggle, dirSwitchEnabled ? COL_GREEN : lv_color_hex(0x333333), 0);
+  lv_label_set_text(idleToggleLbl, dirSwitchEnabled ? "ON" : "OFF");
 }
 
 static void save_apply_cb(lv_event_t* e) {
   g_settings.microstep = microOptions[selectedMicro];
   g_settings.acceleration = (uint32_t)lv_slider_get_value(accelSlider);
-  g_settings.dir_switch_enabled = enableIdle;
-  g_dir_switch_cache = enableIdle;
+  g_settings.dir_switch_enabled = dirSwitchEnabled;
+  g_dir_switch_cache = dirSwitchEnabled;
   storage_save_settings();
   motorConfigApplyPending = true;
   screens_show(SCREEN_SETTINGS);
@@ -97,6 +97,8 @@ void screen_motor_config_create() {
   lv_obj_t* screen = screenRoots[SCREEN_MOTOR_CONFIG];
   lv_obj_clean(screen);
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
+
+  dirSwitchEnabled = g_settings.dir_switch_enabled;
 
   const int PX = 16;
   const int CONTENT_W = SCREEN_W - 2 * PX;
@@ -345,11 +347,11 @@ void screen_motor_config_create() {
   lv_obj_set_style_pad_all(idleToggle, 0, 0);
   lv_obj_remove_flag(idleToggle, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_add_flag(idleToggle, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_set_style_bg_color(idleToggle, enableIdle ? COL_GREEN : lv_color_hex(0x333333), 0);
+  lv_obj_set_style_bg_color(idleToggle, dirSwitchEnabled ? COL_GREEN : lv_color_hex(0x333333), 0);
   lv_obj_add_event_cb(idleToggle, idle_toggle_cb, LV_EVENT_CLICKED, nullptr);
 
   idleToggleLbl = lv_label_create(idleToggle);
-  lv_label_set_text(idleToggleLbl, enableIdle ? "ON" : "OFF");
+  lv_label_set_text(idleToggleLbl, dirSwitchEnabled ? "ON" : "OFF");
   lv_obj_set_style_text_font(idleToggleLbl, FONT_BODY, 0);
   lv_obj_set_style_text_color(idleToggleLbl, lv_color_white(), 0);
   lv_obj_center(idleToggleLbl);

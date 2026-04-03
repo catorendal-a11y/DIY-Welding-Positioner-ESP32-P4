@@ -192,6 +192,9 @@ void screens_update_current() {
     case SCREEN_ABOUT:
       screen_about_update();
       break;
+    case SCREEN_CONFIRM:
+      screen_confirm_update();
+      break;
   }
 }
 

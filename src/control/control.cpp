@@ -8,6 +8,9 @@
 #include "esp_task_wdt.h"
 #include <atomic>
 
+static_assert(std::atomic<float>::is_always_lock_free,
+              "std::atomic<float> must be lock-free for inter-core state sharing");
+
 // ───────────────────────────────────────────────────────────────────────────────
 // STATE VARIABLES
 // ───────────────────────────────────────────────────────────────────────────────

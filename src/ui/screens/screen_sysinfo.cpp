@@ -5,7 +5,6 @@
 #include "../../config.h"
 #include "../../storage/storage.h"
 #include "../../ble/ble.h"
-#include "WiFi.h"
 #include "esp_heap_caps.h"
 #include "esp_psram.h"
 #include "esp_system.h"
@@ -14,6 +13,11 @@
 #include "freertos/task.h"
 #include <cstdio>
 #include <cstring>
+
+extern volatile bool wifiIsConnected;
+extern char wifiConnectedSsid[33];
+extern char wifiConnectedIp[16];
+extern volatile int wifiConnectedRssi;
 
 static lv_obj_t* uptimeLabel = nullptr;
 static lv_obj_t* heapBar = nullptr;
@@ -37,6 +41,9 @@ static float cachedTemp = 0.0f;
 static uint32_t lastCoreRead = 0;
 static int cachedCore0Pct = 0;
 static int cachedCore1Pct = 0;
+static uint32_t prevTotalRunTime = 0;
+static uint32_t prevIdleCore0Time = 0;
+static uint32_t prevIdleCore1Time = 0;
 
 static void back_cb(lv_event_t* e) {
   screens_show(SCREEN_SETTINGS);
@@ -252,9 +259,9 @@ void screen_sysinfo_create() {
   y += 14;
 
   make_key_label(screen, keyX, y, "WiFi");
-  if (WiFi.STA.status() == WL_CONNECTED) {
+  if (wifiIsConnected) {
     char wifiBuf[64];
-    snprintf(wifiBuf, sizeof(wifiBuf), "Connected - %s", WiFi.SSID().c_str());
+    snprintf(wifiBuf, sizeof(wifiBuf), "Connected - %s", wifiConnectedSsid);
     wifiStatusLabel = make_val_label(screen, valX, y, wifiBuf);
     lv_obj_set_style_text_color(wifiStatusLabel, COL_GREEN, 0);
   } else {
@@ -263,8 +270,8 @@ void screen_sysinfo_create() {
   y += rowH;
 
   make_key_label(screen, keyX, y, "IP");
-  if (WiFi.STA.status() == WL_CONNECTED) {
-    ipLabel = make_val_label(screen, valX, y, WiFi.localIP().toString().c_str());
+  if (wifiIsConnected) {
+    ipLabel = make_val_label(screen, valX, y, wifiConnectedIp);
   } else {
     ipLabel = make_val_label(screen, valX, y, "--");
   }
@@ -348,7 +355,20 @@ void screen_sysinfo_update() {
   int flashPct = appTotal > 0 ? (int)((uint64_t)appUsed * 100 / appTotal) : 0;
   if (flashBar) lv_bar_set_value(flashBar, flashPct, LV_ANIM_OFF);
 
-  // Core load (update every 2 seconds)
+  // WiFi status (from cached values updated by storageTask)
+  if (wifiIsConnected) {
+    char wifiBuf[64];
+    snprintf(wifiBuf, sizeof(wifiBuf), "Connected - %s", wifiConnectedSsid);
+    if (wifiStatusLabel) lv_label_set_text(wifiStatusLabel, wifiBuf);
+    if (wifiStatusLabel) lv_obj_set_style_text_color(wifiStatusLabel, COL_GREEN, 0);
+    if (ipLabel) lv_label_set_text(ipLabel, wifiConnectedIp);
+  } else {
+    if (wifiStatusLabel) lv_label_set_text(wifiStatusLabel, "Disconnected");
+    if (wifiStatusLabel) lv_obj_set_style_text_color(wifiStatusLabel, COL_TEXT, 0);
+    if (ipLabel) lv_label_set_text(ipLabel, "--");
+  }
+
+  // Core load (update every 2 seconds, delta-based)
   uint32_t now = millis();
   if (now - lastCoreRead >= 2000) {
     lastCoreRead = now;
@@ -357,25 +377,31 @@ void screen_sysinfo_update() {
     uint32_t totalRunTime = 0;
     uint32_t idleCore0Time = 0;
     uint32_t idleCore1Time = 0;
-    uint32_t core0Total = 0;
-    uint32_t core1Total = 0;
 
     taskCount = uxTaskGetNumberOfTasks();
     taskArray = (TaskStatus_t*)pvPortMalloc(taskCount * sizeof(TaskStatus_t));
     if (taskArray) {
       taskCount = uxTaskGetSystemState(taskArray, taskCount, &totalRunTime);
       for (UBaseType_t i = 0; i < taskCount; i++) {
-        uint32_t t = taskArray[i].ulRunTimeCounter;
-        if (taskArray[i].xCoreID == 0) core0Total += t;
-        else core1Total += t;
         if (strncmp(taskArray[i].pcTaskName, "IDLE", 4) == 0) {
-          if (taskArray[i].xCoreID == 0) idleCore0Time = t;
-          else idleCore1Time = t;
+          if (taskArray[i].xCoreID == 0) idleCore0Time = taskArray[i].ulRunTimeCounter;
+          else if (taskArray[i].xCoreID == 1) idleCore1Time = taskArray[i].ulRunTimeCounter;
         }
       }
       vPortFree(taskArray);
-      cachedCore0Pct = core0Total > 0 ? 100 - (int)(idleCore0Time * 100 / core0Total) : 0;
-      cachedCore1Pct = core1Total > 0 ? 100 - (int)(idleCore1Time * 100 / core1Total) : 0;
+
+      if (prevTotalRunTime > 0 && totalRunTime > prevTotalRunTime) {
+        uint32_t deltaTotal = totalRunTime - prevTotalRunTime;
+        uint32_t deltaIdle0 = idleCore0Time - prevIdleCore0Time;
+        uint32_t deltaIdle1 = idleCore1Time - prevIdleCore1Time;
+        cachedCore0Pct = 100 - (int)(deltaIdle0 * 100 / deltaTotal);
+        cachedCore1Pct = 100 - (int)(deltaIdle1 * 100 / deltaTotal);
+        if (cachedCore0Pct < 0) cachedCore0Pct = 0;
+        if (cachedCore1Pct < 0) cachedCore1Pct = 0;
+      }
+      prevTotalRunTime = totalRunTime;
+      prevIdleCore0Time = idleCore0Time;
+      prevIdleCore1Time = idleCore1Time;
     }
   }
   if (core0Label) {

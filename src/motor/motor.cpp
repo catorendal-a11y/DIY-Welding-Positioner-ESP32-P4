@@ -54,8 +54,10 @@ void motor_gpio_init() {
 void motor_init() {
   motor_gpio_init();
 
-  // Initialize engine
-  engine.init();
+  // Pin stepper engine to Core 0 — motorTask, controlTask and safetyTask all run here.
+  // Without pinning, FastAccelStepper's internal timer ISR may fire on Core 1
+  // causing inter-core contention and jitter in step pulse timing.
+  engine.init(0);
 
   // Connect stepper to step pin with RMT driver
   stepper = engine.stepperConnectToPin(PIN_STEP);

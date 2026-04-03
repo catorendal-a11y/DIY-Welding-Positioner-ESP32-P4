@@ -42,14 +42,12 @@ static lv_color_t countdown_color(int remaining, int total) {
 // ───────────────────────────────────────────────────────────────────────────────
 // EVENT HANDLERS
 // ───────────────────────────────────────────────────────────────────────────────
-static volatile bool backPending = false;
-
 static void back_event_cb(lv_event_t* e) {
   countingDown = false;
   startPending = false;
   g_settings.countdown_seconds = (uint8_t)countdownSec;
   storage_save_settings();
-  backPending = true;
+  screens_show(SCREEN_MAIN);
 }
 
 static void sec_adj_cb(lv_event_t* e) {
@@ -277,12 +275,6 @@ void screen_timer_create() {
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_timer_update() {
   if (!screens_is_active(SCREEN_TIMER)) return;
-
-  if (backPending) {
-    backPending = false;
-    screens_show(SCREEN_MAIN);
-    return;
-  }
 
   // Handle pending start (countdown reached 0)
   if (startPending) {

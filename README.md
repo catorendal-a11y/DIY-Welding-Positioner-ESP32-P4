@@ -121,6 +121,12 @@ controlTask (pri 3, 4KB)
 
 ---
 
+## Gear System
+
+<div align="center">
+  <img src="docs/images/motor.worm.svg" width="700" alt="Gear System">
+</div>
+
 ## Wiring Diagram
 
 <div align="center">

@@ -34,6 +34,8 @@ static lv_obj_t* rpmUpBtn = nullptr;
 static lv_obj_t* jogBtn = nullptr;
 static lv_obj_t* cwBtn = nullptr;
 static lv_obj_t* pulseBtn = nullptr;
+static lv_obj_t* pedalBtn = nullptr;
+static lv_obj_t* pedalLabel = nullptr;
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STATE
@@ -41,6 +43,13 @@ static lv_obj_t* pulseBtn = nullptr;
 static const char* state_strings[] = {
   "IDLE", "RUN", "PULSE", "STEP", "JOG", "TIMER", "STOP", "E-STOP"
 };
+static SystemState prevState = STATE_IDLE;
+static Direction prevDir = DIR_CW;
+static float prevRpm = -1.0f;
+static bool prevPedalEnabled = false;
+static bool mainDirty = true;
+
+static void screen_main_set_dirty() { mainDirty = true; }
 static lv_color_t get_state_color(int state) {
   switch (state) {
     case 1: return COL_GREEN;
@@ -53,58 +62,62 @@ static lv_color_t get_state_color(int state) {
 // EVENT handlers
 // ───────────────────────────────────────────────────────────────────────────────
 static void start_event_cb(lv_event_t*) {
-  if (control_get_state() == STATE_IDLE) control_start_continuous();
+  if (control_get_state() == STATE_IDLE) { control_start_continuous(); screen_main_set_dirty(); }
 }
 static void stop_event_cb(lv_event_t*) {
-  control_stop();
+  control_stop(); screen_main_set_dirty();
 }
 static void jog_press_cb(lv_event_t*) {
   if (speed_get_direction() == DIR_CW) control_start_jog_cw();
   else control_start_jog_ccw();
+  screen_main_set_dirty();
 }
 static void jog_release_cb(lv_event_t*) {
-  control_stop();
+  control_stop(); screen_main_set_dirty();
 }
 static void cw_event_cb(lv_event_t*) {
   Direction d = speed_get_direction();
   speed_set_direction(d == DIR_CW ? DIR_CCW : DIR_CW);
-  screen_main_update();
+  screen_main_set_dirty();
 }
 static void pulse_event_cb(lv_event_t*) {
   control_start_pulse(mainPulseOnMs, mainPulseOffMs);
-  screen_main_update();
+  screen_main_set_dirty();
 }
 static void speed_down_cb(lv_event_t*) {
   float rpm = speed_get_target_rpm();
   rpm -= 0.1f;
   if (rpm < MIN_RPM) rpm = MIN_RPM;
   speed_slider_set(rpm);
-  speed_request_update();
-  screen_main_update();
+  screen_main_set_dirty();
 }
 static void speed_up_cb(lv_event_t*) {
   float rpm = speed_get_target_rpm();
   rpm += 0.1f;
   if (rpm > MAX_RPM) rpm = MAX_RPM;
   speed_slider_set(rpm);
-  speed_request_update();
-  screen_main_update();
+  screen_main_set_dirty();
 }
 static void pulse_on_down_cb(lv_event_t*) {
   if (mainPulseOnMs >= 200) mainPulseOnMs -= 100;
-  screen_main_update();
+  screen_main_set_dirty();
 }
 static void pulse_on_up_cb(lv_event_t*) {
   if (mainPulseOnMs <= 4900) mainPulseOnMs += 100;
-  screen_main_update();
+  screen_main_set_dirty();
 }
 static void pulse_off_down_cb(lv_event_t*) {
   if (mainPulseOffMs >= 200) mainPulseOffMs -= 100;
-  screen_main_update();
+  screen_main_set_dirty();
 }
 static void pulse_off_up_cb(lv_event_t*) {
   if (mainPulseOffMs <= 4900) mainPulseOffMs += 100;
-  screen_main_update();
+  screen_main_set_dirty();
+}
+static void pedal_toggle_cb(lv_event_t*) {
+  bool enabled = !speed_get_pedal_enabled();
+  speed_set_pedal_enabled(enabled);
+  screen_main_set_dirty();
 }
 static void menu_event_cb(lv_event_t*) {
   screens_show(SCREEN_MENU);
@@ -134,7 +147,7 @@ static lv_obj_t* make_btn(lv_obj_t* parent, int x, int y, int w, int h,
 
   lv_obj_t* lbl = lv_label_create(btn);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(lbl, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(lbl, accent ? COL_ACCENT : COL_TEXT, 0);
   lv_obj_center(lbl);
   return btn;
@@ -169,7 +182,7 @@ void screen_main_create() {
 
   lv_obj_t* title = lv_label_create(header);
   lv_label_set_text(title, "TIG-ROTATOR");
-  lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(title, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(title, COL_ACCENT, 0);
   lv_obj_set_pos(title, PAD_X, 8);
 
@@ -227,7 +240,7 @@ void screen_main_create() {
   // "RPM" text under value
   lv_obj_t* rpmTag = lv_label_create(mainScreenPtr);
   lv_label_set_text(rpmTag, "RPM");
-  lv_obj_set_style_text_font(rpmTag, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_font(rpmTag, FONT_XL, 0);
   lv_obj_set_style_text_color(rpmTag, COL_TEXT_DIM, 0);
   lv_obj_set_pos(rpmTag, arcCX - 20, arcCY + 20);
 
@@ -259,6 +272,10 @@ void screen_main_create() {
   lv_obj_t* menuBtn = make_btn(mainScreenPtr, rightX, 36 + (sideH + sideGap) * 2, sideW, sideH, "MENU", false);
   lv_obj_add_event_cb(menuBtn, menu_event_cb, LV_EVENT_CLICKED, nullptr);
 
+  pedalBtn = make_btn(mainScreenPtr, rightX, 36 + (sideH + sideGap) * 3, sideW, sideH, "PEDAL", false);
+  lv_obj_add_event_cb(pedalBtn, pedal_toggle_cb, LV_EVENT_CLICKED, nullptr);
+  pedalLabel = lv_obj_get_child(pedalBtn, 0);
+
   // ── RPM +/- under gauge (y=290) ──
   rpmDownBtn = make_btn(mainScreenPtr, 280, 310, 120, 56, "-", false);
   rpmUpBtn = make_btn(mainScreenPtr, 410, 310, 120, 56, "+", false);
@@ -277,7 +294,7 @@ void screen_main_create() {
   lv_obj_add_event_cb(pulseOnDownBtn, pulse_on_down_cb, LV_EVENT_CLICKED, nullptr);
 
   pulseOnLabel = lv_label_create(mainScreenPtr);
-  lv_obj_set_style_text_font(pulseOnLabel, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_font(pulseOnLabel, FONT_XL, 0);
   lv_obj_set_style_text_color(pulseOnLabel, COL_TEXT, 0);
   lv_obj_set_pos(pulseOnLabel, pCol + 50, 296);
 
@@ -286,7 +303,7 @@ void screen_main_create() {
 
   lv_obj_t* onTag = lv_label_create(mainScreenPtr);
   lv_label_set_text(onTag, "ON");
-  lv_obj_set_style_text_font(onTag, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_font(onTag, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(onTag, COL_TEXT_DIM, 0);
   lv_obj_set_pos(onTag, pCol + pW + 4, 302);
 
@@ -295,7 +312,7 @@ void screen_main_create() {
   lv_obj_add_event_cb(pulseOffDownBtn, pulse_off_down_cb, LV_EVENT_CLICKED, nullptr);
 
   pulseOffLabel = lv_label_create(mainScreenPtr);
-  lv_obj_set_style_text_font(pulseOffLabel, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_font(pulseOffLabel, FONT_XL, 0);
   lv_obj_set_style_text_color(pulseOffLabel, COL_TEXT, 0);
   lv_obj_set_pos(pulseOffLabel, pCol + 50, 346);
 
@@ -304,7 +321,7 @@ void screen_main_create() {
 
   lv_obj_t* offTag = lv_label_create(mainScreenPtr);
   lv_label_set_text(offTag, "OFF");
-  lv_obj_set_style_text_font(offTag, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_font(offTag, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(offTag, COL_TEXT_DIM, 0);
   lv_obj_set_pos(offTag, pCol + pW + 4, 352);
 
@@ -324,7 +341,7 @@ void screen_main_create() {
   lv_obj_add_event_cb(startBtn, start_event_cb, LV_EVENT_CLICKED, nullptr);
   lv_obj_t* startLbl = lv_label_create(startBtn);
   lv_label_set_text(startLbl, "> START");
-  lv_obj_set_style_text_font(startLbl, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(startLbl, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(startLbl, COL_TEXT, 0);
   lv_obj_center(startLbl);
 
@@ -339,8 +356,8 @@ void screen_main_create() {
   lv_obj_set_style_pad_all(stopBtn, 0, 0);
   lv_obj_add_event_cb(stopBtn, stop_event_cb, LV_EVENT_CLICKED, nullptr);
   lv_obj_t* stopLbl = lv_label_create(stopBtn);
-  lv_label_set_text(stopLbl, "[] STOP");
-  lv_obj_set_style_text_font(stopLbl, &lv_font_montserrat_16, 0);
+  lv_label_set_text(stopLbl, "X STOP");
+  lv_obj_set_style_text_font(stopLbl, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(stopLbl, COL_RED, 0);
   lv_obj_center(stopLbl);
 
@@ -366,6 +383,20 @@ void screen_main_update() {
   } else {
     rpm = speed_get_target_rpm();
   }
+
+  bool stateChanged = (state != prevState);
+  bool dirChanged = (dir != prevDir);
+  bool rpmChanged = (rpm != prevRpm);
+  bool pedalChanged = (speed_get_pedal_enabled() != prevPedalEnabled);
+
+  if (!mainDirty && !stateChanged && !dirChanged && !rpmChanged && !pedalChanged) return;
+
+  mainDirty = false;
+  prevState = state;
+  prevDir = dir;
+  prevRpm = rpm;
+  prevPedalEnabled = speed_get_pedal_enabled();
+
   int32_t val = (int32_t)(rpm * 100.0f);
 
   // Header state
@@ -406,6 +437,15 @@ void screen_main_update() {
     set_btn_style(pulseBtn, COL_BG_ACTIVE, COL_ACCENT, 2, COL_ACCENT);
   } else {
     set_btn_style(pulseBtn, COL_BTN_BG, COL_BORDER, 1, COL_TEXT);
+  }
+
+  // PEDAL button: accent when enabled
+  if (pedalBtn) {
+    if (speed_get_pedal_enabled()) {
+      set_btn_style(pedalBtn, COL_BG_ACTIVE, COL_ACCENT, 2, COL_ACCENT);
+    } else {
+      set_btn_style(pedalBtn, COL_BTN_BG, COL_BORDER, 1, COL_TEXT);
+    }
   }
 
   // Pulse time labels

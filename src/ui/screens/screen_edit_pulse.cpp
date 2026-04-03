@@ -163,7 +163,7 @@ static lv_obj_t* create_pm_btn(lv_obj_t* parent, int16_t x, int16_t y,
 
   lv_obj_t* lbl = lv_label_create(btn);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_font(lbl, FONT_XL, 0);
   lv_obj_set_style_text_color(lbl, COL_TEXT, 0);
   lv_obj_center(lbl);
   return btn;
@@ -256,7 +256,7 @@ void screen_edit_pulse_create() {
 
   onTimeLabel = lv_label_create(screen);
   lv_label_set_text_fmt(onTimeLabel, "%.1fs", editOnMs / 1000.0f);
-  lv_obj_set_style_text_font(onTimeLabel, &lv_font_montserrat_32, 0);
+  lv_obj_set_style_text_font(onTimeLabel, FONT_XXL, 0);
   lv_obj_set_style_text_color(onTimeLabel, COL_ACCENT, 0);
   lv_obj_set_pos(onTimeLabel, colLeftX + 80, onY);
 
@@ -289,7 +289,7 @@ void screen_edit_pulse_create() {
 
   offTimeLabel = lv_label_create(screen);
   lv_label_set_text_fmt(offTimeLabel, "%.1fs", editOffMs / 1000.0f);
-  lv_obj_set_style_text_font(offTimeLabel, &lv_font_montserrat_32, 0);
+  lv_obj_set_style_text_font(offTimeLabel, FONT_XXL, 0);
   lv_obj_set_style_text_color(offTimeLabel, COL_TEXT, 0);
   lv_obj_set_pos(offTimeLabel, colRightX + 100, onY);
 
@@ -329,7 +329,7 @@ void screen_edit_pulse_create() {
 
   rpmLabel = lv_label_create(screen);
   lv_label_set_text_fmt(rpmLabel, "%.1f", editRpm);
-  lv_obj_set_style_text_font(rpmLabel, &lv_font_montserrat_32, 0);
+  lv_obj_set_style_text_font(rpmLabel, FONT_XXL, 0);
   lv_obj_set_style_text_color(rpmLabel, COL_TEXT, 0);
   lv_obj_set_pos(rpmLabel, colLeftX + 50, rpmY);
 
@@ -369,7 +369,7 @@ void screen_edit_pulse_create() {
 
   cyclesLabel = lv_label_create(screen);
   lv_label_set_text(cyclesLabel, "INF");
-  lv_obj_set_style_text_font(cyclesLabel, &lv_font_montserrat_32, 0);
+  lv_obj_set_style_text_font(cyclesLabel, FONT_XXL, 0);
   lv_obj_set_style_text_color(cyclesLabel, COL_TEXT, 0);
   lv_obj_set_pos(cyclesLabel, colRightX + 70, rpmY);
 
@@ -427,7 +427,7 @@ void screen_edit_pulse_create() {
 
   lv_obj_t* cancelLabel = lv_label_create(cancelBtn);
   lv_label_set_text(cancelLabel, "CANCEL");
-  lv_obj_set_style_text_font(cancelLabel, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(cancelLabel, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(cancelLabel, COL_TEXT, 0);
   lv_obj_center(cancelLabel);
 
@@ -447,7 +447,7 @@ void screen_edit_pulse_create() {
 
   lv_obj_t* saveLabel = lv_label_create(saveBtn);
   lv_label_set_text(saveLabel, "SAVE");
-  lv_obj_set_style_text_font(saveLabel, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(saveLabel, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(saveLabel, COL_ACCENT, 0);
   lv_obj_center(saveLabel);
 

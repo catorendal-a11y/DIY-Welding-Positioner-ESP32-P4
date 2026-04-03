@@ -4,11 +4,14 @@
 #pragma once
 #include "lvgl.h"
 #include "../storage/storage.h"  // For Preset type
+#include <atomic>
 
 // ───────────────────────────────────────────────────────────────────────────────
 // GLOBAL SCREEN ROOTS ARRAY
 // ───────────────────────────────────────────────────────────────────────────────
 extern lv_obj_t* screenRoots[];
+
+extern std::atomic<bool> motorConfigApplyPending;
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN ENUM
@@ -30,6 +33,13 @@ typedef enum {
   SCREEN_EDIT_STEP,      // Step edit (preset quick edit)
   SCREEN_EDIT_TIMER,     // Timer edit (preset quick edit)
   SCREEN_EDIT_CONT,      // Continuous edit (preset quick edit)
+  SCREEN_WIFI,         // WiFi + BLE connectivity settings
+  SCREEN_BT,           // Bluetooth settings
+  SCREEN_SYSINFO,      // System info
+  SCREEN_CALIBRATION,   // Motor calibration
+  SCREEN_MOTOR_CONFIG,  // Motor configuration
+  SCREEN_DISPLAY,        // Display settings
+  SCREEN_ABOUT,          // About screen
   SCREEN_COUNT           // MUST be last — total number of screens
 } ScreenId;
 
@@ -59,6 +69,7 @@ void screen_boot_create();
 void screen_confirm_create_static();  // Static init
 void screen_confirm_create(const char* title, const char* message,
                            void (*on_confirm)(), void (*on_cancel)());
+void screen_confirm_update();
 
 // Boot screen
 void screen_boot_update(int percent, const char* status);
@@ -74,6 +85,22 @@ void screen_edit_step_create();
 void screen_edit_timer_create();
 void screen_edit_cont_create();
 
+void screen_wifi_create();
+void screen_wifi_update();
+void screen_bt_create();
+void screen_bt_update();
+void screen_sysinfo_create();
+void screen_sysinfo_update();
+void screen_calibration_create();
+void screen_calibration_update();
+void screen_motor_config_create();
+void screen_motor_config_update();
+void screen_display_create();
+void screen_display_update();
+void screen_display_mark_dirty();
+void screen_about_create();
+void screen_about_update();
+
 // Update functions (called when returning to these screens)
 void screen_edit_pulse_update();
 void screen_edit_step_update();
@@ -88,11 +115,13 @@ void screen_pulse_update();
 void screen_step_update();
 void screen_timer_update();
 void screen_programs_update();
+void screen_programs_mark_dirty();
 
 // ───────────────────────────────────────────────────────────────────────────────
 // ESTOP OVERLAY
 // ───────────────────────────────────────────────────────────────────────────────
 void estop_overlay_create();   // Create overlay (initially hidden)
+void estop_overlay_destroy();  // Destroy overlay (for theme reinit)
 void estop_overlay_show();     // Show overlay
 void estop_overlay_hide();     // Hide overlay
 void estop_overlay_update();   // Update overlay state
@@ -102,5 +131,6 @@ bool estop_overlay_visible();  // Check if overlay is visible
 // HELPERS
 // ───────────────────────────────────────────────────────────────────────────────
 void screens_set_back_button(lv_obj_t* btn, ScreenId dest);  // Configure back button
+void screens_set_edit_slot(int slot);  // Set slot for SCREEN_PROGRAM_EDIT creation
 Preset* screen_program_edit_get_preset();  // Get current preset being edited
 void screen_program_edit_update_ui();  // Update UI with current preset values

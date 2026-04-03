@@ -363,39 +363,15 @@ void display_init() {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// LVGL VSYNC CALLBACK — Called by MIPI DPI hardware when frame transfer complete
-// CRITICAL for MIPI DSI Video Mode: flush_ready MUST be called from here, not flush_cb!
+// VSYNC CALLBACK — REMOVED (was obsolete in LVGL 9)
+// In LVGL 9, flush_ready is called at the end of lvgl_flush_cb after the
+// synchronous memcpy to the DPI buffer. Registering a vsync callback that
+// calls flush_ready asynchronously (60×/s) corrupts LVGL's buffer state
+// machine and causes Load access faults on ESP32-P4.
 // ───────────────────────────────────────────────────────────────────────────────
-extern "C" bool display_lvgl_vsync_callback(
-    esp_lcd_panel_handle_t panel,
-    esp_lcd_dpi_panel_event_data_t *edata,
-    void *user_ctx)
-{
-    // OBSOLETE IN LVGL 9: We do NOT call lv_display_flush_ready here!
-    // Since esp_lcd_panel_draw_bitmap for ST7701S performs a synchronous memcpy to the DPI buffer,
-    // calling flush_ready here (60 times a second) corrupts LVGL's internal buffer state machine
-    // causing a Load access fault. flush_ready is now safely called at the end of lvgl_flush_cb.
-    return false;
-}
-
 void display_register_lvgl_vsync(void *user_ctx) {
-  if (!display_panel || !user_ctx) {
-    LOG_E("Cannot register vsync: display_panel=%p, user_ctx=%p", display_panel, user_ctx);
-    return;
-  }
-
-  const esp_lcd_dpi_panel_event_callbacks_t cbs = {
-    .on_color_trans_done = display_lvgl_vsync_callback,
-  };
-
-  esp_err_t ret = esp_lcd_dpi_panel_register_event_callbacks(
-      display_panel, &cbs, user_ctx);
-
-  if (ret == ESP_OK) {
-    LOG_I("LVGL vsync callback registered OK on DPI panel");
-  } else {
-    LOG_E("vsync register failed: %s", esp_err_to_name(ret));
-  }
+  // No-op: vsync callback was removed. flush_ready is handled in lvgl_flush_cb.
+  LOG_I("Vsync callback skipped (LVGL 9 handles flush in lvgl_flush_cb)");
 }
 
 // ───────────────────────────────────────────────────────────────────────────────

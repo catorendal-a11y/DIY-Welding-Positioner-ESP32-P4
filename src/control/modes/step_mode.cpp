@@ -19,7 +19,7 @@ static long stepsTaken = 0;             // Counter for display
 void step_execute(float angle_deg) {
   // Can execute from IDLE or after previous step completes
   SystemState state = control_get_state();
-  if (state != STATE_IDLE && state != STATE_STEP) return;
+  if (state != STATE_IDLE) return;
 
   // Validate angle range
   if (angle_deg <= 0.0f || angle_deg > 3600.0f) {
@@ -29,21 +29,21 @@ void step_execute(float angle_deg) {
 
   stepCurrentAngle = angle_deg;
   long steps = angleToSteps(angle_deg);
+  if (speed_get_direction() == DIR_CCW) {
+    steps = -steps;
+  }
 
   LOG_I("Step mode: %.1f deg (%ld steps)", angle_deg, steps);
 
-  // Set direction
-  digitalWrite(PIN_DIR, (speed_get_direction() == DIR_CW) ? HIGH : LOW);
-
-  // Enable and move at a default step speed
-  digitalWrite(PIN_ENA, LOW);
+  portENTER_CRITICAL(&g_stepperMutex);
   FastAccelStepper* stepper = motor_get_stepper();
   if (stepper != nullptr) {
-    stepper->setSpeedInHz((uint32_t)rpmToStepHz(0.5f));  // Default step speed
+    stepper->setSpeedInHz((uint32_t)rpmToStepHz(0.5f));
     stepper->move(steps);
+    digitalWrite(PIN_ENA, LOW);
   }
+  portEXIT_CRITICAL(&g_stepperMutex);
 
-  // Update accumulator
   accumulatedAngle += angle_deg;
   stepsTaken++;
 
@@ -56,11 +56,14 @@ void step_execute(float angle_deg) {
 void step_update() {
   if (control_get_state() != STATE_STEP) return;
 
+  portENTER_CRITICAL(&g_stepperMutex);
   FastAccelStepper* stepper = motor_get_stepper();
-  if (stepper != nullptr && !stepper->isRunning()) {
-    // Step complete
+  bool done = (stepper != nullptr && !stepper->isRunning());
+  portEXIT_CRITICAL(&g_stepperMutex);
+
+  if (done) {
     LOG_D("Step complete: %.1f deg", stepCurrentAngle);
-    control_transition_to(STATE_IDLE);
+    control_transition_to(STATE_STOPPING);
   }
 }
 

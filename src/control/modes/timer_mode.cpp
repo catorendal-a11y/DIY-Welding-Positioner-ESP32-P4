@@ -25,10 +25,12 @@ void timer_start(uint32_t duration_sec) {
 
   LOG_I("Timer mode: %lu seconds", timerDurationSec);
 
-  // Start motor
-  digitalWrite(PIN_ENA, LOW);
-  digitalWrite(PIN_DIR, (speed_get_direction() == DIR_CW) ? HIGH : LOW);
-  speed_apply();
+  Direction dir = speed_get_direction();
+  if (dir == DIR_CW) {
+    motor_run_cw();
+  } else {
+    motor_run_ccw();
+  }
 
   control_transition_to(STATE_TIMER);
 }

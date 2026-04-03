@@ -13,7 +13,7 @@
 // STATE
 // ───────────────────────────────────────────────────────────────────────────────
 static float currentAngle = 90.0f;
-static float targetRpm = 2.0f;
+static float targetRpm = 0.5f;
 static lv_obj_t* angleLabel = nullptr;
 static lv_obj_t* arcWidget = nullptr;
 static lv_obj_t* angleArcLabel = nullptr;
@@ -24,6 +24,7 @@ static lv_obj_t* presetBtns[7] = {nullptr};
 static int activePreset = 1;  // 90 deg is default (index 1)
 static lv_obj_t* customNumpad = nullptr;
 static lv_obj_t* customTa = nullptr;
+static volatile bool numpadClosePending = false;
 
 // ───────────────────────────────────────────────────────────────────────────────
 // HELPERS
@@ -72,7 +73,7 @@ static void update_info_panel() {
 static void back_event_cb(lv_event_t* e) {
   if (customNumpad) { lv_obj_delete(customNumpad); customNumpad = nullptr; }
   if (customTa) { lv_obj_delete(customTa); customTa = nullptr; }
-  screens_show(SCREEN_MENU);
+  screens_show(SCREEN_MAIN);
 }
 
 static void preset_cb(lv_event_t* e) {
@@ -103,14 +104,13 @@ static void custom_keyboard_cb(lv_event_t* e) {
   }
 
   if (code == LV_EVENT_READY || code == LV_EVENT_CANCEL) {
-    if (customNumpad) { lv_obj_delete(customNumpad); customNumpad = nullptr; }
-    if (customTa) { lv_obj_delete(customTa); customTa = nullptr; }
+    numpadClosePending = true;
   }
 }
 
 static void custom_btn_cb(lv_event_t* e) {
   if (!customNumpad) {
-    customTa = lv_textarea_create(lv_screen_active());
+    customTa = lv_textarea_create(screenRoots[SCREEN_STEP]);
     lv_obj_set_size(customTa, 200, 50);
     lv_obj_align(customTa, LV_ALIGN_TOP_MID, 0, 50);
     lv_textarea_set_one_line(customTa, true);
@@ -120,7 +120,7 @@ static void custom_btn_cb(lv_event_t* e) {
     lv_obj_set_style_border_width(customTa, 2, 0);
     lv_obj_set_style_text_color(customTa, COL_TEXT, 0);
 
-    customNumpad = lv_keyboard_create(lv_screen_active());
+    customNumpad = lv_keyboard_create(screenRoots[SCREEN_STEP]);
     lv_keyboard_set_mode(customNumpad, LV_KEYBOARD_MODE_NUMBER);
     lv_keyboard_set_textarea(customNumpad, customTa);
 
@@ -142,7 +142,7 @@ static void rpm_plus_cb(lv_event_t* e) {
   targetRpm += 0.1f;
   if (targetRpm < MIN_RPM) targetRpm = MIN_RPM;
   if (targetRpm > MAX_RPM) targetRpm = MAX_RPM;
-  if (rpmLabel) lv_label_set_text_fmt(rpmLabel, "%.1f", targetRpm);
+  if (rpmLabel) lv_label_set_text_fmt(rpmLabel, "%.1f RPM", targetRpm);
 }
 
 static void calib_adj_cb(lv_event_t* e) {
@@ -379,7 +379,7 @@ void screen_step_create() {
   lv_obj_add_event_cb(calibMinusBtn, calib_adj_cb, LV_EVENT_CLICKED, (void*)-1);
   lv_obj_t* calibMinusLbl = lv_label_create(calibMinusBtn);
   lv_label_set_text(calibMinusLbl, "-1%");
-  lv_obj_set_style_text_font(calibMinusLbl, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(calibMinusLbl, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(calibMinusLbl, COL_TEXT, 0);
   lv_obj_center(calibMinusLbl);
 
@@ -395,15 +395,15 @@ void screen_step_create() {
   lv_obj_add_event_cb(calibPlusBtn, calib_adj_cb, LV_EVENT_CLICKED, (void*)1);
   lv_obj_t* calibPlusLbl = lv_label_create(calibPlusBtn);
   lv_label_set_text(calibPlusLbl, "+1%");
-  lv_obj_set_style_text_font(calibPlusLbl, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(calibPlusLbl, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(calibPlusLbl, COL_TEXT, 0);
   lv_obj_center(calibPlusLbl);
 
   // ── Presets row (y=378, 118x36 each) ──
   const int presetY = 378;
-  const int presetW = 118;
-  const int presetH = 36;
-  const int presetGap = 6;
+  const int presetW = 106;
+  const int presetH = 40;
+  const int presetGap = 4;
   const int presetStartX = 8;
 
   const float presetAngles[] = {45.0f, 90.0f, 180.0f, 360.0f};
@@ -496,7 +496,7 @@ void screen_step_create() {
 
   lv_obj_t* backLabel = lv_label_create(backBtn);
   lv_label_set_text(backLabel, "<  BACK");
-  lv_obj_set_style_text_font(backLabel, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(backLabel, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(backLabel, COL_TEXT, 0);
   lv_obj_center(backLabel);
 
@@ -512,7 +512,7 @@ void screen_step_create() {
 
   lv_obj_t* stepLabel = lv_label_create(stepBtn);
   lv_label_set_text(stepLabel, "> STEP");
-  lv_obj_set_style_text_font(stepLabel, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(stepLabel, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(stepLabel, COL_ACCENT, 0);
   lv_obj_center(stepLabel);
 
@@ -528,7 +528,7 @@ void screen_step_create() {
 
   lv_obj_t* stopLabel = lv_label_create(stopBtn);
   lv_label_set_text(stopLabel, "[] STOP");
-  lv_obj_set_style_text_font(stopLabel, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(stopLabel, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(stopLabel, COL_RED, 0);
   lv_obj_center(stopLabel);
 
@@ -536,6 +536,11 @@ void screen_step_create() {
 }
 
 void screen_step_update() {
+  if (numpadClosePending) {
+    if (customNumpad) { lv_obj_delete(customNumpad); customNumpad = nullptr; }
+    if (customTa) { lv_obj_delete(customTa); customTa = nullptr; }
+    numpadClosePending = false;
+  }
   if (!screens_is_active(SCREEN_STEP)) return;
 
   SystemState state = control_get_state();
@@ -551,7 +556,10 @@ void screen_step_update() {
     }
     // Update arc to show progress
     if (arcWidget) {
-      int32_t progress = (int32_t)((accum / currentAngle) * 360.0f);
+      int32_t progress = 0;
+      if (currentAngle > 0.0f) {
+        progress = (int32_t)((accum / currentAngle) * 360.0f);
+      }
       if (progress > 360) progress = 360;
       if (progress < 0) progress = 0;
       lv_arc_set_value(arcWidget, progress);

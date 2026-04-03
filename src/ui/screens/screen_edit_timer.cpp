@@ -7,6 +7,7 @@
 #include "../../control/control.h"
 #include "../../motor/speed.h"
 #include "../../config.h"
+#include "../../motor/microstep.h"
 #include <cstdio>
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -36,7 +37,7 @@ static void update_computed_info() {
     // Revolutions = RPM * duration_minutes = rpm * (durSec / 60.0)
     float revolutions = rpm * (durSec / 60.0f);
     float degrees = revolutions * 360.0f;
-    long totalSteps = (long)(revolutions * GEAR_RATIO * STEPS_PER_REV);
+    long totalSteps = (long)(revolutions * GEAR_RATIO * microstep_get_steps_per_rev());
 
     lv_label_set_text_fmt(computedLabel,
         "TOTAL %.1f rev (%.0f deg) * STEPS %ld",
@@ -50,15 +51,6 @@ static void update_duration_display() {
     uint32_t sec = durSec % 60;
     lv_label_set_text_fmt(durationLabel, "%02d:%02d", (int)min, (int)sec);
     update_computed_info();
-}
-
-static void format_time_label(char* buf, size_t len, uint32_t totalSec) {
-    if (totalSec >= 60) {
-        uint32_t m = totalSec / 60;
-        snprintf(buf, len, "%dmin", (int)m);
-    } else {
-        snprintf(buf, len, "%ds", (int)totalSec);
-    }
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -250,19 +242,19 @@ void screen_edit_timer_create() {
     // -1s, +1s, -10s, +10s, -/+1min
     // Layout: row of 5 buttons
     const int adjY = 128;
-    const int adjW = 130;
-    const int adjW_wide = 144;  // wider for min buttons
+    const int adjW = 120;
+    const int adjW_wide = 120;
     const int adjH = 40;
     const int adjGap = 8;
-    // Total: 3*130 + 2*144 + 4*8 = 390 + 288 + 32 = 710, start = (800-710)/2 = 45
-    const int adjStartX = 45;
+    // Total: 6*120 + 5*8 = 720 + 40 = 760, start = (800-760)/2 = 20
+    const int adjStartX = 20;
 
-    const int deltas[] = {-1, 1, -10, 10, -60};
-    const char* adjLabels[] = {"-1s", "+1s", "-10s", "+10s", "-1min"};
-    const int adjWidths[] = {adjW, adjW, adjW, adjW, adjW_wide};
+    const int deltas[] = {-1, 1, -10, 10, -60, 60};
+    const char* adjLabels[] = {"-1s", "+1s", "-10s", "+10s", "-1min", "+1min"};
+    const int adjWidths[] = {adjW, adjW, adjW, adjW, adjW_wide, adjW_wide};
 
     int xPos = adjStartX;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 6; i++) {
         lv_obj_t* btn = lv_button_create(screen);
         lv_obj_set_size(btn, adjWidths[i], adjH);
         lv_obj_set_pos(btn, xPos, adjY);
@@ -280,22 +272,6 @@ void screen_edit_timer_create() {
 
         xPos += adjWidths[i] + adjGap;
     }
-
-    // +1min button (6th, separate since it's part of the pair)
-    lv_obj_t* plusMinBtn = lv_button_create(screen);
-    lv_obj_set_size(plusMinBtn, adjW_wide, adjH);
-    lv_obj_set_pos(plusMinBtn, xPos, adjY);
-    lv_obj_set_style_bg_color(plusMinBtn, COL_BTN_BG, 0);
-    lv_obj_set_style_radius(plusMinBtn, RADIUS_BTN, 0);
-    lv_obj_set_style_border_width(plusMinBtn, 1, 0);
-    lv_obj_set_style_border_color(plusMinBtn, COL_BORDER, 0);
-    lv_obj_add_event_cb(plusMinBtn, duration_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)60);
-
-    lv_obj_t* plusMinLbl = lv_label_create(plusMinBtn);
-    lv_label_set_text(plusMinLbl, "+1min");
-    lv_obj_set_style_text_font(plusMinLbl, FONT_NORMAL, 0);
-    lv_obj_set_style_text_color(plusMinLbl, COL_TEXT, 0);
-    lv_obj_center(plusMinLbl);
 
     // ── Separator (y=178) ──
     lv_obj_t* sep1 = lv_obj_create(screen);
@@ -316,7 +292,7 @@ void screen_edit_timer_create() {
 
     rpmLabel = lv_label_create(screen);
     lv_label_set_text_fmt(rpmLabel, "%.1f", editRpm);
-    lv_obj_set_style_text_font(rpmLabel, &lv_font_montserrat_24, 0);
+    lv_obj_set_style_text_font(rpmLabel, FONT_XL, 0);
     lv_obj_set_style_text_color(rpmLabel, COL_TEXT_BRIGHT, 0);
     lv_obj_set_pos(rpmLabel, 20, 204);
 

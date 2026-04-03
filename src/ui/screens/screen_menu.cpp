@@ -36,7 +36,7 @@ static lv_obj_t* create_grid_btn(lv_obj_t* parent, int16_t x, int16_t y,
 
   lv_obj_t* lbl = lv_label_create(btn);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_font(lbl, FONT_XL, 0);
   lv_obj_set_style_text_color(lbl, active ? COL_ACCENT : COL_TEXT, 0);
   lv_obj_center(lbl);
   return btn;
@@ -47,6 +47,7 @@ static lv_obj_t* create_grid_btn(lv_obj_t* parent, int16_t x, int16_t y,
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_menu_create() {
   lv_obj_t* screen = screenRoots[SCREEN_MENU];
+  lv_obj_clean(screen);
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
   // ── Header bar (0,0,800,32) ──
@@ -116,7 +117,7 @@ void screen_menu_create() {
 
   lv_obj_t* programsLabel = lv_label_create(programsBtn);
   lv_label_set_text(programsLabel, "PROGRAMS");
-  lv_obj_set_style_text_font(programsLabel, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(programsLabel, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(programsLabel, COL_ACCENT, 0);
   lv_obj_center(programsLabel);
 
@@ -150,7 +151,7 @@ void screen_menu_create() {
 
   lv_obj_t* backLabel = lv_label_create(backBtn);
   lv_label_set_text(backLabel, "<  BACK");
-  lv_obj_set_style_text_font(backLabel, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(backLabel, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(backLabel, COL_TEXT, 0);
   lv_obj_center(backLabel);
 
@@ -168,7 +169,7 @@ void screen_menu_create() {
 
   lv_obj_t* settingsLabel = lv_label_create(settingsBtn);
   lv_label_set_text(settingsLabel, "SETTINGS");
-  lv_obj_set_style_text_font(settingsLabel, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(settingsLabel, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(settingsLabel, COL_ACCENT, 0);
   lv_obj_center(settingsLabel);
 

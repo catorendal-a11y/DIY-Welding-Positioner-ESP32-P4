@@ -30,21 +30,29 @@ static lv_obj_t* modeBtns[4] = { nullptr };
 // ───────────────────────────────────────────────────────────────────────────────
 // EVENT HANDLERS
 // ───────────────────────────────────────────────────────────────────────────────
+static void keyboard_event_cb(lv_event_t* e);
+
+static volatile bool kbClosePending = false;
+
+static void do_cleanup_kb() {
+  if (keyboard) {
+    lv_obj_remove_event_cb(keyboard, keyboard_event_cb);
+    lv_keyboard_set_textarea(keyboard, nullptr);
+    lv_obj_delete(keyboard);
+    keyboard = nullptr;
+  }
+  kbClosePending = false;
+}
+
 static void back_event_cb(lv_event_t* e) {
-  if (keyboard) { lv_obj_delete(keyboard); keyboard = nullptr; }
+  do_cleanup_kb();
   screens_show(SCREEN_PROGRAMS);
 }
 
 static void keyboard_event_cb(lv_event_t* e) {
   lv_event_code_t code = lv_event_get_code(e);
   if (code == LV_EVENT_CANCEL || code == LV_EVENT_READY) {
-    if (keyboard) {
-      lv_obj_delete(keyboard);
-      keyboard = nullptr;
-    }
-    if (nameInput) {
-      lv_obj_clear_state(nameInput, LV_STATE_FOCUSED);
-    }
+    kbClosePending = true;
   }
 }
 
@@ -158,7 +166,10 @@ static void rpm_minus_cb(lv_event_t* e) {
 }
 
 static void mode_settings_cb(lv_event_t* e) {
-  // Navigate to mode-specific edit screen
+  const char* nameText = nameInput ? lv_textarea_get_text(nameInput) : nullptr;
+  if (nameText && nameText[0]) {
+    strlcpy(editPreset.name, nameText, sizeof(editPreset.name));
+  }
   switch (editPreset.mode) {
     case STATE_RUNNING:
       screens_show(SCREEN_EDIT_CONT);
@@ -178,50 +189,40 @@ static void mode_settings_cb(lv_event_t* e) {
 }
 
 static void cancel_cb(lv_event_t* e) {
-  if (keyboard) { lv_obj_delete(keyboard); keyboard = nullptr; }
+  do_cleanup_kb();
   screens_show(SCREEN_PROGRAMS);
 }
 
 static void save_preset_cb(lv_event_t* e) {
-  // Get name from input
+  do_cleanup_kb();
   const char* name = nameInput ? lv_textarea_get_text(nameInput) : "";
   if (strlen(name) == 0) {
-    // Show error - need a name
-    return;
+    name = "Untitled";
   }
 
-  // If editing existing, find and update. If new, add to vector
+  xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
   if (editSlot >= 0 && editSlot < (int)g_presets.size()) {
-    // Update existing
     g_presets[editSlot] = editPreset;
     g_presets[editSlot].id = editSlot + 1;
   } else {
-    // Create new
     if (g_presets.size() >= MAX_PRESETS) {
-      // Show error - full
+      xSemaphoreGive(g_presets_mutex);
       return;
     }
     editPreset.id = g_presets.size() + 1;
     g_presets.push_back(editPreset);
   }
 
-  // Copy name to correct location
   if (editSlot >= 0 && editSlot < (int)g_presets.size()) {
-    // Editing existing - use editSlot as index
-    strncpy(g_presets[editSlot].name, name, 31);
-    g_presets[editSlot].name[31] = '\0';
+    strlcpy(g_presets[editSlot].name, name, sizeof(g_presets[editSlot].name));
   } else {
-    // New program - use the newly added index
     if (!g_presets.empty()) {
-      strncpy(g_presets[g_presets.size() - 1].name, name, 31);
-      g_presets[g_presets.size() - 1].name[31] = '\0';
+      strlcpy(g_presets[g_presets.size() - 1].name, name, sizeof(g_presets[g_presets.size() - 1].name));
     }
   }
+  xSemaphoreGive(g_presets_mutex);
 
-  // Save to LittleFS
   storage_save_presets();
-
-  // Go back to programs list
   screens_show(SCREEN_PROGRAMS);
 }
 
@@ -241,7 +242,7 @@ void screen_program_edit_create(int slot) {
   editSlot = slot;
   keyboard = nullptr;
 
-  // Load preset data if editing existing
+  xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
   if (slot >= 0 && slot < (int)g_presets.size()) {
     editPreset = g_presets[slot];
   } else {
@@ -259,10 +260,10 @@ void screen_program_edit_create(int slot) {
     editPreset.step_repeats = 1;
     editPreset.step_dwell_sec = 0.0f;
     editPreset.timer_auto_stop = 1;  // auto stop
-    editPreset.cont_soft_start = 0;  // disabled
+    editPreset.cont_soft_start = 0;
   }
+  xSemaphoreGive(g_presets_mutex);
 
-  // ── Header (SVG: 0,0,800,32, fill=#090909) ──
   lv_obj_t* header = lv_obj_create(screen);
   lv_obj_set_size(header, SCREEN_W, 32);
   lv_obj_set_pos(header, 0, 0);
@@ -284,24 +285,6 @@ void screen_program_edit_create(int slot) {
   lv_obj_set_style_text_font(title, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(title, COL_ACCENT, 0);
   lv_obj_set_pos(title, 12, 7);
-
-  // [ESC] button at right of header
-  lv_obj_t* escBtn = lv_button_create(header);
-  lv_obj_set_size(escBtn, 60, 24);
-  lv_obj_set_pos(escBtn, SCREEN_W - 60 - PAD_X, 4);
-  lv_obj_set_style_bg_color(escBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(escBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(escBtn, 1, 0);
-  lv_obj_set_style_border_color(escBtn, COL_BORDER, 0);
-  lv_obj_set_style_shadow_width(escBtn, 0, 0);
-  lv_obj_set_style_pad_all(escBtn, 0, 0);
-  lv_obj_add_event_cb(escBtn, back_event_cb, LV_EVENT_CLICKED, nullptr);
-
-  lv_obj_t* escLbl = lv_label_create(escBtn);
-  lv_label_set_text(escLbl, "[ESC]");
-  lv_obj_set_style_text_font(escLbl, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(escLbl, COL_TEXT_DIM, 0);
-  lv_obj_center(escLbl);
 
   // ── Separator line at y=32 ──
   lv_obj_t* line1 = lv_obj_create(screen);

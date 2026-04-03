@@ -58,7 +58,3 @@ uint32_t control_get_timer_remaining();
 // FREERTOS TASKS
 // ───────────────────────────────────────────────────────────────────────────────
 void controlTask(void* pvParameters);   // Main control logic task
-void safetyTask(void* pvParameters);    // ESTOP monitoring (Phase 3)
-void motorTask(void* pvParameters);     // Motor speed updates
-void ioTask(void* pvParameters);        // ADC and input polling
-void storageTask(void* pvParameters);   // Program save/load (Phase 5)

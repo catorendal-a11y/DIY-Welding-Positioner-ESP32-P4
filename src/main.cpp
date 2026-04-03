@@ -9,9 +9,20 @@
 #include "ui/screens.h"
 #include "motor/motor.h"
 #include "motor/speed.h"
+#include "motor/acceleration.h"
+#include "motor/microstep.h"
+#include "motor/calibration.h"
 #include "control/control.h"
+
+#include <atomic>
+
+extern std::atomic<bool> motorConfigApplyPending;
 #include "safety/safety.h"
 #include "storage/storage.h"
+#include "ble/ble.h"
+#include <esp_timer.h>
+#include "WiFi.h"
+#include "esp32-hal-hosted.h"
 #include "esp_task_wdt.h"
 #include "esp_cache.h"
 
@@ -19,13 +30,9 @@
 // SAFETY GLOBALS (defined in safety.cpp)
 // ───────────────────────────────────────────────────────────────────────────────
 extern volatile bool g_estopPending;
-extern volatile int64_t g_estopTriggerUs;  // microseconds, ISR-safe
-
-// ───────────────────────────────────────────────────────────────────────────────
-// EXTERNAL TASKS (defined in their respective modules)
-// ───────────────────────────────────────────────────────────────────────────────
-extern void safetyTask(void* pvParameters);
-extern void controlTask(void* pvParameters);
+extern volatile uint32_t g_estopTriggerMs;
+extern bool speed_get_pedal_enabled();
+extern bool speed_pedal_connected();
 
 // ───────────────────────────────────────────────────────────────────────────────
 // TASK HANDLES — for health monitoring (FIX-09)
@@ -52,30 +59,32 @@ void lvglTask(void* pvParameters) {
 
   // Show boot screen during initialization
   screens_show(SCREEN_BOOT);
-  screen_boot_update(10, "INITIALIZING HARDWARE...");
+  screen_boot_update(10, "INITIALIZING DISPLAY");
 
-  // Give LVGL time to render boot screen
   for (int i = 0; i < 5; i++) {
     lv_timer_handler();
-    vTaskDelay(pdMS_TO_TICKS(50));  // Increased from 20 to 50
+    vTaskDelay(pdMS_TO_TICKS(50));
   }
 
-  // Continue initialization with progress updates
-  screen_boot_update(30, "LOADING CONFIGURATION...");
+  screen_boot_update(30, "LOADING SETTINGS");
   lv_timer_handler();
-  vTaskDelay(pdMS_TO_TICKS(500));  // Increased from 100 to 500
+  vTaskDelay(pdMS_TO_TICKS(100));
 
-  screen_boot_update(50, "CHECKING MOTOR SYSTEMS...");
+  screen_boot_update(50, "MOTOR SYSTEM");
   lv_timer_handler();
-  vTaskDelay(pdMS_TO_TICKS(700));  // Increased from 100 to 700
+  vTaskDelay(pdMS_TO_TICKS(100));
 
-  screen_boot_update(80, "STARTING UI SYSTEM...");
+  screen_boot_update(70, "SAFETY SYSTEM");
   lv_timer_handler();
-  vTaskDelay(pdMS_TO_TICKS(700));  // Increased from 100 to 700
+  vTaskDelay(pdMS_TO_TICKS(100));
+
+  screen_boot_update(90, "CONNECTIVITY");
+  lv_timer_handler();
+  vTaskDelay(pdMS_TO_TICKS(100));
 
   screen_boot_update(100, "READY");
   lv_timer_handler();
-  vTaskDelay(pdMS_TO_TICKS(1000));  // Increased from 500 to 1000
+  vTaskDelay(pdMS_TO_TICKS(50));
 
   // Transition to main screen
   screens_show(SCREEN_MAIN);
@@ -115,29 +124,89 @@ void motorTask(void* pvParameters) {
   LOG_I("Motor task started on Core %d", xPortGetCoreID());
   esp_task_wdt_add(NULL);
   uint8_t adcCycle = 0;
+  static bool pedalSwWasPressed = false;
   TickType_t t = xTaskGetTickCount();
+
+  #if DEBUG_BUILD
+  int32_t motorLoopUs = 0;
+  int32_t motorMaxUs = 0;
+  int32_t motorMinUs = INT32_MAX;
+  uint32_t motorJitterCount = 0;
+  uint32_t lastJitterLog = 0;
+  #endif
+
   for (;;) {
     esp_task_wdt_reset();
-    speed_apply();                   // every 5 ms
-    if (++adcCycle >= 4) {           // every 20 ms (4 × 5 ms)
-      speed_update_adc();            // IIR filter on pot ADC
+
+    #if DEBUG_BUILD
+    int32_t loopStart = (int32_t)esp_timer_get_time();
+    #endif
+
+    speed_apply();
+    if (++adcCycle >= 4) {
+      speed_update_adc();
       adcCycle = 0;
     }
-    vTaskDelayUntil(&t, pdMS_TO_TICKS(5));
+
+    if (acceleration_has_pending_apply()) {
+      acceleration_clear_pending();
+      motor_apply_settings();
+    }
+
+    if (motorConfigApplyPending) {
+      motorConfigApplyPending = false;
+      microstep_init();
+      acceleration_init();
+      motor_apply_settings();
+    }
+
+    if (speed_get_pedal_enabled() && speed_pedal_connected()) {
+      bool swPressed = (digitalRead(PIN_PEDAL_SW) == LOW);
+      if (swPressed && !pedalSwWasPressed) {
+        if (control_get_state() == STATE_IDLE) control_start_continuous();
+      } else if (!swPressed && pedalSwWasPressed) {
+        if (control_get_state() == STATE_RUNNING) control_stop();
+      }
+      pedalSwWasPressed = swPressed;
+    } else {
+      pedalSwWasPressed = false;
+    }
+
+    #if DEBUG_BUILD
+    int32_t loopEnd = (int32_t)esp_timer_get_time();
+    motorLoopUs = loopEnd - loopStart;
+    if (motorLoopUs > motorMaxUs) motorMaxUs = motorLoopUs;
+    if (motorLoopUs < motorMinUs) motorMinUs = motorLoopUs;
+    motorJitterCount++;
+
+    uint32_t now = millis();
+    if (now - lastJitterLog >= 30000) {
+      lastJitterLog = now;
+      LOG_I("Motor jitter (5ms loop): avg=%ldus min=%ldus max=%ldus samples=%lu",
+            motorLoopUs, motorMinUs, motorMaxUs, (unsigned long)motorJitterCount);
+      motorMaxUs = 0;
+      motorMinUs = INT32_MAX;
+      motorJitterCount = 0;
+    }
+    #endif
+
+     vTaskDelayUntil(&t, pdMS_TO_TICKS(5));
   }
 }
 
 // Storage task (Core 1, priority 1) — program save/load + health monitoring
+// NOT subscribed to WDT — does blocking I/O (LittleFS, WiFi SDIO, BLE SDIO)
 void storageTask(void* pvParameters) {
   LOG_I("Storage task started on Core %d", xPortGetCoreID());
-  esp_task_wdt_add(NULL);
   TickType_t t = xTaskGetTickCount();
 
   static uint32_t lastHealthCheck = 0;
   for (;;) {
-    esp_task_wdt_reset();
-
     storage_flush();
+
+    wifi_process_pending();
+
+    ble_update();
 
     // Health monitoring every 30 seconds (FIX-09)
     if (millis() - lastHealthCheck >= 30000) {
@@ -173,7 +242,9 @@ void setup() {
   // CRITICAL SAFETY: ENA MUST BE HIGH BEFORE ANYTHING ELSE
   // ─────────────────────────────────────────────────────────────────────────
   pinMode(PIN_ENA, OUTPUT);
-  digitalWrite(PIN_ENA, HIGH);   // MOTOR OFF — cannot move
+  digitalWrite(PIN_ENA, HIGH);
+
+  pinMode(PIN_PEDAL_SW, INPUT_PULLUP);   // MOTOR OFF — cannot move
   // ─────────────────────────────────────────────────────────────────────────
 
   Serial.begin(115200);
@@ -202,6 +273,14 @@ void setup() {
   // Initialize motor control (GPIO + FastAccelStepper)
   motor_init();
 
+  // Validate and initialize motor sub-modules
+  acceleration_init();
+  microstep_init();
+  calibration_init();
+
+  // Apply validated settings to stepper
+  motor_apply_settings();
+
   // Cache stepper pointer for ESTOP ISR
   safety_cache_stepper();
 
@@ -211,17 +290,36 @@ void setup() {
   // Initialize control state machine
   control_init();
 
+  // Initialize WiFi via C6 co-processor (non-blocking)
+  const char* ssid = g_settings.wifi_ssid[0] ? g_settings.wifi_ssid : WIFI_SSID;
+  const char* pass = g_settings.wifi_pass[0] ? g_settings.wifi_pass : WIFI_PASS;
+  LOG_I("Starting WiFi (non-blocking): %s", ssid);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, pass);
+  if (WiFi.status() == WL_CONNECTED) {
+    LOG_I("WiFi already connected: %s", WiFi.localIP().toString().c_str());
+    if (hostedHasUpdate()) {
+      LOG_I("C6 co-processor firmware update available — auto-updating...");
+      ble_ota_update_c6();
+    }
+  } else {
+    LOG_I("WiFi connecting in background...");
+  }
+
+  // Initialize BLE (ESP-Hosted via C6 co-processor)
+  ble_init();
+
   // ─────────────────────────────────────────────────────────────────────────
   // CREATE FREERTOS TASKS
-  // Priority: safety(5) > motor(4) > control(3) > lvgl(1) = storage(1)
+  // Priority: safety(5) > motor(4) > control(3) > lvgl(2) > storage(1)
   // ESP32-P4 HP cores: Core 0 and Core 1 (RISC-V dual-core @ 360 MHz)
   // Task handles for health monitoring (FIX-09)
   // ─────────────────────────────────────────────────────────────────────────
   xTaskCreatePinnedToCore(safetyTask,  "safety",  2048,  nullptr, 5, &safetyHandle,  0);
   xTaskCreatePinnedToCore(motorTask,   "motor",   5120,  nullptr, 4, &motorHandle,   0);
   xTaskCreatePinnedToCore(controlTask, "control", 4096,  nullptr, 3, &controlHandle, 0);
-  xTaskCreatePinnedToCore(lvglTask,    "lvgl",    65536, nullptr, 1, &lvglHandle,    1);  // 64KB: LVGL 9 rotation + arc rendering needs large stack
-  xTaskCreatePinnedToCore(storageTask, "storage", 4096,  nullptr, 1, &storageHandle, 1);
+  xTaskCreatePinnedToCore(lvglTask,    "lvgl",    65536, nullptr, 2, &lvglHandle,    1);  // 64KB: LVGL 9 rotation + arc rendering needs large stack
+  xTaskCreatePinnedToCore(storageTask, "storage", 12288, nullptr, 1, &storageHandle, 1);
 
   LOG_I("All FreeRTOS tasks started");
   LOG_I("System ready — ESP32-P4 + MIPI-DSI display");
@@ -231,6 +329,5 @@ void setup() {
 // MAIN LOOP
 // ───────────────────────────────────────────────────────────────────────────────
 void loop() {
-  // Nothing here — all work done in FreeRTOS tasks
   delay(100);
 }

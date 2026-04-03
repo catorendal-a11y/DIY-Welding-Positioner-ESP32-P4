@@ -1,3 +1,4 @@
+// Theme - Color palette and style constants for UI
 #include "theme.h"
 #include "screens.h"
 #include "../storage/storage.h"
@@ -31,6 +32,13 @@ void theme_init() {
     g_accent = lv_color_hex(theme_palette[idx].accent);
     g_accent_dim = lv_color_hex(theme_palette[idx].dim);
     g_accent_border = lv_color_hex(theme_palette[idx].accent);
+
+    lv_theme_t* th = lv_theme_default_init(
+        lv_display_get_default(), g_accent, g_accent_dim, true, &lv_font_montserrat_14
+    );
+    if (th) {
+        lv_theme_set_apply_cb(th, nullptr);
+    }
 }
 
 void theme_set_color(uint8_t idx) {

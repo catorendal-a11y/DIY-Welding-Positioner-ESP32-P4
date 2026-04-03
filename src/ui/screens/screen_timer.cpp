@@ -20,6 +20,7 @@ static lv_obj_t* presetBtns[4] = {nullptr};
 static int activePreset = 1;  // 30s default
 static lv_obj_t* customNumpad = nullptr;
 static lv_obj_t* customTa = nullptr;
+static volatile bool numpadClosePending = false;
 
 // ───────────────────────────────────────────────────────────────────────────────
 // HELPERS
@@ -49,7 +50,7 @@ static void update_preset_styles() {
 static void back_event_cb(lv_event_t* e) {
   if (customNumpad) { lv_obj_delete(customNumpad); customNumpad = nullptr; }
   if (customTa) { lv_obj_delete(customTa); customTa = nullptr; }
-  screens_show(SCREEN_MENU);
+  screens_show(SCREEN_MAIN);
 }
 
 static void preset_event_cb(lv_event_t* e) {
@@ -79,14 +80,13 @@ static void custom_keyboard_cb(lv_event_t* e) {
     }
   }
   if (code == LV_EVENT_READY || code == LV_EVENT_CANCEL) {
-    if (customNumpad) { lv_obj_delete(customNumpad); customNumpad = nullptr; }
-    if (customTa) { lv_obj_delete(customTa); customTa = nullptr; }
+    numpadClosePending = true;
   }
 }
 
 static void custom_btn_cb(lv_event_t* e) {
   if (!customNumpad) {
-    customTa = lv_textarea_create(lv_screen_active());
+    customTa = lv_textarea_create(screenRoots[SCREEN_TIMER]);
     lv_obj_set_size(customTa, 200, 50);
     lv_obj_align(customTa, LV_ALIGN_TOP_MID, 0, 50);
     lv_textarea_set_one_line(customTa, true);
@@ -96,7 +96,7 @@ static void custom_btn_cb(lv_event_t* e) {
     lv_obj_set_style_border_width(customTa, 2, 0);
     lv_obj_set_style_text_color(customTa, COL_TEXT, 0);
 
-    customNumpad = lv_keyboard_create(lv_screen_active());
+    customNumpad = lv_keyboard_create(screenRoots[SCREEN_TIMER]);
     lv_keyboard_set_mode(customNumpad, LV_KEYBOARD_MODE_NUMBER);
     lv_keyboard_set_textarea(customNumpad, customTa);
     lv_obj_set_style_bg_color(customNumpad, COL_BG, 0);
@@ -164,7 +164,7 @@ static lv_obj_t* create_pm_btn(lv_obj_t* parent, int16_t x, int16_t y,
 
   lv_obj_t* lbl = lv_label_create(btn);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_font(lbl, FONT_XL, 0);
   lv_obj_set_style_text_color(lbl, COL_TEXT, 0);
   lv_obj_center(lbl);
   return btn;
@@ -260,7 +260,7 @@ void screen_timer_create() {
   uint32_t dMin = timerSeconds / 60;
   uint32_t dSec = timerSeconds % 60;
   lv_label_set_text_fmt(durValLabel, "%02d:%02d", (int)dMin, (int)dSec);
-  lv_obj_set_style_text_font(durValLabel, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_font(durValLabel, FONT_LARGE, 0);
   lv_obj_set_style_text_color(durValLabel, COL_TEXT_BRIGHT, 0);
   lv_obj_set_pos(durValLabel, 130, durY + 10);
 
@@ -284,7 +284,7 @@ void screen_timer_create() {
 
   rpmLabel = lv_label_create(screen);
   lv_label_set_text_fmt(rpmLabel, "%.1f", speed_get_target_rpm());
-  lv_obj_set_style_text_font(rpmLabel, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_font(rpmLabel, FONT_LARGE, 0);
   lv_obj_set_style_text_color(rpmLabel, COL_TEXT_BRIGHT, 0);
   lv_obj_set_pos(rpmLabel, 510, durY + 10);
 
@@ -352,7 +352,7 @@ void screen_timer_create() {
   lv_obj_add_event_cb(backBtn, back_event_cb, LV_EVENT_CLICKED, nullptr);
   lv_obj_t* backLabel = lv_label_create(backBtn);
   lv_label_set_text(backLabel, "<  BACK");
-  lv_obj_set_style_text_font(backLabel, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(backLabel, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(backLabel, COL_TEXT, 0);
   lv_obj_center(backLabel);
 
@@ -366,7 +366,7 @@ void screen_timer_create() {
   lv_obj_add_event_cb(startBtn, start_event_cb, LV_EVENT_CLICKED, nullptr);
   lv_obj_t* startLabel = lv_label_create(startBtn);
   lv_label_set_text(startLabel, "> START");
-  lv_obj_set_style_text_font(startLabel, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(startLabel, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(startLabel, COL_ACCENT, 0);
   lv_obj_center(startLabel);
 
@@ -380,7 +380,7 @@ void screen_timer_create() {
   lv_obj_add_event_cb(stopBtn, stop_event_cb, LV_EVENT_CLICKED, nullptr);
   lv_obj_t* stopLabel = lv_label_create(stopBtn);
   lv_label_set_text(stopLabel, "[] STOP");
-  lv_obj_set_style_text_font(stopLabel, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(stopLabel, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(stopLabel, COL_RED, 0);
   lv_obj_center(stopLabel);
 
@@ -391,6 +391,11 @@ void screen_timer_create() {
 // SCREEN UPDATE
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_timer_update() {
+  if (numpadClosePending) {
+    if (customNumpad) { lv_obj_delete(customNumpad); customNumpad = nullptr; }
+    if (customTa) { lv_obj_delete(customTa); customTa = nullptr; }
+    numpadClosePending = false;
+  }
   if (!screens_is_active(SCREEN_TIMER)) return;
 
   uint32_t remaining = control_get_timer_remaining();

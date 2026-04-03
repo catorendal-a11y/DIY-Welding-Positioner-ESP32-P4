@@ -4,7 +4,9 @@
 #include "motor.h"
 #include "../storage/storage.h"
 #include "speed.h"
+#include "microstep.h"
 #include "../config.h"
+#include "../safety/safety.h"
 #include <FastAccelStepper.h>
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -12,6 +14,12 @@
 // ───────────────────────────────────────────────────────────────────────────────
 static FastAccelStepperEngine engine = FastAccelStepperEngine();
 static FastAccelStepper* stepper = nullptr;
+
+// ───────────────────────────────────────────────────────────────────────────────
+// STEPPER MUTEX — all stepper API calls must hold this
+// FastAccelStepper is NOT thread-safe — shared between motorTask, controlTask, safetyTask, ISR
+// ───────────────────────────────────────────────────────────────────────────────
+portMUX_TYPE g_stepperMutex = portMUX_INITIALIZER_UNLOCKED;
 
 // ───────────────────────────────────────────────────────────────────────────────
 // GPIO INITIALIZATION — ENA MUST BE HIGH BEFORE CALLING
@@ -46,8 +54,10 @@ void motor_gpio_init() {
 void motor_init() {
   motor_gpio_init();
 
-  // Initialize engine
-  engine.init();
+  // Pin stepper engine to Core 0 — motorTask, controlTask and safetyTask all run here.
+  // Without pinning, FastAccelStepper's internal timer ISR may fire on Core 1
+  // causing inter-core contention and jitter in step pulse timing.
+  engine.init(0);
 
   // Connect stepper to step pin with RMT driver
   stepper = engine.stepperConnectToPin(PIN_STEP);
@@ -63,15 +73,13 @@ void motor_init() {
   // FastAccelStepper's setEnablePin conflicts with manual control.
 
   // Set acceleration and start speed
-  stepper->setAcceleration(ACCELERATION);
-  // Linear ramp through resonance zone (NEMA 23: 100-300 RPM)
-  // 200 steps linear phase → handover at ~sqrt(1.5 * 7000 * 200) = ~1449 Hz
+  stepper->setAcceleration(g_settings.acceleration);
   stepper->setLinearAcceleration(200);
   stepper->setSpeedInHz(START_SPEED);
 
   LOG_I("FastAccelStepper init OK");
-  LOG_I("  Steps/rev: %d", STEPS_PER_REV);
-  LOG_I("  Accel: %d steps/s2", ACCELERATION);
+  LOG_I("  Steps/rev: %u", microstep_get_steps_per_rev());
+  LOG_I("  Accel: %d steps/s2", g_settings.acceleration);
   LOG_I("  Start speed: %d Hz", START_SPEED);
 }
 
@@ -79,30 +87,46 @@ void motor_init() {
 // MOTOR CONTROL FUNCTIONS
 // ───────────────────────────────────────────────────────────────────────────────
 void motor_run_cw() {
-  digitalWrite(PIN_ENA, LOW);    // Enable motor
+  if (safety_is_estop_active()) return;
+  portENTER_CRITICAL(&g_stepperMutex);
+  if (stepper == nullptr) { portEXIT_CRITICAL(&g_stepperMutex); return; }
+  digitalWrite(PIN_ENA, LOW);
   stepper->runForward();
+  portEXIT_CRITICAL(&g_stepperMutex);
   LOG_I("Motor: CW");
 }
 
 void motor_run_ccw() {
-  digitalWrite(PIN_ENA, LOW);    // Enable motor
+  if (safety_is_estop_active()) return;
+  portENTER_CRITICAL(&g_stepperMutex);
+  if (stepper == nullptr) { portEXIT_CRITICAL(&g_stepperMutex); return; }
+  digitalWrite(PIN_ENA, LOW);
   stepper->runBackward();
+  portEXIT_CRITICAL(&g_stepperMutex);
   LOG_I("Motor: CCW");
 }
 
 void motor_stop() {
+  portENTER_CRITICAL(&g_stepperMutex);
+  if (stepper == nullptr) { portEXIT_CRITICAL(&g_stepperMutex); return; }
   stepper->stopMove();
+  portEXIT_CRITICAL(&g_stepperMutex);
   LOG_I("Motor: stopping (smooth decel)");
 }
 
 void motor_halt() {
+  portENTER_CRITICAL(&g_stepperMutex);
+  if (stepper == nullptr) { portEXIT_CRITICAL(&g_stepperMutex); return; }
   stepper->forceStop();
-  digitalWrite(PIN_ENA, HIGH);   // Disable motor immediately
+  digitalWrite(PIN_ENA, HIGH);
+  portEXIT_CRITICAL(&g_stepperMutex);
   LOG_I("Motor: HALT");
 }
 
 void motor_disable() {
+  portENTER_CRITICAL(&g_stepperMutex);
   digitalWrite(PIN_ENA, HIGH);   // Disable motor (ENA HIGH = disabled)
+  portEXIT_CRITICAL(&g_stepperMutex);
   LOG_I("Motor: disabled");
 }
 
@@ -110,20 +134,27 @@ void motor_disable() {
 // STATUS QUERIES
 // ───────────────────────────────────────────────────────────────────────────────
 bool motor_is_running() {
-  return (stepper != nullptr) && stepper->isRunning();
+  portENTER_CRITICAL(&g_stepperMutex);
+  bool running = (stepper != nullptr) && stepper->isRunning();
+  portEXIT_CRITICAL(&g_stepperMutex);
+  return running;
 }
 
 uint32_t motor_get_current_hz() {
-  if (stepper == nullptr) return 0;
+  portENTER_CRITICAL(&g_stepperMutex);
+  if (stepper == nullptr) { portEXIT_CRITICAL(&g_stepperMutex); return 0; }
   int32_t mhZ = stepper->getCurrentSpeedInMilliHz();
+  portEXIT_CRITICAL(&g_stepperMutex);
   return (mhZ >= 0) ? (uint32_t)mhZ / 1000 : (uint32_t)(-mhZ) / 1000;
 }
 
 void motor_apply_settings() {
+  portENTER_CRITICAL(&g_stepperMutex);
   if (stepper != nullptr) {
     stepper->setAcceleration(g_settings.acceleration);
     LOG_I("Motor: acceleration set to %d", g_settings.acceleration);
   }
+  portEXIT_CRITICAL(&g_stepperMutex);
 }
 
 FastAccelStepper* motor_get_stepper() {

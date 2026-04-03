@@ -8,8 +8,9 @@
 // ───────────────────────────────────────────────────────────────────────────────
 // SAFETY GLOBALS (shared with ISR)
 // ───────────────────────────────────────────────────────────────────────────────
-extern volatile bool g_estopPending;      // Set by ISR, cleared by safetyTask
-extern volatile int64_t g_estopTriggerUs; // Timestamp of ESTOP event (microseconds, ISR-safe)
+extern volatile bool g_estopPending;        // Set by ISR, cleared by safetyTask
+extern volatile uint32_t g_estopTriggerMs;  // Timestamp of ESTOP event (milliseconds, 32-bit atomic on RV32)
+extern volatile bool g_uiResetPending;      // Set by UI, processed by safety task
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SAFETY FUNCTIONS
@@ -22,7 +23,11 @@ void safety_attach_estop();            // Attach ESTOP interrupt (call after mot
 bool safety_is_estop_active();         // Returns true if ESTOP is pressed
 bool safety_is_estop_locked();         // Returns true if in ESTOP state
 void safety_reset_estop();             // Reset ESTOP (only when physical button released)
+bool safety_check_ui_reset();          // Check if UI requested reset, process if safe
 
 // Watchdog
-void safety_init_watchdog();           // Initialize hardware watchdog (2s timeout)
+void safety_init_watchdog();           // Initialize hardware watchdog (5s timeout)
 void safety_feed_watchdog();           // Feed watchdog (call from tasks periodically)
+
+// FreeRTOS task
+void safetyTask(void* pvParameters);   // ESTOP monitoring task (Core 0, priority 5)

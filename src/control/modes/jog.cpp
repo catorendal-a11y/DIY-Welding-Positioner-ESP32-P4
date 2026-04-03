@@ -1,74 +1,63 @@
-// TIG Rotator Controller - Jog Mode
-// Motor runs only while button held, stops on release
-
+// Jog Mode - Touch-and-hold jog control with configurable speed
 #include "../control.h"
 #include "../../motor/motor.h"
 #include "../../motor/speed.h"
 #include "../../config.h"
+#include <atomic>
 
-// ───────────────────────────────────────────────────────────────────────────────
-// JOG MODE STATE
-// ───────────────────────────────────────────────────────────────────────────────
-static float jogRPM = 0.5f;  // Default jog speed (workpiece RPM)
+static_assert(std::atomic<float>::is_always_lock_free,
+              "std::atomic<float> must be lock-free for inter-core jog speed sharing");
 
-// ───────────────────────────────────────────────────────────────────────────────
-// JOG MODE START
-// ───────────────────────────────────────────────────────────────────────────────
+static std::atomic<float> jogRPM{0.5f};
+static std::atomic<float> pendingJogSpeed{-1.0f};
+
 void jog_start(Direction dir) {
-  // Allow jog from IDLE or while already jogging (direction change)
   SystemState state = control_get_state();
   if (state != STATE_IDLE && state != STATE_JOG) return;
 
   LOG_I("Jog mode: %s", (dir == DIR_CW) ? "CW" : "CCW");
 
-  // Set direction
-  digitalWrite(PIN_DIR, (dir == DIR_CW) ? HIGH : LOW);
-
-  // Enable motor at jog speed
-  digitalWrite(PIN_ENA, LOW);
-
+  portENTER_CRITICAL(&g_stepperMutex);
   FastAccelStepper* stepper = motor_get_stepper();
   if (stepper != nullptr) {
-    uint32_t hz = (uint32_t)rpmToStepHz(jogRPM);
+    uint32_t hz = (uint32_t)rpmToStepHz(jogRPM.load(std::memory_order_relaxed));
     stepper->setSpeedInHz(hz);
-    if (dir == DIR_CW) {
-      stepper->runForward();
-    } else {
-      stepper->runBackward();
-    }
   }
+  portEXIT_CRITICAL(&g_stepperMutex);
+
+  if (dir == DIR_CW) motor_run_cw();
+  else motor_run_ccw();
 
   control_transition_to(STATE_JOG);
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// JOG MODE STOP (immediate)
-// ───────────────────────────────────────────────────────────────────────────────
 void jog_stop() {
   if (control_get_state() != STATE_JOG) return;
 
   LOG_D("Jog stop");
-
-  // Transition through STOPPING (motor_stop triggers deceleration)
   control_transition_to(STATE_STOPPING);
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// JOG SPEED SET
-// ───────────────────────────────────────────────────────────────────────────────
 void jog_set_speed(float rpm) {
-  jogRPM = constrain(rpm, MIN_RPM, MAX_RPM);
+  float constrained = constrain(rpm, MIN_RPM, MAX_RPM);
+  jogRPM.store(constrained, std::memory_order_relaxed);
+  pendingJogSpeed.store(constrained, std::memory_order_release);
+}
 
-  // Update speed if currently jogging
-  if (control_get_state() == STATE_JOG) {
+void jog_update() {
+  float pending = pendingJogSpeed.load(std::memory_order_acquire);
+  if (pending >= 0.0f && control_get_state() == STATE_JOG) {
+    pendingJogSpeed.store(-1.0f, std::memory_order_relaxed);
+    portENTER_CRITICAL(&g_stepperMutex);
     FastAccelStepper* stepper = motor_get_stepper();
     if (stepper != nullptr) {
-      uint32_t hz = (uint32_t)rpmToStepHz(jogRPM);
+      uint32_t hz = (uint32_t)rpmToStepHz(jogRPM.load(std::memory_order_relaxed));
       stepper->setSpeedInHz(hz);
     }
+    portEXIT_CRITICAL(&g_stepperMutex);
   }
 }
 
 float jog_get_speed() {
-  return jogRPM;
+  return jogRPM.load(std::memory_order_relaxed);
 }

@@ -21,13 +21,17 @@ extern std::atomic<bool> motorConfigApplyPending;
 
 volatile bool g_wakePending = false;
 #include "storage/storage.h"
+extern volatile bool wifiConnectPending;
+extern char wifiPendingSsid[33];
+extern char wifiPendingPass[65];
 #include "ble/ble.h"
-extern bool wifiEnabled;
 #include <esp_timer.h>
 #include "WiFi.h"
 #include "esp32-hal-hosted.h"
 #include "esp_task_wdt.h"
 #include "esp_cache.h"
+#include <cstdint>
+#include "onchip_temp.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SAFETY GLOBALS (defined in safety.cpp)
@@ -92,11 +96,16 @@ void lvglTask(void* pvParameters) {
   // Transition to main screen
   screens_show(SCREEN_MAIN);
 
-  TickType_t t = xTaskGetTickCount();
   for (;;) {
-    lv_timer_handler();
-
-    dim_update();
+    screens_process_pending();
+    lvgl_lock();
+    uint32_t handlerStart = millis();
+    // Return value = ms until next LVGL timer work (see LVGL integration docs); avoids fixed 10ms when idle.
+    uint32_t next_lv_ms = lv_timer_handler();
+    uint32_t handlerMs = millis() - handlerStart;
+    if (handlerMs > 50) {
+      LOG_W("LVGL handler took %lums", (unsigned long)handlerMs);
+    }
 
     // Update current screen (200ms interval for smooth UI)
     static uint32_t lastScreenUpdate = 0;
@@ -113,12 +122,33 @@ void lvglTask(void* pvParameters) {
       estop_overlay_hide();
     }
 
-    // Update ESTOP overlay if visible
     if (estop_overlay_visible()) {
       estop_overlay_update();
     }
+    lvgl_unlock();
 
-    vTaskDelayUntil(&t, pdMS_TO_TICKS(10));
+    // Outside LVGL mutex: backlight dim uses GT911 read — must not nest with lv_indev touch read
+    dim_update();
+
+    #if DEBUG_BUILD
+    static uint32_t lastLvglStackLog = 0;
+    if (millis() - lastLvglStackLog >= 30000) {
+      lastLvglStackLog = millis();
+      LOG_I("LVGL stack watermark: %u bytes free", uxTaskGetStackHighWaterMark(NULL) * 4);
+    }
+    #endif
+
+    // Sleep until next LVGL tick hint; cap so we still poll touch/input regularly.
+    // After a heavy frame, add a short pause so other tasks/ISRs on this core get CPU (helps IWDT margins).
+    uint32_t sleep_ms = 10;
+    if (next_lv_ms != UINT32_MAX && next_lv_ms < sleep_ms) {
+      sleep_ms = next_lv_ms ? next_lv_ms : 1u;
+    }
+    if (sleep_ms < 1u) sleep_ms = 1u;
+    if (sleep_ms > 25u) sleep_ms = 25u;
+    if (handlerMs > 40u) sleep_ms += 2u;
+
+    vTaskDelay(pdMS_TO_TICKS(sleep_ms));
   }
 }
 
@@ -264,11 +294,16 @@ void setup() {
   // Initialize safety system (ESTOP, watchdog)
   safety_init();
 
-  // Initialize speed control (ADC)
-  speed_init();
+  // Step/dir/ENA/ESTOP + DIR switch — before speed_init() (pot + digitalRead DIR_SW)
+  motor_gpio_init();
 
   // Initialize display (MIPI-DSI + GT911 touch)
   display_init();
+
+  onchip_temp_init();
+
+  // Speed/pot + ADS1115 on display I2C bus (must run after display_init)
+  speed_init();
 
   // Initialize LVGL
   lvgl_hal_init();
@@ -293,24 +328,15 @@ void setup() {
   // Initialize control state machine
   control_init();
 
-  // Initialize WiFi via C6 co-processor (non-blocking)
-  if (g_settings.wifi_enabled) {
-    const char* ssid = g_settings.wifi_ssid[0] ? g_settings.wifi_ssid : WIFI_SSID;
-    const char* pass = g_settings.wifi_pass[0] ? g_settings.wifi_pass : WIFI_PASS;
-    LOG_I("Starting WiFi (non-blocking): %s", ssid);
+  // WiFi init deferred to storageTask (ESP-Hosted SDIO must be single-owner)
+  if (g_settings.wifi_enabled && g_settings.wifi_ssid[0] != '\0') {
     WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid, pass);
-    if (WiFi.status() == WL_CONNECTED) {
-      LOG_I("WiFi already connected: %s", WiFi.localIP().toString().c_str());
-      if (hostedHasUpdate()) {
-        LOG_I("C6 co-processor firmware update available — auto-updating...");
-        ble_ota_update_c6();
-      }
-    } else {
-      LOG_I("WiFi connecting in background...");
-    }
+    wifiConnectPending = true;
+    strlcpy(wifiPendingSsid, g_settings.wifi_ssid, sizeof(wifiPendingSsid));
+    strlcpy(wifiPendingPass, g_settings.wifi_pass, sizeof(wifiPendingPass));
+    LOG_I("WiFi connect deferred to storageTask: %s", g_settings.wifi_ssid);
   } else {
-    LOG_I("WiFi disabled (saved setting)");
+    LOG_I("WiFi %s", g_settings.wifi_enabled ? "enabled (no SSID)" : "disabled (saved setting)");
   }
 
   // Initialize BLE (ESP-Hosted via C6 co-processor)
@@ -322,7 +348,7 @@ void setup() {
   // ESP32-P4 HP cores: Core 0 and Core 1 (RISC-V dual-core @ 360 MHz)
   // Task handles for health monitoring (FIX-09)
   // ─────────────────────────────────────────────────────────────────────────
-  xTaskCreatePinnedToCore(safetyTask,  "safety",  2048,  nullptr, 5, &safetyHandle,  0);
+  xTaskCreatePinnedToCore(safetyTask,  "safety",  4096,  nullptr, 5, &safetyHandle,  0);
   xTaskCreatePinnedToCore(motorTask,   "motor",   5120,  nullptr, 4, &motorHandle,   0);
   xTaskCreatePinnedToCore(controlTask, "control", 4096,  nullptr, 3, &controlHandle, 0);
   xTaskCreatePinnedToCore(lvglTask,    "lvgl",    65536, nullptr, 2, &lvglHandle,    1);  // 64KB: LVGL 9 rotation + arc rendering needs large stack

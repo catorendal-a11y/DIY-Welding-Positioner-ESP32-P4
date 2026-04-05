@@ -20,6 +20,7 @@
 #define LV_USE_STDLIB_STRING    LV_STDLIB_CLIB
 #define LV_USE_STDLIB_SPRINTF   LV_STDLIB_CLIB
 #define LV_MEM_SIZE             (128 * 1024U)  // Backup/ignored when using CLIB
+#define LV_DRAW_BUF_ALIGN       64    // ESP32-P4 PPA requires 64-byte alignment
 
 // ───────────────────────────────────────────────────────────────────────────────
 // MONITORING (LVGL 9.x - LV_USE_SYSMON requires LV_USE_PERF_MONITOR or MEM_MONITOR)

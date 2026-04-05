@@ -48,6 +48,10 @@ static volatile float blePendingRpm = 0;
 static volatile bool blePendingRpmFlag = false;
 static volatile bool blePendingDirFlag = false;
 static volatile uint8_t blePendingDir = 0;
+volatile bool bleScanPending = false;
+volatile bool bleScanDone = false;
+volatile bool bleEnablePending = false;
+volatile bool bleEnableValue = false;
 static uint32_t lastNotifyTime = 0;
 static float lastNotifiedRpm = -1;
 static uint8_t lastNotifiedState = 255;
@@ -240,7 +244,18 @@ static DirectionCallbacks dirCb;
 void ble_update() {
   if (!bleServer) return;
 
-#if DEBUG_BUILD
+  if (bleEnablePending) {
+    bleEnablePending = false;
+    ble_set_enabled(bleEnableValue);
+  }
+
+  if (bleScanPending) {
+    bleScanPending = false;
+    ble_scan_start();
+    bleScanDone = true;
+  }
+
+  #if DEBUG_BUILD
   if (bleRxFlag) {
     bleRxFlag = false;
     Serial.print("BLE RX: ");

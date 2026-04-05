@@ -29,6 +29,10 @@ CONFIG_ARDUINO_LOOP_STACK_SIZE=32768
 CONFIG_RMT_ISR_IRAM_SAFE=y
 CONFIG_GPTIMER_ISR_IRAM_SAFE=y
 
+# Interrupt watchdog — see ESP-IDF wdts.rst: tick ISR must run within this window.
+# PSRAM + MIPI-DSI flush + heavy lv_timer_handler() can defer interrupts; 800ms was still tight in practice.
+CONFIG_ESP_INT_WDT_TIMEOUT_MS=2000
+
 # ─── ESP-Hosted: C6 co-processor for BLE ───
 CONFIG_ESP_HOSTED_ENABLED=y
 CONFIG_ESP_HOSTED_ENABLE_BT_NIMBLE=y

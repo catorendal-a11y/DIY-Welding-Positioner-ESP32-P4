@@ -30,11 +30,11 @@ static void cleanup_kb() {
   if (bleKb) {
     lv_obj_remove_event_cb(bleKb, ble_kb_cb);
     lv_keyboard_set_textarea(bleKb, nullptr);
-    lv_obj_delete(bleKb);
-    bleKb = nullptr;
+    lv_obj_t* old = bleKb; bleKb = nullptr;
+    lv_obj_delete_async(old);
   }
-  if (bleTa) { lv_obj_delete(bleTa); bleTa = nullptr; }
-  if (blePromptLabel) { lv_obj_delete(blePromptLabel); blePromptLabel = nullptr; }
+  if (bleTa) { lv_obj_t* old = bleTa; bleTa = nullptr; lv_obj_delete_async(old); }
+  if (blePromptLabel) { lv_obj_t* old = blePromptLabel; blePromptLabel = nullptr; lv_obj_delete_async(old); }
   bleKbClosePending = false;
 }
 
@@ -105,7 +105,8 @@ static void show_ble_kb() {
 
 static void ble_toggle_cb(lv_event_t* e) {
   bleEnabled = !bleEnabled;
-  ble_set_enabled(bleEnabled);
+  bleEnableValue = bleEnabled;
+  bleEnablePending = true;
   if (bleEnabled) {
     lv_obj_set_style_bg_color(bleToggleSw, COL_GREEN, 0);
     lv_label_set_text(bleToggleLbl, "ON");
@@ -119,37 +120,8 @@ static void scan_cb(lv_event_t* e) {
   if (scanRunning) return;
   scanRunning = true;
   lv_obj_clean(discoveredList);
-  ble_scan_start();
-  BLEDeviceInfo results[BLE_MAX_DEVICES];
-  int count = ble_scan_get_results(results, BLE_MAX_DEVICES);
-  scanRunning = false;
-  if (count <= 0) return;
-  char buf[65];
-  for (int i = 0; i < count; i++) {
-    lv_obj_t* row = lv_obj_create(discoveredList);
-    lv_obj_set_size(row, 760, 44);
-    lv_obj_set_style_bg_color(row, COL_BG_ROW, 0);
-    lv_obj_set_style_border_color(row, COL_BORDER_ROW, 0);
-    lv_obj_set_style_border_width(row, 1, 0);
-    lv_obj_set_style_radius(row, RADIUS_ROW, 0);
-    lv_obj_set_style_shadow_width(row, 0, 0);
-    lv_obj_set_style_pad_all(row, 0, 0);
-    lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
-
-    snprintf(buf, sizeof(buf), "%s", results[i].name);
-    lv_obj_t* nameLbl = lv_label_create(row);
-    lv_label_set_text(nameLbl, buf);
-    lv_obj_set_style_text_font(nameLbl, FONT_SUBTITLE, 0);
-    lv_obj_set_style_text_color(nameLbl, COL_TEXT, 0);
-    lv_obj_align(nameLbl, LV_ALIGN_LEFT_MID, 8, -8);
-
-    snprintf(buf, sizeof(buf), "%s  %ddBm", results[i].addr, results[i].rssi);
-    lv_obj_t* detailLbl = lv_label_create(row);
-    lv_label_set_text(detailLbl, buf);
-    lv_obj_set_style_text_font(detailLbl, FONT_BODY, 0);
-    lv_obj_set_style_text_color(detailLbl, COL_TEXT_DIM, 0);
-    lv_obj_align(detailLbl, LV_ALIGN_LEFT_MID, 8, 8);
-  }
+  bleScanDone = false;
+  bleScanPending = true;
 }
 
 static void forget_all_cb(lv_event_t* e) {
@@ -214,6 +186,22 @@ static void add_paired_placeholder() {
   lv_obj_set_style_text_font(lbl, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(lbl, COL_TEXT_VDIM, 0);
   lv_obj_align(lbl, LV_ALIGN_LEFT_MID, 8, 0);
+}
+
+void screen_bt_invalidate_widgets() {
+  bleToggleSw = nullptr;
+  bleToggleLbl = nullptr;
+  bleNameRow = nullptr;
+  bleNameValueLbl = nullptr;
+  statusDot = nullptr;
+  statusLabel = nullptr;
+  pairedList = nullptr;
+  discoveredList = nullptr;
+  bleKb = nullptr;
+  bleTa = nullptr;
+  blePromptLabel = nullptr;
+  bleKbClosePending = false;
+  scanRunning = false;
 }
 
 void screen_bt_create() {
@@ -389,6 +377,40 @@ void screen_bt_create() {
 
 void screen_bt_update() {
   if (bleKbClosePending) cleanup_kb();
+  if (scanRunning && bleScanDone) {
+    scanRunning = false;
+    bleScanDone = false;
+    BLEDeviceInfo results[BLE_MAX_DEVICES];
+    int count = ble_scan_get_results(results, BLE_MAX_DEVICES);
+    if (count > 0 && discoveredList) {
+      char buf[65];
+      for (int i = 0; i < count; i++) {
+        lv_obj_t* row = lv_obj_create(discoveredList);
+        lv_obj_set_size(row, 760, 44);
+        lv_obj_set_style_bg_color(row, COL_BG_ROW, 0);
+        lv_obj_set_style_border_color(row, COL_BORDER_ROW, 0);
+        lv_obj_set_style_border_width(row, 1, 0);
+        lv_obj_set_style_radius(row, RADIUS_ROW, 0);
+        lv_obj_set_style_shadow_width(row, 0, 0);
+        lv_obj_set_style_pad_all(row, 0, 0);
+        lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+
+        snprintf(buf, sizeof(buf), "%s", results[i].name);
+        lv_obj_t* nameLbl = lv_label_create(row);
+        lv_label_set_text(nameLbl, buf);
+        lv_obj_set_style_text_font(nameLbl, FONT_SUBTITLE, 0);
+        lv_obj_set_style_text_color(nameLbl, COL_TEXT, 0);
+        lv_obj_align(nameLbl, LV_ALIGN_LEFT_MID, 8, -8);
+
+        snprintf(buf, sizeof(buf), "%s  %ddBm", results[i].addr, results[i].rssi);
+        lv_obj_t* detailLbl = lv_label_create(row);
+        lv_label_set_text(detailLbl, buf);
+        lv_obj_set_style_text_font(detailLbl, FONT_BODY, 0);
+        lv_obj_set_style_text_color(detailLbl, COL_TEXT_DIM, 0);
+        lv_obj_align(detailLbl, LV_ALIGN_LEFT_MID, 8, 8);
+      }
+    }
+  }
   if (statusDot && statusLabel) {
     bool connected = ble_is_connected();
     lv_obj_set_style_bg_color(statusDot, connected ? COL_GREEN : COL_TEXT_VDIM, 0);

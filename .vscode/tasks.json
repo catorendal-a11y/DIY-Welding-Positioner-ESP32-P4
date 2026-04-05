@@ -1,0 +1,56 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "PlatformIO: Build (esp32p4-release)",
+      "type": "shell",
+      "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe",
+      "args": ["run", "-e", "esp32p4-release"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "shared", "focus": false },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "PlatformIO: Build (esp32p4-debug)",
+      "type": "shell",
+      "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe",
+      "args": ["run", "-e", "esp32p4-debug"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared", "focus": false },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "PlatformIO: Upload (release)",
+      "type": "shell",
+      "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe",
+      "args": ["run", "-e", "esp32p4-release", "-t", "upload"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "none",
+      "presentation": { "reveal": "always", "panel": "shared", "focus": true },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "PlatformIO: Serial monitor",
+      "type": "shell",
+      "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe",
+      "args": ["device", "monitor"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "none",
+      "presentation": { "reveal": "always", "panel": "dedicated", "focus": true },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "PlatformIO: Clean",
+      "type": "shell",
+      "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe",
+      "args": ["run", "-t", "clean"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "none",
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    }
+  ]
+}

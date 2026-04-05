@@ -35,14 +35,14 @@ void step_execute(float angle_deg) {
 
   LOG_I("Step mode: %.1f deg (%ld steps)", angle_deg, steps);
 
-  portENTER_CRITICAL(&g_stepperMutex);
+  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   FastAccelStepper* stepper = motor_get_stepper();
   if (stepper != nullptr) {
     stepper->setSpeedInHz((uint32_t)rpmToStepHz(0.5f));
     stepper->move(steps);
     digitalWrite(PIN_ENA, LOW);
   }
-  portEXIT_CRITICAL(&g_stepperMutex);
+  xSemaphoreGive(g_stepperMutex);
 
   accumulatedAngle += angle_deg;
   stepsTaken++;
@@ -56,10 +56,10 @@ void step_execute(float angle_deg) {
 void step_update() {
   if (control_get_state() != STATE_STEP) return;
 
-  portENTER_CRITICAL(&g_stepperMutex);
+  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   FastAccelStepper* stepper = motor_get_stepper();
   bool done = (stepper != nullptr && !stepper->isRunning());
-  portEXIT_CRITICAL(&g_stepperMutex);
+  xSemaphoreGive(g_stepperMutex);
 
   if (done) {
     LOG_D("Step complete: %.1f deg", stepCurrentAngle);

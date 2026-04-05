@@ -17,13 +17,13 @@ void jog_start(Direction dir) {
 
   LOG_I("Jog mode: %s", (dir == DIR_CW) ? "CW" : "CCW");
 
-  portENTER_CRITICAL(&g_stepperMutex);
+  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   FastAccelStepper* stepper = motor_get_stepper();
   if (stepper != nullptr) {
     uint32_t hz = (uint32_t)rpmToStepHz(jogRPM.load(std::memory_order_relaxed));
     stepper->setSpeedInHz(hz);
   }
-  portEXIT_CRITICAL(&g_stepperMutex);
+  xSemaphoreGive(g_stepperMutex);
 
   if (dir == DIR_CW) motor_run_cw();
   else motor_run_ccw();
@@ -48,13 +48,13 @@ void jog_update() {
   float pending = pendingJogSpeed.load(std::memory_order_acquire);
   if (pending >= 0.0f && control_get_state() == STATE_JOG) {
     pendingJogSpeed.store(-1.0f, std::memory_order_relaxed);
-    portENTER_CRITICAL(&g_stepperMutex);
+    xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
     FastAccelStepper* stepper = motor_get_stepper();
     if (stepper != nullptr) {
       uint32_t hz = (uint32_t)rpmToStepHz(jogRPM.load(std::memory_order_relaxed));
       stepper->setSpeedInHz(hz);
     }
-    portEXIT_CRITICAL(&g_stepperMutex);
+    xSemaphoreGive(g_stepperMutex);
   }
 }
 

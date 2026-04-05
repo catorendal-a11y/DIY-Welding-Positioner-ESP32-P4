@@ -71,8 +71,8 @@ static void update_info_panel() {
 // EVENT HANDLERS
 // ───────────────────────────────────────────────────────────────────────────────
 static void back_event_cb(lv_event_t* e) {
-  if (customNumpad) { lv_obj_delete(customNumpad); customNumpad = nullptr; }
-  if (customTa) { lv_obj_delete(customTa); customTa = nullptr; }
+  if (customNumpad) { lv_obj_t* old = customNumpad; customNumpad = nullptr; lv_obj_delete_async(old); }
+  if (customTa) { lv_obj_t* old = customTa; customTa = nullptr; lv_obj_delete_async(old); }
   screens_show(SCREEN_MAIN);
 }
 
@@ -535,10 +535,23 @@ void screen_step_create() {
   LOG_I("Screen step: protractor layout created");
 }
 
+void screen_step_invalidate_widgets() {
+  angleLabel = nullptr;
+  arcWidget = nullptr;
+  angleArcLabel = nullptr;
+  rpmLabel = nullptr;
+  stepsLabel = nullptr;
+  calibLabel = nullptr;
+  for (int i = 0; i < 7; i++) presetBtns[i] = nullptr;
+  customNumpad = nullptr;
+  customTa = nullptr;
+  numpadClosePending = false;
+}
+
 void screen_step_update() {
   if (numpadClosePending) {
-    if (customNumpad) { lv_obj_delete(customNumpad); customNumpad = nullptr; }
-    if (customTa) { lv_obj_delete(customTa); customTa = nullptr; }
+    if (customNumpad) { lv_obj_t* old = customNumpad; customNumpad = nullptr; lv_obj_delete_async(old); }
+    if (customTa) { lv_obj_t* old = customTa; customTa = nullptr; lv_obj_delete_async(old); }
     numpadClosePending = false;
   }
   if (!screens_is_active(SCREEN_STEP)) return;

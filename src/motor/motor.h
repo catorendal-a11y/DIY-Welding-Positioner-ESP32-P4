@@ -9,8 +9,9 @@
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STEPPER MUTEX — all stepper calls must hold this
+// FreeRTOS mutex (not spinlock) so tick interrupts stay enabled on both cores
 // ───────────────────────────────────────────────────────────────────────────────
-extern portMUX_TYPE g_stepperMutex;
+extern SemaphoreHandle_t g_stepperMutex;
 
 // ───────────────────────────────────────────────────────────────────────────────
 // FUNCTION DECLARATIONS

@@ -34,25 +34,8 @@ void safety_cache_stepper() {
 // Layer 1: < 0.5 ms response — Direct hardware action only
 // ───────────────────────────────────────────────────────────────────────────────
 void IRAM_ATTR estopISR() {
-  #if DEBUG_BUILD
-  g_estopISRCount++;
-  #endif
-
-  // CRITICAL: Minimum work, no FreeRTOS calls, no Serial prints
-  // This runs at interrupt priority — must exit immediately
-
-  // Layer 1: Disable motor NOW (direct register - IRAM-safe, no flash/PSRAM)
-  // GPIO 52 is in high bank (32-63): use out1_w1ts to set HIGH
   GPIO.out1_w1ts.val = (1UL << (PIN_ENA - 32));
-
-  // Stop stepper (forceStop is IRAM-safe)
-  if (estopStepper != nullptr) {
-    estopStepper->forceStop();
-  }
-
-  // Signal safety task for Layer 2 (state transition)
   g_estopPending = true;
-  g_estopTriggerMs = millis();
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -141,30 +124,33 @@ void safetyTask(void* pvParameters) {
     }
 
     if (g_estopPending) {
+      if (g_estopTriggerMs == 0) {
+        g_estopTriggerMs = millis();
+        if (estopStepper != nullptr) {
+          estopStepper->forceStop();
+        }
+      }
+
       uint32_t elapsedMs = millis() - g_estopTriggerMs;
 
-      // Debounce: Wait 5ms before state transition
       if (elapsedMs >= 5) {
-        // Verify ESTOP is still pressed (not a glitch)
         if (digitalRead(PIN_ESTOP) == LOW) {
-          // Layer 2: State transition to ESTOP
           if (control_get_state() != STATE_ESTOP) {
             control_transition_to(STATE_ESTOP);
             estopLocked = true;
 
             #if DEBUG_BUILD
             g_estopConfirmed++;
-            LOG_W("ESTOP #%u confirmed (ISR hit %u times)", g_estopConfirmed, g_estopISRCount);
-            g_estopISRCount = 0;
+            LOG_W("ESTOP #%u confirmed", g_estopConfirmed);
             #else
             LOG_E("ESTOP TRIGGERED — State->ESTOP");
             #endif
           }
         } else {
-          // ESTOP released quickly (< 5ms) — treat as glitch
           LOG_W("ESTOP glitch detected (< 5ms)");
         }
         g_estopPending = false;
+        g_estopTriggerMs = 0;
       }
     }
 

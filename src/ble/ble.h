@@ -10,6 +10,12 @@ void ble_ota_update_c6();
 void ble_set_enabled(bool enabled);
 bool ble_is_enabled();
 
+// Pending flags for deferred BLE operations (set from UI, processed by ble_update)
+extern volatile bool bleScanPending;
+extern volatile bool bleScanDone;
+extern volatile bool bleEnablePending;
+extern volatile bool bleEnableValue;
+
 typedef struct {
   char name[33];
   char addr[18];

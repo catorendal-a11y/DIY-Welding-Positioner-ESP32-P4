@@ -1,5 +1,6 @@
 // TIG Rotator Controller - Speed Control Implementation
 // ADC IIR filter, slider/pot source selection, RPM conversion
+// Optional ADS1115 pedal ADC on touch I2C (see ENABLE_ADS1115_PEDAL in config.h)
 
 #include "speed.h"
 #include "../config.h"
@@ -9,41 +10,91 @@
 #include "../storage/storage.h"
 #include "../control/control.h"
 #include <atomic>
+#if ENABLE_ADS1115_PEDAL
+#include "../ui/display.h"
+#include "driver/i2c_master.h"
+#include "esp_err.h"
+#endif
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
-// Verify std::atomic<float> is lock-free on this target.
-// On ESP32-P4 (Xtensa LX7), 32-bit atomics are natively lock-free.
-// If this fails on another platform, switch to std::atomic<int32_t> with ×1000 fixed-point.
 static_assert(std::atomic<float>::is_always_lock_free,
               "std::atomic<float> must be lock-free for inter-core RPM sharing");
 
-// ───────────────────────────────────────────────────────────────────────────────
-// CONSTANTS
-// ───────────────────────────────────────────────────────────────────────────────
-#define IIR_ALPHA       0.1f    // ADC filter coefficient (lower = smoother)
-#define SLIDER_TIMEOUT_MS 1000 // Slider has priority for 1s after last +/- press
+#if ENABLE_ADS1115_PEDAL
+#define ADS_REG_PTR_CONVERT 0x00
+#define ADS_REG_PTR_CONFIG  0x01
+#define ADS_REG_PTR_LOTH    0x02
+#define ADS_REG_PTR_HITH    0x03
 
-// ───────────────────────────────────────────────────────────────────────────────
-// STATE VARIABLES
-// ───────────────────────────────────────────────────────────────────────────────
-static float adcFiltered = 2047.5f;     // Filtered ADC value (center of 0–4095)
-static std::atomic<float> sliderRPM{MIN_RPM};       // Speed set by GUI slider (Core 0/1 shared)
-static uint32_t lastSliderMs = 0;       // Last time slider was used
-static Direction currentDir = DIR_CW;   // Current direction
-static volatile bool buttonsActive = false;      // Buttons have control, pot locked out
-static volatile float lastPotAdc = 2047.5f;      // Last ADC when buttons took over
-static volatile bool pedalEnabled = false;
+#define ADS_CFG_CQUE_1CONV    0x0000
+#define ADS_CFG_CLAT_NONLAT   0x0000
+#define ADS_CFG_CPOL_ACTVLOW  0x0000
+#define ADS_CFG_CMODE_TRAD    0x0000
+#define ADS_CFG_MODE_SINGLE   0x0100
+#define ADS_CFG_PGA_4_096V    0x0200
+#define ADS_CFG_DR_128SPS     0x0080
+#define ADS_CFG_MUX_SINGLE_0  0x4000
+#define ADS_CFG_OS_START      0x8000
+
+static i2c_master_dev_handle_t s_ads_dev = nullptr;
+
+static bool ads_i2c_write_reg(uint8_t reg, uint16_t val) {
+  if (!s_ads_dev) return false;
+  uint8_t buf[3] = { reg, (uint8_t)(val >> 8), (uint8_t)(val & 0xFF) };
+  return i2c_master_transmit(s_ads_dev, buf, sizeof(buf), pdMS_TO_TICKS(80)) == ESP_OK;
+}
+
+static bool ads_i2c_read_reg(uint8_t reg, uint16_t* out) {
+  if (!s_ads_dev || !out) return false;
+  uint8_t data[2];
+  esp_err_t e = i2c_master_transmit_receive(s_ads_dev, &reg, 1, data, 2, pdMS_TO_TICKS(80));
+  if (e != ESP_OK) return false;
+  *out = ((uint16_t)data[0] << 8) | data[1];
+  return true;
+}
+
+static int16_t ads_read_channel0_blocking() {
+  if (!s_ads_dev) return 0;
+  uint16_t config = ADS_CFG_CQUE_1CONV | ADS_CFG_CLAT_NONLAT | ADS_CFG_CPOL_ACTVLOW | ADS_CFG_CMODE_TRAD
+      | ADS_CFG_MODE_SINGLE | ADS_CFG_PGA_4_096V | ADS_CFG_DR_128SPS | ADS_CFG_MUX_SINGLE_0 | ADS_CFG_OS_START;
+  if (!ads_i2c_write_reg(ADS_REG_PTR_CONFIG, config)) return 0;
+  if (!ads_i2c_write_reg(ADS_REG_PTR_HITH, 0x8000)) return 0;
+  if (!ads_i2c_write_reg(ADS_REG_PTR_LOTH, 0)) return 0;
+  for (int i = 0; i < 25; i++) {
+    uint16_t st = 0;
+    if (!ads_i2c_read_reg(ADS_REG_PTR_CONFIG, &st)) return 0;
+    if (st & 0x8000) break;
+    vTaskDelay(pdMS_TO_TICKS(1));
+  }
+  uint16_t raw = 0;
+  if (!ads_i2c_read_reg(ADS_REG_PTR_CONVERT, &raw)) return 0;
+  return (int16_t)raw;
+}
+#endif
+
+#define IIR_ALPHA       0.1f
+#define SLIDER_TIMEOUT_MS 1000
+
+static float adcFiltered = 2047.5f;
+static std::atomic<float> sliderRPM{MIN_RPM};
+static uint32_t lastSliderMs = 0;
+static Direction currentDir = DIR_CW;
+static volatile bool buttonsActive = false;
+static volatile float lastPotAdc = 2047.5f;
+static std::atomic<bool> pedalEnabled{false};
+static std::atomic<bool> pedalApplyPending{false};
 static float pedalFiltered = 2047.5f;
 static std::atomic<float> cachedTargetRpm{0.0f};
-static uint8_t lastDirSwitchState = 1;  // Cached dir switch for change detection
-#define POT_WAKE_THRESHOLD 30  // ADC counts change to trigger wake
+static uint8_t lastDirSwitchState = 1;
+#define POT_WAKE_THRESHOLD 30
 
-// ───────────────────────────────────────────────────────────────────────────────
-// CONVERSION FUNCTIONS
-// ───────────────────────────────────────────────────────────────────────────────
+static bool ads1115Connected = false;
+#if ENABLE_ADS1115_PEDAL
+#define ADS1115_TO_ADC_SCALE (4095.0f / 26667.0f)
+#endif
+
 float rpmToStepHz(float rpm_workpiece) {
-  // Formula: RPM × GearRatio × (D_workpiece / D_roller) × StepsPerRev / 60
-  // = rpm × 199.5 × 3.75 × 1600 / 60 = rpm × 19950
-  // 0.01 RPM -> 199 Hz, 0.1 RPM -> 1995 Hz, 1 RPM -> 19950 Hz
   return rpm_workpiece * GEAR_RATIO * (D_EMNE / D_RULLE) * microstep_get_steps_per_rev() / 60.0f;
 }
 
@@ -53,25 +104,58 @@ long angleToSteps(float degrees) {
   return calibration_apply_steps(steps);
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// SPEED CONTROL
-// ───────────────────────────────────────────────────────────────────────────────
 void speed_init() {
-  pinMode(PIN_POT, INPUT);
   analogReadResolution(12);
+  (void)analogRead(PIN_POT);
   analogSetPinAttenuation(PIN_POT, ADC_11db);
 
-  pinMode(PIN_PEDAL, INPUT);
-  analogSetPinAttenuation(PIN_PEDAL, ADC_11db);
+#if ENABLE_ADS1115_PEDAL
+  i2c_master_bus_handle_t bus = display_touch_i2c_bus_handle();
+  if (bus) {
+    esp_err_t probe = i2c_master_probe(bus, ADS1115_ADDR, pdMS_TO_TICKS(80));
+    if (probe != ESP_OK) {
+      LOG_D("ADS1115 probe 0x%02X: %s", ADS1115_ADDR, esp_err_to_name(probe));
+    } else {
+      i2c_device_config_t dev_cfg = {};
+      dev_cfg.dev_addr_length = I2C_ADDR_BIT_LEN_7;
+      dev_cfg.device_address = ADS1115_ADDR;
+      dev_cfg.scl_speed_hz = 400000;
+      if (i2c_master_bus_add_device(bus, &dev_cfg, &s_ads_dev) == ESP_OK) {
+        uint16_t cfgProbe = 0;
+        if (ads_i2c_read_reg(ADS_REG_PTR_CONFIG, &cfgProbe)) {
+          ads1115Connected = true;
+          LOG_I("ADS1115 on touch I2C 0x%02X", ADS1115_ADDR);
+        } else {
+          i2c_master_bus_rm_device(s_ads_dev);
+          s_ads_dev = nullptr;
+          LOG_D("ADS1115 config read failed at 0x%02X", ADS1115_ADDR);
+        }
+      }
+    }
+  }
+#endif
 
   delay(10);
   adcFiltered = (float)analogRead(PIN_POT);
-  pedalFiltered = (float)analogRead(PIN_PEDAL);
+#if ENABLE_ADS1115_PEDAL
+  if (ads1115Connected) {
+    int16_t v = ads_read_channel0_blocking();
+    pedalFiltered = (float)v * ADS1115_TO_ADC_SCALE;
+  } else
+#endif
+  {
+    pedalFiltered = adcFiltered;
+  }
   lastDirSwitchState = digitalRead(PIN_DIR_SWITCH);
   LOG_I("Speed control init: pot=%.0f pedal=%.0f", adcFiltered, pedalFiltered);
 }
 
 void speed_update_adc() {
+  bool pedalSettingsTick = pedalApplyPending.exchange(false, std::memory_order_acq_rel);
+  if (pedalSettingsTick) {
+    buttonsActive = false;
+  }
+
   float raw = (float)analogRead(PIN_POT);
   float prev = adcFiltered;
   adcFiltered = IIR_ALPHA * raw + (1.0f - IIR_ALPHA) * adcFiltered;
@@ -79,10 +163,18 @@ void speed_update_adc() {
     g_wakePending = true;
   }
 
-  if (pedalEnabled) {
-    float praw = (float)analogRead(PIN_PEDAL);
-    pedalFiltered = IIR_ALPHA * praw + (1.0f - IIR_ALPHA) * pedalFiltered;
+#if ENABLE_ADS1115_PEDAL
+  if (pedalEnabled.load(std::memory_order_acquire) && ads1115Connected) {
+    int16_t adsVal = ads_read_channel0_blocking();
+    float pedalAdc = (float)adsVal * ADS1115_TO_ADC_SCALE;
+    if (pedalSettingsTick) {
+      pedalFiltered = pedalAdc;
+      lastPotAdc = adcFiltered;
+    } else {
+      pedalFiltered = IIR_ALPHA * pedalAdc + (1.0f - IIR_ALPHA) * pedalFiltered;
+    }
   }
+#endif
 
   if (g_dir_switch_cache) {
     uint8_t state = digitalRead(PIN_DIR_SWITCH);
@@ -117,7 +209,8 @@ bool speed_using_slider() {
 }
 
 void speed_apply() {
-  bool usePedal = pedalEnabled && pedalFiltered > 100.0f && pedalFiltered < 3900.0f;
+  bool pedOn = pedalEnabled.load(std::memory_order_acquire);
+  bool usePedal = pedOn && pedalFiltered > 100.0f && pedalFiltered < 3900.0f;
   float activeAdc = usePedal ? pedalFiltered : adcFiltered;
   float adc = constrain(activeAdc, 0.0f, 4095.0f);
   float normalized = (3315.0f - adc) / 3315.0f;
@@ -144,21 +237,18 @@ void speed_apply() {
 
   uint32_t mhz = (uint32_t)(rpmToStepHz(cachedTargetRpm) * 1000);
 
-  portENTER_CRITICAL(&g_stepperMutex);
+  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   FastAccelStepper* stepper = motor_get_stepper();
   if (stepper != nullptr) {
     stepper->setSpeedInMilliHz(mhz);
     stepper->applySpeedAcceleration();
   }
-  portEXIT_CRITICAL(&g_stepperMutex);
+  xSemaphoreGive(g_stepperMutex);
 }
 
 void speed_request_update() {
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// DIRECTION CONTROL
-// ───────────────────────────────────────────────────────────────────────────────
 Direction speed_get_direction() {
   Direction dir;
   if (g_dir_switch_cache) {
@@ -177,18 +267,16 @@ void speed_set_direction(Direction dir) {
 }
 
 void speed_set_pedal_enabled(bool enabled) {
-  pedalEnabled = enabled;
-  if (enabled) {
-    pedalFiltered = (float)analogRead(PIN_PEDAL);
-    lastPotAdc = pedalFiltered;
-    buttonsActive = false;
-  }
+  if (enabled && !ads1115Connected) return;
+  pedalEnabled.store(enabled, std::memory_order_release);
+  pedalApplyPending.store(true, std::memory_order_release);
 }
 
 bool speed_get_pedal_enabled() {
-  return pedalEnabled;
+  return pedalEnabled.load(std::memory_order_acquire);
 }
 
 bool speed_pedal_connected() {
-  return pedalEnabled && pedalFiltered > 100.0f && pedalFiltered < 3900.0f;
+  return ads1115Connected && pedalEnabled.load(std::memory_order_acquire)
+      && pedalFiltered > 100.0f && pedalFiltered < 3900.0f;
 }

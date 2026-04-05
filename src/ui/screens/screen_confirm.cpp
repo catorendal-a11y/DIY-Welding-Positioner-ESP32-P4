@@ -36,20 +36,25 @@ void screen_confirm_update() {
     auto cb = onConfirmCallback;
     onConfirmCallback = nullptr;
     onCancelCallback = nullptr;
+    ScreenId dest = (returnScreen > SCREEN_NONE && returnScreen < SCREEN_COUNT)
+                    ? returnScreen : SCREEN_PROGRAMS;
     if (cb) {
       cb();
     }
-    screens_show(returnScreen);
+    screens_request_show(dest);
     return;
   }
   if (cancelPending) {
     cancelPending = false;
-    if (onCancelCallback) {
-      onCancelCallback();
-    }
+    auto cb = onCancelCallback;
     onConfirmCallback = nullptr;
     onCancelCallback = nullptr;
-    screens_show(returnScreen);
+    ScreenId dest = (returnScreen > SCREEN_NONE && returnScreen < SCREEN_COUNT)
+                    ? returnScreen : SCREEN_PROGRAMS;
+    if (cb) {
+      cb();
+    }
+    screens_request_show(dest);
     return;
   }
 }

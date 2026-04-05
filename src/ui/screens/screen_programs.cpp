@@ -9,6 +9,7 @@
 #include "../../motor/speed.h"
 #include "../../control/control.h"
 #include <cstdio>
+#include <vector>
 
 // ───────────────────────────────────────────────────────────────────────────────
 // WIDGETS
@@ -125,6 +126,12 @@ static void format_details(char* buf, size_t len, const Preset& p) {
 // Cards start at y=40, each 784x56 with 8px gap
 // BACK button at (16,416,180x36) .sm style
 // ───────────────────────────────────────────────────────────────────────────────
+void screen_programs_invalidate_widgets() {
+  programList = nullptr;
+  countLabel = nullptr;
+  newBtn = nullptr;
+}
+
 void screen_programs_create() {
   lv_obj_t* screen = screenRoots[SCREEN_PROGRAMS];
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
@@ -222,25 +229,29 @@ void screen_programs_create() {
 // UPDATE -- rebuild card list from g_presets
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_programs_update() {
-  if (!programList) return;
+  if (!programList || !newBtn || !countLabel) return;
 
-  xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
-  size_t presetCount = g_presets.size();
-
-  if (!programsDirty && presetCount == lastPresetCount) {
+  std::vector<Preset> snapshot;
+  size_t presetCount = 0;
+  {
+    xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
+    presetCount = g_presets.size();
+    if (!programsDirty && presetCount == lastPresetCount) {
+      xSemaphoreGive(g_presets_mutex);
+      return;
+    }
+    programsDirty = false;
+    lastPresetCount = presetCount;
+    snapshot = g_presets;
     xSemaphoreGive(g_presets_mutex);
-    return;
   }
 
-  programsDirty = false;
-  lastPresetCount = presetCount;
+  // LVGL work must NOT run under g_presets_mutex (long section + re-entrancy risk).
   lv_obj_clean(programList);
   bool isFull = presetCount >= MAX_PRESETS;
-  bool isEmpty = g_presets.empty();
+  bool isEmpty = snapshot.empty();
 
-  if (countLabel) {
-    lv_label_set_text_fmt(countLabel, "(%d/%d)", (int)presetCount, MAX_PRESETS);
-  }
+  lv_label_set_text_fmt(countLabel, "(%d/%d)", (int)presetCount, MAX_PRESETS);
 
   if (isFull) {
     lv_obj_set_style_bg_color(newBtn, COL_BTN_BG, 0);
@@ -259,7 +270,7 @@ void screen_programs_update() {
   int yPos = 0;
 
   for (size_t i = 0; i < presetCount; i++) {
-    const auto& p = g_presets[i];
+    const auto& p = snapshot[i];
 
     // ── Card background (SVG: 784x56, fill=#0D0D0D odd / #0B0B0B even) ──
     lv_obj_t* card = lv_obj_create(programList);
@@ -367,7 +378,7 @@ void screen_programs_update() {
     yPos += cardH + cardGap;
   }
 
-  int emptyStart = (int)presetCount;
+  int emptyStart = (int)snapshot.size();
   int emptyEnd = emptyStart + 4;
   if (emptyEnd > MAX_PRESETS) emptyEnd = MAX_PRESETS;
 
@@ -400,8 +411,6 @@ void screen_programs_update() {
     lv_obj_set_style_text_color(emptyLabel, COL_TEXT_DIM, 0);
     lv_obj_align(emptyLabel, LV_ALIGN_CENTER, 0, 0);
   }
-
-  xSemaphoreGive(g_presets_mutex);
 }
 
 void screen_programs_mark_dirty() {

@@ -12,6 +12,7 @@
 #include "esp_lcd_st7701.h"
 #include "esp_lcd_touch.h"
 #include "esp_lcd_touch_gt911.h"
+#include "driver/i2c_master.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // DISPLAY HANDLES — accessible by LVGL HAL for flush/touch callbacks
@@ -24,7 +25,11 @@ extern void*                    display_framebuffer;  // DPI framebuffer pointer
 // FUNCTION DECLARATIONS
 // ───────────────────────────────────────────────────────────────────────────────
 void display_init();
+i2c_master_bus_handle_t display_touch_i2c_bus_handle();
 void display_set_brightness(uint8_t brightness);  // 0–255
+
+// Fill physical panel with black (used at boot). Do not call during LVGL runtime — raw draw_bitmap races MIPI flush and can break touch.
+void display_fill_black();
 
 // Vsync callback for LVGL flush ready (MIPI DSI Video Mode requirement)
 extern "C" bool display_lvgl_vsync_callback(

@@ -6,11 +6,10 @@
 #include "../../storage/storage.h"
 #include "../../ble/ble.h"
 #include "esp_heap_caps.h"
-#include "esp_psram.h"
 #include "esp_system.h"
 #include "esp_partition.h"
-#include "driver/temperature_sensor.h"
 #include "freertos/task.h"
+#include "../../onchip_temp.h"
 #include <cstdio>
 #include <cstring>
 
@@ -35,7 +34,6 @@ static lv_obj_t* core1Bar = nullptr;
 static lv_obj_t* core1Label = nullptr;
 static lv_obj_t* tempLabel = nullptr;
 static uint32_t bootMs = 0;
-static temperature_sensor_handle_t tempHandle = nullptr;
 static uint32_t lastTempRead = 0;
 static float cachedTemp = 0.0f;
 static uint32_t lastCoreRead = 0;
@@ -171,13 +169,6 @@ void screen_sysinfo_create() {
   const int CW = SCREEN_W - 2 * PX;
   bootMs = millis();
 
-  if (!tempHandle) {
-    temperature_sensor_config_t tempConfig = TEMPERATURE_SENSOR_CONFIG_DEFAULT(-10, 80);
-    if (temperature_sensor_install(&tempConfig, &tempHandle) == ESP_OK) {
-      temperature_sensor_enable(tempHandle);
-    }
-  }
-
   lv_obj_t* header = lv_obj_create(screen);
   lv_obj_set_size(header, SCREEN_W, 28);
   lv_obj_set_pos(header, 0, 0);
@@ -227,11 +218,10 @@ void screen_sysinfo_create() {
   y += rowH;
 
   make_key_label(screen, keyX, y, "PSRAM");
-  size_t psramSize = esp_psram_get_size();
-  size_t freePsram = esp_get_free_heap_size();
   size_t psramTotal = heap_caps_get_total_size(MALLOC_CAP_SPIRAM);
-  int psramPct = psramTotal > 0 ? (int)((uint64_t)heap_caps_get_free_size(MALLOC_CAP_SPIRAM) * 100 / psramTotal) : 0;
-  snprintf(buf, sizeof(buf), "%.1f MB", (double)psramSize / (1024.0 * 1024.0));
+  size_t freePsram = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+  int psramPct = psramTotal > 0 ? (int)((uint64_t)freePsram * 100 / psramTotal) : 0;
+  snprintf(buf, sizeof(buf), "%.1f MB", (double)freePsram / (1024.0 * 1024.0));
   psramValueLabel = make_val_label(screen, valX, y, buf);
   psramBar = make_bar(screen, barX, y + 3, barW, SET_BAR_H, COL_GREEN);
   lv_bar_set_value(psramBar, psramPct, LV_ANIM_OFF);
@@ -416,10 +406,10 @@ void screen_sysinfo_update() {
   if (core1Bar) lv_bar_set_value(core1Bar, cachedCore1Pct, LV_ANIM_OFF);
 
   // Temperature (update every 3 seconds)
-  if (now - lastTempRead >= 3000 && tempHandle) {
+  if (now - lastTempRead >= 3000) {
     lastTempRead = now;
     float tsensVal = 0.0f;
-    if (temperature_sensor_get_celsius(tempHandle, &tsensVal) == ESP_OK) {
+    if (onchip_temp_get_celsius(&tsensVal)) {
       cachedTemp = tsensVal;
     }
   }

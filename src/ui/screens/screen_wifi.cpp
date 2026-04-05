@@ -20,7 +20,6 @@ static lv_obj_t* connSsidLabel = nullptr;
 static lv_obj_t* connDetailLabel = nullptr;
 static lv_obj_t* connSignalContainer = nullptr;
 static lv_obj_t* connSignalBars[4] = {nullptr, nullptr, nullptr, nullptr};
-static bool wifiEnabled = true;
 static bool wifiScanRunning = false;
 static bool wifiScanDone = false;
 
@@ -37,7 +36,6 @@ extern volatile bool wifiIsConnected;
 extern char wifiConnectedSsid[33];
 extern char wifiConnectedIp[16];
 extern volatile int wifiConnectedRssi;
-extern bool wifiEnabled;
 extern char wifiPendingSsid[33];
 extern char wifiPendingPass[65];
 
@@ -45,11 +43,18 @@ static lv_obj_t* wifiPromptLabel = nullptr;
 static lv_obj_t* wifiSsidNameLabel = nullptr;
 static volatile bool kbClosePending = false;
 
+static void wifi_kb_cb(lv_event_t* e);
+
 static void cleanup_kb() {
-  if (kb) { lv_obj_delete(kb); kb = nullptr; }
-  if (passTa) { lv_obj_delete(passTa); passTa = nullptr; }
-  if (wifiPromptLabel) { lv_obj_delete(wifiPromptLabel); wifiPromptLabel = nullptr; }
-  if (wifiSsidNameLabel) { lv_obj_delete(wifiSsidNameLabel); wifiSsidNameLabel = nullptr; }
+  if (kb) {
+    lv_obj_remove_event_cb(kb, wifi_kb_cb);
+    lv_keyboard_set_textarea(kb, nullptr);
+    lv_obj_t* old = kb; kb = nullptr;
+    lv_obj_delete_async(old);
+  }
+  if (passTa) { lv_obj_t* old = passTa; passTa = nullptr; lv_obj_delete_async(old); }
+  if (wifiPromptLabel) { lv_obj_t* old = wifiPromptLabel; wifiPromptLabel = nullptr; lv_obj_delete_async(old); }
+  if (wifiSsidNameLabel) { lv_obj_t* old = wifiSsidNameLabel; wifiSsidNameLabel = nullptr; lv_obj_delete_async(old); }
   if (scrollPanel) lv_obj_remove_flag(scrollPanel, LV_OBJ_FLAG_HIDDEN);
   kbClosePending = false;
 }
@@ -66,22 +71,24 @@ static void back_cb(lv_event_t* e) {
 static void connect_wifi() {
   if (!selectedSsid[0]) return;
   const char* pass = passTa ? lv_textarea_get_text(passTa) : g_settings.wifi_pass;
+  char passBuf[65];
+  strlcpy(passBuf, pass, sizeof(passBuf));
   strlcpy(g_settings.wifi_ssid, selectedSsid, sizeof(g_settings.wifi_ssid));
-  strlcpy(g_settings.wifi_pass, pass, sizeof(g_settings.wifi_pass));
+  strlcpy(g_settings.wifi_pass, passBuf, sizeof(g_settings.wifi_pass));
   storage_save_settings();
   strlcpy(wifiPendingSsid, selectedSsid, sizeof(wifiPendingSsid));
-  strlcpy(wifiPendingPass, pass, sizeof(wifiPendingPass));
+  strlcpy(wifiPendingPass, passBuf, sizeof(wifiPendingPass));
   wifiConnectPending = true;
-  cleanup_kb();
 }
+
+static volatile bool wifiConnectOnClose = false;
 
 static void wifi_kb_cb(lv_event_t* e) {
   lv_event_code_t code = lv_event_get_code(e);
   if (code == LV_EVENT_READY) {
-    connect_wifi();
+    wifiConnectOnClose = true;
     kbClosePending = true;
-  }
-  if (code == LV_EVENT_CANCEL) {
+  } else if (code == LV_EVENT_CANCEL) {
     kbClosePending = true;
   }
 }
@@ -131,7 +138,8 @@ static void show_wifi_kb() {
   lv_obj_set_size(kb, 700, 220);
   lv_obj_align(kb, LV_ALIGN_TOP_MID, 0, 184);
   style_kb(kb);
-  lv_obj_add_event_cb(kb, wifi_kb_cb, LV_EVENT_ALL, nullptr);
+  lv_obj_add_event_cb(kb, wifi_kb_cb, LV_EVENT_READY, nullptr);
+  lv_obj_add_event_cb(kb, wifi_kb_cb, LV_EVENT_CANCEL, nullptr);
 }
 
 static void create_signal_bars(lv_obj_t* parent, lv_obj_t* bars[4], int filled) {
@@ -172,11 +180,10 @@ static void network_click_cb(lv_event_t* e) {
 }
 
 static void wifi_toggle_cb(lv_event_t* e) {
-  wifiEnabled = !wifiEnabled;
+  g_settings.wifi_enabled = !g_settings.wifi_enabled;
   wifiTogglePending = true;
-  g_settings.wifi_enabled = wifiEnabled;
   storage_save_settings();
-  if (wifiEnabled) {
+  if (g_settings.wifi_enabled) {
     lv_obj_set_style_bg_color(wifiToggleSw, COL_GREEN, 0);
     lv_label_set_text(wifiToggleLbl, "ON");
   } else {
@@ -186,18 +193,17 @@ static void wifi_toggle_cb(lv_event_t* e) {
 }
 
 static void populate_scan_results() {
-  int n = wifiScanResultCount;
+  int n = wifiScanBufferCount;
   lv_obj_clean(networkList);
   if (n <= 0) {
     wifiScanDone = false;
     return;
   }
   char buf[40];
-  for (int i = 0; i < n && i < 12; i++) {
-    String ssidStr = WiFi.SSID(i);
-    int rssi = WiFi.RSSI(i);
-    uint8_t enc = WiFi.encryptionType(i);
-    bool secured = (enc != WIFI_AUTH_OPEN);
+  for (int i = 0; i < n; i++) {
+    const char* ssid = wifiScanBuffer[i].ssid;
+    int rssi = wifiScanBuffer[i].rssi;
+    bool secured = (wifiScanBuffer[i].enc != WIFI_AUTH_OPEN);
 
     lv_obj_t* row = lv_obj_create(networkList);
     lv_obj_set_size(row, 760, 46);
@@ -210,7 +216,7 @@ static void populate_scan_results() {
     lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
 
-    snprintf(buf, sizeof(buf), "%s%s", ssidStr.c_str(), secured ? " [L]" : "");
+    snprintf(buf, sizeof(buf), "%s%s", ssid, secured ? " [L]" : "");
     lv_obj_t* lbl = lv_label_create(row);
     lv_label_set_text(lbl, buf);
     lv_obj_set_style_text_font(lbl, FONT_SUBTITLE, 0);
@@ -229,8 +235,8 @@ static void populate_scan_results() {
     lv_obj_t* bars[4] = {nullptr};
     create_signal_bars(sigCont, bars, rssi_to_bars(rssi));
 
-    char* ssidCopy = new char[ssidStr.length() + 1];
-    strlcpy(ssidCopy, ssidStr.c_str(), ssidStr.length() + 1);
+    char* ssidCopy = new char[strlen(ssid) + 1];
+    strlcpy(ssidCopy, ssid, strlen(ssid) + 1);
     lv_obj_add_event_cb(row, network_click_cb, LV_EVENT_CLICKED, ssidCopy);
     lv_obj_add_event_cb(row, [](lv_event_t* e) {
       void* ud = lv_event_get_user_data(e);
@@ -355,11 +361,11 @@ void screen_wifi_create() {
   lv_obj_set_style_shadow_width(wifiToggleSw, 0, 0);
   lv_obj_set_style_pad_all(wifiToggleSw, 0, 0);
   lv_obj_remove_flag(wifiToggleSw, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_set_style_bg_color(wifiToggleSw, wifiEnabled ? COL_GREEN : lv_color_hex(0x333333), 0);
+  lv_obj_set_style_bg_color(wifiToggleSw, g_settings.wifi_enabled ? COL_GREEN : lv_color_hex(0x333333), 0);
   lv_obj_add_event_cb(wifiToggleSw, wifi_toggle_cb, LV_EVENT_CLICKED, nullptr);
 
   wifiToggleLbl = lv_label_create(wifiToggleSw);
-  lv_label_set_text(wifiToggleLbl, wifiEnabled ? "ON" : "OFF");
+  lv_label_set_text(wifiToggleLbl, g_settings.wifi_enabled ? "ON" : "OFF");
   lv_obj_set_style_text_font(wifiToggleLbl, FONT_BTN, 0);
   lv_obj_set_style_text_color(wifiToggleLbl, lv_color_white(), 0);
   lv_obj_center(wifiToggleLbl);
@@ -446,16 +452,39 @@ void screen_wifi_create() {
   LOG_I("Screen wifi: dedicated wifi layout created");
 }
 
+void screen_wifi_invalidate_widgets() {
+  kb = nullptr;
+  passTa = nullptr;
+  wifiPromptLabel = nullptr;
+  wifiSsidNameLabel = nullptr;
+  networkList = nullptr;
+  scrollPanel = nullptr;
+  wifiToggleSw = nullptr;
+  wifiToggleLbl = nullptr;
+  connectedCard = nullptr;
+  connSsidLabel = nullptr;
+  connDetailLabel = nullptr;
+  connSignalContainer = nullptr;
+  for (int i = 0; i < 4; i++) connSignalBars[i] = nullptr;
+  kbClosePending = false;
+  wifiScanRunning = false;
+  wifiScanDone = false;
+  wifiConnectOnClose = false;
+}
+
 void screen_wifi_update() {
-  if (kbClosePending) cleanup_kb();
+  if (kbClosePending) {
+    bool doConnect = wifiConnectOnClose;
+    wifiConnectOnClose = false;
+    if (doConnect) connect_wifi();
+    cleanup_kb();
+  }
 
   if (wifiScanResultReady) {
     wifiScanResultReady = false;
     wifiScanRunning = false;
     wifiScanDone = true;
-    wifiScanResultCount = wifiScanResultCount;
     populate_scan_results();
-    wifiScanResultCount = 0;
   }
   if (wifiScanFailed) {
     wifiScanFailed = false;
@@ -463,5 +492,5 @@ void screen_wifi_update() {
     wifiScanDone = false;
   }
 
-  update_connected_card();
+  if (connectedCard) update_connected_card();
 }

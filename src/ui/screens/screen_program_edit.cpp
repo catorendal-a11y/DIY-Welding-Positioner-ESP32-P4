@@ -38,8 +38,9 @@ static void do_cleanup_kb() {
   if (keyboard) {
     lv_obj_remove_event_cb(keyboard, keyboard_event_cb);
     lv_keyboard_set_textarea(keyboard, nullptr);
-    lv_obj_delete(keyboard);
+    lv_obj_t* kb = keyboard;
     keyboard = nullptr;
+    lv_obj_delete_async(kb);
   }
   kbClosePending = false;
 }
@@ -186,16 +187,22 @@ static void cancel_cb(lv_event_t* e) {
 }
 
 static void save_preset_cb(lv_event_t* e) {
-  do_cleanup_kb();
-  const char* name = nameInput ? lv_textarea_get_text(nameInput) : "";
-  if (strlen(name) == 0) {
-    name = "Untitled";
+  const char* rawName = nameInput ? lv_textarea_get_text(nameInput) : "";
+  char nameBuf[32];
+  if (rawName && rawName[0]) {
+    strlcpy(nameBuf, rawName, sizeof(nameBuf));
+  } else {
+    strlcpy(nameBuf, "Untitled", sizeof(nameBuf));
   }
+
+  strlcpy(editPreset.name, nameBuf, sizeof(editPreset.name));
+
+  do_cleanup_kb();
 
   xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
   if (editSlot >= 0 && editSlot < (int)g_presets.size()) {
+    editPreset.id = editSlot + 1;
     g_presets[editSlot] = editPreset;
-    g_presets[editSlot].id = editSlot + 1;
   } else {
     if (g_presets.size() >= MAX_PRESETS) {
       xSemaphoreGive(g_presets_mutex);
@@ -203,14 +210,6 @@ static void save_preset_cb(lv_event_t* e) {
     }
     editPreset.id = g_presets.size() + 1;
     g_presets.push_back(editPreset);
-  }
-
-  if (editSlot >= 0 && editSlot < (int)g_presets.size()) {
-    strlcpy(g_presets[editSlot].name, name, sizeof(g_presets[editSlot].name));
-  } else {
-    if (!g_presets.empty()) {
-      strlcpy(g_presets[g_presets.size() - 1].name, name, sizeof(g_presets[g_presets.size() - 1].name));
-    }
   }
   xSemaphoreGive(g_presets_mutex);
 
@@ -230,6 +229,13 @@ static void save_preset_cb(lv_event_t* e) {
 void screen_program_edit_create(int slot) {
   lv_obj_t* screen = screenRoots[SCREEN_PROGRAM_EDIT];
   lv_obj_clean(screen);
+
+  for (int j = 0; j < 4; j++) {
+    modeBtns[j] = nullptr;
+  }
+  nameInput = nullptr;
+  rpmLabel = nullptr;
+  modeSettingsBtn = nullptr;
 
   editSlot = slot;
   keyboard = nullptr;
@@ -319,7 +325,7 @@ void screen_program_edit_create(int slot) {
   lv_obj_set_style_text_color(modeLabel, COL_TEXT_DIM, 0);
   lv_obj_set_pos(modeLabel, 20, 118);
 
-  // ── MODE selector (SVG: y=136, 4 toggle buttons, each 170x38, gap=6.67) ──
+  // ── MODE selector (y=136): CONT | PULSE | STEP (3 modes; do not loop 4x -- modes[] has 3 entries)
   const struct ModeBtn {
     const char* label;
     SystemState mode;
@@ -328,14 +334,16 @@ void screen_program_edit_create(int slot) {
     { "PULSE", STATE_PULSE   },
     { "STEP",  STATE_STEP    }
   };
+  const int modeCount = (int)(sizeof(modes) / sizeof(modes[0]));
 
   const int modeY = 136;
-  const int modeBtnW = 185;  // (760 - 3*6.67) / 4 ~= 185
   const int modeBtnH = 38;
   const int modeGap = 6;
   const int modeStartX = 20;
+  const int modeRowW = SCREEN_W - 2 * modeStartX;
+  const int modeBtnW = (modeRowW - (modeCount - 1) * modeGap) / modeCount;
 
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < modeCount; i++) {
     lv_obj_t* btn = lv_button_create(screen);
     lv_obj_set_size(btn, modeBtnW, modeBtnH);
     lv_obj_set_pos(btn, modeStartX + i * (modeBtnW + modeGap), modeY);
@@ -523,8 +531,16 @@ void screen_program_edit_update_ui() {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// PUBLIC API - Get current preset being edited
+// PUBLIC API
 // ───────────────────────────────────────────────────────────────────────────────
 Preset* screen_program_edit_get_preset() {
   return &editPreset;
+}
+
+void screen_program_edit_invalidate_widgets() {
+  nameInput = nullptr;
+  rpmLabel = nullptr;
+  modeSettingsBtn = nullptr;
+  keyboard = nullptr;
+  for (int i = 0; i < 4; i++) modeBtns[i] = nullptr;
 }

@@ -97,24 +97,27 @@ bool storage_load_presets() {
         g_presets.push_back(p);
     }
 
-    LOG_I("Loaded %d presets from LittleFS.", g_presets.size());
+    LOG_I("Loaded %u presets from LittleFS.", (unsigned)g_presets.size());
     xSemaphoreGive(g_presets_mutex);
     return true;
 }
 
 static bool storage_save_presets_internal() {
+    std::vector<Preset> localCopy;
     xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
+    localCopy = g_presets;
+    xSemaphoreGive(g_presets_mutex);
+
     File file = LittleFS.open(PRESETS_FILE ".tmp", FILE_WRITE);
     if (!file) {
         LOG_E("Failed to open presets temp file for writing");
-        xSemaphoreGive(g_presets_mutex);
         return false;
     }
 
     JsonDocument doc;
     JsonArray array = doc.to<JsonArray>();
 
-    for (const auto& p : g_presets) {
+    for (const auto& p : localCopy) {
         JsonObject obj = array.add<JsonObject>();
         obj["id"] = p.id;
         obj["name"] = p.name;
@@ -136,15 +139,13 @@ static bool storage_save_presets_internal() {
         LOG_E("Failed to write JSON sequence to presets temp file");
         file.close();
         LittleFS.remove(PRESETS_FILE ".tmp");
-        xSemaphoreGive(g_presets_mutex);
         return false;
     }
 
     file.close();
     LittleFS.remove(PRESETS_FILE);
     LittleFS.rename(PRESETS_FILE ".tmp", PRESETS_FILE);
-    LOG_I("Successfully saved %d presets to LittleFS.", g_presets.size());
-    xSemaphoreGive(g_presets_mutex);
+    LOG_I("Successfully saved %u presets to LittleFS.", (unsigned)localCopy.size());
     return true;
 }
 
@@ -317,14 +318,43 @@ volatile int wifiConnectedRssi = 0;
 char wifiPendingSsid[33] = "";
 char wifiPendingPass[65] = "";
 
+WifiScanEntry wifiScanBuffer[WIFI_SCAN_MAX];
+int wifiScanBufferCount = 0;
+
 static bool wifiScanStarted = false;
 static uint32_t wifiReconnectInterval = 30000;
 static uint32_t wifiLastReconnectAttempt = 0;
 static uint32_t wifiLastStatusPoll = 0;
 
 void wifi_process_pending() {
+    // WiFi toggle MUST run even when turning OFF: g_settings.wifi_enabled is already false,
+    // so an early return would skip disconnect/WIFI_OFF and leave the radio active (ESP-IDF
+    // station teardown: disconnect connectivity before stopping — see Wi-Fi Deinit Phase).
+    if (wifiTogglePending) {
+        wifiTogglePending = false;
+        if (g_settings.wifi_enabled) {
+            WiFi.mode(WIFI_STA);
+            WiFi.begin(g_settings.wifi_ssid, g_settings.wifi_pass);
+            LOG_I("WiFi enabled");
+        } else {
+            WiFi.STA.disconnect();
+            WiFi.mode(WIFI_OFF);
+            wifiScanStarted = false;
+            wifiScanPending = false;
+            wifiScanBufferCount = 0;
+            wifiIsConnected = false;
+            wifiConnectedSsid[0] = '\0';
+            wifiConnectedIp[0] = '\0';
+            wifiConnectedRssi = 0;
+            LOG_I("WiFi disabled");
+        }
+    }
+
+    if (!g_settings.wifi_enabled) {
+        return;
+    }
+
     // Update cached connection status (every 2s to avoid SDIO bus blocking idle task)
-    if (!g_settings.wifi_enabled) return;
     uint32_t now = millis();
     if (now - wifiLastStatusPoll >= 2000) {
         wifiLastStatusPoll = now;
@@ -353,8 +383,15 @@ void wifi_process_pending() {
         int result = WiFi.scanComplete();
         if (result >= 0) {
             wifiScanStarted = false;
+            wifiScanBufferCount = (result > WIFI_SCAN_MAX) ? WIFI_SCAN_MAX : result;
+            for (int i = 0; i < wifiScanBufferCount; i++) {
+                strlcpy(wifiScanBuffer[i].ssid, WiFi.SSID(i).c_str(), sizeof(wifiScanBuffer[i].ssid));
+                wifiScanBuffer[i].rssi = WiFi.RSSI(i);
+                wifiScanBuffer[i].enc = WiFi.encryptionType(i);
+            }
             wifiScanResultCount = result;
             wifiScanResultReady = true;
+            WiFi.scanDelete();
             LOG_I("WiFi scan complete: %d networks", result);
         } else if (result == WIFI_SCAN_FAILED) {
             wifiScanStarted = false;
@@ -370,20 +407,6 @@ void wifi_process_pending() {
         WiFi.STA.disconnect();
         WiFi.begin(wifiPendingSsid, wifiPendingPass);
         LOG_I("WiFi connecting to: %s", wifiPendingSsid);
-    }
-
-    // Process WiFi toggle
-    if (wifiTogglePending) {
-        wifiTogglePending = false;
-        if (g_settings.wifi_enabled) {
-            WiFi.mode(WIFI_STA);
-            WiFi.begin(g_settings.wifi_ssid, g_settings.wifi_pass);
-            LOG_I("WiFi enabled");
-        } else {
-            WiFi.STA.disconnect();
-            WiFi.mode(WIFI_OFF);
-            LOG_I("WiFi disabled");
-        }
     }
 
     // Auto-reconnect with exponential backoff

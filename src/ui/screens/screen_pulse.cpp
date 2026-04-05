@@ -504,11 +504,13 @@ void screen_pulse_create() {
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_pulse_update() {
   if (!screens_is_active(SCREEN_PULSE)) return;
+  if (!startBtn) return;
 
   SystemState state = control_get_state();
 
   // Update START button appearance
   lv_obj_t* startLbl = lv_obj_get_child(startBtn, 0);
+  if (!startLbl) return;
   if (state == STATE_PULSE) {
     lv_label_set_text(startLbl, "[] STOP");
     lv_obj_set_style_text_color(startLbl, COL_ACCENT, 0);

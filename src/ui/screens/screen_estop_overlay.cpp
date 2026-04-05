@@ -8,6 +8,7 @@
 #include "../../control/control.h"
 #include "../../safety/safety.h"
 #include "../../motor/motor.h"
+#include "../../onchip_temp.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // WIDGETS
@@ -153,12 +154,11 @@ void estop_overlay_create() {
   lv_obj_remove_flag(infoPanel, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_remove_flag(infoPanel, LV_OBJ_FLAG_CLICKABLE);
 
-  // Info grid: 2 rows x 3 cols — MODE, POSITION, CURRENT, PROGRAM, TEMP, ELAPSED
-  // Row 1 (top half): MODE, POSITION, CURRENT
-  // Row 2 (bottom half): PROGRAM, TEMP, ELAPSED
-  // Grid: 3 columns x 2 rows, each col ~194px wide (600 - 16 padding) / 3
+  // Info grid: 2 rows x 3 cols — labels must match estop_overlay_update() values
+  // Row 1: MODE (state), FREQ (step Hz), CURRENT (unused)
+  // Row 2: PROGRAM (unused), UPTIME (since boot), TEMP (placeholder)
   static const char* const info_names[6] = {
-    "MODE", "POSITION", "CURRENT", "PROGRAM", "TEMP", "ELAPSED"
+    "MODE", "FREQ", "CURRENT", "PROGRAM", "UPTIME", "TEMP"
   };
   static const lv_coord_t col_x[3] = { 0, 194, 388 };
 
@@ -308,7 +308,14 @@ void estop_overlay_update() {
     lv_label_set_text(infoLabels[4], buf);
   }
   if (infoLabels[5]) {
-    lv_label_set_text(infoLabels[5], "-- C");
+    float t = 0.0f;
+    char tbuf[20];
+    if (onchip_temp_get_celsius(&t)) {
+      snprintf(tbuf, sizeof(tbuf), "%.1f C", t);
+    } else {
+      snprintf(tbuf, sizeof(tbuf), "-- C");
+    }
+    lv_label_set_text(infoLabels[5], tbuf);
   }
 
   // Enable/disable reset button based on ESTOP state

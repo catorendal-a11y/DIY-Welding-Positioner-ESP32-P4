@@ -9,25 +9,44 @@
 
 extern TaskHandle_t lvglHandle;
 
+SemaphoreHandle_t g_lvgl_mutex = nullptr;
+
+void lvgl_lock() {
+  if (g_lvgl_mutex) xSemaphoreTake(g_lvgl_mutex, portMAX_DELAY);
+}
+
+void lvgl_unlock() {
+  if (g_lvgl_mutex) xSemaphoreGive(g_lvgl_mutex);
+}
+
 // ───────────────────────────────────────────────────────────────────────────────
 // GLOBALS
 // ───────────────────────────────────────────────────────────────────────────────
 // STATE
 // ───────────────────────────────────────────────────────────────────────────────
 static ScreenId currentScreen = SCREEN_NONE;
+static volatile ScreenId pendingScreen = SCREEN_NONE;
+static volatile bool themeReinitPending = false;
 lv_obj_t* screenRoots[SCREEN_COUNT] = { nullptr };  // Extern for screen files
 static bool screenCreated[SCREEN_COUNT] = {};
 static int pendingEditSlot = -1;
 
+static bool screen_needs_rebuild(ScreenId id) {
+  return id == SCREEN_PROGRAM_EDIT || id == SCREEN_EDIT_CONT
+      || id == SCREEN_EDIT_PULSE  || id == SCREEN_EDIT_STEP;
+}
+
 static void create_screen(ScreenId id) {
-  screenRoots[id] = lv_obj_create(nullptr);
-  lv_obj_set_size(screenRoots[id], SCREEN_W, SCREEN_H);
-  lv_obj_set_style_bg_color(screenRoots[id], COL_BG, 0);
-  lv_obj_set_style_bg_opa(screenRoots[id], LV_OPA_COVER, 0);
-  lv_obj_set_style_border_width(screenRoots[id], 0, 0);
-  lv_obj_set_style_pad_all(screenRoots[id], 0, 0);
-  lv_obj_set_style_radius(screenRoots[id], 0, 0);
-  lv_obj_remove_flag(screenRoots[id], LV_OBJ_FLAG_SCROLLABLE);
+  if (!screenRoots[id]) {
+    screenRoots[id] = lv_obj_create(nullptr);
+    lv_obj_set_size(screenRoots[id], SCREEN_W, SCREEN_H);
+    lv_obj_set_style_bg_color(screenRoots[id], COL_BG, 0);
+    lv_obj_set_style_bg_opa(screenRoots[id], LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(screenRoots[id], 0, 0);
+    lv_obj_set_style_pad_all(screenRoots[id], 0, 0);
+    lv_obj_set_style_radius(screenRoots[id], 0, 0);
+    lv_obj_remove_flag(screenRoots[id], LV_OBJ_FLAG_SCROLLABLE);
+  }
 
   switch (id) {
     case SCREEN_BOOT:        screen_boot_create(); break;
@@ -60,6 +79,13 @@ static void create_screen(ScreenId id) {
 // SCREEN INITIALIZATION
 // ───────────────────────────────────────────────────────────────────────────────
 void screens_init() {
+  if (!g_lvgl_mutex) {
+    g_lvgl_mutex = xSemaphoreCreateRecursiveMutex();
+    if (!g_lvgl_mutex) {
+      LOG_E("Screens init: failed to create LVGL mutex");
+      return;
+    }
+  }
   LOG_I("Screens init: creating boot and main screens");
 
   for (int i = 0; i < SCREEN_COUNT; i++) {
@@ -77,6 +103,12 @@ void screens_init() {
 
 void screens_reinit() {
   ScreenId prev = currentScreen;
+
+  screen_programs_invalidate_widgets();
+  screen_program_edit_invalidate_widgets();
+  screen_wifi_invalidate_widgets();
+  screen_bt_invalidate_widgets();
+  screen_step_invalidate_widgets();
 
   estop_overlay_destroy();
 
@@ -103,6 +135,10 @@ void screens_reinit() {
 void screens_show(ScreenId id) {
   if (id < 0 || id >= SCREEN_COUNT) return;
 
+  if (screen_needs_rebuild(id)) {
+    screenCreated[id] = false;
+  }
+
   if (!screenCreated[id]) {
     create_screen(id);
   }
@@ -125,6 +161,27 @@ void screens_show(ScreenId id) {
   #endif
 
   LOG_D("Screen show: %d", id);
+}
+
+void screens_request_show(ScreenId id) {
+  pendingScreen = id;
+}
+
+void screens_request_theme_reinit() {
+  themeReinitPending = true;
+}
+
+void screens_process_pending() {
+  if (themeReinitPending) {
+    themeReinitPending = false;
+    theme_refresh();
+    return;
+  }
+  if (pendingScreen != SCREEN_NONE) {
+    ScreenId id = pendingScreen;
+    pendingScreen = SCREEN_NONE;
+    screens_show(id);
+  }
 }
 
 ScreenId screens_get_current() {

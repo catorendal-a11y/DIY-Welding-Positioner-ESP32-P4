@@ -8,16 +8,21 @@
 // GPIO HEADER PINS (2×13 pin header)
 // Available GPIOs: 28–35, 49–52 (see board pin diagram)
 // ───────────────────────────────────────────────────────────────────────────────
-#define PIN_POT         49   // ADC — Potentiometer speed input
-                              // NOTE: GPIO 49 ADC channel must be verified against
-                              // ESP32-P4 datasheet. High GPIOs (47-54) may be reserved.
 #define PIN_STEP        50   // Step pulse output (FastAccelStepper RMT)
 #define PIN_DIR         51   // Direction: CW=HIGH, CCW=LOW
 #define PIN_ENA         52   // Enable: Active LOW to TB6600
 #define PIN_ESTOP       34   // Emergency Stop: Active LOW, NC contact
+                            // NOTE: GPIO34 is a strapping pin (JTAG source control).
+                            // Default eFuse config ignores GPIO34, so ESTOP is safe.
+                            // GPIO34 has NO internal pull resistors — external pull-up
+                            // from NC contact is required.
 #define PIN_DIR_SWITCH  29   // CW/CCW direction switch (INPUT_PULLUP, LOW=CCW, HIGH=CW)
-#define PIN_PEDAL       35   // ADC — Foot pedal potentiometer
+#define PIN_POT         49   // ADC — Potentiometer speed input (ADC2_CH0)
 #define PIN_PEDAL_SW    33   // Foot pedal start switch (INPUT_PULLUP, LOW=pressed)
+#define ADS1115_ADDR    0x48 // ADS1115 I2C address when ENABLE_ADS1115_PEDAL is 1
+#ifndef ENABLE_ADS1115_PEDAL
+#define ENABLE_ADS1115_PEDAL 0  // 1 = probe touch I2C bus for ADS1115 pedal ADC (SDA7/SCL8)
+#endif
 
 // ───────────────────────────────────────────────────────────────────────────────
 // DISPLAY & TOUCH — MIPI-DSI (handled by ESP-IDF native drivers)

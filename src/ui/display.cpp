@@ -16,6 +16,7 @@
 #include "driver/ledc.h"
 #include "esp_log.h"
 #include "lvgl.h"
+#include <cstring>
 
 // Forward declarations for LDO
 extern "C" {
@@ -130,6 +131,22 @@ void display_set_brightness(uint8_t brightness) {
   uint32_t duty = (uint32_t)brightness * BL_MAX_DUTY / 255;
   ledc_set_duty(LEDC_LOW_SPEED_MODE, BL_LEDC_CHANNEL, duty);
   ledc_update_duty(LEDC_LOW_SPEED_MODE, BL_LEDC_CHANNEL);
+}
+
+void display_fill_black() {
+  if (!display_panel) return;
+  const int w = DISPLAY_H_RES_NATIVE;
+  const int h = DISPLAY_V_RES_NATIVE;
+  const int strip = 100;
+  uint16_t* black_buf = (uint16_t*)heap_caps_malloc((size_t)w * strip * 2, MALLOC_CAP_DMA);
+  if (!black_buf) return;
+  memset(black_buf, 0, (size_t)w * strip * 2);
+  for (int y = 0; y < h; y += strip) {
+    int y_end = (y + strip > h) ? h : (y + strip);
+    esp_lcd_panel_draw_bitmap(display_panel, 0, y, w, y_end, black_buf);
+    delay(5);
+  }
+  heap_caps_free(black_buf);
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -273,18 +290,8 @@ void display_init() {
   // get_framebuffer may switch DPI to framebuffer mode which causes issues
   display_framebuffer = nullptr;  // Not used in draw_bitmap mode
 
-  // Clear screen to black BEFORE turning on backlight
-  // esp_lcd_panel_draw_bitmap takes (x_start, y_start, x_end, y_end, data)
   LOG_I(">>> Clear screen to black...");
-  uint16_t *black_buf = (uint16_t *)heap_caps_malloc(480 * 100 * 2, MALLOC_CAP_DMA);  // RGB565
-  if (black_buf) {
-    memset(black_buf, 0, 480 * 100 * 2);  // All zeros = black
-    for (int y = 0; y < 800; y += 100) {
-      esp_lcd_panel_draw_bitmap(display_panel, 0, y, 480, y + 100, black_buf);
-      delay(5);  // Let DMA complete before next draw
-    }
-    heap_caps_free(black_buf);
-  }
+  display_fill_black();
 
   ret = esp_lcd_panel_disp_on_off(display_panel, true);
   if (ret != ESP_OK) {
@@ -360,6 +367,10 @@ void display_init() {
   display_set_brightness(g_settings.brightness);
 
   LOG_I("Display init complete: %dx%d", DISPLAY_H_RES, DISPLAY_V_RES);
+}
+
+i2c_master_bus_handle_t display_touch_i2c_bus_handle() {
+  return touch_i2c_bus;
 }
 
 // ───────────────────────────────────────────────────────────────────────────────

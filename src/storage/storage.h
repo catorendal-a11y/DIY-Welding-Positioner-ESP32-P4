@@ -77,6 +77,16 @@ void storage_flush();
 // ESP-Hosted WiFi API is NOT thread-safe — all WiFi calls must go through here
 void wifi_process_pending();
 
+// WiFi scan result buffer (populated by storageTask, read by UI)
+#define WIFI_SCAN_MAX 12
+typedef struct {
+    char ssid[33];
+    int rssi;
+    uint8_t enc;
+} WifiScanEntry;
+extern WifiScanEntry wifiScanBuffer[];
+extern int wifiScanBufferCount;
+
 // Helper functions
 bool storage_get_preset(uint8_t id, Preset* out);
 bool storage_delete_preset(uint8_t id);

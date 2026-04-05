@@ -5,6 +5,12 @@
 #include "lvgl.h"
 #include "../storage/storage.h"  // For Preset type
 #include <atomic>
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+
+extern SemaphoreHandle_t g_lvgl_mutex;
+void lvgl_lock();
+void lvgl_unlock();
 
 // ───────────────────────────────────────────────────────────────────────────────
 // GLOBAL SCREEN ROOTS ARRAY
@@ -47,7 +53,10 @@ typedef enum {
 // ───────────────────────────────────────────────────────────────────────────────
 void screens_init();                    // Initialize all screens
 void screens_reinit();                  // Destroy and recreate all screens (theme change)
-void screens_show(ScreenId id);         // Show specific screen
+void screens_show(ScreenId id);         // Show specific screen (safe from callbacks)
+void screens_request_show(ScreenId id); // Deferred show — processed before lv_timer_handler
+void screens_request_theme_reinit();    // Deferred theme reinit — processed before lv_timer_handler
+void screens_process_pending();         // Execute deferred screen switch (call BEFORE lv_timer_handler)
 ScreenId screens_get_current();         // Get current screen
 bool screens_is_active(ScreenId id);    // Check if screen is active
 void screens_update_current();          // Update current screen (call from lvglTask)
@@ -113,6 +122,11 @@ void screen_step_update();
 void screen_timer_update();
 void screen_programs_update();
 void screen_programs_mark_dirty();
+void screen_programs_invalidate_widgets();      // Call before deleting screen trees (screens_reinit)
+void screen_program_edit_invalidate_widgets();  // Same for program edit screen
+void screen_wifi_invalidate_widgets();          // Same for WiFi screen (keyboard, scan state)
+void screen_bt_invalidate_widgets();            // Same for BT screen (keyboard, scan state)
+void screen_step_invalidate_widgets();          // Same for Step screen (numpad)
 
 // ───────────────────────────────────────────────────────────────────────────────
 // ESTOP OVERLAY

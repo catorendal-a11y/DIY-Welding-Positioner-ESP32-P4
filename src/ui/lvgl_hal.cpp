@@ -35,18 +35,10 @@ void dim_update() {
     return;
   }
 
+  // While dimmed, do NOT touch GT911 here — lvgl_touchpad_read_cb runs inside
+  // lv_timer_handler() first each frame and calls dim_reset_activity() on press.
+  // A second I2C read here cleared the chip buffer and starved LVGL of events.
   if (isDimmed) {
-    if (display_touch) {
-      uint16_t tx[1], ty[1], ts[1];
-      uint8_t tc = 0;
-      esp_lcd_touch_read_data(display_touch);
-      esp_lcd_touch_get_coordinates(display_touch, tx, ty, ts, &tc, 1);
-      if (tc > 0) {
-        isDimmed = false;
-        display_set_brightness(g_settings.brightness);
-        lastActivityMs = millis();
-      }
-    }
     return;
   }
 
@@ -86,9 +78,10 @@ void lvgl_alloc_buffers() {
   rot_buf_pixels = DISPLAY_H_RES * LVGL_BUF_LINES; // 800 * 80 = 64000 pixels
 
   // Use PSRAM (32MB available) — DMA2D is disabled so PSRAM is safe
-  buf1 = (uint8_t*)heap_caps_malloc(buf_bytes, MALLOC_CAP_SPIRAM);
-  buf2 = (uint8_t*)heap_caps_malloc(buf_bytes, MALLOC_CAP_SPIRAM);
-  rot_buf = (uint16_t*)heap_caps_malloc(rot_buf_pixels * 2, MALLOC_CAP_SPIRAM);
+  // LV_DRAW_BUF_ALIGN=64 requires 64-byte aligned buffers for ESP32-P4 PPA
+  buf1 = (uint8_t*)heap_caps_aligned_calloc(64, 1, buf_bytes, MALLOC_CAP_SPIRAM);
+  buf2 = (uint8_t*)heap_caps_aligned_calloc(64, 1, buf_bytes, MALLOC_CAP_SPIRAM);
+  rot_buf = (uint16_t*)heap_caps_aligned_calloc(64, 1, rot_buf_pixels * 2, MALLOC_CAP_SPIRAM);
 
   if (!buf1 || !buf2 || !rot_buf) {
     LOG_E("FATAL: LVGL buffer alloc failed!");
@@ -99,7 +92,8 @@ void lvgl_alloc_buffers() {
     rot_buf = nullptr;
     return;
   }
-  LOG_I("LVGL buffers OK: 2x%zu bytes draw + %zu bytes rotation (PSRAM)", buf_bytes, rot_buf_pixels * 2);
+  LOG_I("LVGL buffers OK: 2x%u bytes draw + %u bytes rotation (PSRAM)",
+        (unsigned)buf_bytes, (unsigned)(rot_buf_pixels * 2));
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -138,7 +132,7 @@ void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
 
   // Check rotation buffer fits
   if ((size_t)(W * H) > rot_buf_pixels) {
-    LOG_E("Rotation buffer too small: need %d, have %zu", W * H, rot_buf_pixels);
+    LOG_E("Rotation buffer too small: need %d, have %u", W * H, (unsigned)rot_buf_pixels);
     lv_display_flush_ready(disp);
     return;
   }

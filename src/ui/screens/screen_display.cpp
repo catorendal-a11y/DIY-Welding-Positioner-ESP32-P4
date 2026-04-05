@@ -62,11 +62,16 @@ static void dim_cycle_cb(lv_event_t* e) {
   update_info_text();
 }
 
+static volatile bool themeRefreshPending = false;
+
 static void theme_cycle_cb(lv_event_t* e) {
   uint8_t count = theme_get_count();
   g_settings.accent_color = (g_settings.accent_color + 1) % count;
   theme_set_color(g_settings.accent_color);
-  theme_refresh();
+  if (themeBtnLabel) {
+    lv_label_set_text(themeBtnLabel, theme_get_name(g_settings.accent_color));
+  }
+  themeRefreshPending = true;
 }
 
 static void save_cb(lv_event_t* e) {
@@ -290,6 +295,11 @@ void screen_display_create() {
 }
 
 void screen_display_update() {
+  if (themeRefreshPending) {
+    themeRefreshPending = false;
+    screens_request_theme_reinit();
+    return;
+  }
   if (displayScreenActive) {
     displayScreenActive = false;
     update_slider_from_settings();

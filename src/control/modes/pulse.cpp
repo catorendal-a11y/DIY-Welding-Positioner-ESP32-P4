@@ -28,13 +28,13 @@ void pulse_start(uint32_t on_ms, uint32_t off_ms) {
 
   LOG_I("Pulse mode: ON=%lu OFF=%lu", pulseOnMs, pulseOffMs);
 
-  portENTER_CRITICAL(&g_stepperMutex);
+  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   FastAccelStepper* stepper = motor_get_stepper();
   if (stepper != nullptr) {
     uint32_t hz = (uint32_t)rpmToStepHz(speed_get_target_rpm());
     stepper->setSpeedInHz(hz);
   }
-  portEXIT_CRITICAL(&g_stepperMutex);
+  xSemaphoreGive(g_stepperMutex);
 
   if (speed_get_direction() == DIR_CW) motor_run_cw();
   else motor_run_ccw();
@@ -57,21 +57,21 @@ void pulse_update() {
     pulseStateStartMs = millis();
 
     if (pulseIsOn) {
-      portENTER_CRITICAL(&g_stepperMutex);
+      xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
       FastAccelStepper* s = motor_get_stepper();
       if (s != nullptr) {
         uint32_t hz = (uint32_t)rpmToStepHz(speed_get_target_rpm());
         s->setSpeedInHz(hz);
       }
-      portEXIT_CRITICAL(&g_stepperMutex);
+      xSemaphoreGive(g_stepperMutex);
       if (speed_get_direction() == DIR_CW) motor_run_cw();
       else motor_run_ccw();
       LOG_D("Pulse: ON");
     } else {
-      portENTER_CRITICAL(&g_stepperMutex);
-      FastAccelStepper* stepper = motor_get_stepper();
-      if (stepper != nullptr) stepper->stopMove();
-      portEXIT_CRITICAL(&g_stepperMutex);
+      xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
+      FastAccelStepper* s = motor_get_stepper();
+      if (s != nullptr) s->stopMove();
+      xSemaphoreGive(g_stepperMutex);
       LOG_D("Pulse: OFF");
     }
   }

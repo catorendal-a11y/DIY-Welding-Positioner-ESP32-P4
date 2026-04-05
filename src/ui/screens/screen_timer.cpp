@@ -51,7 +51,7 @@ static void back_event_cb(lv_event_t* e) {
 
 static void sec_adj_cb(lv_event_t* e) {
   if (countingDown) return;
-  int delta = (int)(intptr_t)(lv_obj_t*)lv_event_get_user_data(e);
+  int delta = (int)(intptr_t)lv_event_get_user_data(e);
   countdownSec += delta;
   if (countdownSec < 1) countdownSec = 1;
   if (countdownSec > 10) countdownSec = 10;
@@ -60,7 +60,7 @@ static void sec_adj_cb(lv_event_t* e) {
 }
 
 static void rpm_adj_cb(lv_event_t* e) {
-  int delta = (int)(intptr_t)(lv_obj_t*)lv_event_get_user_data(e);
+  int delta = (int)(intptr_t)lv_event_get_user_data(e);
   float rpm = speed_get_target_rpm();
   rpm += delta * 0.1f;
   if (rpm < MIN_RPM) rpm = MIN_RPM;
@@ -281,7 +281,7 @@ void screen_timer_update() {
     startPending = false;
     g_settings.countdown_seconds = (uint8_t)countdownSec;
     storage_save_settings();
-    screens_show(SCREEN_MAIN);
+    screens_request_show(SCREEN_MAIN);
     return;
   }
 
@@ -290,7 +290,7 @@ void screen_timer_update() {
     startPending = false;
     countingDown = false;
     control_start_continuous();
-    screens_show(SCREEN_MAIN);
+    screens_request_show(SCREEN_MAIN);
     return;
   }
 

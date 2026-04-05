@@ -272,6 +272,17 @@ void screen_timer_create() {
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN UPDATE
 // ───────────────────────────────────────────────────────────────────────────────
+void screen_timer_invalidate_widgets() {
+  arcRing = nullptr;
+  bigNumberLabel = nullptr;
+  statusLabel = nullptr;
+  rpmLabel = nullptr;
+  secLabel = nullptr;
+  countingDown = false;
+  startPending = false;
+  backPending = false;
+}
+
 void screen_timer_update() {
   if (!screens_is_active(SCREEN_TIMER)) return;
 

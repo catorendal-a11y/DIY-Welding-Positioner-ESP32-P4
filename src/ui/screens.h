@@ -122,11 +122,22 @@ void screen_step_update();
 void screen_timer_update();
 void screen_programs_update();
 void screen_programs_mark_dirty();
-void screen_programs_invalidate_widgets();      // Call before deleting screen trees (screens_reinit)
-void screen_program_edit_invalidate_widgets();  // Same for program edit screen
-void screen_wifi_invalidate_widgets();          // Same for WiFi screen (keyboard, scan state)
-void screen_bt_invalidate_widgets();            // Same for BT screen (keyboard, scan state)
-void screen_step_invalidate_widgets();          // Same for Step screen (numpad)
+void screen_programs_invalidate_widgets();
+void screen_program_edit_invalidate_widgets();
+void screen_wifi_invalidate_widgets();
+void screen_bt_invalidate_widgets();
+void screen_step_invalidate_widgets();
+void screen_main_invalidate_widgets();
+void screen_pulse_invalidate_widgets();
+void screen_timer_invalidate_widgets();
+void screen_jog_invalidate_widgets();
+void screen_display_invalidate_widgets();
+void screen_sysinfo_invalidate_widgets();
+void screen_motor_config_invalidate_widgets();
+void screen_calibration_invalidate_widgets();
+void screen_edit_cont_invalidate_widgets();
+void screen_edit_pulse_invalidate_widgets();
+void screen_edit_step_invalidate_widgets();
 
 // ───────────────────────────────────────────────────────────────────────────────
 // ESTOP OVERLAY

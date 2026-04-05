@@ -2,6 +2,7 @@
 #include "acceleration.h"
 #include "../config.h"
 #include "../storage/storage.h"
+#include <atomic>
 
 #define ACCEL_MIN  1000
 #define ACCEL_MAX  20000
@@ -13,20 +14,20 @@ void acceleration_init() {
   LOG_I("Acceleration: %u", g_settings.acceleration);
 }
 
-static volatile bool accelApplyPending = false;
+static std::atomic<bool> accelApplyPending{false};
 
 void acceleration_set(uint32_t accel) {
   g_settings.acceleration = constrain(accel, ACCEL_MIN, ACCEL_MAX);
-  accelApplyPending = true;
+  accelApplyPending.store(true, std::memory_order_release);
   LOG_I("Acceleration set to: %u", g_settings.acceleration);
 }
 
 bool acceleration_has_pending_apply() {
-  return accelApplyPending;
+  return accelApplyPending.load(std::memory_order_acquire);
 }
 
 void acceleration_clear_pending() {
-  accelApplyPending = false;
+  accelApplyPending.store(false, std::memory_order_release);
 }
 
 uint32_t acceleration_get() {

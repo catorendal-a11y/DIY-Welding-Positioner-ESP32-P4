@@ -502,6 +502,22 @@ void screen_pulse_create() {
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN UPDATE — refresh computed values and button states
 // ───────────────────────────────────────────────────────────────────────────────
+void screen_pulse_invalidate_widgets() {
+  onTimeLabel = nullptr;
+  offTimeLabel = nullptr;
+  rpmLabel = nullptr;
+  startBtn = nullptr;
+  stopBtn = nullptr;
+  onBar = nullptr;
+  offBar = nullptr;
+  rpmBar = nullptr;
+  infoDutyLabel = nullptr;
+  infoCycleLabel = nullptr;
+  infoFreqLabel = nullptr;
+  infoStepsLabel = nullptr;
+  for (int i = 0; i < WAVE_CYCLES; i++) waveLines[i] = nullptr;
+}
+
 void screen_pulse_update() {
   if (!screens_is_active(SCREEN_PULSE)) return;
   if (!startBtn) return;

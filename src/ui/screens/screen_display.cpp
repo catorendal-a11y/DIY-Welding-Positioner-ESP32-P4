@@ -294,6 +294,17 @@ void screen_display_create() {
   LOG_I("Screen display: created");
 }
 
+void screen_display_invalidate_widgets() {
+  brightnessSlider = nullptr;
+  brightnessValueLabel = nullptr;
+  dimBtn = nullptr;
+  dimBtnLabel = nullptr;
+  themeBtn = nullptr;
+  themeBtnLabel = nullptr;
+  infoLabel = nullptr;
+  displayScreenActive = false;
+}
+
 void screen_display_update() {
   if (themeRefreshPending) {
     themeRefreshPending = false;

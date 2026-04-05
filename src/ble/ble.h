@@ -9,12 +9,14 @@ void ble_notify_state();
 void ble_ota_update_c6();
 void ble_set_enabled(bool enabled);
 bool ble_is_enabled();
+void ble_update_name(const char* name);
 
 // Pending flags for deferred BLE operations (set from UI, processed by ble_update)
 extern volatile bool bleScanPending;
 extern volatile bool bleScanDone;
 extern volatile bool bleEnablePending;
 extern volatile bool bleEnableValue;
+extern volatile bool bleNameUpdatePending;
 
 typedef struct {
   char name[33];

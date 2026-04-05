@@ -104,11 +104,22 @@ void screens_init() {
 void screens_reinit() {
   ScreenId prev = currentScreen;
 
+  screen_main_invalidate_widgets();
+  screen_pulse_invalidate_widgets();
+  screen_timer_invalidate_widgets();
+  screen_jog_invalidate_widgets();
   screen_programs_invalidate_widgets();
   screen_program_edit_invalidate_widgets();
   screen_wifi_invalidate_widgets();
   screen_bt_invalidate_widgets();
   screen_step_invalidate_widgets();
+  screen_display_invalidate_widgets();
+  screen_sysinfo_invalidate_widgets();
+  screen_motor_config_invalidate_widgets();
+  screen_calibration_invalidate_widgets();
+  screen_edit_cont_invalidate_widgets();
+  screen_edit_pulse_invalidate_widgets();
+  screen_edit_step_invalidate_widgets();
 
   estop_overlay_destroy();
 

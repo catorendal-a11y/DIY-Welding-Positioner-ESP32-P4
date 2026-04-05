@@ -308,6 +308,18 @@ void screen_calibration_create() {
   screen_calibration_update();
 }
 
+void screen_calibration_invalidate_widgets() {
+  zeroValueLabel = nullptr;
+  stepsDegValueLabel = nullptr;
+  errorValueLabel = nullptr;
+  toleranceValueLabel = nullptr;
+  resultValueLabel = nullptr;
+  progressBar = nullptr;
+  for (int i = 0; i < 4; i++) { checkLabels[i] = nullptr; checkDots[i] = nullptr; }
+  progressLine = nullptr;
+  calStep = STEP_NONE;
+}
+
 void screen_calibration_update() {
   float factor = calibration_get_factor();
   uint32_t stepsPerRev = microstep_get_steps_per_rev();

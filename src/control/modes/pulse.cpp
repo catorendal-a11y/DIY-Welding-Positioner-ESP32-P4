@@ -33,6 +33,7 @@ void pulse_start(uint32_t on_ms, uint32_t off_ms) {
   if (stepper != nullptr) {
     uint32_t hz = (uint32_t)rpmToStepHz(speed_get_target_rpm());
     stepper->setSpeedInHz(hz);
+    stepper->applySpeedAcceleration();
   }
   xSemaphoreGive(g_stepperMutex);
 
@@ -62,6 +63,7 @@ void pulse_update() {
       if (s != nullptr) {
         uint32_t hz = (uint32_t)rpmToStepHz(speed_get_target_rpm());
         s->setSpeedInHz(hz);
+        s->applySpeedAcceleration();
       }
       xSemaphoreGive(g_stepperMutex);
       if (speed_get_direction() == DIR_CW) motor_run_cw();

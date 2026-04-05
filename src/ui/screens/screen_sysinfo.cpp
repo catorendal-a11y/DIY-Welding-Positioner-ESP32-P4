@@ -305,6 +305,24 @@ void screen_sysinfo_create() {
   LOG_I("Screen sysinfo: system info screen created");
 }
 
+void screen_sysinfo_invalidate_widgets() {
+  uptimeLabel = nullptr;
+  heapBar = nullptr;
+  heapValueLabel = nullptr;
+  psramBar = nullptr;
+  psramValueLabel = nullptr;
+  flashBar = nullptr;
+  flashValueLabel = nullptr;
+  wifiStatusLabel = nullptr;
+  ipLabel = nullptr;
+  bleStatusLabel = nullptr;
+  core0Bar = nullptr;
+  core0Label = nullptr;
+  core1Bar = nullptr;
+  core1Label = nullptr;
+  tempLabel = nullptr;
+}
+
 void screen_sysinfo_update() {
   if (!uptimeLabel) return;
   char buf[24];

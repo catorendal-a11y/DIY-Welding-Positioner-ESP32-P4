@@ -29,7 +29,6 @@ extern char wifiPendingPass[65];
 #include "WiFi.h"
 #include "esp32-hal-hosted.h"
 #include "esp_task_wdt.h"
-#include "esp_cache.h"
 #include <cstdint>
 #include "onchip_temp.h"
 
@@ -328,9 +327,8 @@ void setup() {
   // Initialize control state machine
   control_init();
 
-  // WiFi init deferred to storageTask (ESP-Hosted SDIO must be single-owner)
+  // WiFi init fully deferred to storageTask (ESP-Hosted SDIO must be single-owner)
   if (g_settings.wifi_enabled && g_settings.wifi_ssid[0] != '\0') {
-    WiFi.mode(WIFI_STA);
     wifiConnectPending = true;
     strlcpy(wifiPendingSsid, g_settings.wifi_ssid, sizeof(wifiPendingSsid));
     strlcpy(wifiPendingPass, g_settings.wifi_pass, sizeof(wifiPendingPass));

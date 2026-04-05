@@ -614,6 +614,18 @@ void screen_edit_step_create() {
   LOG_I("Screen edit step: full edit layout created");
 }
 
+void screen_edit_step_invalidate_widgets() {
+  angleLabel = nullptr;
+  rpmLabel = nullptr;
+  dirBtns[0] = nullptr;
+  dirBtns[1] = nullptr;
+  repeatsLabel = nullptr;
+  dwellLabel = nullptr;
+  totalAngleLabel = nullptr;
+  durationLabel = nullptr;
+  stepsLabel = nullptr;
+}
+
 void screen_edit_step_update() {
   if (!screens_is_active(SCREEN_EDIT_STEP)) return;
 

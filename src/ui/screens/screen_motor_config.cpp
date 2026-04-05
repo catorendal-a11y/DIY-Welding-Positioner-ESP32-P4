@@ -63,14 +63,14 @@ static void accel_slider_cb(lv_event_t* e) {
 static void invert_toggle_cb(lv_event_t* e) {
   (void)e;
   invertDir = !invertDir;
-  lv_obj_set_style_bg_color(invertToggle, invertDir ? COL_ACCENT : lv_color_hex(0x333333), 0);
+  lv_obj_set_style_bg_color(invertToggle, invertDir ? COL_ACCENT : COL_TOGGLE_OFF, 0);
   lv_label_set_text(invertToggleLbl, invertDir ? "ON" : "OFF");
 }
 
 static void idle_toggle_cb(lv_event_t* e) {
   (void)e;
   dirSwitchEnabled = !dirSwitchEnabled;
-  lv_obj_set_style_bg_color(idleToggle, dirSwitchEnabled ? COL_GREEN : lv_color_hex(0x333333), 0);
+  lv_obj_set_style_bg_color(idleToggle, dirSwitchEnabled ? COL_GREEN : COL_TOGGLE_OFF, 0);
   lv_label_set_text(idleToggleLbl, dirSwitchEnabled ? "ON" : "OFF");
 }
 
@@ -79,7 +79,7 @@ static void save_apply_cb(lv_event_t* e) {
   g_settings.acceleration = (uint32_t)lv_slider_get_value(accelSlider);
   g_settings.dir_switch_enabled = dirSwitchEnabled;
   g_settings.invert_direction = invertDir;
-  g_dir_switch_cache = dirSwitchEnabled;
+  g_dir_switch_cache.store(dirSwitchEnabled, std::memory_order_release);
   storage_save_settings();
   motorConfigApplyPending = true;
   screens_show(SCREEN_SETTINGS);
@@ -106,7 +106,7 @@ void screen_motor_config_create() {
   const int CONTENT_W = SCREEN_W - 2 * PX;
 
   lv_obj_t* header = lv_obj_create(screen);
-  lv_obj_set_size(header, SCREEN_W, 28);
+  lv_obj_set_size(header, SCREEN_W, SET_HEADER_H);
   lv_obj_set_pos(header, 0, 0);
   lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
   lv_obj_set_style_pad_all(header, 0, 0);
@@ -314,13 +314,13 @@ void screen_motor_config_create() {
   lv_obj_set_style_pad_all(invertToggle, 0, 0);
   lv_obj_remove_flag(invertToggle, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_add_flag(invertToggle, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_set_style_bg_color(invertToggle, invertDir ? COL_ACCENT : lv_color_hex(0x333333), 0);
+  lv_obj_set_style_bg_color(invertToggle, invertDir ? COL_ACCENT : COL_TOGGLE_OFF, 0);
   lv_obj_add_event_cb(invertToggle, invert_toggle_cb, LV_EVENT_CLICKED, nullptr);
 
   invertToggleLbl = lv_label_create(invertToggle);
   lv_label_set_text(invertToggleLbl, invertDir ? "ON" : "OFF");
   lv_obj_set_style_text_font(invertToggleLbl, FONT_BTN, 0);
-  lv_obj_set_style_text_color(invertToggleLbl, lv_color_white(), 0);
+  lv_obj_set_style_text_color(invertToggleLbl, COL_TEXT_WHITE, 0);
   lv_obj_center(invertToggleLbl);
 
   y += 56;
@@ -349,13 +349,13 @@ void screen_motor_config_create() {
   lv_obj_set_style_pad_all(idleToggle, 0, 0);
   lv_obj_remove_flag(idleToggle, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_add_flag(idleToggle, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_set_style_bg_color(idleToggle, dirSwitchEnabled ? COL_GREEN : lv_color_hex(0x333333), 0);
+  lv_obj_set_style_bg_color(idleToggle, dirSwitchEnabled ? COL_GREEN : COL_TOGGLE_OFF, 0);
   lv_obj_add_event_cb(idleToggle, idle_toggle_cb, LV_EVENT_CLICKED, nullptr);
 
   idleToggleLbl = lv_label_create(idleToggle);
   lv_label_set_text(idleToggleLbl, dirSwitchEnabled ? "ON" : "OFF");
   lv_obj_set_style_text_font(idleToggleLbl, FONT_BTN, 0);
-  lv_obj_set_style_text_color(idleToggleLbl, lv_color_white(), 0);
+  lv_obj_set_style_text_color(idleToggleLbl, COL_TEXT_WHITE, 0);
   lv_obj_center(idleToggleLbl);
 
   y += 56;
@@ -432,6 +432,22 @@ void screen_motor_config_create() {
   lv_obj_set_style_text_font(sLbl, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(sLbl, COL_ACCENT, 0);
   lv_obj_center(sLbl);
+}
+
+void screen_motor_config_invalidate_widgets() {
+  for (int i = 0; i < 3; i++) { microBtns[i] = nullptr; microLabels[i] = nullptr; }
+  rpmSlider = nullptr;
+  rpmValueLabel = nullptr;
+  accelSlider = nullptr;
+  accelValueLabel = nullptr;
+  gearLabel = nullptr;
+  currentLabel = nullptr;
+  holdLabel = nullptr;
+  invertToggle = nullptr;
+  invertToggleLbl = nullptr;
+  idleToggle = nullptr;
+  idleToggleLbl = nullptr;
+  statusLabel = nullptr;
 }
 
 void screen_motor_config_update() {

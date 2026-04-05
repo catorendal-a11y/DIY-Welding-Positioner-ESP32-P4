@@ -5,8 +5,9 @@
 
 std::vector<Preset> g_presets;
 SemaphoreHandle_t g_presets_mutex;
+SemaphoreHandle_t g_settings_mutex;
 SystemSettings g_settings = { 5000, 8, 1.0f, true, 150, 60, true, false, 0, "", "", BLE_DEVICE_NAME_DEFAULT, true, true, 3, 1 };
-volatile bool g_dir_switch_cache = true;
+std::atomic<bool> g_dir_switch_cache{true};
 
 static volatile bool savePending = false;
 static uint32_t lastSaveMs = 0;
@@ -19,8 +20,8 @@ void storage_init() {
     if (!LittleFS.begin(false)) {
         LOG_E("LittleFS mount failed, attempting format...");
         if (!LittleFS.begin(true)) {
-            LOG_E("LittleFS format failed!");
-            return;
+            LOG_E("LittleFS format failed — restarting!");
+            ESP.restart();
         }
         LOG_W("LittleFS formatted - default settings loaded");
     }
@@ -28,7 +29,17 @@ void storage_init() {
     g_presets_mutex = xSemaphoreCreateMutex();
     if (!g_presets_mutex) {
         LOG_E("Failed to create presets mutex!");
-        return;
+        ESP.restart();
+    }
+    g_settings_mutex = xSemaphoreCreateMutex();
+    if (!g_settings_mutex) {
+        LOG_E("Failed to create settings mutex!");
+        ESP.restart();
+    }
+    g_wifi_mutex = xSemaphoreCreateMutex();
+    if (!g_wifi_mutex) {
+        LOG_E("Failed to create wifi mutex!");
+        ESP.restart();
     }
     storage_load_presets();
     storage_load_settings();
@@ -73,6 +84,7 @@ bool storage_load_presets() {
         Preset p;
         p.id = obj["id"] | 0;
         strlcpy(p.name, obj["name"] | "Unnamed", sizeof(p.name));
+        sanitize_ascii(p.name, sizeof(p.name));
         p.mode = (SystemState)(obj["mode"] | (int)STATE_RUNNING);
         p.rpm = obj["rpm"] | 1.0f;
         p.pulse_on_ms = obj["pulse_on"] | 500;
@@ -143,8 +155,12 @@ static bool storage_save_presets_internal() {
     }
 
     file.close();
-    LittleFS.remove(PRESETS_FILE);
-    LittleFS.rename(PRESETS_FILE ".tmp", PRESETS_FILE);
+    if (!LittleFS.remove(PRESETS_FILE)) {
+        LOG_W("Could not remove old presets file (may not exist)");
+    }
+    if (!LittleFS.rename(PRESETS_FILE ".tmp", PRESETS_FILE)) {
+        LOG_E("Failed to rename presets temp file — data may be in .tmp");
+    }
     LOG_I("Successfully saved %u presets to LittleFS.", (unsigned)localCopy.size());
     return true;
 }
@@ -185,20 +201,27 @@ bool storage_load_settings() {
     g_settings.invert_direction = doc["invert_direction"] | false;
     g_settings.accent_color = constrain(doc["accent_color"] | 0, (uint8_t)0, (uint8_t)7);
     strlcpy(g_settings.wifi_ssid, doc["wifi_ssid"] | WIFI_SSID, sizeof(g_settings.wifi_ssid));
+    sanitize_ascii(g_settings.wifi_ssid, sizeof(g_settings.wifi_ssid));
     strlcpy(g_settings.wifi_pass, doc["wifi_pass"] | WIFI_PASS, sizeof(g_settings.wifi_pass));
     strlcpy(g_settings.ble_name, doc["ble_name"] | BLE_DEVICE_NAME_DEFAULT, sizeof(g_settings.ble_name));
+    sanitize_ascii(g_settings.ble_name, sizeof(g_settings.ble_name));
     g_settings.ble_enabled = doc["ble_enabled"] | true;
     g_settings.wifi_enabled = doc["wifi_enabled"] | true;
     g_settings.countdown_seconds = constrain(doc["countdown_seconds"] | 3, (uint8_t)1, (uint8_t)10);
     g_settings.settings_version = doc["settings_version"] | 0;
 
-    g_dir_switch_cache = g_settings.dir_switch_enabled;
+    g_dir_switch_cache.store(g_settings.dir_switch_enabled, std::memory_order_release);
 
     LOG_I("Loaded system settings from LittleFS.");
     return true;
 }
 
 static bool storage_save_settings_internal() {
+    SystemSettings snap;
+    xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+    snap = g_settings;
+    xSemaphoreGive(g_settings_mutex);
+
     File file = LittleFS.open(SETTINGS_FILE ".tmp", FILE_WRITE);
     if (!file) {
         LOG_E("Failed to open settings temp file for writing");
@@ -206,22 +229,22 @@ static bool storage_save_settings_internal() {
     }
 
     JsonDocument doc;
-    doc["acceleration"] = g_settings.acceleration;
-    doc["microstep"] = g_settings.microstep;
-    doc["calibration_factor"] = g_settings.calibration_factor;
-    doc["rpm_buttons_enabled"] = g_settings.rpm_buttons_enabled;
-    doc["brightness"] = g_settings.brightness;
-    doc["dim_timeout"] = g_settings.dim_timeout;
-    doc["dir_switch_enabled"] = g_settings.dir_switch_enabled;
-    doc["invert_direction"] = g_settings.invert_direction;
-    doc["accent_color"] = g_settings.accent_color;
-    doc["wifi_ssid"] = g_settings.wifi_ssid;
-    doc["wifi_pass"] = g_settings.wifi_pass;
-    doc["ble_name"] = g_settings.ble_name;
-    doc["ble_enabled"] = g_settings.ble_enabled;
-    doc["wifi_enabled"] = g_settings.wifi_enabled;
-    doc["countdown_seconds"] = g_settings.countdown_seconds;
-    doc["settings_version"] = g_settings.settings_version;
+    doc["acceleration"] = snap.acceleration;
+    doc["microstep"] = snap.microstep;
+    doc["calibration_factor"] = snap.calibration_factor;
+    doc["rpm_buttons_enabled"] = snap.rpm_buttons_enabled;
+    doc["brightness"] = snap.brightness;
+    doc["dim_timeout"] = snap.dim_timeout;
+    doc["dir_switch_enabled"] = snap.dir_switch_enabled;
+    doc["invert_direction"] = snap.invert_direction;
+    doc["accent_color"] = snap.accent_color;
+    doc["wifi_ssid"] = snap.wifi_ssid;
+    doc["wifi_pass"] = snap.wifi_pass;
+    doc["ble_name"] = snap.ble_name;
+    doc["ble_enabled"] = snap.ble_enabled;
+    doc["wifi_enabled"] = snap.wifi_enabled;
+    doc["countdown_seconds"] = snap.countdown_seconds;
+    doc["settings_version"] = snap.settings_version;
 
     if (serializeJson(doc, file) == 0) {
         LOG_E("Failed to write JSON to settings temp file");
@@ -231,10 +254,14 @@ static bool storage_save_settings_internal() {
     }
 
     file.close();
-    LittleFS.remove(SETTINGS_FILE);
-    LittleFS.rename(SETTINGS_FILE ".tmp", SETTINGS_FILE);
+    if (!LittleFS.remove(SETTINGS_FILE)) {
+        LOG_W("Could not remove old settings file (may not exist)");
+    }
+    if (!LittleFS.rename(SETTINGS_FILE ".tmp", SETTINGS_FILE)) {
+        LOG_E("Failed to rename settings temp file — data may be in .tmp");
+    }
     LOG_I("Successfully saved settings to LittleFS.");
-    g_dir_switch_cache = g_settings.dir_switch_enabled;
+    g_dir_switch_cache.store(snap.dir_switch_enabled, std::memory_order_release);
     return true;
 }
 
@@ -320,6 +347,7 @@ char wifiPendingPass[65] = "";
 
 WifiScanEntry wifiScanBuffer[WIFI_SCAN_MAX];
 int wifiScanBufferCount = 0;
+SemaphoreHandle_t g_wifi_mutex = nullptr;
 
 static bool wifiScanStarted = false;
 static uint32_t wifiReconnectInterval = 30000;
@@ -359,6 +387,7 @@ void wifi_process_pending() {
     if (now - wifiLastStatusPoll >= 2000) {
         wifiLastStatusPoll = now;
         bool connected = (WiFi.status() == WL_CONNECTED);
+        if (g_wifi_mutex) xSemaphoreTake(g_wifi_mutex, portMAX_DELAY);
         wifiIsConnected = connected;
         if (connected) {
             strlcpy(wifiConnectedSsid, WiFi.SSID().c_str(), sizeof(wifiConnectedSsid));
@@ -369,6 +398,7 @@ void wifi_process_pending() {
             wifiConnectedIp[0] = '\0';
             wifiConnectedRssi = 0;
         }
+        if (g_wifi_mutex) xSemaphoreGive(g_wifi_mutex);
     }
 
     // Process WiFi scan
@@ -383,13 +413,16 @@ void wifi_process_pending() {
         int result = WiFi.scanComplete();
         if (result >= 0) {
             wifiScanStarted = false;
+            if (g_wifi_mutex) xSemaphoreTake(g_wifi_mutex, portMAX_DELAY);
             wifiScanBufferCount = (result > WIFI_SCAN_MAX) ? WIFI_SCAN_MAX : result;
             for (int i = 0; i < wifiScanBufferCount; i++) {
                 strlcpy(wifiScanBuffer[i].ssid, WiFi.SSID(i).c_str(), sizeof(wifiScanBuffer[i].ssid));
+                sanitize_ascii(wifiScanBuffer[i].ssid, sizeof(wifiScanBuffer[i].ssid));
                 wifiScanBuffer[i].rssi = WiFi.RSSI(i);
                 wifiScanBuffer[i].enc = WiFi.encryptionType(i);
             }
             wifiScanResultCount = result;
+            if (g_wifi_mutex) xSemaphoreGive(g_wifi_mutex);
             wifiScanResultReady = true;
             WiFi.scanDelete();
             LOG_I("WiFi scan complete: %d networks", result);
@@ -404,6 +437,7 @@ void wifi_process_pending() {
     // Process WiFi connect
     if (wifiConnectPending) {
         wifiConnectPending = false;
+        WiFi.mode(WIFI_STA);
         WiFi.STA.disconnect();
         WiFi.begin(wifiPendingSsid, wifiPendingPass);
         LOG_I("WiFi connecting to: %s", wifiPendingSsid);

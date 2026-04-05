@@ -447,6 +447,15 @@ void screen_edit_cont_create() {
     LOG_I("Screen edit cont: v2.0 layout created");
 }
 
+void screen_edit_cont_invalidate_widgets() {
+  rpmValueLabel = nullptr;
+  rpmBar = nullptr;
+  cwBtn = nullptr;
+  ccwBtn = nullptr;
+  ssOnBtn = nullptr;
+  ssOffBtn = nullptr;
+}
+
 void screen_edit_cont_update() {
     Preset* p = screen_program_edit_get_preset();
     editRpm = p ? p->rpm : 1.0f;

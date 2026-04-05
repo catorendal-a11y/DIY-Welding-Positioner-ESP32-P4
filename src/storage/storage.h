@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <vector>
+#include <atomic>
 #include <LittleFS.h>
 #include <ArduinoJson.h>
 #include "../config.h"
@@ -63,7 +64,8 @@ extern SemaphoreHandle_t g_presets_mutex;
 
 // Global settings
 extern SystemSettings g_settings;
-extern volatile bool g_dir_switch_cache;
+extern SemaphoreHandle_t g_settings_mutex;
+extern std::atomic<bool> g_dir_switch_cache;
 
 // Core functions
 void storage_init();
@@ -76,6 +78,9 @@ void storage_flush();
 // WiFi pending request processing (called from storageTask only)
 // ESP-Hosted WiFi API is NOT thread-safe — all WiFi calls must go through here
 void wifi_process_pending();
+
+// WiFi shared-data mutex — protects scan results and connection status buffers
+extern SemaphoreHandle_t g_wifi_mutex;
 
 // WiFi scan result buffer (populated by storageTask, read by UI)
 #define WIFI_SCAN_MAX 12

@@ -78,10 +78,10 @@ static int16_t ads_read_channel0_blocking() {
 
 static float adcFiltered = 2047.5f;
 static std::atomic<float> sliderRPM{MIN_RPM};
-static uint32_t lastSliderMs = 0;
-static Direction currentDir = DIR_CW;
-static volatile bool buttonsActive = false;
-static volatile float lastPotAdc = 2047.5f;
+static std::atomic<uint32_t> lastSliderMs{0};
+static std::atomic<uint8_t> currentDir{DIR_CW};
+static std::atomic<bool> buttonsActive{false};
+static std::atomic<float> lastPotAdc{2047.5f};
 static std::atomic<bool> pedalEnabled{false};
 static std::atomic<bool> pedalApplyPending{false};
 static float pedalFiltered = 2047.5f;
@@ -153,7 +153,7 @@ void speed_init() {
 void speed_update_adc() {
   bool pedalSettingsTick = pedalApplyPending.exchange(false, std::memory_order_acq_rel);
   if (pedalSettingsTick) {
-    buttonsActive = false;
+    buttonsActive.store(false, std::memory_order_release);
   }
 
   float raw = (float)analogRead(PIN_POT);
@@ -169,14 +169,14 @@ void speed_update_adc() {
     float pedalAdc = (float)adsVal * ADS1115_TO_ADC_SCALE;
     if (pedalSettingsTick) {
       pedalFiltered = pedalAdc;
-      lastPotAdc = adcFiltered;
+      lastPotAdc.store(adcFiltered, std::memory_order_release);
     } else {
       pedalFiltered = IIR_ALPHA * pedalAdc + (1.0f - IIR_ALPHA) * pedalFiltered;
     }
   }
 #endif
 
-  if (g_dir_switch_cache) {
+  if (g_dir_switch_cache.load(std::memory_order_acquire)) {
     uint8_t state = digitalRead(PIN_DIR_SWITCH);
     if (state != lastDirSwitchState) {
       lastDirSwitchState = state;
@@ -187,9 +187,9 @@ void speed_update_adc() {
 
 void speed_slider_set(float rpm) {
   sliderRPM.store(constrain(rpm, MIN_RPM, MAX_RPM), std::memory_order_release);
-  lastSliderMs = millis();
-  buttonsActive = true;
-  lastPotAdc = adcFiltered;
+  lastSliderMs.store(millis(), std::memory_order_release);
+  buttonsActive.store(true, std::memory_order_release);
+  lastPotAdc.store(adcFiltered, std::memory_order_release);
 }
 
 float speed_get_target_rpm() {
@@ -205,7 +205,7 @@ float speed_get_actual_rpm() {
 }
 
 bool speed_using_slider() {
-  return (millis() - lastSliderMs < SLIDER_TIMEOUT_MS);
+  return (millis() - lastSliderMs.load(std::memory_order_acquire) < SLIDER_TIMEOUT_MS);
 }
 
 void speed_apply() {
@@ -216,12 +216,12 @@ void speed_apply() {
   float normalized = (3315.0f - adc) / 3315.0f;
   float pot_rpm = MIN_RPM + constrain(normalized, 0.0f, 1.0f) * (MAX_RPM - MIN_RPM);
 
-  bool active = buttonsActive;
+  bool active = buttonsActive.load(std::memory_order_acquire);
   float srpm = sliderRPM.load(std::memory_order_relaxed);
 
   if (active) {
-    if (fabs(activeAdc - lastPotAdc) > 200.0f) {
-      buttonsActive = false;
+    if (fabs(activeAdc - lastPotAdc.load(std::memory_order_relaxed)) > 200.0f) {
+      buttonsActive.store(false, std::memory_order_release);
       sliderRPM.store(pot_rpm, std::memory_order_relaxed);
       cachedTargetRpm.store(pot_rpm, std::memory_order_relaxed);
     } else {
@@ -251,10 +251,10 @@ void speed_request_update() {
 
 Direction speed_get_direction() {
   Direction dir;
-  if (g_dir_switch_cache) {
+  if (g_dir_switch_cache.load(std::memory_order_acquire)) {
     dir = digitalRead(PIN_DIR_SWITCH) ? DIR_CW : DIR_CCW;
   } else {
-    dir = currentDir;
+    dir = (Direction)currentDir.load(std::memory_order_acquire);
   }
   if (g_settings.invert_direction) {
     dir = (dir == DIR_CW) ? DIR_CCW : DIR_CW;
@@ -263,7 +263,7 @@ Direction speed_get_direction() {
 }
 
 void speed_set_direction(Direction dir) {
-  currentDir = dir;
+  currentDir.store((uint8_t)dir, std::memory_order_release);
 }
 
 void speed_set_pedal_enabled(bool enabled) {

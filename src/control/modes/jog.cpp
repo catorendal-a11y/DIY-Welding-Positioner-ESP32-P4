@@ -22,6 +22,7 @@ void jog_start(Direction dir) {
   if (stepper != nullptr) {
     uint32_t hz = (uint32_t)rpmToStepHz(jogRPM.load(std::memory_order_relaxed));
     stepper->setSpeedInHz(hz);
+    stepper->applySpeedAcceleration();
   }
   xSemaphoreGive(g_stepperMutex);
 
@@ -53,6 +54,7 @@ void jog_update() {
     if (stepper != nullptr) {
       uint32_t hz = (uint32_t)rpmToStepHz(jogRPM.load(std::memory_order_relaxed));
       stepper->setSpeedInHz(hz);
+      stepper->applySpeedAcceleration();
     }
     xSemaphoreGive(g_stepperMutex);
   }

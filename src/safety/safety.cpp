@@ -127,7 +127,12 @@ void safetyTask(void* pvParameters) {
       if (g_estopTriggerMs == 0) {
         g_estopTriggerMs = millis();
         if (estopStepper != nullptr) {
-          estopStepper->forceStop();
+          if (g_stepperMutex && xSemaphoreTake(g_stepperMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+            estopStepper->forceStop();
+            xSemaphoreGive(g_stepperMutex);
+          } else {
+            estopStepper->forceStop();
+          }
         }
       }
 

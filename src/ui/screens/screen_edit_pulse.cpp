@@ -457,6 +457,20 @@ void screen_edit_pulse_create() {
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN UPDATE — refresh values from preset
 // ───────────────────────────────────────────────────────────────────────────────
+void screen_edit_pulse_invalidate_widgets() {
+  onTimeLabel = nullptr;
+  offTimeLabel = nullptr;
+  rpmLabel = nullptr;
+  cyclesLabel = nullptr;
+  onBar = nullptr;
+  offBar = nullptr;
+  rpmBar = nullptr;
+  infoDutyLabel = nullptr;
+  infoCycleLabel = nullptr;
+  infoFreqLabel = nullptr;
+  infoTotalLabel = nullptr;
+}
+
 void screen_edit_pulse_update() {
   if (!screens_is_active(SCREEN_EDIT_PULSE)) return;
 

@@ -68,8 +68,10 @@ static void ble_kb_cb(lv_event_t* e) {
       const char* name = lv_textarea_get_text(bleTa);
       if (name[0]) {
         strlcpy(g_settings.ble_name, name, sizeof(g_settings.ble_name));
+        sanitize_ascii(g_settings.ble_name, sizeof(g_settings.ble_name));
         storage_save_settings();
-        if (bleNameValueLbl) lv_label_set_text(bleNameValueLbl, name);
+        bleNameUpdatePending = true;
+        if (bleNameValueLbl) lv_label_set_text(bleNameValueLbl, g_settings.ble_name);
       }
     }
     bleKbClosePending = true;
@@ -111,7 +113,7 @@ static void ble_toggle_cb(lv_event_t* e) {
     lv_obj_set_style_bg_color(bleToggleSw, COL_GREEN, 0);
     lv_label_set_text(bleToggleLbl, "ON");
   } else {
-    lv_obj_set_style_bg_color(bleToggleSw, lv_color_hex(0x333333), 0);
+    lv_obj_set_style_bg_color(bleToggleSw, COL_TOGGLE_OFF, 0);
     lv_label_set_text(bleToggleLbl, "OFF");
   }
 }
@@ -212,7 +214,7 @@ void screen_bt_create() {
   const int CW = SCREEN_W - 2 * PX;
 
   lv_obj_t* header = lv_obj_create(screen);
-  lv_obj_set_size(header, SCREEN_W, 28);
+  lv_obj_set_size(header, SCREEN_W, SET_HEADER_H);
   lv_obj_set_pos(header, 0, 0);
   lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
   lv_obj_set_style_pad_all(header, 0, 0);
@@ -226,7 +228,7 @@ void screen_bt_create() {
   lv_obj_set_style_text_color(title, COL_ACCENT, 0);
   lv_obj_set_pos(title, PX, 6);
 
-  int y = 28;
+  int y = SET_HEADER_H;
 
   lv_obj_t* toggleRow = lv_obj_create(screen);
   lv_obj_set_size(toggleRow, CW, SET_ROW_H);
@@ -245,21 +247,21 @@ void screen_bt_create() {
   lv_obj_align(btLabel, LV_ALIGN_LEFT_MID, 8, 0);
 
   bleToggleSw = lv_button_create(toggleRow);
-  lv_obj_set_size(bleToggleSw, 80, 40);
+  lv_obj_set_size(bleToggleSw, SET_TOGGLE_W, SET_TOGGLE_H);
   lv_obj_align(bleToggleSw, LV_ALIGN_RIGHT_MID, -8, 0);
-  lv_obj_set_style_radius(bleToggleSw, 12, 0);
+  lv_obj_set_style_radius(bleToggleSw, SET_TOGGLE_R, 0);
   lv_obj_set_style_border_width(bleToggleSw, 0, 0);
   lv_obj_set_style_shadow_width(bleToggleSw, 0, 0);
   lv_obj_set_style_pad_all(bleToggleSw, 0, 0);
   lv_obj_remove_flag(bleToggleSw, LV_OBJ_FLAG_SCROLLABLE);
   bleEnabled = ble_is_enabled();
-  lv_obj_set_style_bg_color(bleToggleSw, bleEnabled ? COL_GREEN : lv_color_hex(0x333333), 0);
+  lv_obj_set_style_bg_color(bleToggleSw, bleEnabled ? COL_GREEN : COL_TOGGLE_OFF, 0);
   lv_obj_add_event_cb(bleToggleSw, ble_toggle_cb, LV_EVENT_CLICKED, nullptr);
 
   bleToggleLbl = lv_label_create(bleToggleSw);
   lv_label_set_text(bleToggleLbl, bleEnabled ? "ON" : "OFF");
   lv_obj_set_style_text_font(bleToggleLbl, FONT_BTN, 0);
-  lv_obj_set_style_text_color(bleToggleLbl, lv_color_white(), 0);
+  lv_obj_set_style_text_color(bleToggleLbl, COL_TEXT_WHITE, 0);
   lv_obj_center(bleToggleLbl);
 
   y += SET_ROW_H;

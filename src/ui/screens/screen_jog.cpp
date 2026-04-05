@@ -264,6 +264,13 @@ void screen_jog_create() {
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN UPDATE
 // ───────────────────────────────────────────────────────────────────────────────
+void screen_jog_invalidate_widgets() {
+  cwHoldBtn = nullptr;
+  ccwHoldBtn = nullptr;
+  rpmLabel = nullptr;
+  rpmBar = nullptr;
+}
+
 void screen_jog_update() {
   if (!screens_is_active(SCREEN_JOG)) return;
 

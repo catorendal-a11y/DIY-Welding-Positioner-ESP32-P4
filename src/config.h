@@ -109,6 +109,16 @@
 #define WIFI_PASS ""
 
 // ───────────────────────────────────────────────────────────────────────────────
+// ASCII SANITIZATION — LVGL Montserrat fonts only cover 0x20-0x7E
+// ───────────────────────────────────────────────────────────────────────────────
+#include <cstddef>
+inline void sanitize_ascii(char* buf, unsigned int len) {
+  for (unsigned int i = 0; i < len && buf[i]; i++) {
+    if (buf[i] < 0x20 || buf[i] > 0x7E) buf[i] = '?';
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
 // CROSS-CORE FLAGS
 // ───────────────────────────────────────────────────────────────────────────────
 volatile extern bool g_wakePending;  // Set by Core 0 (pot/dir change), cleared by Core 1 (dim_update)

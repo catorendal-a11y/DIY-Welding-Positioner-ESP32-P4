@@ -52,6 +52,7 @@ volatile bool bleScanPending = false;
 volatile bool bleScanDone = false;
 volatile bool bleEnablePending = false;
 volatile bool bleEnableValue = false;
+volatile bool bleNameUpdatePending = false;
 static uint32_t lastNotifyTime = 0;
 static float lastNotifiedRpm = -1;
 static uint8_t lastNotifiedState = 255;
@@ -249,6 +250,11 @@ void ble_update() {
     ble_set_enabled(bleEnableValue);
   }
 
+  if (bleNameUpdatePending) {
+    bleNameUpdatePending = false;
+    ble_update_name(g_settings.ble_name);
+  }
+
   if (bleScanPending) {
     bleScanPending = false;
     ble_scan_start();
@@ -393,120 +399,106 @@ void ble_ota_update_c6() {
 
   LOG_I("OTA URL: %s", updateUrl);
 
+  bool otaSuccess = false;
+  uint8_t* buff = nullptr;
+
   LOG_I("Connecting WiFi via C6...");
   WiFi.STA.begin();
-  if (g_settings.wifi_ssid[0] != '\0') {
-    WiFi.STA.connect(g_settings.wifi_ssid, g_settings.wifi_pass);
-  } else {
+  if (g_settings.wifi_ssid[0] == '\0') {
     LOG_E("No WiFi credentials configured - cannot OTA");
-    return;
+    goto ota_cleanup;
   }
+  WiFi.STA.connect(g_settings.wifi_ssid, g_settings.wifi_pass);
 
-  uint32_t wifiStart = millis();
-  while (WiFi.STA.status() != WL_CONNECTED && millis() - wifiStart < 15000) {
-    delay(10);
-    yield();
+  {
+    uint32_t wifiStart = millis();
+    while (WiFi.STA.status() != WL_CONNECTED && millis() - wifiStart < 15000) {
+      delay(10);
+      yield();
+    }
   }
 
   if (WiFi.STA.status() != WL_CONNECTED) {
     LOG_E("WiFi connection failed — cannot download OTA");
-    WiFi.STA.disconnect();
-    return;
+    goto ota_cleanup;
   }
 
   LOG_I("WiFi connected! IP: %s", WiFi.STA.localIP().toString().c_str());
 
-  NetworkClientSecure client;
-  client.setInsecure();
+  {
+    NetworkClientSecure client;
+    client.setInsecure();
+    HTTPClient https;
+    https.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
 
-  HTTPClient https;
-  https.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-
-  if (!https.begin(client, updateUrl)) {
-    LOG_E("HTTPS begin failed");
-    WiFi.STA.disconnect();
-    return;
-  }
-
-  int httpCode = https.GET();
-  LOG_I("HTTP response: %d", httpCode);
-
-  if (httpCode != HTTP_CODE_OK) {
-    LOG_E("HTTP GET failed: %d", httpCode);
-    https.end();
-    WiFi.STA.disconnect();
-    return;
-  }
-
-  int contentLen = https.getSize();
-  LOG_I("Firmware size: %d bytes", contentLen);
-
-  if (!hostedBeginUpdate()) {
-    LOG_E("hostedBeginUpdate failed");
-    https.end();
-    WiFi.STA.disconnect();
-    return;
-  }
-
-  LOG_I("Writing firmware to C6...");
-  uint8_t* buff = (uint8_t*)malloc(4096);
-  if (!buff) {
-    LOG_E("OTA: failed to allocate buffer");
-    https.end();
-    WiFi.STA.disconnect();
-    return;
-  }
-  int totalWritten = 0;
-  WiFiClient* stream = https.getStreamPtr();
-
-  while (contentLen > 0 && totalWritten < contentLen) {
-    int readNow = stream->readBytes(buff, min((size_t)contentLen - totalWritten, (size_t)4096));
-    if (readNow <= 0) {
-      delay(10);
-      continue;
+    if (!https.begin(client, updateUrl)) {
+      LOG_E("HTTPS begin failed");
+      goto ota_cleanup;
     }
-    if (!hostedWriteUpdate(buff, readNow)) {
-      LOG_E("hostedWriteUpdate failed at %d bytes", totalWritten);
-      free(buff);
+
+    int httpCode = https.GET();
+    LOG_I("HTTP response: %d", httpCode);
+
+    if (httpCode != HTTP_CODE_OK) {
+      LOG_E("HTTP GET failed: %d", httpCode);
       https.end();
-      WiFi.STA.disconnect();
-      return;
+      goto ota_cleanup;
     }
-    totalWritten += readNow;
-    if (totalWritten % 32768 == 0) {
-      LOG_I("  OTA progress: %d / %d bytes", totalWritten, contentLen);
+
+    int contentLen = https.getSize();
+    LOG_I("Firmware size: %d bytes", contentLen);
+
+    if (!hostedBeginUpdate()) {
+      LOG_E("hostedBeginUpdate failed");
+      https.end();
+      goto ota_cleanup;
     }
-  }
 
-  LOG_I("OTA write complete: %d bytes", totalWritten);
-  free(buff);
+    LOG_I("Writing firmware to C6...");
+    buff = (uint8_t*)malloc(4096);
+    if (!buff) {
+      LOG_E("OTA: failed to allocate buffer");
+      https.end();
+      goto ota_cleanup;
+    }
+    int totalWritten = 0;
+    WiFiClient* stream = https.getStreamPtr();
 
-  if (!hostedEndUpdate()) {
-    LOG_E("hostedEndUpdate failed");
+    while (contentLen > 0 && totalWritten < contentLen) {
+      int readNow = stream->readBytes(buff, min((size_t)contentLen - totalWritten, (size_t)4096));
+      if (readNow <= 0) { delay(10); continue; }
+      if (!hostedWriteUpdate(buff, readNow)) {
+        LOG_E("hostedWriteUpdate failed at %d bytes", totalWritten);
+        free(buff); buff = nullptr;
+        https.end();
+        goto ota_cleanup;
+      }
+      totalWritten += readNow;
+      if (totalWritten % 32768 == 0)
+        LOG_I("  OTA progress: %d / %d bytes", totalWritten, contentLen);
+    }
+
+    LOG_I("OTA write complete: %d bytes", totalWritten);
+    free(buff); buff = nullptr;
+
+    if (!hostedEndUpdate()) { LOG_E("hostedEndUpdate failed"); https.end(); goto ota_cleanup; }
+    LOG_I("OTA end OK");
+
+    if (!hostedActivateUpdate()) { LOG_E("hostedActivateUpdate failed"); https.end(); goto ota_cleanup; }
+
+    LOG_I("=== C6 OTA Update SUCCESS! C6 rebooting ===");
+    otaSuccess = true;
     https.end();
-    WiFi.STA.disconnect();
-    return;
-  }
-  LOG_I("OTA end OK");
-
-  if (!hostedActivateUpdate()) {
-    LOG_E("hostedActivateUpdate failed");
-    https.end();
-    WiFi.STA.disconnect();
-    return;
   }
 
-  LOG_I("=== C6 OTA Update SUCCESS! C6 rebooting ===");
-
-  https.end();
+ota_cleanup:
+  if (buff) free(buff);
   WiFi.STA.disconnect();
   WiFi.mode(WIFI_OFF);
-
-  // Resume BLE after WiFi is off — SDIO bus is free again
   if (wasAdvertising) {
-    delay(500);  // Wait for C6 to reboot and SDIO to settle
+    delay(otaSuccess ? 500 : 100);
     BLEDevice::startAdvertising();
-    LOG_I("BLE resumed after OTA");
+    LOG_I("BLE resumed after OTA %s", otaSuccess ? "success" : "failure");
   }
 }
 
@@ -531,6 +523,11 @@ void ble_set_enabled(bool enabled) {
 
 bool ble_is_enabled() {
   return bleEnabled.load(std::memory_order_relaxed);
+}
+
+void ble_update_name(const char* name) {
+  if (!name || !name[0]) return;
+  LOG_I("BLE name saved: %s (effective after reboot)", name);
 }
 
 void ble_scan_start() {

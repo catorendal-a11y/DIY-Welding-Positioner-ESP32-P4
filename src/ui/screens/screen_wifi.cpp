@@ -160,7 +160,7 @@ static void create_signal_bars(lv_obj_t* parent, lv_obj_t* bars[4], int filled) 
     if (i < filled) {
       lv_obj_set_style_bg_color(bars[i], COL_GREEN, 0);
     } else {
-      lv_obj_set_style_bg_color(bars[i], lv_color_hex(0x333333), 0);
+      lv_obj_set_style_bg_color(bars[i], COL_TOGGLE_OFF, 0);
     }
   }
 }
@@ -187,13 +187,19 @@ static void wifi_toggle_cb(lv_event_t* e) {
     lv_obj_set_style_bg_color(wifiToggleSw, COL_GREEN, 0);
     lv_label_set_text(wifiToggleLbl, "ON");
   } else {
-    lv_obj_set_style_bg_color(wifiToggleSw, lv_color_hex(0x333333), 0);
+    lv_obj_set_style_bg_color(wifiToggleSw, COL_TOGGLE_OFF, 0);
     lv_label_set_text(wifiToggleLbl, "OFF");
   }
 }
 
 static void populate_scan_results() {
-  int n = wifiScanBufferCount;
+  WifiScanEntry localBuf[WIFI_SCAN_MAX];
+  int n;
+  if (g_wifi_mutex) xSemaphoreTake(g_wifi_mutex, portMAX_DELAY);
+  n = wifiScanBufferCount;
+  if (n > 0) memcpy(localBuf, wifiScanBuffer, n * sizeof(WifiScanEntry));
+  if (g_wifi_mutex) xSemaphoreGive(g_wifi_mutex);
+
   lv_obj_clean(networkList);
   if (n <= 0) {
     wifiScanDone = false;
@@ -201,9 +207,9 @@ static void populate_scan_results() {
   }
   char buf[40];
   for (int i = 0; i < n; i++) {
-    const char* ssid = wifiScanBuffer[i].ssid;
-    int rssi = wifiScanBuffer[i].rssi;
-    bool secured = (wifiScanBuffer[i].enc != WIFI_AUTH_OPEN);
+    const char* ssid = localBuf[i].ssid;
+    int rssi = localBuf[i].rssi;
+    bool secured = (localBuf[i].enc != WIFI_AUTH_OPEN);
 
     lv_obj_t* row = lv_obj_create(networkList);
     lv_obj_set_size(row, 760, 46);
@@ -295,17 +301,28 @@ static lv_obj_t* make_accent_btn(lv_obj_t* parent, int x, int y, int w, int h,
 }
 
 static void update_connected_card() {
-  if (wifiIsConnected) {
+  char ssidBuf[33];
+  char ipBuf[16];
+  int rssi;
+  bool connected;
+  if (g_wifi_mutex) xSemaphoreTake(g_wifi_mutex, portMAX_DELAY);
+  connected = wifiIsConnected;
+  strlcpy(ssidBuf, wifiConnectedSsid, sizeof(ssidBuf));
+  strlcpy(ipBuf, wifiConnectedIp, sizeof(ipBuf));
+  rssi = wifiConnectedRssi;
+  if (g_wifi_mutex) xSemaphoreGive(g_wifi_mutex);
+
+  if (connected) {
     lv_obj_remove_flag(connectedCard, LV_OBJ_FLAG_HIDDEN);
-    lv_label_set_text(connSsidLabel, wifiConnectedSsid);
+    lv_label_set_text(connSsidLabel, ssidBuf);
     char detail[50];
-    snprintf(detail, sizeof(detail), "%s | %ddBm", wifiConnectedIp, wifiConnectedRssi);
+    snprintf(detail, sizeof(detail), "%s | %ddBm", ipBuf, rssi);
     lv_label_set_text(connDetailLabel, detail);
-    int bars = rssi_to_bars(wifiConnectedRssi);
+    int bars = rssi_to_bars(rssi);
     for (int i = 0; i < 4; i++) {
       if (connSignalBars[i]) {
         lv_obj_set_style_bg_color(connSignalBars[i],
-          i < bars ? COL_GREEN : lv_color_hex(0x333333), 0);
+          i < bars ? COL_GREEN : COL_TOGGLE_OFF, 0);
       }
     }
   } else {
@@ -361,13 +378,13 @@ void screen_wifi_create() {
   lv_obj_set_style_shadow_width(wifiToggleSw, 0, 0);
   lv_obj_set_style_pad_all(wifiToggleSw, 0, 0);
   lv_obj_remove_flag(wifiToggleSw, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_set_style_bg_color(wifiToggleSw, g_settings.wifi_enabled ? COL_GREEN : lv_color_hex(0x333333), 0);
+  lv_obj_set_style_bg_color(wifiToggleSw, g_settings.wifi_enabled ? COL_GREEN : COL_TOGGLE_OFF, 0);
   lv_obj_add_event_cb(wifiToggleSw, wifi_toggle_cb, LV_EVENT_CLICKED, nullptr);
 
   wifiToggleLbl = lv_label_create(wifiToggleSw);
   lv_label_set_text(wifiToggleLbl, g_settings.wifi_enabled ? "ON" : "OFF");
   lv_obj_set_style_text_font(wifiToggleLbl, FONT_BTN, 0);
-  lv_obj_set_style_text_color(wifiToggleLbl, lv_color_white(), 0);
+  lv_obj_set_style_text_color(wifiToggleLbl, COL_TEXT_WHITE, 0);
   lv_obj_center(wifiToggleLbl);
 
   y += SET_ROW_H;

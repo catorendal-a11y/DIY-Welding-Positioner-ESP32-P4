@@ -20,6 +20,7 @@
 #define COL_SEPARATOR   lv_color_hex(0x1A1A1A)   // SVG: separator line color
 #define COL_BG_INPUT    lv_color_hex(0x0A0A0A)   // Input field background
 #define COL_GAUGE_BG    lv_color_hex(0x111111)   // SVG: #111 gauge track
+#define COL_TOGGLE_OFF  lv_color_hex(0x333333)   // Toggle switch "off" background
 
 // ───────────────────────────────────────────────────────────────────────────────
 // DYNAMIC ACCENT COLORS (set at runtime from theme palette)

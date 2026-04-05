@@ -206,6 +206,9 @@ static void save_preset_cb(lv_event_t* e) {
   } else {
     if (g_presets.size() >= MAX_PRESETS) {
       xSemaphoreGive(g_presets_mutex);
+      LOG_W("Preset list full (%d/%d)", (int)g_presets.size(), MAX_PRESETS);
+      screen_confirm_create("FULL", "Maximum 16 programs reached.", nullptr, nullptr);
+      screens_show(SCREEN_CONFIRM);
       return;
     }
     editPreset.id = g_presets.size() + 1;
@@ -312,7 +315,7 @@ void screen_program_edit_create(int slot) {
   lv_obj_set_style_bg_color(nameInput, COL_BG_INPUT, 0);
   lv_obj_set_style_radius(nameInput, RADIUS_BTN, 0);
   lv_obj_set_style_border_width(nameInput, 1, 0);
-  lv_obj_set_style_border_color(nameInput, lv_color_hex(0x333333), 0);
+  lv_obj_set_style_border_color(nameInput, COL_BORDER_SM, 0);
   lv_obj_set_style_text_color(nameInput, COL_TEXT, 0);
   lv_obj_set_style_text_font(nameInput, FONT_NORMAL, 0);
   lv_obj_set_style_pad_all(nameInput, 4, 0);

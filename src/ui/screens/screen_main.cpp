@@ -367,6 +367,24 @@ void screen_main_create() {
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN UPDATE
 // ───────────────────────────────────────────────────────────────────────────────
+void screen_main_invalidate_widgets() {
+  mainScreenPtr = nullptr;
+  stateLabel = nullptr;
+  rpmLabel = nullptr;
+  rpmIndicatorArc = nullptr;
+  pulseOnLabel = nullptr;
+  pulseOffLabel = nullptr;
+  startBtn = nullptr;
+  stopBtn = nullptr;
+  rpmDownBtn = nullptr;
+  rpmUpBtn = nullptr;
+  jogBtn = nullptr;
+  cwBtn = nullptr;
+  pulseBtn = nullptr;
+  pedalBtn = nullptr;
+  pedalLabel = nullptr;
+}
+
 void screen_main_update() {
   if (!screens_is_active(SCREEN_MAIN)) return;
 

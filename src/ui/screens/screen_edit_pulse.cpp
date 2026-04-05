@@ -353,7 +353,9 @@ void screen_edit_pulse_create() {
 
   // Range hint
   lv_obj_t* rpmHint = lv_label_create(screen);
-  lv_label_set_text(rpmHint, "0.1-3.0");
+  char hintBuf[16];
+  snprintf(hintBuf, sizeof(hintBuf), "%.2f-%.1f", MIN_RPM, MAX_RPM);
+  lv_label_set_text(rpmHint, hintBuf);
   lv_obj_set_style_text_font(rpmHint, FONT_SMALL, 0);
   lv_obj_set_style_text_color(rpmHint, COL_TEXT_VDIM, 0);
   lv_obj_set_pos(rpmHint, colLeftX + barW + 20 + (btnW + 8) * 2 + 4, rpmY + 28);

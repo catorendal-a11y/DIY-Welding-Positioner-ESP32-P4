@@ -8,12 +8,14 @@ void continuous_start();
 void continuous_stop();
 void continuous_update();
 
-void pulse_start(uint32_t on_ms, uint32_t off_ms);
+void pulse_start(uint32_t on_ms, uint32_t off_ms, uint16_t cycles);
 void pulse_stop();
 void pulse_update();
 uint32_t pulse_get_on_ms();
 uint32_t pulse_get_off_ms();
 bool pulse_is_on_phase();
+uint16_t pulse_get_cycle_count();
+uint16_t pulse_get_cycle_limit();
 
 void step_execute(float angle_deg);
 void step_update();

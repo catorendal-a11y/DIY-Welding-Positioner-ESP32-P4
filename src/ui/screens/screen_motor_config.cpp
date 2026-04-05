@@ -15,13 +15,10 @@ static const char* microStrings[3] = {"1/8", "1/16", "1/32"};
 static int selectedMicro = 0;
 static lv_obj_t* microBtns[3] = {nullptr, nullptr, nullptr};
 static lv_obj_t* microLabels[3] = {nullptr, nullptr, nullptr};
-static lv_obj_t* rpmSlider = nullptr;
-static lv_obj_t* rpmValueLabel = nullptr;
 static lv_obj_t* accelSlider = nullptr;
 static lv_obj_t* accelValueLabel = nullptr;
 static lv_obj_t* gearLabel = nullptr;
-static lv_obj_t* currentLabel = nullptr;
-static lv_obj_t* holdLabel = nullptr;
+static lv_obj_t* saveFeedbackLabel = nullptr;
 static bool invertDir = false;
 static lv_obj_t* invertToggle = nullptr;
 static lv_obj_t* invertToggleLbl = nullptr;
@@ -48,10 +45,6 @@ static void micro_btn_cb(lv_event_t* e) {
   }
 }
 
-static void rpm_slider_cb(lv_event_t* e) {
-  (void)e;
-}
-
 static void accel_slider_cb(lv_event_t* e) {
   (void)e;
   int val = lv_slider_get_value(accelSlider);
@@ -74,6 +67,13 @@ static void idle_toggle_cb(lv_event_t* e) {
   lv_label_set_text(idleToggleLbl, dirSwitchEnabled ? "ON" : "OFF");
 }
 
+static lv_timer_t* saveNavTimer = nullptr;
+
+static void save_nav_timer_cb(lv_timer_t* timer) {
+  saveNavTimer = nullptr;
+  screens_show(SCREEN_SETTINGS);
+}
+
 static void save_apply_cb(lv_event_t* e) {
   g_settings.microstep = microOptions[selectedMicro];
   g_settings.acceleration = (uint32_t)lv_slider_get_value(accelSlider);
@@ -82,7 +82,13 @@ static void save_apply_cb(lv_event_t* e) {
   g_dir_switch_cache.store(dirSwitchEnabled, std::memory_order_release);
   storage_save_settings();
   motorConfigApplyPending = true;
-  screens_show(SCREEN_SETTINGS);
+  if (saveFeedbackLabel) {
+    lv_label_set_text(saveFeedbackLabel, "Settings saved!");
+    lv_obj_set_style_text_color(saveFeedbackLabel, COL_GREEN, 0);
+  }
+  if (saveNavTimer) lv_timer_delete(saveNavTimer);
+  saveNavTimer = lv_timer_create(save_nav_timer_cb, 800, nullptr);
+  lv_timer_set_repeat_count(saveNavTimer, 1);
 }
 
 static void style_slider(lv_obj_t* slider) {
@@ -169,41 +175,6 @@ void screen_motor_config_create() {
 
   y += 56;
 
-  lv_obj_t* rpmRow = lv_obj_create(screen);
-  lv_obj_set_size(rpmRow, CONTENT_W, 48);
-  lv_obj_set_pos(rpmRow, PX, y);
-  lv_obj_set_style_bg_color(rpmRow, COL_BG, 0);
-  lv_obj_set_style_border_width(rpmRow, 0, 0);
-  lv_obj_set_style_radius(rpmRow, 0, 0);
-  lv_obj_set_style_pad_all(rpmRow, 0, 0);
-  lv_obj_remove_flag(rpmRow, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_remove_flag(rpmRow, LV_OBJ_FLAG_CLICKABLE);
-
-  lv_obj_t* rpmTitleLbl = lv_label_create(rpmRow);
-  lv_label_set_text(rpmTitleLbl, "MAX RPM");
-  lv_obj_set_style_text_font(rpmTitleLbl, FONT_MED, 0);
-  lv_obj_set_style_text_color(rpmTitleLbl, COL_TEXT_DIM, 0);
-  lv_obj_align(rpmTitleLbl, LV_ALIGN_LEFT_MID, 0, 0);
-
-  rpmValueLabel = lv_label_create(rpmRow);
-  char rpmBuf[20];
-  snprintf(rpmBuf, sizeof(rpmBuf), "%.1f RPM", MAX_RPM);
-  lv_label_set_text(rpmValueLabel, rpmBuf);
-  lv_obj_set_style_text_font(rpmValueLabel, FONT_LARGE, 0);
-  lv_obj_set_style_text_color(rpmValueLabel, COL_TEXT_WHITE, 0);
-  lv_obj_align(rpmValueLabel, LV_ALIGN_RIGHT_MID, -180, 0);
-
-  rpmSlider = lv_slider_create(rpmRow);
-  lv_obj_set_size(rpmSlider, 200, 20);
-  lv_obj_align(rpmSlider, LV_ALIGN_RIGHT_MID, -8, 0);
-  lv_slider_set_range(rpmSlider, 0, 1000);
-  int rpmInit = (int)((MAX_RPM - MIN_RPM) / (MAX_RPM - MIN_RPM) * 1000.0f);
-  lv_slider_set_value(rpmSlider, rpmInit, LV_ANIM_OFF);
-  style_slider(rpmSlider);
-  lv_obj_add_event_cb(rpmSlider, rpm_slider_cb, LV_EVENT_VALUE_CHANGED, nullptr);
-
-  y += 56;
-
   lv_obj_t* accelRow = lv_obj_create(screen);
   lv_obj_set_size(accelRow, CONTENT_W, 48);
   lv_obj_set_pos(accelRow, PX, y);
@@ -264,29 +235,19 @@ void screen_motor_config_create() {
   lv_obj_set_style_text_color(gearLabel, COL_TEXT, 0);
   lv_obj_align(gearLabel, LV_ALIGN_LEFT_MID, 140, 0);
 
-  lv_obj_t* curTitleLbl = lv_label_create(infoRow);
-  lv_label_set_text(curTitleLbl, "CURRENT");
-  lv_obj_set_style_text_font(curTitleLbl, FONT_MED, 0);
-  lv_obj_set_style_text_color(curTitleLbl, COL_TEXT_DIM, 0);
-  lv_obj_align(curTitleLbl, LV_ALIGN_LEFT_MID, 280, 0);
+  lv_obj_t* rpmRangeTitleLbl = lv_label_create(infoRow);
+  lv_label_set_text(rpmRangeTitleLbl, "RPM RANGE");
+  lv_obj_set_style_text_font(rpmRangeTitleLbl, FONT_MED, 0);
+  lv_obj_set_style_text_color(rpmRangeTitleLbl, COL_TEXT_DIM, 0);
+  lv_obj_align(rpmRangeTitleLbl, LV_ALIGN_LEFT_MID, 280, 0);
 
-  currentLabel = lv_label_create(infoRow);
-  lv_label_set_text(currentLabel, "1.2A");
-  lv_obj_set_style_text_font(currentLabel, FONT_LARGE, 0);
-  lv_obj_set_style_text_color(currentLabel, COL_TEXT, 0);
-  lv_obj_align(currentLabel, LV_ALIGN_LEFT_MID, 380, 0);
-
-  lv_obj_t* holdTitleLbl = lv_label_create(infoRow);
-  lv_label_set_text(holdTitleLbl, "HOLD");
-  lv_obj_set_style_text_font(holdTitleLbl, FONT_MED, 0);
-  lv_obj_set_style_text_color(holdTitleLbl, COL_TEXT_DIM, 0);
-  lv_obj_align(holdTitleLbl, LV_ALIGN_LEFT_MID, 460, 0);
-
-  holdLabel = lv_label_create(infoRow);
-  lv_label_set_text(holdLabel, "0.6A");
-  lv_obj_set_style_text_font(holdLabel, FONT_LARGE, 0);
-  lv_obj_set_style_text_color(holdLabel, COL_TEXT, 0);
-  lv_obj_align(holdLabel, LV_ALIGN_LEFT_MID, 520, 0);
+  lv_obj_t* rpmRangeVal = lv_label_create(infoRow);
+  char rpmBuf[24];
+  snprintf(rpmBuf, sizeof(rpmBuf), "%.2f - %.1f", MIN_RPM, MAX_RPM);
+  lv_label_set_text(rpmRangeVal, rpmBuf);
+  lv_obj_set_style_text_font(rpmRangeVal, FONT_LARGE, 0);
+  lv_obj_set_style_text_color(rpmRangeVal, COL_TEXT, 0);
+  lv_obj_align(rpmRangeVal, LV_ALIGN_LEFT_MID, 400, 0);
 
   y += 52;
 
@@ -391,10 +352,16 @@ void screen_motor_config_create() {
   lv_obj_remove_flag(statusRow, LV_OBJ_FLAG_CLICKABLE);
 
   statusLabel = lv_label_create(statusRow);
-  lv_label_set_text(statusLabel, "TEMP: --  |  CURRENT: --  |  POSITION: --  |  IDLE");
+  lv_label_set_text(statusLabel, "MOTOR: IDLE");
   lv_obj_set_style_text_font(statusLabel, FONT_MED, 0);
   lv_obj_set_style_text_color(statusLabel, COL_TEXT_DIM, 0);
   lv_obj_align(statusLabel, LV_ALIGN_LEFT_MID, 8, 0);
+
+  saveFeedbackLabel = lv_label_create(statusRow);
+  lv_label_set_text(saveFeedbackLabel, "");
+  lv_obj_set_style_text_font(saveFeedbackLabel, FONT_MED, 0);
+  lv_obj_set_style_text_color(saveFeedbackLabel, COL_GREEN, 0);
+  lv_obj_align(saveFeedbackLabel, LV_ALIGN_RIGHT_MID, -8, 0);
 
   int footerY = SET_FOOTER_Y;
   int footerH = SET_FOOTER_H;
@@ -436,25 +403,23 @@ void screen_motor_config_create() {
 
 void screen_motor_config_invalidate_widgets() {
   for (int i = 0; i < 3; i++) { microBtns[i] = nullptr; microLabels[i] = nullptr; }
-  rpmSlider = nullptr;
-  rpmValueLabel = nullptr;
   accelSlider = nullptr;
   accelValueLabel = nullptr;
   gearLabel = nullptr;
-  currentLabel = nullptr;
-  holdLabel = nullptr;
+  saveFeedbackLabel = nullptr;
   invertToggle = nullptr;
   invertToggleLbl = nullptr;
   idleToggle = nullptr;
   idleToggleLbl = nullptr;
   statusLabel = nullptr;
+  saveNavTimer = nullptr;
 }
 
 void screen_motor_config_update() {
   if (!statusLabel) return;
   SystemState st = control_get_state();
   const char* stateStr = (st == STATE_IDLE) ? "IDLE" : (st == STATE_ESTOP) ? "ESTOP" : "RUNNING";
-  char buf[80];
-  snprintf(buf, sizeof(buf), "TEMP: --  |  CURRENT: --  |  POSITION: --  |  %s", stateStr);
+  char buf[32];
+  snprintf(buf, sizeof(buf), "MOTOR: %s", stateStr);
   lv_label_set_text(statusLabel, buf);
 }

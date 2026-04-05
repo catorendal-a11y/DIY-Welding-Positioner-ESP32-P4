@@ -14,19 +14,23 @@ static uint32_t pulseOnMs = 500;
 static uint32_t pulseOffMs = 500;
 static uint32_t pulseStateStartMs = 0;
 static bool pulseIsOn = false;
+static uint16_t pulseCycleLimit = 0;
+static uint16_t pulseCycleCount = 0;
 
 // ───────────────────────────────────────────────────────────────────────────────
 // PULSE MODE ENTRY
 // ───────────────────────────────────────────────────────────────────────────────
-void pulse_start(uint32_t on_ms, uint32_t off_ms) {
+void pulse_start(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
   if (control_get_state() != STATE_IDLE) return;
 
   pulseOnMs = constrain(on_ms, 100, 5000);
   pulseOffMs = constrain(off_ms, 100, 5000);
+  pulseCycleLimit = cycles;
+  pulseCycleCount = 0;
   pulseIsOn = true;
   pulseStateStartMs = millis();
 
-  LOG_I("Pulse mode: ON=%lu OFF=%lu", pulseOnMs, pulseOffMs);
+  LOG_I("Pulse mode: ON=%lu OFF=%lu cycles=%u", pulseOnMs, pulseOffMs, cycles);
 
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   FastAccelStepper* stepper = motor_get_stepper();
@@ -58,6 +62,12 @@ void pulse_update() {
     pulseStateStartMs = millis();
 
     if (pulseIsOn) {
+      pulseCycleCount++;
+      if (pulseCycleLimit > 0 && pulseCycleCount >= pulseCycleLimit) {
+        LOG_I("Pulse: cycle limit reached (%u/%u)", pulseCycleCount, pulseCycleLimit);
+        control_transition_to(STATE_STOPPING);
+        return;
+      }
       xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
       FastAccelStepper* s = motor_get_stepper();
       if (s != nullptr) {
@@ -68,7 +78,7 @@ void pulse_update() {
       xSemaphoreGive(g_stepperMutex);
       if (speed_get_direction() == DIR_CW) motor_run_cw();
       else motor_run_ccw();
-      LOG_D("Pulse: ON");
+      LOG_D("Pulse: ON (%u/%u)", pulseCycleCount, pulseCycleLimit);
     } else {
       xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
       FastAccelStepper* s = motor_get_stepper();
@@ -95,3 +105,5 @@ void pulse_stop() {
 uint32_t pulse_get_on_ms() { return pulseOnMs; }
 uint32_t pulse_get_off_ms() { return pulseOffMs; }
 bool pulse_is_on_phase() { return pulseIsOn; }
+uint16_t pulse_get_cycle_count() { return pulseCycleCount; }
+uint16_t pulse_get_cycle_limit() { return pulseCycleLimit; }

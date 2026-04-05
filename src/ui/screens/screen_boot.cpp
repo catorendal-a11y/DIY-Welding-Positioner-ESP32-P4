@@ -5,6 +5,7 @@
 #include "../screens.h"
 #include "../theme.h"
 #include "../../config.h"
+#include "../../storage/storage.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // WIDGETS
@@ -166,10 +167,16 @@ void screen_boot_create() {
         "Flash: 16MB SPI-NOR",
         "Display: MIPI-DSI 800x480"
     };
-    static const char* specsRight[] = {
+    uint8_t ms = g_settings.microstep;
+    uint32_t stepsPerRev = 200 * ms;
+    static char microBuf[40];
+    static char rpmBuf[32];
+    snprintf(microBuf, sizeof(microBuf), "Microstep: 1/%u (%lu steps/rev)", ms, (unsigned long)stepsPerRev);
+    snprintf(rpmBuf, sizeof(rpmBuf), "RPM Range: %.2f - %.1f", MIN_RPM, MAX_RPM);
+    const char* specsRight[] = {
         "Motor: TB6600 200:1 worm gear",
-        "Microstep: 1/8 (1600 steps/rev)",
-        "RPM Range: 0.1 - 5.0",
+        microBuf,
+        rpmBuf,
         "Firmware: " FW_VERSION " LVGL 9.x"
     };
 

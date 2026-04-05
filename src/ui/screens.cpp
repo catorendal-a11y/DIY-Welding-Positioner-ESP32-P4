@@ -7,6 +7,7 @@
 #include "../config.h"
 #include "freertos/task.h"
 
+// lvglHandle defined in main.cpp — used for DEBUG stack watermark logging
 extern TaskHandle_t lvglHandle;
 
 SemaphoreHandle_t g_lvgl_mutex = nullptr;

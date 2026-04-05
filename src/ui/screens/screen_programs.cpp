@@ -37,7 +37,7 @@ static void load_preset_cb(lv_event_t* e) {
     if (p.mode == STATE_RUNNING) {
       control_start_continuous();
     } else if (p.mode == STATE_PULSE) {
-      control_start_pulse(p.pulse_on_ms, p.pulse_off_ms);
+      control_start_pulse(p.pulse_on_ms, p.pulse_off_ms, p.pulse_cycles);
     } else if (p.mode == STATE_STEP) {
       control_start_step(p.step_angle);
     } else {
@@ -406,7 +406,7 @@ void screen_programs_update() {
 
   if (isEmpty) {
     lv_obj_t* emptyLabel = lv_label_create(programList);
-    lv_label_set_text(emptyLabel, "No programs yet.\nTap + NEW PROGRAM to create one.");
+    lv_label_set_text(emptyLabel, "No programs yet.\nTap + NEW to create one.");
     lv_obj_set_style_text_font(emptyLabel, FONT_LARGE, 0);
     lv_obj_set_style_text_color(emptyLabel, COL_TEXT_DIM, 0);
     lv_obj_align(emptyLabel, LV_ALIGN_CENTER, 0, 0);

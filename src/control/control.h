@@ -33,8 +33,8 @@ const char* control_state_name(SystemState s); // Internal: state enum to string
 void control_start_continuous();
 void control_stop();
 
-// Pulse mode
-void control_start_pulse(uint32_t on_ms, uint32_t off_ms);
+// Pulse mode (cycles=0 means infinite)
+void control_start_pulse(uint32_t on_ms, uint32_t off_ms, uint16_t cycles = 0);
 
 // Step mode
 void control_start_step(float angle_deg);

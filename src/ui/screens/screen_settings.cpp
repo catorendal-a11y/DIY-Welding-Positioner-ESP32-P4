@@ -15,8 +15,8 @@ static void create_nav_item(lv_obj_t* parent, int y, const char* label, ScreenId
   lv_obj_t* row = lv_obj_create(parent);
   lv_obj_set_size(row, 776, SET_ROW_H);
   lv_obj_set_pos(row, 12, y);
-  lv_obj_set_style_bg_color(row, lv_color_hex(0x181818), 0);
-  lv_obj_set_style_border_color(row, lv_color_hex(0x1E1E1E), 0);
+  lv_obj_set_style_bg_color(row, COL_BG_ROW, 0);
+  lv_obj_set_style_border_color(row, COL_BORDER_ROW, 0);
   lv_obj_set_style_border_width(row, 1, 0);
   lv_obj_set_style_radius(row, 0, 0);
   lv_obj_set_style_pad_all(row, 0, 0);
@@ -27,7 +27,7 @@ static void create_nav_item(lv_obj_t* parent, int y, const char* label, ScreenId
   lv_obj_t* lbl = lv_label_create(row);
   lv_label_set_text(lbl, label);
   lv_obj_set_style_text_font(lbl, FONT_BTN, 0);
-  lv_obj_set_style_text_color(lbl, lv_color_hex(0xAAAAAA), 0);
+  lv_obj_set_style_text_color(lbl, COL_TEXT, 0);
   lv_obj_align(lbl, LV_ALIGN_LEFT_MID, 16, 0);
 
   lv_obj_t* chevron = lv_label_create(row);

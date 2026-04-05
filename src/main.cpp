@@ -16,29 +16,25 @@
 
 #include <atomic>
 
-extern std::atomic<bool> motorConfigApplyPending;
 #include "safety/safety.h"
 
 volatile bool g_wakePending = false;
 #include "storage/storage.h"
-extern volatile bool wifiConnectPending;
-extern char wifiPendingSsid[33];
-extern char wifiPendingPass[65];
 #include "ble/ble.h"
 #include <esp_timer.h>
 #include "WiFi.h"
 #include "esp32-hal-hosted.h"
 #include "esp_task_wdt.h"
+#include "esp_cache.h"
 #include <cstdint>
 #include "onchip_temp.h"
 
-// ───────────────────────────────────────────────────────────────────────────────
-// SAFETY GLOBALS (defined in safety.cpp)
-// ───────────────────────────────────────────────────────────────────────────────
-extern volatile bool g_estopPending;
-extern volatile uint32_t g_estopTriggerMs;
-extern bool speed_get_pedal_enabled();
-extern bool speed_pedal_connected();
+// Cross-module externs now declared in their respective headers:
+//   motorConfigApplyPending  -> screens.h
+//   wifiConnectPending, etc. -> storage.h
+//   g_estopPending, etc.     -> safety.h
+//   speed_get_pedal_enabled  -> speed.h
+
 
 // ───────────────────────────────────────────────────────────────────────────────
 // TASK HANDLES — for health monitoring (FIX-09)

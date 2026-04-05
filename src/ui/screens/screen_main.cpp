@@ -41,7 +41,7 @@ static lv_obj_t* pedalLabel = nullptr;
 // STATE
 // ───────────────────────────────────────────────────────────────────────────────
 static const char* state_strings[] = {
-  "IDLE", "RUN", "PULSE", "STEP", "JOG", "3-2-1", "STOP", "E-STOP"
+  "IDLE", "RUN", "PULSE", "STEP", "JOG", "STOP", "E-STOP"
 };
 static SystemState prevState = STATE_IDLE;
 static Direction prevDir = DIR_CW;
@@ -52,9 +52,9 @@ static bool mainDirty = true;
 static void screen_main_set_dirty() { mainDirty = true; }
 static lv_color_t get_state_color(int state) {
   switch (state) {
-    case 1: return COL_GREEN;
-    case 7: return COL_RED;
-    default: return COL_ACCENT;
+    case STATE_RUNNING: return COL_GREEN;
+    case STATE_ESTOP:   return COL_RED;
+    default:            return COL_ACCENT;
   }
 }
 

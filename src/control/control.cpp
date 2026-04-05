@@ -22,6 +22,7 @@ static std::atomic<uint8_t> pendingModeRequest{0};
 static std::atomic<bool> pendingStop{false};
 static std::atomic<uint32_t> pendingPulseOnMs{0};
 static std::atomic<uint32_t> pendingPulseOffMs{0};
+static std::atomic<uint16_t> pendingPulseCycles{0};
 static std::atomic<float> pendingStepAngle{0.0f};
 static std::atomic<bool> pendingStopJog{false};
 
@@ -132,10 +133,11 @@ void control_stop() {
   pendingStop.store(true, std::memory_order_relaxed);
 }
 
-void control_start_pulse(uint32_t on_ms, uint32_t off_ms) {
+void control_start_pulse(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
   if (safety_is_estop_active()) return;
   pendingPulseOnMs.store(on_ms, std::memory_order_release);
   pendingPulseOffMs.store(off_ms, std::memory_order_release);
+  pendingPulseCycles.store(cycles, std::memory_order_release);
   pendingModeRequest.store(2, std::memory_order_relaxed);
 }
 
@@ -237,7 +239,9 @@ static void process_pending_requests() {
       continuous_start();
       break;
     case 2:
-      pulse_start(pendingPulseOnMs.load(std::memory_order_acquire), pendingPulseOffMs.load(std::memory_order_acquire));
+      pulse_start(pendingPulseOnMs.load(std::memory_order_acquire),
+                  pendingPulseOffMs.load(std::memory_order_acquire),
+                  pendingPulseCycles.load(std::memory_order_acquire));
       break;
     case 3:
       step_execute(pendingStepAngle.load(std::memory_order_acquire));

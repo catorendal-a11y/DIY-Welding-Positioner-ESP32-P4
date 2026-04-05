@@ -13,10 +13,8 @@
 #include <cstdio>
 #include <cstring>
 
-extern volatile bool wifiIsConnected;
-extern char wifiConnectedSsid[33];
-extern char wifiConnectedIp[16];
-extern volatile int wifiConnectedRssi;
+// WiFi state from storage.h (include already present above)
+
 
 static lv_obj_t* uptimeLabel = nullptr;
 static lv_obj_t* heapBar = nullptr;

@@ -215,8 +215,13 @@ void screen_edit_cont_create() {
     lv_bar_set_range(rpmBar, (int32_t)(MIN_RPM * 10), (int32_t)(MAX_RPM * 10));
     lv_bar_set_value(rpmBar, (int32_t)(rpm * 10), LV_ANIM_OFF);
 
-    // Scale marks below progress bar
-    const char* scaleLabels[] = {"0.1", "1.0", "2.0", "3.0"};
+    // Scale marks below progress bar (derived from MIN_RPM / MAX_RPM)
+    char s0[8], s1[8], s2[8], s3[8];
+    snprintf(s0, sizeof(s0), "%.2f", MIN_RPM);
+    snprintf(s1, sizeof(s1), "%.2f", MIN_RPM + (MAX_RPM - MIN_RPM) * 0.33f);
+    snprintf(s2, sizeof(s2), "%.2f", MIN_RPM + (MAX_RPM - MIN_RPM) * 0.66f);
+    snprintf(s3, sizeof(s3), "%.1f", MAX_RPM);
+    const char* scaleLabels[] = {s0, s1, s2, s3};
     const int scaleX[] = {20, 265, 510, 740};
     for (int i = 0; i < 4; i++) {
       lv_obj_t* tick = lv_label_create(screen);

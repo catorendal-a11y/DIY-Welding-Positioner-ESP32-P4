@@ -175,6 +175,11 @@ controlTask  (pri 3, 4 KB)
   <img src="docs/images/motor.worm.svg" width="700" alt="Gear System — Worm Drive">
 </div>
 
+<div align="center">
+  <img src="docs/images/stepper_setup.png" width="700" alt="Motor Assembly — NEMA 23 with Worm Gearbox and TB6600 Driver">
+  <br><sub>NEMA 23 stepper with worm gear reducer and TB6600 microstep driver</sub>
+</div>
+
 ---
 
 ## Wiring Diagram
@@ -184,6 +189,13 @@ controlTask  (pri 3, 4 KB)
 </div>
 
 ### Pinout
+
+<div align="center">
+  <img src="docs/images/pinout.jpg" width="600" alt="GUITION JC4880P443C — Pin Definitions">
+  <br><sub>Header pin definitions — color-coded by function</sub>
+</div>
+
+<br>
 
 | ESP32-P4 Pin | Function | Notes |
 |:---|:---|:---|
@@ -225,6 +237,13 @@ Connect via phone BLE apps (e.g., nRF Connect) using the Nordic UART Service.
 ---
 
 ## Bill of Materials
+
+<div align="center">
+  <img src="docs/images/board_overview.jpg" width="600" alt="GUITION JC4880P443C — ESP32-P4 + C6 Touch Display Dev Board">
+  <br><sub>GUITION JC4880P443C — 4.3" MIPI-DSI touch display with ESP32-P4 and ESP32-C6</sub>
+</div>
+
+<br>
 
 | Component | Model / Specs | Qty |
 |:---|:---|:---:|

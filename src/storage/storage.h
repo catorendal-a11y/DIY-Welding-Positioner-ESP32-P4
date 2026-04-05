@@ -92,6 +92,21 @@ typedef struct {
 extern WifiScanEntry wifiScanBuffer[];
 extern int wifiScanBufferCount;
 
+// WiFi shared state (defined in storage.cpp, read by UI screens)
+// ESP-Hosted WiFi API is NOT thread-safe — all writes go through storageTask
+extern volatile bool wifiScanPending;
+extern volatile bool wifiConnectPending;
+extern volatile bool wifiTogglePending;
+extern volatile bool wifiScanResultReady;
+extern volatile int  wifiScanResultCount;
+extern volatile bool wifiScanFailed;
+extern volatile bool wifiIsConnected;
+extern char wifiConnectedSsid[33];
+extern char wifiConnectedIp[16];
+extern volatile int  wifiConnectedRssi;
+extern char wifiPendingSsid[33];
+extern char wifiPendingPass[65];
+
 // Helper functions
 bool storage_get_preset(uint8_t id, Preset* out);
 bool storage_delete_preset(uint8_t id);

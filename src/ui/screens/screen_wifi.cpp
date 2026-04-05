@@ -25,19 +25,8 @@ static bool wifiScanDone = false;
 
 static char selectedSsid[33] = "";
 
-// WiFi state shared with storageTask (defined in storage.cpp)
-extern volatile bool wifiScanPending;
-extern volatile bool wifiConnectPending;
-extern volatile bool wifiTogglePending;
-extern volatile bool wifiScanResultReady;
-extern volatile int wifiScanResultCount;
-extern volatile bool wifiScanFailed;
-extern volatile bool wifiIsConnected;
-extern char wifiConnectedSsid[33];
-extern char wifiConnectedIp[16];
-extern volatile int wifiConnectedRssi;
-extern char wifiPendingSsid[33];
-extern char wifiPendingPass[65];
+// WiFi state from storage.h (include already present above)
+
 
 static lv_obj_t* wifiPromptLabel = nullptr;
 static lv_obj_t* wifiSsidNameLabel = nullptr;

@@ -16,7 +16,7 @@ The system transitions through a rigorous state machine (defined in `control.h`)
 ## 2. Emergency Stop (E-STOP)
 - **Hardware Interrupt:** GPIO 34 configured with interrupt.
 - **Normally Closed (NC) Logic:** The button holds the pin LOW. When pressed (or wire cut), pin goes HIGH, triggering the ISR.
-- **ISR Response (<0.5ms):** Calls `stepper->forceStop()` and sets ENA HIGH (Disabled) immediately.
+- **ISR Response (<0.5ms):** Direct GPIO register write sets ENA HIGH (Disabled) + sets `g_estopPending` flag. NO function calls in ISR (flash may be disabled during LittleFS writes).
 - **State Transition (<5ms):** `safetyTask` (priority 5) checks pending flag with debounce, transitions to STATE_ESTOP via CAS.
 - **UI Overlay:** `lvglTask` detects STATE_ESTOP and shows full-screen red overlay on any active screen.
 - **ESTOP Reset:** UI sets `g_uiResetPending` flag. `controlTask` on Core 0 calls `safety_check_ui_reset()` and transitions to STATE_IDLE. Overlay auto-hides.
@@ -28,10 +28,11 @@ The system transitions through a rigorous state machine (defined in `control.h`)
 - **Live Speed Changes:** `applySpeedAcceleration()` after `setSpeedInMilliHz()` for immediate effect during rotation.
 
 ## 4. Thread Safety
-- **Stepper mutex:** `g_stepperMutex` protects all FastAccelStepper calls from concurrent access.
+- **Stepper mutex:** `g_stepperMutex` (`SemaphoreHandle_t`, FreeRTOS mutex) protects all FastAccelStepper calls. Uses `xSemaphoreTake`/`xSemaphoreGive` — keeps tick interrupts enabled during cross-core contention (prevents IWDT crashes).
 - **Atomic variables:** Cross-core shared state uses `std::atomic` with explicit memory ordering.
 - **Pending-flag pattern:** UI callbacks set volatile flags, Core 0 tasks execute within their cycle. No direct motor calls from UI thread.
 - **Storage mutex:** `g_presets_mutex` semaphore protects preset vector access.
+- **LVGL safety:** `lv_obj_delete_async()` for all keyboard/numpad deletion from event callbacks. `screen_*_invalidate_widgets()` nullifies static pointers on `screens_reinit()`.
 
 ## 5. Hardware Watchdog (TWDT)
 - **Motor Task:** Subscribed to WDT. Ensures pulses are generated.

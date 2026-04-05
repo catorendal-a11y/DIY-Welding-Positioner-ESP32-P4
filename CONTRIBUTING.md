@@ -41,7 +41,7 @@ PYTHONUTF8=1 PYTHONIOENCODING=utf-8 "C:\Users\Rendalsniken\.platformio\penv\Scri
 ```
 Core 0 (Realtime)          Core 1 (UI)
 ------------------          ------------------
-safetyTask  (pri 5, 2KB)    lvglTask   (pri 2, 64KB)
+safetyTask  (pri 5, 4KB)    lvglTask   (pri 2, 64KB)
 motorTask   (pri 4, 5KB)    storageTask (pri 1, 12KB)
 controlTask (pri 3, 4KB)
 ```
@@ -69,7 +69,10 @@ controlTask (pri 3, 4KB)
 - `speed_apply()` must ONLY be called from Core 0 (`motorTask`)
 - UI callbacks must set `volatile` flags — never call motor functions directly
 - Shared state between cores: use `std::atomic` or `volatile` flags
-- Mutex-protected data (e.g., `g_presets`): always `xSemaphoreGive` before ANY return path
+- Mutex-protected data (e.g., `g_presets`, `g_stepperMutex`): always `xSemaphoreGive` before ANY return path
+- **`g_stepperMutex` is a FreeRTOS mutex** (`SemaphoreHandle_t`) — NOT a spinlock. Uses `xSemaphoreTake`/`xSemaphoreGive`
+- **Never use `lv_obj_delete()` inside event callbacks** for the triggering object — use `lv_obj_delete_async()`
+- Screens with static widget pointers must implement `screen_*_invalidate_widgets()` called from `screens_reinit()`
 
 ### LVGL Rules
 - Use LVGL 9 API names only (e.g., `lv_button_create`, not `lv_btn_create`)

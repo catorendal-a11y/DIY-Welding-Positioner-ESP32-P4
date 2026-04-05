@@ -23,7 +23,7 @@
 - Or physically reverse one motor coil pair (A+ and A-)
 
 ### Speed not changing during rotation
-- Ensure firmware is v2.0.0 or newer (includes `applySpeedAcceleration()` fix)
+- Ensure firmware is v2.0.2 or newer (includes `applySpeedAcceleration()` fix)
 - Check that potentiometer ADC reads change in debug log
 
 ### Direction switch not working
@@ -83,11 +83,11 @@
 - If pot doesn't reach 0 RPM, calibrate ADC reference in `speed.cpp`
 
 ### Buttons don't change RPM during rotation
-- Firmware v2.0.0 uses `speed_request_update()` (thread-safe flag pattern)
+- Firmware v2.0.2 uses `speed_request_update()` (thread-safe flag pattern)
 - UI callbacks never call `speed_apply()` directly
 
 ### RPM gauge doesn't show below 0.1
-- v2.0.0 uses 2-decimal precision and `MAX_RPM * 100` gauge range
+- v2.0.2 uses 2-decimal precision and `MAX_RPM * 100` gauge range
 - MIN_RPM is 0.02
 
 ## WiFi / BLE Issues
@@ -126,4 +126,10 @@
 
 ### Typing in WiFi/BT/Program Edit causes crash
 - Keyboard close/delete from inside LVGL event callback causes use-after-free
-- Fixed with deferred cleanup pattern: callback sets flag, cleanup in next update cycle
+- Fixed in v2.0.2: deferred cleanup pattern with `*ClosePending` flags + `lv_obj_delete_async()`
+- `screen_*_invalidate_widgets()` functions prevent dangling pointers after theme changes
+
+### Crash after navigating many screens (IWDT timeout)
+- Fixed in v2.0.2: `g_stepperMutex` changed from spinlock (`portMUX_TYPE`) to FreeRTOS mutex (`SemaphoreHandle_t`)
+- The spinlock disabled interrupts on both cores during cross-core contention, causing Interrupt WDT timeout
+- FreeRTOS mutex blocks via scheduler without disabling interrupts

@@ -1,25 +1,36 @@
 # Roadmap
 
-## v2.0.0 — Current Release
+## v2.0.2 — Current Release (Stability & IWDT Crash Fix)
 
-### Completed
+### v2.0.2 Fixes (2026-04-05)
+- [x] FreeRTOS mutex for stepper (replaced spinlock — fixed IWDT crash)
+- [x] LVGL async object deletion (lv_obj_delete_async for keyboard/numpad)
+- [x] Screen widget invalidation pattern (WiFi, BT, Step, Programs, ProgramEdit)
+- [x] Deferred keyboard cleanup (*ClosePending flags)
+- [x] Confirm dialog validation (returnScreen range check)
+- [x] Program Edit crash fixes (out-of-bounds, dangling pointers)
+
+### v2.0.1 Fixes (2026-04-03)
+- [x] Invert direction toggle (persisted in settings)
+- [x] Jog screen CW/CCW redesign
+- [x] Display/Motor Config UI polish
+
+### v2.0.0 Features (2026-04-03)
 - [x] BLE remote control (NUS service, phone app, passkey 123456)
 - [x] WiFi connectivity (STA mode, scan, connect, credentials)
 - [x] 23 UI screens (settings, system info, calibration, motor config, etc.)
 - [x] Direction switch (GPIO29, toggle via settings)
 - [x] Foot pedal support (analog speed + digital start)
-- [x] Thread-safe stepper access (mutex + atomic variables)
+- [x] Thread-safe stepper access (FreeRTOS mutex + atomic variables)
 - [x] CAS state transitions (race-free)
 - [x] ESTOP reset via Core 0 pending pattern
 - [x] Storage reliability (mutex, debounce, copy-based API)
 - [x] WiFi/BLE thread safety (all calls via storageTask)
-- [x] Confirm dialog crash fix (pending-flag pattern)
-- [x] Keyboard crash fixes (deferred cleanup)
 - [x] 8 accent color themes with live switching
 - [x] Display settings (brightness slider, dim timeout)
 - [x] System info screen (core load, heap, PSRAM, WiFi, uptime)
 - [x] Motor configuration UI (microstepping, acceleration, calibration)
-- [x] DM542T driver support
+- [x] Countdown before start (configurable 1-10s delay with visual countdown)
 - [x] All 5 welding modes tested on hardware
 - [x] E-STOP validated
 - [x] Program presets (16 slots, full CRUD from UI)
@@ -31,10 +42,9 @@
 
 ## Next
 
-- [ ] Countdown before start (3-2-1 on screen, gives welder time to position)
 - [ ] Increase MAX_RPM to 5.0 with DM542T
 - [ ] Enclosure design files (3D printable)
-- [ Assembly guide
+- [ ] Assembly guide
 - [ ] WiFi SoftAP mode (standalone network)
 - [ ] Web-based remote control panel (hosted on C6)
 - [ ] Bidirectional state sync (phone mirrors display)

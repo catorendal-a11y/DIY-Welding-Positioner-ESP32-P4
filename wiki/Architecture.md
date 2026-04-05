@@ -7,7 +7,7 @@ The controller runs on ESP32-P4's dual-core RISC-V processor, with an ESP32-C6 c
 ```
 CORE 0 (Real-time)              CORE 1 (UI)
 ========================         ========================
-safetyTask  (pri 5, 2KB)        lvglTask    (pri 2, 64KB)
+safetyTask  (pri 5, 4KB)        lvglTask    (pri 2, 64KB)
 motorTask   (pri 4, 5KB)        storageTask (pri 1, 12KB)
 controlTask (pri 3, 4KB)
 ```
@@ -16,7 +16,7 @@ controlTask (pri 3, 4KB)
 
 **WDT:** motorTask, controlTask, safetyTask are subscribed to TWDT. lvglTask and storageTask are NOT subscribed (they do blocking I/O that can exceed WDT timeout).
 
-**Flash safety:** `CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y` + `CONFIG_SPIRAM_RODATA=y` ensures code remains accessible when flash cache is disabled during LittleFS writes. All WiFi calls go through `wifi_process_pending()` (thread-safe). Storage uses .tmp + rename for atomic writes.
+**Flash safety:** `CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y` + `CONFIG_SPIRAM_RODATA=y` ensures code remains accessible when flash cache is disabled during LittleFS writes. All WiFi calls go through `wifi_process_pending()` (thread-safe). Storage uses .tmp + rename for atomic writes. IWDT timeout is 2000ms (`CONFIG_ESP_INT_WDT_TIMEOUT_MS=2000`).
 
 ## State Machine
 
@@ -65,7 +65,7 @@ bool control_transition_to(SystemState newState) {
 ```
 
 ### Mutex-Protected Stepper
-All FastAccelStepper calls wrapped in `g_stepperMutex`:
+All FastAccelStepper calls wrapped in `g_stepperMutex` (`SemaphoreHandle_t`, FreeRTOS mutex — NOT a spinlock):
 ```
 xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
 stepper->setSpeedInMilliHz(mhz);
@@ -73,8 +73,15 @@ stepper->applySpeedAcceleration();
 xSemaphoreGive(g_stepperMutex);
 ```
 
+Previously a `portMUX_TYPE` spinlock, which disabled interrupts and caused IWDT crashes when contended across cores. FreeRTOS mutex blocks via scheduler, keeping tick interrupts enabled.
+
 ### Storage Mutex
 Preset vector access protected by `g_presets_mutex` semaphore. Copy-based API: `storage_get_preset()` returns a copy, never a pointer.
+
+### LVGL Object Deletion Safety
+- **Never use `lv_obj_delete()` in event callbacks** for the triggering object — use `lv_obj_delete_async()`
+- Keyboard/numpad cleanup uses `*ClosePending` flags, actual deletion deferred to `screen_*_update()` cycle
+- `screens_reinit()` calls `screen_*_invalidate_widgets()` for all screens with static widget pointers
 
 ## Module Breakdown
 
@@ -99,7 +106,7 @@ Preset vector access protected by `g_presets_mutex` semaphore. Copy-based API: `
 ### `src/safety/` — Emergency Stop
 
 Two-layer ESTOP architecture:
-1. **ISR layer (<0.5ms):** GPIO 34 interrupt calls `stepper->forceStop()` and sets ENA HIGH
+1. **ISR layer (<0.5ms):** GPIO 34 interrupt sets ENA HIGH via direct register write + sets `g_estopPending` flag (NO function calls)
 2. **Task layer (<5ms):** `safetyTask` debounces and transitions to STATE_ESTOP
 3. **UI layer:** `lvglTask` shows/hides red overlay based on current state
 4. **Reset:** UI sets `g_uiResetPending`, Core 0 processes via `controlTask`

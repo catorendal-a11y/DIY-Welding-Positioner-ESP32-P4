@@ -1,7 +1,7 @@
 # Project Status
 
-**Last Updated:** 2026-04-03
-**Firmware:** v2.0.0
+**Last Updated:** 2026-04-05
+**Firmware:** v2.0.2
 **Build:** SUCCESS (Release & Debug, 0 errors 0 warnings)
 
 ---
@@ -16,7 +16,7 @@
 - [x] **FreeRTOS dual-core architecture** (Core 0: Motor/Safety, Core 1: UI)
 - [x] **5 welding modes:** Continuous, Jog, Pulse, Step, Timer
 - [x] **Live RPM adjustment** (potentiometer + touchscreen buttons during rotation)
-- [x] **Thread-safe cross-core speed updates** (volatile + request flag pattern)
+- [x] **Thread-safe cross-core speed updates** (atomic + request flag pattern, FreeRTOS mutex for stepper)
 - [x] **`applySpeedAcceleration()`** for immediate speed changes during running
 - [x] **Linear acceleration phase** (resonance-zone traversal)
 - [x] **Microstepping selection** (1/4, 1/8, 1/16, 1/32)
@@ -73,6 +73,14 @@
 
 ---
 
+### Stability & Robustness (v2.0.2)
+- [x] **FreeRTOS mutex for stepper** (replaced portMUX_TYPE spinlock — fixed IWDT crash on cross-core contention)
+- [x] **LVGL async object deletion** (lv_obj_delete_async for keyboard/numpad cleanup from event callbacks)
+- [x] **Screen widget invalidation** (invalidate_widgets pattern for WiFi, BT, Step, Programs, ProgramEdit screens)
+- [x] **Deferred keyboard cleanup** (*ClosePending flags, actual cleanup in update cycle)
+- [x] **Screen reinit safety** (screens_reinit calls invalidate_widgets for all screens with static pointers)
+- [x] **Confirm dialog validation** (returnScreen range check prevents invalid screen navigation)
+
 ## In Progress
 
 - [ ] **DM542T driver integration** (anti-resonance DSP for wider RPM range, up to 5.0 RPM)
@@ -80,7 +88,6 @@
 
 ## Planned
 
-- [ ] **Countdown before start** (3-2-1 on screen, gives welder time to position)
 - [ ] **Enclosure design** (3D printable)
 - [ ] **Assembly guide**
 - [ ] **WiFi SoftAP mode** (standalone network without router)
@@ -97,7 +104,7 @@
 | **RAM Usage** | ~13% (41 KB / 320 KB) |
 | **Flash Usage** | ~27% (1.8 MB / 6.5 MB) |
 | **FastAccelStepper** | 0.33.x |
-| **LVGL** | 9.6.0 (RGB565) |
+| **LVGL** | 9.5.0 (RGB565) |
 | **ArduinoJson** | 7.4.3 |
 | **BLE** | NimBLE via ESP-Hosted (C6 co-processor) |
 | **WiFi** | ESP-Hosted SDIO transport |

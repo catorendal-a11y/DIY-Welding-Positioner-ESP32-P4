@@ -198,7 +198,7 @@ When `storage_save_settings_internal()` or `storage_save_presets_internal()` wri
 **Mitigations applied**:
 - `CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y` + `CONFIG_SPIRAM_RODATA=y` — moves code/rodata to PSRAM
 - ESTOP ISR contains NO function calls (only GPIO + flag)
-- IWDT timeout increased to 800ms
+- IWDT timeout increased to 2000ms
 - storageTask NOT subscribed to WDT
 
 **REMAINING RISK**:
@@ -234,24 +234,23 @@ Line 114: `SystemState state = control_get_state();` is called outside mutex.
 `control_get_state()` reads `std::atomic<SystemState>` which is lock-free — safe.
 But the subsequent `estop_overlay_show/hide/update()` calls are properly mutex-wrapped.
 
-### PROBLEM 4: `motor_is_running()` Uses Critical Section (LOW)
+### PROBLEM 4: `motor_is_running()` Uses Critical Section (FIXED)
 
-**Severity**: LOW — short critical sections
-**Status**: ACCEPTABLE
+**Severity**: LOW — was short critical sections
+**Status**: FIXED (2026-04-05)
 
-`motor_is_running()` (motor.cpp:136) uses `portENTER_CRITICAL` which disables interrupts on Core 0. If called from Core 1 (e.g., from UI update), it only disables Core 0 interrupts — this is correct behavior for cross-core motor status check. But `portENTER_CRITICAL` on SMP only disables interrupts on the calling core, so it's safe.
+`motor_is_running()` and `motor_get_current_hz()` previously used `portENTER_CRITICAL` (spinlock) which disables interrupts on the calling core. When called from Core 1 (UI) while Core 0 held the spinlock, both cores had interrupts disabled — triggering IWDT crashes under cross-core contention.
 
-However, `motor_get_current_hz()` (motor.cpp:143) also uses critical section and calls `stepper->getCurrentSpeedInMilliHz()` which may take time. If called frequently from UI updates, it could add jitter.
+**Fix**: `g_stepperMutex` replaced from `portMUX_TYPE` (spinlock) to `SemaphoreHandle_t` (FreeRTOS mutex). All `portENTER_CRITICAL`/`portEXIT_CRITICAL` replaced with `xSemaphoreTake`/`xSemaphoreGive`. FreeRTOS mutex blocks via scheduler without disabling interrupts.
 
-### PROBLEM 5: `g_stepperMutex` is `portMUX_TYPE` Not `SemaphoreHandle_t` (LOW)
+### PROBLEM 5: `g_stepperMutex` is `portMUX_TYPE` Not `SemaphoreHandle_t` (FIXED)
 
-**Severity**: LOW — works but not ideal
-**Status**: ACCEPTABLE
+**Severity**: WAS LOW, turned out to be CRITICAL — caused IWDT crash on Core 0
+**Status**: FIXED (2026-04-05)
 
-`g_stepperMutex` (motor.cpp:22) is a spinlock (`portMUX_TYPE`), not a FreeRTOS mutex. This means:
-- No priority inheritance — a low-priority task holding the mutex will block a high-priority task
-- `portENTER_CRITICAL` disables interrupts — should be very short sections
-- All motor functions use it correctly with minimal critical section duration
+`g_stepperMutex` was a spinlock (`portMUX_TYPE`) used with `portENTER_CRITICAL`. When contended across both cores (Core 1 UI calling `motor_is_running()` while Core 0 motorTask holds lock), interrupts were disabled on both cores simultaneously. This blocked the IPC task and tick interrupt on Core 0, triggering "Interrupt wdt timeout on CPU0" after 2000ms.
+
+**Fix**: Changed to `SemaphoreHandle_t` mutex. All 16 instances of `portENTER_CRITICAL`/`portEXIT_CRITICAL` across `motor.cpp`, `speed.cpp`, `step_mode.cpp`, `jog.cpp`, and `pulse.cpp` replaced with `xSemaphoreTake`/`xSemaphoreGive`. FreeRTOS mutex has priority inheritance and blocks via scheduler, keeping tick interrupts enabled.
 
 ### PROBLEM 6: `storage_save_presets_internal()` Holds Mutex During Flash Write (MEDIUM)
 
@@ -321,7 +320,7 @@ Line 25: `extern bool wifiEnabled;` — this variable was removed from storage.c
 | Mutex | Owner | Used by | Notes |
 |---|---|---|---|
 | `g_lvgl_mutex` (recursive) | lvglTask | lv_timer_handler, screens_update_current, estop overlay | Event callbacks run inside this mutex (called from lv_timer_handler) |
-| `g_stepperMutex` (spinlock) | motorTask | All motor functions, safetyTask (forceStop) | portENTER_CRITICAL — very short sections |
+| `g_stepperMutex` (FreeRTOS mutex) | motorTask | All motor functions, speed_apply, jog, pulse, step_mode | xSemaphoreTake/Give — scheduler-based, interrupts stay enabled |
 | `g_presets_mutex` | storageTask | storage_save/load_presets_internal | Held during flash write (PROBLEM 6) |
 | (none) | storageTask | WiFi API, BLE API | Sequential in same task — no mutex needed |
 

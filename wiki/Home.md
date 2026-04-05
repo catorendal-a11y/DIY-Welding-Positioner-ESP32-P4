@@ -2,7 +2,7 @@
 
 **ESP32-P4 / C6 GUITION JC4880P443C** | Open-source firmware for TIG/MIG welding rotators
 
-## Current Status: v2.0.0 — BLE + WiFi + Full Settings UI
+## Current Status: v2.0.2 — Stability Fixes + IWDT Crash Fix
 
 All core features tested and confirmed working on real hardware:
 
@@ -38,7 +38,7 @@ Open-source welding positioner controller for rotary welding tables, pipe weldin
 | Display | GUITION JC4880P443C, 800x480 landscape, MIPI-DSI ST7701S |
 | Touch | GT911 capacitive |
 | UI Framework | LVGL 9.5.0 |
-| Motor Driver | FastAccelStepper 0.33.14 (RMT hardware pulses) |
+| Motor Driver | FastAccelStepper 0.33.x (RMT hardware pulses) |
 | Gear Ratio | 199.5:1 worm gear (60 x 133 / 40) |
 | Microstepping | 1/4, 1/8, 1/16, 1/32 (selectable) |
 | RPM Range | 0.02 - 1.0 RPM (TB6600), up to 5.0 (DM542T) |

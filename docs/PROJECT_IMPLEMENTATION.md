@@ -3,7 +3,7 @@
 **Board**: GUITION JC4880P443C ESP32-P4 4.3" Touch Display (with ESP32-C6 co-processor)
 **Display**: ST7701S 480x800 MIPI-DSI (rotated to 800x480 landscape)
 **Touch**: GT911 capacitive touch controller
-**Firmware**: v2.0.0
+**Firmware**: v2.0.2
 
 ---
 
@@ -51,11 +51,11 @@
 
 | Task | Core | Priority | Stack | Purpose |
 |------|------|----------|-------|---------|
-| safetyTask | 0 | 5 | 2 KB | E-STOP ISR processing, state guard |
+| safetyTask | 0 | 5 | 4 KB | E-STOP ISR processing, state guard |
 | motorTask | 0 | 4 | 5 KB | Speed apply, ADC poll, pedal, motor config |
 | controlTask | 0 | 3 | 4 KB | State machine, mode logic |
 | lvglTask | 1 | 2 | 64 KB | LVGL rendering, screen updates, dim, ESTOP overlay |
-| storageTask | 1 | 1 | 12 KB | LittleFS flush, WiFi process, BLE update |
+| storageTask | 1 | 1 | 12 KB | LittleFS flush, WiFi process, BLE update, health monitoring |
 
 - motorTask, controlTask, safetyTask: subscribed to WDT
 - lvglTask, storageTask: NOT subscribed (blocking I/O can exceed WDT timeout)
@@ -65,10 +65,10 @@
 
 ## 3. Motor Control & Live Speed Adjustment
 
-- **FastAccelStepper 0.33.14** with RMT driver on GPIO 50
+- **FastAccelStepper 0.33.x** with RMT driver on GPIO 50
 - **Live speed**: `applySpeedAcceleration()` required after `setSpeedInMilliHz()` for changes during running
 - **Cross-core**: Shared RPM variables use `std::atomic<float>` with `.load()`/`.store()`
-- **Stepper mutex**: `g_stepperMutex` protects all stepper calls (setSpeedInHz, move, etc.)
+- **Stepper mutex**: `g_stepperMutex` (`SemaphoreHandle_t`, FreeRTOS mutex) protects all stepper calls — uses `xSemaphoreTake`/`xSemaphoreGive`, keeps interrupts enabled during cross-core contention
 - **Pending-flag pattern**: UI sets volatile flags, motorTask executes within 5ms cycle
 
 ---
@@ -76,7 +76,7 @@
 ## 4. Safety System
 
 - **E-STOP**: GPIO 34, NC contact, INPUT_PULLUP, hardware ISR
-- **ISR**: `stepper->forceStop()` + ENA HIGH + `g_estopPending` flag
+- **ISR**: GPIO register write (ENA HIGH) + `g_estopPending` flag (NO function calls — flash may be disabled)
 - **Debounce**: 5ms in safetyTask before STATE_ESTOP transition
 - **CAS transitions**: `control_transition_to()` uses `compare_exchange_strong` for race-free state changes
 - **UI reset**: `g_uiResetPending` flag from UI, processed in controlTask on Core 0
@@ -161,10 +161,41 @@ bool control_transition_to(SystemState newState) {
 
 ### Mutex-Protected Stepper
 ```cpp
+// g_stepperMutex is SemaphoreHandle_t (FreeRTOS mutex, NOT spinlock)
 xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
 stepper->setSpeedInMilliHz(mhz);
 stepper->applySpeedAcceleration();
 xSemaphoreGive(g_stepperMutex);
+```
+
+### Deferred Keyboard Cleanup
+```cpp
+// Event callback — sets flag only
+static void wifi_kb_cb(lv_event_t* e) {
+  if (lv_event_get_code(e) == LV_EVENT_READY) {
+    wifiConnectOnClose = true;
+    kbClosePending = true;
+  }
+}
+
+// Update function — performs actual cleanup
+void screen_wifi_update() {
+  if (kbClosePending) {
+    if (wifiConnectOnClose) connect_wifi();
+    cleanup_kb();  // uses lv_obj_delete_async()
+  }
+}
+```
+
+### Widget Invalidation on Screen Reinit
+```cpp
+void screen_wifi_invalidate_widgets() {
+  scrollPanel = nullptr; kb = nullptr; passTa = nullptr;
+  // ... null all static widget pointers ...
+  kbClosePending = false;
+  wifiConnectOnClose = false;
+}
+// Called from screens_reinit() to prevent dangling pointers
 ```
 
 ---
@@ -173,7 +204,7 @@ xSemaphoreGive(g_stepperMutex);
 
 | Issue | Workaround |
 |-------|-----------|
-| `lv_display_set_rotation()` crashes ESP32-P4 | Use `sw_rotate = 1` in driver, manual rotation in flush callback |
+| `lv_display_set_rotation()` crashes ESP32-P4 | Manual rotation in flush callback |
 | `ledc_set_duty_and_update()` crashes backlight | Use separate `ledc_set_duty()` + `ledc_update_duty()` |
 | `LittleFS.rename()` crashes ESP32-P4 | Use direct FILE_WRITE (not atomic) |
 | GPIO 28/32 claimed by C6 co-processor | Do not use for GPIO — reserved for WiFi/BLE SDIO transport |
@@ -183,6 +214,9 @@ xSemaphoreGive(g_stepperMutex);
 | montserrat_48+ crashes ESP32-P4 | Max font is montserrat_40 |
 | `LV_SYMBOL_MINUS`/`PLUS` not in montserrat_16 | Use ASCII `"-"`/`"+"` |
 | `-mfix-esp32-psram-cache-issue` crashes ESP32-P4 | RISC-V only, not Xtensa |
+| `portENTER_CRITICAL` spinlock causes IWDT crash | Use FreeRTOS mutex (`SemaphoreHandle_t`) for cross-core mutexes |
+| `lv_obj_delete()` in event callback crashes | Use `lv_obj_delete_async()` for self-deletion |
+| Static widget pointers dangle after `screens_reinit()` | Implement `screen_*_invalidate_widgets()` called from `screens_reinit()` |
 
 ---
 

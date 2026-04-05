@@ -4,7 +4,7 @@
 
 ### Precision Multi-Mode Welding Rotator for TIG, MIG, and Pipe Welding
 
-**ESP32-P4 / ESP32-C6 &nbsp;&middot;&nbsp; Firmware v2.0.0**
+**ESP32-P4 / ESP32-C6 &nbsp;&middot;&nbsp; Firmware v2.0.2**
 
 <br>
 
@@ -152,7 +152,7 @@ Dual-core **FreeRTOS** design separating realtime motor control from UI renderin
 ```
 Core 0 (Realtime)                Core 1 (UI)
 ─────────────────                ──────────────────
-safetyTask   (pri 5, 2 KB)      lvglTask    (pri 2, 64 KB)
+safetyTask   (pri 5, 4 KB)      lvglTask    (pri 2, 64 KB)
 motorTask    (pri 4, 5 KB)      storageTask (pri 1, 12 KB)
 controlTask  (pri 3, 4 KB)
 ```
@@ -164,7 +164,7 @@ controlTask  (pri 3, 4 KB)
 | **Task Isolation** | UI rendering cannot block motor pulse generation |
 | **Hardware Timers** | RMT peripheral for jitter-free micro-stepping |
 | **Fail-Safe** | E-STOP ISR cuts ENA pin in <0.5 ms |
-| **Thread Safety** | Mutex on stepper access, atomic cross-core variables, pending-flag patterns |
+| **Thread Safety** | FreeRTOS mutex on stepper access, atomic cross-core variables, pending-flag patterns |
 | **Live Speed** | `applySpeedAcceleration()` for immediate RPM changes during rotation |
 
 ---
@@ -391,11 +391,12 @@ Settings can also be changed from the touchscreen via **Settings > Motor Config*
 - [x] Display settings (brightness, dim timeout)
 - [x] System info screen (core load, heap, WiFi status)
 - [x] Motor configuration UI
-- [x] Thread-safe stepper access + atomic cross-core variables
+- [x] FreeRTOS mutex stepper access + atomic cross-core variables
+- [x] Countdown before start (configurable 1-10s delay with visual countdown)
+- [x] LVGL async object deletion + widget invalidation pattern
 
 **Planned:**
 
-- [ ] Countdown before start (3-2-1 on screen, gives welder time to position)
 - [ ] Increase MAX_RPM to 5.0 with DM542T
 - [ ] Enclosure design (3D printable)
 - [ ] Assembly guide

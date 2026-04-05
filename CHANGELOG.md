@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.2] - 2026-04-05 (Stability & IWDT Crash Fix)
+
+### Fixed
+- **CRITICAL: Interrupt WDT timeout on Core 0** — `g_stepperMutex` was a `portMUX_TYPE` spinlock that disabled interrupts during cross-core contention (Core 1 UI calling `motor_is_running()` while Core 0 motorTask held lock). Replaced with `SemaphoreHandle_t` FreeRTOS mutex across `motor.cpp`, `speed.cpp`, `step_mode.cpp`, `jog.cpp`, and `pulse.cpp`
+- **Program Edit crashes on "New Program"** — out-of-bounds array access in mode button loop (`i < 4` instead of `i < modeCount`)
+- **Program Edit crashes on SAVE** — dangling static widget pointers after `screens_reinit()`, stale screen data on re-entry
+- **Confirm screen crashes on CONFIRM** — invalid `returnScreen` ID, added range validation
+- **WiFi keyboard self-deletion crash** — `cleanup_kb()` called synchronously from `wifi_kb_cb()`, deleting the keyboard while LVGL processed its event. Deferred via `kbClosePending` flag
+- **BT/Step keyboard crashes** — synchronous `lv_obj_delete()` in event callbacks replaced with `lv_obj_delete_async()`
+- **Dangling pointers after `screens_reinit()`** — added `screen_*_invalidate_widgets()` functions for WiFi, BT, Step, Programs, and ProgramEdit screens
+
+### Added
+- **Widget invalidation pattern** — each screen with static pointers has `screen_*_invalidate_widgets()` called from `screens_reinit()`
+- **`screen_needs_rebuild()`** — forces full screen recreation for edit screens on re-entry
+- **Deferred keyboard cleanup** — `*ClosePending` flags in WiFi/BT/Step screens, cleanup runs in `screen_*_update()` cycle
+
 ## [2.0.1] - 2026-04-03
 
 ### Added

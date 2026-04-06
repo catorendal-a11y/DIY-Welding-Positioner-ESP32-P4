@@ -23,11 +23,6 @@ struct SystemSettings {
     bool dir_switch_enabled; // CW/CCW hardware switch on GPIO28
     bool invert_direction;   // Invert CW/CCW direction
     uint8_t accent_color;  // Index into theme palette (0=Orange, 1=Cyan, etc.)
-    char wifi_ssid[33];    // WiFi SSID (max 32 chars + null)
-    char wifi_pass[64];    // WiFi password (max 63 chars + null)
-    char ble_name[33];     // BLE device name (max 32 chars + null)
-    bool ble_enabled;       // BLE on/off (persisted)
-    bool wifi_enabled;      // WiFi on/off (persisted)
     uint8_t countdown_seconds; // Countdown before rotation start (1-10, default 3)
     uint8_t settings_version;
 };
@@ -67,6 +62,12 @@ extern SystemSettings g_settings;
 extern SemaphoreHandle_t g_settings_mutex;
 extern std::atomic<bool> g_dir_switch_cache;
 
+// Flash write coordination — set true during LittleFS writes.
+// lvglTask skips rendering while this is true to prevent blue screen flashes
+// caused by CPU cache being disabled during flash operations.
+extern std::atomic<bool> g_flashWriting;
+extern volatile bool g_screenRedraw;
+
 // Core functions
 void storage_init();
 bool storage_load_presets();
@@ -74,38 +75,6 @@ bool storage_save_presets();
 bool storage_load_settings();
 void storage_save_settings();
 void storage_flush();
-
-// WiFi pending request processing (called from storageTask only)
-// ESP-Hosted WiFi API is NOT thread-safe — all WiFi calls must go through here
-void wifi_process_pending();
-
-// WiFi shared-data mutex — protects scan results and connection status buffers
-extern SemaphoreHandle_t g_wifi_mutex;
-
-// WiFi scan result buffer (populated by storageTask, read by UI)
-#define WIFI_SCAN_MAX 12
-typedef struct {
-    char ssid[33];
-    int rssi;
-    uint8_t enc;
-} WifiScanEntry;
-extern WifiScanEntry wifiScanBuffer[];
-extern int wifiScanBufferCount;
-
-// WiFi shared state (defined in storage.cpp, read by UI screens)
-// ESP-Hosted WiFi API is NOT thread-safe — all writes go through storageTask
-extern volatile bool wifiScanPending;
-extern volatile bool wifiConnectPending;
-extern volatile bool wifiTogglePending;
-extern volatile bool wifiScanResultReady;
-extern volatile int  wifiScanResultCount;
-extern volatile bool wifiScanFailed;
-extern volatile bool wifiIsConnected;
-extern char wifiConnectedSsid[33];
-extern char wifiConnectedIp[16];
-extern volatile int  wifiConnectedRssi;
-extern char wifiPendingSsid[33];
-extern char wifiPendingPass[65];
 
 // Helper functions
 bool storage_get_preset(uint8_t id, Preset* out);

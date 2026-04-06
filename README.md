@@ -14,8 +14,7 @@
 
 <br>
 
-Open-source welding positioner controller with BLE remote, WiFi connectivity,
-and a glove-safe industrial touch UI built on dual-core FreeRTOS.
+Open-source welding positioner controller with a glove-safe industrial touch UI built on dual-core FreeRTOS.
 
 <br>
 
@@ -44,7 +43,6 @@ and a glove-safe industrial touch UI built on dual-core FreeRTOS.
 - [UI Screens](#ui-screens)
 - [Architecture](#industrial-rtos-architecture)
 - [Gear System & Wiring](#gear-system)
-- [BLE Remote Control](#ble-remote-control)
 - [Bill of Materials](#bill-of-materials)
 - [Performance Specifications](#performance-specifications)
 - [Welding Modes](#welding-modes)
@@ -107,12 +105,10 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 | **Foot Pedal** | Analog speed input + digital start switch |
 | **Direction Switch** | Physical CW/CCW toggle (GPIO 29) |
 | **Touch UI** | LVGL 9.x glove-safe interface, high-contrast dark theme, 8 accent colors |
-| **BLE Remote** | Phone control via Nordic UART Service — arm, start, stop, direction, RPM |
-| **WiFi** | Network scanning, credential storage, OTA updates for C6 co-processor |
 | **Program Presets** | Save/load up to 16 welding parameter sets to LittleFS flash |
 | **Motor Config** | Microstepping (1/4 – 1/32), acceleration, calibration, direction invert |
 | **Display Settings** | Brightness slider, dim timeout, theme color selection |
-| **System Info** | Live CPU core load, free heap, PSRAM usage, WiFi status, uptime |
+| **System Info** | Live CPU core load, free heap, PSRAM usage, uptime |
 | **Hardware Safety** | NC E-STOP interrupt (<0.5 ms), software watchdog, CAS state transitions |
 | **Thread Safety** | Mutex-protected stepper access, atomic cross-core variables, pending-flag patterns |
 
@@ -133,9 +129,7 @@ The interface consists of **23 screens**, each purpose-built for industrial use 
 | **Countdown** | Visual 3-2-1 before rotation starts |
 | **Programs** | Preset list with save, load, delete |
 | **Program Edit** | Full preset editor with on-screen keyboard |
-| **Settings** | Hub for WiFi, Bluetooth, Display, System Info, Calibration, Motor Config, About |
-| **WiFi** | Toggle, scan, connect, hidden networks, on-screen keyboard |
-| **Bluetooth** | Toggle, scan, device list, on-screen keyboard |
+| **Settings** | Hub for Display, System Info, Calibration, Motor Config, About |
 | **Display** | Brightness slider, dim timeout |
 | **System Info** | Core load, heap, PSRAM, WiFi, uptime |
 | **Calibration** | Motor calibration factor adjustment |
@@ -208,31 +202,7 @@ controlTask  (pri 3, 4 KB)
 | **GPIO 35** | PEDAL POT (ADC Input) | Foot pedal speed |
 | **GPIO 33** | PEDAL SW (Input) | Foot pedal switch, active LOW |
 | GPIO 7 / 8 | Touch I2C | GT911 (internal) |
-| GPIO 28 / 32 | C6 UART | SDIO to ESP32-C6 (do not use) |
-| GPIO 14-19, 54 | C6 SDIO | ESP-Hosted transport (do not use) |
-
-> **Important:** GPIO 28 (C6_U0TXD) and GPIO 32 (C6_U0RXD) are PCB-routed to the ESP32-C6 co-processor. They cannot be used as general-purpose I/O when WiFi or BLE is active.
-
 ---
-
-## BLE Remote Control
-
-Connect via phone BLE apps (e.g., nRF Connect) using the Nordic UART Service.
-
-| Character | Command |
-|:---|:---|
-| `0x00` | **Arm** — must arm within 5 s before start |
-| `F` | Start continuous rotation |
-| `S` / `X` | Stop |
-| `R` | Set direction CW |
-| `L` | Set direction CCW |
-| `B` | Reverse + Start |
-
-| Property | Value |
-|:---|:---|
-| **Service UUID** | `6E400001-B5A3-F393-E0A9-E50E24DCCA9E` |
-| **Passkey** | `123456` |
-| **Notifications** | State + RPM pushed at 500 ms intervals (rate-limited to avoid SDIO saturation) |
 
 ---
 
@@ -313,8 +283,6 @@ Settings can also be changed from the touchscreen via **Settings > Motor Config*
 - [ ] All 5 welding modes tested
 - [ ] Program preset save/load verified
 - [ ] Foot pedal starts/stops motor (if connected)
-- [ ] BLE remote connects and controls motor
-- [ ] WiFi connects and settings screen works
 
 ---
 
@@ -350,14 +318,6 @@ Settings can also be changed from the touchscreen via **Settings > Motor Config*
 </details>
 
 <details>
-<summary><b>WiFi or BLE causes crashes</b></summary>
-
-- GPIO 28/32 are reserved for C6 co-processor — do not use for other purposes
-- BLE notify rate is limited to 500 ms to avoid SDIO bus saturation
-
-</details>
-
-<details>
 <summary><b>Settings not saving</b></summary>
 
 - Check LittleFS partition is flashed (upload filesystem)
@@ -371,8 +331,7 @@ Settings can also be changed from the touchscreen via **Settings > Motor Config*
 
 - Single-axis control only
 - TB6600 has no anti-resonance DSP — DM542T recommended for higher RPM
-- WiFi/BLE share SDIO bus to C6 — simultaneous heavy traffic may cause latency
-- GPIO 28/32 unavailable for GPIO use (C6 UART)
+- GPIO 28/32 unavailable for GPIO use (C6 co-processor)
 
 ---
 
@@ -385,11 +344,9 @@ Settings can also be changed from the touchscreen via **Settings > Motor Config*
 - [x] Live RPM adjustment (pot + buttons)
 - [x] Foot pedal support
 - [x] Direction switch
-- [x] BLE remote control (NUS)
-- [x] WiFi connectivity + network scanning
 - [x] 8 accent color themes
 - [x] Display settings (brightness, dim timeout)
-- [x] System info screen (core load, heap, WiFi status)
+- [x] System info screen (core load, heap, PSRAM, uptime)
 - [x] Motor configuration UI
 - [x] FreeRTOS mutex stepper access + atomic cross-core variables
 - [x] Countdown before start (configurable 1-10s delay with visual countdown)
@@ -421,9 +378,7 @@ src/
   safety/                   E-STOP + watchdog
     safety.cpp                ISR, UI reset, state guard
   storage/                  LittleFS persistence
-    storage.cpp               Settings/presets JSON, WiFi process, mutex
-  ble/                      Bluetooth Low Energy
-    ble.cpp                   NimBLE NUS service, scanning, OTA
+    storage.cpp               Settings/presets JSON, mutex
   ui/                       LVGL display
     display.cpp               MIPI-DSI ST7701 init
     lvgl_hal.cpp              Flush callback, dim, touch polling
@@ -443,6 +398,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 <div align="center">
 
-<sub>DIY welding positioner &middot; ESP32-P4 &middot; Rotary welding table &middot; Pipe welding rotator &middot; TB6600 stepper driver &middot; NEMA 23 &middot; BLE remote &middot; WiFi &middot; LVGL touch UI &middot; FreeRTOS &middot; ESP32-C6 co-processor</sub>
+<sub>DIY welding positioner &middot; ESP32-P4 &middot; Rotary welding table &middot; Pipe welding rotator &middot; TB6600 stepper driver &middot; NEMA 23 &middot; LVGL touch UI &middot; FreeRTOS</sub>
 
 </div>

@@ -330,7 +330,7 @@ void estop_overlay_update() {
       lv_obj_set_style_text_opa(resetLabel, LV_OPA_30, 0);
     }
   } else {
-    lv_obj_clear_state(resetBtn, LV_STATE_DISABLED);
+    lv_obj_remove_state(resetBtn, LV_STATE_DISABLED);
     lv_obj_set_style_bg_opa(resetBtn, LV_OPA_COVER, 0);
     lv_obj_set_style_border_opa(resetBtn, LV_OPA_COVER, 0);
     if (resetLabel) {

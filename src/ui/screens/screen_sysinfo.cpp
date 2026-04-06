@@ -4,7 +4,6 @@
 #include "../theme.h"
 #include "../../config.h"
 #include "../../storage/storage.h"
-#include "../../ble/ble.h"
 #include "esp_heap_caps.h"
 #include "esp_system.h"
 #include "esp_partition.h"
@@ -12,8 +11,6 @@
 #include "../../onchip_temp.h"
 #include <cstdio>
 #include <cstring>
-
-// WiFi state from storage.h (include already present above)
 
 
 static lv_obj_t* uptimeLabel = nullptr;
@@ -23,9 +20,6 @@ static lv_obj_t* psramBar = nullptr;
 static lv_obj_t* psramValueLabel = nullptr;
 static lv_obj_t* flashBar = nullptr;
 static lv_obj_t* flashValueLabel = nullptr;
-static lv_obj_t* wifiStatusLabel = nullptr;
-static lv_obj_t* ipLabel = nullptr;
-static lv_obj_t* bleStatusLabel = nullptr;
 static lv_obj_t* core0Bar = nullptr;
 static lv_obj_t* core0Label = nullptr;
 static lv_obj_t* core1Bar = nullptr;
@@ -243,39 +237,6 @@ void screen_sysinfo_create() {
   make_sep(screen, PX, y, CW);
   y += 6;
 
-  make_section_label(screen, keyX, y, "CONNECTIVITY");
-  y += 14;
-
-  make_key_label(screen, keyX, y, "WiFi");
-  if (wifiIsConnected) {
-    char wifiBuf[64];
-    snprintf(wifiBuf, sizeof(wifiBuf), "Connected - %s", wifiConnectedSsid);
-    wifiStatusLabel = make_val_label(screen, valX, y, wifiBuf);
-    lv_obj_set_style_text_color(wifiStatusLabel, COL_GREEN, 0);
-  } else {
-    wifiStatusLabel = make_val_label(screen, valX, y, "Disconnected");
-  }
-  y += rowH;
-
-  make_key_label(screen, keyX, y, "IP");
-  if (wifiIsConnected) {
-    ipLabel = make_val_label(screen, valX, y, wifiConnectedIp);
-  } else {
-    ipLabel = make_val_label(screen, valX, y, "--");
-  }
-  y += rowH;
-
-  make_key_label(screen, keyX, y, "BLE");
-  if (ble_is_enabled()) {
-    bleStatusLabel = make_val_label(screen, valX, y, ble_is_connected() ? "Active - Connected" : "Active - Advertising");
-  } else {
-    bleStatusLabel = make_val_label(screen, valX, y, "Disabled");
-  }
-  y += rowH + 4;
-
-  make_sep(screen, PX, y, CW);
-  y += 6;
-
   make_section_label(screen, keyX, y, "SYSTEM");
   y += 14;
 
@@ -311,9 +272,6 @@ void screen_sysinfo_invalidate_widgets() {
   psramValueLabel = nullptr;
   flashBar = nullptr;
   flashValueLabel = nullptr;
-  wifiStatusLabel = nullptr;
-  ipLabel = nullptr;
-  bleStatusLabel = nullptr;
   core0Bar = nullptr;
   core0Label = nullptr;
   core1Bar = nullptr;
@@ -360,19 +318,6 @@ void screen_sysinfo_update() {
   size_t appTotal = appUsed + (ota1 ? ota1->size : 0);
   int flashPct = appTotal > 0 ? (int)((uint64_t)appUsed * 100 / appTotal) : 0;
   if (flashBar) lv_bar_set_value(flashBar, flashPct, LV_ANIM_OFF);
-
-  // WiFi status (from cached values updated by storageTask)
-  if (wifiIsConnected) {
-    char wifiBuf[64];
-    snprintf(wifiBuf, sizeof(wifiBuf), "Connected - %s", wifiConnectedSsid);
-    if (wifiStatusLabel) lv_label_set_text(wifiStatusLabel, wifiBuf);
-    if (wifiStatusLabel) lv_obj_set_style_text_color(wifiStatusLabel, COL_GREEN, 0);
-    if (ipLabel) lv_label_set_text(ipLabel, wifiConnectedIp);
-  } else {
-    if (wifiStatusLabel) lv_label_set_text(wifiStatusLabel, "Disconnected");
-    if (wifiStatusLabel) lv_obj_set_style_text_color(wifiStatusLabel, COL_TEXT, 0);
-    if (ipLabel) lv_label_set_text(ipLabel, "--");
-  }
 
   // Core load (update every 2 seconds, delta-based)
   uint32_t now = millis();

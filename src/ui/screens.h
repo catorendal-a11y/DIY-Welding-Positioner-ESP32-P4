@@ -38,8 +38,6 @@ typedef enum {
   SCREEN_EDIT_PULSE,     // Pulse edit (preset quick edit)
   SCREEN_EDIT_STEP,      // Step edit (preset quick edit)
   SCREEN_EDIT_CONT,      // Continuous edit (preset quick edit)
-  SCREEN_WIFI,         // WiFi + BLE connectivity settings
-  SCREEN_BT,           // Bluetooth settings
   SCREEN_SYSINFO,      // System info
   SCREEN_CALIBRATION,   // Motor calibration
   SCREEN_MOTOR_CONFIG,  // Motor configuration
@@ -92,10 +90,6 @@ void screen_edit_pulse_create();
 void screen_edit_step_create();
 void screen_edit_cont_create();
 
-void screen_wifi_create();
-void screen_wifi_update();
-void screen_bt_create();
-void screen_bt_update();
 void screen_sysinfo_create();
 void screen_sysinfo_update();
 void screen_calibration_create();
@@ -124,8 +118,6 @@ void screen_programs_update();
 void screen_programs_mark_dirty();
 void screen_programs_invalidate_widgets();
 void screen_program_edit_invalidate_widgets();
-void screen_wifi_invalidate_widgets();
-void screen_bt_invalidate_widgets();
 void screen_step_invalidate_widgets();
 void screen_main_invalidate_widgets();
 void screen_pulse_invalidate_widgets();

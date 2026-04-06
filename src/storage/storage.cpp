@@ -1,13 +1,16 @@
 // Storage - LittleFS persistence for settings and presets
 #include "storage.h"
-#include "WiFi.h"
 #include <cstring>
+
+extern SemaphoreHandle_t g_lvgl_mutex;
 
 std::vector<Preset> g_presets;
 SemaphoreHandle_t g_presets_mutex;
 SemaphoreHandle_t g_settings_mutex;
-SystemSettings g_settings = { 5000, 8, 1.0f, true, 150, 60, true, false, 0, "", "", BLE_DEVICE_NAME_DEFAULT, true, true, 3, 1 };
+SystemSettings g_settings = { 5000, 8, 1.0f, true, 150, 60, true, false, 0, 3, 1 };
 std::atomic<bool> g_dir_switch_cache{true};
+std::atomic<bool> g_flashWriting{false};
+volatile bool g_screenRedraw = false;
 
 static volatile bool savePending = false;
 static uint32_t lastSaveMs = 0;
@@ -34,11 +37,6 @@ void storage_init() {
     g_settings_mutex = xSemaphoreCreateMutex();
     if (!g_settings_mutex) {
         LOG_E("Failed to create settings mutex!");
-        ESP.restart();
-    }
-    g_wifi_mutex = xSemaphoreCreateMutex();
-    if (!g_wifi_mutex) {
-        LOG_E("Failed to create wifi mutex!");
         ESP.restart();
     }
     storage_load_presets();
@@ -200,13 +198,6 @@ bool storage_load_settings() {
     g_settings.dir_switch_enabled = doc["dir_switch_enabled"] | true;
     g_settings.invert_direction = doc["invert_direction"] | false;
     g_settings.accent_color = constrain(doc["accent_color"] | 0, (uint8_t)0, (uint8_t)7);
-    strlcpy(g_settings.wifi_ssid, doc["wifi_ssid"] | WIFI_SSID, sizeof(g_settings.wifi_ssid));
-    sanitize_ascii(g_settings.wifi_ssid, sizeof(g_settings.wifi_ssid));
-    strlcpy(g_settings.wifi_pass, doc["wifi_pass"] | WIFI_PASS, sizeof(g_settings.wifi_pass));
-    strlcpy(g_settings.ble_name, doc["ble_name"] | BLE_DEVICE_NAME_DEFAULT, sizeof(g_settings.ble_name));
-    sanitize_ascii(g_settings.ble_name, sizeof(g_settings.ble_name));
-    g_settings.ble_enabled = doc["ble_enabled"] | true;
-    g_settings.wifi_enabled = doc["wifi_enabled"] | true;
     g_settings.countdown_seconds = constrain(doc["countdown_seconds"] | 3, (uint8_t)1, (uint8_t)10);
     g_settings.settings_version = doc["settings_version"] | 0;
 
@@ -238,11 +229,6 @@ static bool storage_save_settings_internal() {
     doc["dir_switch_enabled"] = snap.dir_switch_enabled;
     doc["invert_direction"] = snap.invert_direction;
     doc["accent_color"] = snap.accent_color;
-    doc["wifi_ssid"] = snap.wifi_ssid;
-    doc["wifi_pass"] = snap.wifi_pass;
-    doc["ble_name"] = snap.ble_name;
-    doc["ble_enabled"] = snap.ble_enabled;
-    doc["wifi_enabled"] = snap.wifi_enabled;
     doc["countdown_seconds"] = snap.countdown_seconds;
     doc["settings_version"] = snap.settings_version;
 
@@ -273,13 +259,31 @@ void storage_flush() {
     if (presetsSavePending && (millis() - lastPresetsSaveMs > 500)) {
         presetsSavePending = false;
         lastPresetsSaveMs = millis();
+        LOG_I("FLUSH: presets save starting");
+        xSemaphoreTake(g_lvgl_mutex, portMAX_DELAY);
+        g_flashWriting.store(true, std::memory_order_release);
+        xSemaphoreGive(g_lvgl_mutex);
         storage_save_presets_internal();
+        xSemaphoreTake(g_lvgl_mutex, portMAX_DELAY);
+        g_flashWriting.store(false, std::memory_order_release);
+        g_screenRedraw = true;
+        xSemaphoreGive(g_lvgl_mutex);
+        LOG_I("FLUSH: presets save done");
     }
 
     if (savePending && (millis() - lastSaveMs > 1000)) {
         savePending = false;
         lastSaveMs = millis();
+        LOG_I("FLUSH: settings save starting");
+        xSemaphoreTake(g_lvgl_mutex, portMAX_DELAY);
+        g_flashWriting.store(true, std::memory_order_release);
+        xSemaphoreGive(g_lvgl_mutex);
         storage_save_settings_internal();
+        xSemaphoreTake(g_lvgl_mutex, portMAX_DELAY);
+        g_flashWriting.store(false, std::memory_order_release);
+        g_screenRedraw = true;
+        xSemaphoreGive(g_lvgl_mutex);
+        LOG_I("FLUSH: settings save done");
     }
 }
 
@@ -321,137 +325,10 @@ void storage_get_usage(size_t* used, size_t* total) {
 void storage_format() {
     xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
     g_presets.clear();
-    g_settings = SystemSettings{ 5000, 8, 1.0f, true, 150, 60, false, false, 0, "", "", BLE_DEVICE_NAME_DEFAULT, true, true, 3, 1 };
+    g_settings = SystemSettings{ 5000, 8, 1.0f, true, 150, 60, false, false, 0, 3, 1 };
+    g_flashWriting.store(true, std::memory_order_release);
     LittleFS.format();
+    g_flashWriting.store(false, std::memory_order_release);
     xSemaphoreGive(g_presets_mutex);
     LOG_I("Storage formatted - all data erased");
-}
-
-// ───────────────────────────────────────────────────────────────────────────────
-// WIFI SHARED STATE (accessed from screen_wifi.cpp via extern)
-// ESP-Hosted WiFi API is NOT thread-safe — shared SDIO bus to C6 co-processor
-// ALL WiFi calls from UI go through pending flags processed by storageTask
-// ───────────────────────────────────────────────────────────────────────────────
-volatile bool wifiScanPending = false;
-volatile bool wifiConnectPending = false;
-volatile bool wifiTogglePending = false;
-volatile bool wifiScanResultReady = false;
-volatile int wifiScanResultCount = 0;
-volatile bool wifiScanFailed = false;
-volatile bool wifiIsConnected = false;
-char wifiConnectedSsid[33] = "";
-char wifiConnectedIp[16] = "";
-volatile int wifiConnectedRssi = 0;
-char wifiPendingSsid[33] = "";
-char wifiPendingPass[65] = "";
-
-WifiScanEntry wifiScanBuffer[WIFI_SCAN_MAX];
-int wifiScanBufferCount = 0;
-SemaphoreHandle_t g_wifi_mutex = nullptr;
-
-static bool wifiScanStarted = false;
-static uint32_t wifiReconnectInterval = 30000;
-static uint32_t wifiLastReconnectAttempt = 0;
-static uint32_t wifiLastStatusPoll = 0;
-
-void wifi_process_pending() {
-    // WiFi toggle MUST run even when turning OFF: g_settings.wifi_enabled is already false,
-    // so an early return would skip disconnect/WIFI_OFF and leave the radio active (ESP-IDF
-    // station teardown: disconnect connectivity before stopping — see Wi-Fi Deinit Phase).
-    if (wifiTogglePending) {
-        wifiTogglePending = false;
-        if (g_settings.wifi_enabled) {
-            WiFi.mode(WIFI_STA);
-            WiFi.begin(g_settings.wifi_ssid, g_settings.wifi_pass);
-            LOG_I("WiFi enabled");
-        } else {
-            WiFi.STA.disconnect();
-            WiFi.mode(WIFI_OFF);
-            wifiScanStarted = false;
-            wifiScanPending = false;
-            wifiScanBufferCount = 0;
-            wifiIsConnected = false;
-            wifiConnectedSsid[0] = '\0';
-            wifiConnectedIp[0] = '\0';
-            wifiConnectedRssi = 0;
-            LOG_I("WiFi disabled");
-        }
-    }
-
-    if (!g_settings.wifi_enabled) {
-        return;
-    }
-
-    // Update cached connection status (every 2s to avoid SDIO bus blocking idle task)
-    uint32_t now = millis();
-    if (now - wifiLastStatusPoll >= 2000) {
-        wifiLastStatusPoll = now;
-        bool connected = (WiFi.status() == WL_CONNECTED);
-        if (g_wifi_mutex) xSemaphoreTake(g_wifi_mutex, portMAX_DELAY);
-        wifiIsConnected = connected;
-        if (connected) {
-            strlcpy(wifiConnectedSsid, WiFi.SSID().c_str(), sizeof(wifiConnectedSsid));
-            strlcpy(wifiConnectedIp, WiFi.localIP().toString().c_str(), sizeof(wifiConnectedIp));
-            wifiConnectedRssi = WiFi.RSSI();
-        } else {
-            wifiConnectedSsid[0] = '\0';
-            wifiConnectedIp[0] = '\0';
-            wifiConnectedRssi = 0;
-        }
-        if (g_wifi_mutex) xSemaphoreGive(g_wifi_mutex);
-    }
-
-    // Process WiFi scan
-    if (wifiScanPending) {
-        wifiScanPending = false;
-        wifiScanStarted = true;
-        WiFi.scanNetworks(true);
-        LOG_I("WiFi scan started (async)");
-    }
-
-    if (wifiScanStarted) {
-        int result = WiFi.scanComplete();
-        if (result >= 0) {
-            wifiScanStarted = false;
-            if (g_wifi_mutex) xSemaphoreTake(g_wifi_mutex, portMAX_DELAY);
-            wifiScanBufferCount = (result > WIFI_SCAN_MAX) ? WIFI_SCAN_MAX : result;
-            for (int i = 0; i < wifiScanBufferCount; i++) {
-                strlcpy(wifiScanBuffer[i].ssid, WiFi.SSID(i).c_str(), sizeof(wifiScanBuffer[i].ssid));
-                sanitize_ascii(wifiScanBuffer[i].ssid, sizeof(wifiScanBuffer[i].ssid));
-                wifiScanBuffer[i].rssi = WiFi.RSSI(i);
-                wifiScanBuffer[i].enc = WiFi.encryptionType(i);
-            }
-            wifiScanResultCount = result;
-            if (g_wifi_mutex) xSemaphoreGive(g_wifi_mutex);
-            wifiScanResultReady = true;
-            WiFi.scanDelete();
-            LOG_I("WiFi scan complete: %d networks", result);
-        } else if (result == WIFI_SCAN_FAILED) {
-            wifiScanStarted = false;
-            wifiScanFailed = true;
-            WiFi.scanDelete();
-            LOG_W("WiFi scan failed");
-        }
-    }
-
-    // Process WiFi connect
-    if (wifiConnectPending) {
-        wifiConnectPending = false;
-        WiFi.mode(WIFI_STA);
-        WiFi.STA.disconnect();
-        WiFi.begin(wifiPendingSsid, wifiPendingPass);
-        LOG_I("WiFi connecting to: %s", wifiPendingSsid);
-    }
-
-    // Auto-reconnect with exponential backoff
-    if (g_settings.wifi_enabled && g_settings.wifi_ssid[0] != '\0' && !wifiIsConnected) {
-        if (millis() - wifiLastReconnectAttempt > wifiReconnectInterval) {
-            wifiLastReconnectAttempt = millis();
-            WiFi.begin(g_settings.wifi_ssid, g_settings.wifi_pass);
-            wifiReconnectInterval = (wifiReconnectInterval < 300000) ? wifiReconnectInterval * 2 : 300000;
-        }
-    }
-    if (wifiIsConnected) {
-        wifiReconnectInterval = 30000;
-    }
 }

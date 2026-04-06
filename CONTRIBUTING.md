@@ -30,7 +30,7 @@ PYTHONUTF8=1 PYTHONIOENCODING=utf-8 "C:\Users\Rendalsniken\.platformio\penv\Scri
 
 1. **Fork** the repository on GitHub
 2. **Clone** your fork locally
-3. **Branch** off `master` for your feature/bugfix (e.g., `git checkout -b feature/wifi-remote`)
+3. **Branch** off `master` for your feature/bugfix (e.g., `git checkout -b feature/my-feature`)
 4. **Build** locally using the commands above — only build errors matter, LSP errors are false (missing PlatformIO headers)
 5. **Commit** with clear, descriptive messages following conventional commits format
 6. **Push** your branch to your fork
@@ -55,7 +55,6 @@ controlTask (pri 3, 4KB)
 | `src/safety/` | E-STOP interrupt, watchdog |
 | `src/storage/` | LittleFS persistence, presets, settings |
 | `src/ui/` | LVGL display, screens, theme |
-| `src/ble/` | BLE remote (NimBLE NUS via C6) |
 
 ## Coding Standards
 
@@ -109,9 +108,7 @@ controlTask (pri 3, 4KB)
 - ESP32-P4 uses RISC-V — `-mfix-esp32-psram-cache-issue` will crash
 - `DRIVER_RMT` macro doesn't exist on P4
 - `LittleFS.rename()` crashes on ESP32-P4 — use direct `FILE_WRITE`
-- GPIO 28/32 are PCB-routed to C6 co-processor — cannot use as GPIO when WiFi/BLE active
-- WiFi MUST be initialized BEFORE BLE (shared SDIO transport)
-- BLE notify rate must be limited to 500ms to avoid SDIO saturation
+- GPIO 28/32 are PCB-routed to C6 co-processor — cannot use as GPIO
 
 ## Documentation
 

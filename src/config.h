@@ -90,25 +90,6 @@
 #endif
 
 // ───────────────────────────────────────────────────────────────────────────────
-// ESP-Hosted SDIO (P4 -> C6 co-processor for BLE)
-// ───────────────────────────────────────────────────────────────────────────────
-#define SDIO_CLK    18
-#define SDIO_CMD    19
-#define SDIO_D0     14
-#define SDIO_D1     15
-#define SDIO_D2     16
-#define SDIO_D3     17
-#define SDIO_RESET  54
-
-// BLE device name
-#define BLE_DEVICE_NAME "TIG Rotator"
-#define BLE_DEVICE_NAME_DEFAULT "TIG Rotator"
-
-// Default WiFi credentials (override via settings screen)
-#define WIFI_SSID ""
-#define WIFI_PASS ""
-
-// ───────────────────────────────────────────────────────────────────────────────
 // ASCII SANITIZATION — LVGL Montserrat fonts only cover 0x20-0x7E
 // ───────────────────────────────────────────────────────────────────────────────
 #include <cstddef>

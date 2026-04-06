@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Arduino.h>
-
 void ble_init();
 void ble_update();
 bool ble_is_connected();
@@ -11,7 +9,6 @@ void ble_set_enabled(bool enabled);
 bool ble_is_enabled();
 void ble_update_name(const char* name);
 
-// Pending flags for deferred BLE operations (set from UI, processed by ble_update)
 extern volatile bool bleScanPending;
 extern volatile bool bleScanDone;
 extern volatile bool bleEnablePending;

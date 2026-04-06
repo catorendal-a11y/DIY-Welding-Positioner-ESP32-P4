@@ -1,5 +1,5 @@
 // TIG Rotator Controller - Settings Menu Screen
-// Navigation to motor config, display, WiFi, calibration, about
+// Navigation to motor config, display, calibration, about
 #include "../screens.h"
 #include "../theme.h"
 #include "../../config.h"
@@ -61,13 +61,11 @@ void screen_settings_create() {
   const int gap = 5;
   const int startY = SET_HEADER_H + 8;
 
-  create_nav_item(screen, startY, "WiFi Settings", SCREEN_WIFI);
-  create_nav_item(screen, startY + (itemH + gap) * 1, "Bluetooth Settings", SCREEN_BT);
-  create_nav_item(screen, startY + (itemH + gap) * 2, "Motor Configuration", SCREEN_MOTOR_CONFIG);
-  create_nav_item(screen, startY + (itemH + gap) * 3, "Calibration", SCREEN_CALIBRATION);
-  create_nav_item(screen, startY + (itemH + gap) * 4, "Display Settings", SCREEN_DISPLAY);
-  create_nav_item(screen, startY + (itemH + gap) * 5, "System Info", SCREEN_SYSINFO);
-  create_nav_item(screen, startY + (itemH + gap) * 6, "About", SCREEN_ABOUT);
+  create_nav_item(screen, startY, "Motor Configuration", SCREEN_MOTOR_CONFIG);
+  create_nav_item(screen, startY + (itemH + gap) * 1, "Calibration", SCREEN_CALIBRATION);
+  create_nav_item(screen, startY + (itemH + gap) * 2, "Display Settings", SCREEN_DISPLAY);
+  create_nav_item(screen, startY + (itemH + gap) * 3, "System Info", SCREEN_SYSINFO);
+  create_nav_item(screen, startY + (itemH + gap) * 4, "About", SCREEN_ABOUT);
 
   int footerY = SET_FOOTER_Y;
   int footerH = SET_FOOTER_H;

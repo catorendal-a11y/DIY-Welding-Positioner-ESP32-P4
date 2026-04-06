@@ -59,8 +59,6 @@ static void create_screen(ScreenId id) {
     case SCREEN_TIMER:       screen_timer_create(); break;
     case SCREEN_PROGRAMS:    screen_programs_create(); break;
     case SCREEN_SETTINGS:    screen_settings_create(); break;
-    case SCREEN_WIFI:        screen_wifi_create(); break;
-    case SCREEN_BT:          screen_bt_create(); break;
     case SCREEN_SYSINFO:     screen_sysinfo_create(); break;
     case SCREEN_CALIBRATION: screen_calibration_create(); break;
     case SCREEN_MOTOR_CONFIG: screen_motor_config_create(); break;
@@ -111,8 +109,6 @@ void screens_reinit() {
   screen_jog_invalidate_widgets();
   screen_programs_invalidate_widgets();
   screen_program_edit_invalidate_widgets();
-  screen_wifi_invalidate_widgets();
-  screen_bt_invalidate_widgets();
   screen_step_invalidate_widgets();
   screen_display_invalidate_widgets();
   screen_sysinfo_invalidate_widgets();
@@ -235,12 +231,6 @@ void screens_update_current() {
       break;
     case SCREEN_EDIT_CONT:
       screen_edit_cont_update();
-      break;
-    case SCREEN_WIFI:
-      screen_wifi_update();
-      break;
-    case SCREEN_BT:
-      screen_bt_update();
       break;
     case SCREEN_SYSINFO:
       screen_sysinfo_update();

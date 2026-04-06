@@ -20,10 +20,7 @@
 
 volatile bool g_wakePending = false;
 #include "storage/storage.h"
-#include "ble/ble.h"
 #include <esp_timer.h>
-#include "WiFi.h"
-#include "esp32-hal-hosted.h"
 #include "esp_task_wdt.h"
 #include "esp_cache.h"
 #include <cstdint>
@@ -31,7 +28,6 @@ volatile bool g_wakePending = false;
 
 // Cross-module externs now declared in their respective headers:
 //   motorConfigApplyPending  -> screens.h
-//   wifiConnectPending, etc. -> storage.h
 //   g_estopPending, etc.     -> safety.h
 //   speed_get_pedal_enabled  -> speed.h
 
@@ -93,6 +89,19 @@ void lvglTask(void* pvParameters) {
 
   for (;;) {
     screens_process_pending();
+
+    if (g_flashWriting.load(std::memory_order_acquire)) {
+      vTaskDelay(pdMS_TO_TICKS(5));
+      continue;
+    }
+
+    if (g_screenRedraw) {
+      g_screenRedraw = false;
+      lvgl_lock();
+      lv_obj_invalidate(lv_screen_active());
+      lvgl_unlock();
+    }
+
     lvgl_lock();
     uint32_t handlerStart = millis();
     // Return value = ms until next LVGL timer work (see LVGL integration docs); avoids fixed 10ms when idle.
@@ -223,7 +232,7 @@ void motorTask(void* pvParameters) {
 }
 
 // Storage task (Core 1, priority 1) — program save/load + health monitoring
-// NOT subscribed to WDT — does blocking I/O (LittleFS, WiFi SDIO, BLE SDIO)
+// NOT subscribed to WDT — does blocking I/O (LittleFS flash writes)
 void storageTask(void* pvParameters) {
   LOG_I("Storage task started on Core %d", xPortGetCoreID());
   TickType_t t = xTaskGetTickCount();
@@ -231,10 +240,6 @@ void storageTask(void* pvParameters) {
   static uint32_t lastHealthCheck = 0;
   for (;;) {
     storage_flush();
-
-    wifi_process_pending();
-
-    ble_update();
 
     // Health monitoring every 30 seconds (FIX-09)
     if (millis() - lastHealthCheck >= 30000) {
@@ -322,19 +327,6 @@ void setup() {
 
   // Initialize control state machine
   control_init();
-
-  // WiFi init fully deferred to storageTask (ESP-Hosted SDIO must be single-owner)
-  if (g_settings.wifi_enabled && g_settings.wifi_ssid[0] != '\0') {
-    wifiConnectPending = true;
-    strlcpy(wifiPendingSsid, g_settings.wifi_ssid, sizeof(wifiPendingSsid));
-    strlcpy(wifiPendingPass, g_settings.wifi_pass, sizeof(wifiPendingPass));
-    LOG_I("WiFi connect deferred to storageTask: %s", g_settings.wifi_ssid);
-  } else {
-    LOG_I("WiFi %s", g_settings.wifi_enabled ? "enabled (no SSID)" : "disabled (saved setting)");
-  }
-
-  // Initialize BLE (ESP-Hosted via C6 co-processor)
-  ble_init();
 
   // ─────────────────────────────────────────────────────────────────────────
   // CREATE FREERTOS TASKS

@@ -217,7 +217,9 @@ static void save_preset_cb(lv_event_t* e) {
   xSemaphoreGive(g_presets_mutex);
 
   storage_save_presets();
+  LOG_I("SAVE: switching to programs screen");
   screens_show(SCREEN_PROGRAMS);
+  LOG_I("SAVE: screen switch done");
 }
 
 // ───────────────────────────────────────────────────────────────────────────────

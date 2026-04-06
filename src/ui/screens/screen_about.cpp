@@ -101,7 +101,7 @@ void screen_about_create() {
   make_info_row(screen, PX, y, CW, 32, "MCU", "ESP32-P4 RISC-V 360MHz");
   y += 36;
 
-  make_info_row(screen, PX, y, CW, 32, "CO-PROCESSOR", "ESP32-C6 (WiFi + BLE)");
+  make_info_row(screen, PX, y, CW, 32, "CO-PROCESSOR", "ESP32-C6");
   y += 36;
 
   make_sep(screen, PX, y, CW);

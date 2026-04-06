@@ -29,7 +29,6 @@
 ### Direction switch not working
 - Enable it in Settings > Motor Config > Direction Switch
 - Verify physical wire is on GPIO 29 (not GPIO 28, which is C6_U0TXD)
-- GPIO 28/32 are reserved for WiFi/BLE — cannot be used for GPIO
 
 ## Display Issues
 
@@ -90,22 +89,6 @@
 - v2.0.2 uses 2-decimal precision and `MAX_RPM * 100` gauge range
 - MIN_RPM is 0.02
 
-## WiFi / BLE Issues
-
-### WiFi scan causes bluescreen
-- WiFi API is NOT thread-safe on ESP32-P4 (shared SDIO bus to C6)
-- All WiFi calls go through `wifi_process_pending()` in storageTask — never from UI thread
-
-### BLE data corruption
-- BLE notify was flooding SDIO bus, causing write callback corruption
-- Rate-limited to 500ms max notify interval
-- BLE write callbacks use pending flags, processed in `ble_update()`
-
-### GPIO 28 / 32 causes problems
-- These pins are PCB-routed to ESP32-C6 for WiFi/BLE (C6_U0TXD / C6_U0RXD)
-- WiFi.begin() and BLEDevice::init() claim these pins
-- Do NOT use them for GPIO — dir switch moved to GPIO 29
-
 ## Safety
 
 ### E-STOP not working
@@ -124,7 +107,7 @@
 
 ## Keyboard Crash
 
-### Typing in WiFi/BT/Program Edit causes crash
+### Typing in Program Edit causes crash
 - Keyboard close/delete from inside LVGL event callback causes use-after-free
 - Fixed in v2.0.2: deferred cleanup pattern with `*ClosePending` flags + `lv_obj_delete_async()`
 - `screen_*_invalidate_widgets()` functions prevent dangling pointers after theme changes

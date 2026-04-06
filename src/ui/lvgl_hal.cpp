@@ -58,7 +58,7 @@ static void IRAM_ATTR lvgl_tick_cb(void* arg) {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// LVGL BUFFERS - PSRAM
+// LVGL BUFFERS - PSRAM (full frame, double buffered)
 // LVGL renders at 800x480 landscape, flush callback rotates to 480x800 portrait
 // ───────────────────────────────────────────────────────────────────────────────
 static uint8_t *buf1 = nullptr;
@@ -66,19 +66,14 @@ static uint8_t *buf2 = nullptr;
 static size_t buf_bytes = 0;
 
 // Pre-allocated rotation scratch buffer (PSRAM)
-// Max strip: 800 × 80 lines = 64000 pixels × 2 bytes = 128000 bytes
+// Full frame: 800 × 480 = 384000 pixels × 2 bytes = 768000 bytes
 static uint16_t *rot_buf = nullptr;
 static size_t rot_buf_pixels = 0;
 
 void lvgl_alloc_buffers() {
-  // Buffer for LVGL rendering: 800 × 80 lines × 2 bytes = 128000 bytes
-  buf_bytes = DISPLAY_H_RES * LVGL_BUF_LINES * 2;
+  buf_bytes = DISPLAY_H_RES * DISPLAY_V_RES * 2;  // 800 × 480 × 2 = 768000
+  rot_buf_pixels = DISPLAY_H_RES * DISPLAY_V_RES;  // 384000 pixels
 
-  // Rotation scratch buffer: same max size as a strip
-  rot_buf_pixels = DISPLAY_H_RES * LVGL_BUF_LINES; // 800 * 80 = 64000 pixels
-
-  // Use PSRAM (32MB available) — DMA2D is disabled so PSRAM is safe
-  // LV_DRAW_BUF_ALIGN=64 requires 64-byte aligned buffers for ESP32-P4 PPA
   buf1 = (uint8_t*)heap_caps_aligned_calloc(64, 1, buf_bytes, MALLOC_CAP_SPIRAM);
   buf2 = (uint8_t*)heap_caps_aligned_calloc(64, 1, buf_bytes, MALLOC_CAP_SPIRAM);
   rot_buf = (uint16_t*)heap_caps_aligned_calloc(64, 1, rot_buf_pixels * 2, MALLOC_CAP_SPIRAM);
@@ -89,6 +84,7 @@ void lvgl_alloc_buffers() {
     if (buf2) heap_caps_free(buf2);
     if (rot_buf) heap_caps_free(rot_buf);
     buf1 = nullptr;
+    buf2 = nullptr;
     rot_buf = nullptr;
     return;
   }
@@ -109,6 +105,11 @@ void lvgl_alloc_buffers() {
 // ───────────────────────────────────────────────────────────────────────────────
 void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
   if (!display_panel || !px_map || !area || !rot_buf) {
+    lv_display_flush_ready(disp);
+    return;
+  }
+
+  if (g_flashWriting.load(std::memory_order_acquire)) {
     lv_display_flush_ready(disp);
     return;
   }
@@ -226,7 +227,7 @@ void lvgl_hal_init() {
   // ─────────────────────────────────────────────────────────────────────────
   lv_display_t *disp = lv_display_create(DISPLAY_H_RES, DISPLAY_V_RES);
   lv_display_set_color_format(disp, LV_COLOR_FORMAT_RGB565);
-  lv_display_set_buffers(disp, buf1, buf2, buf_bytes, LV_DISPLAY_RENDER_MODE_PARTIAL);
+  lv_display_set_buffers(disp, buf1, buf2, buf_bytes, LV_DISPLAY_RENDER_MODE_FULL);
   lv_display_set_flush_cb(disp, lvgl_flush_cb);
   // NO lv_display_set_rotation() — causes Load access fault on ESP32-P4.
   // lv_display_set_rotation() triggers LVGL's internal buffer rearrangement

@@ -2,7 +2,7 @@
 
 ## Dual-Core FreeRTOS Design
 
-The controller runs on ESP32-P4's dual-core RISC-V processor, with an ESP32-C6 co-processor connected via SDIO for WiFi and BLE.
+The controller runs on ESP32-P4's dual-core RISC-V processor.
 
 ```
 CORE 0 (Real-time)              CORE 1 (UI)
@@ -16,7 +16,7 @@ controlTask (pri 3, 4KB)
 
 **WDT:** motorTask, controlTask, safetyTask are subscribed to TWDT. lvglTask and storageTask are NOT subscribed (they do blocking I/O that can exceed WDT timeout).
 
-**Flash safety:** `CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y` + `CONFIG_SPIRAM_RODATA=y` ensures code remains accessible when flash cache is disabled during LittleFS writes. All WiFi calls go through `wifi_process_pending()` (thread-safe). Storage uses .tmp + rename for atomic writes. IWDT timeout is 2000ms (`CONFIG_ESP_INT_WDT_TIMEOUT_MS=2000`).
+**Flash safety:** `CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y` + `CONFIG_SPIRAM_RODATA=y` ensures code remains accessible when flash cache is disabled during LittleFS writes. Storage uses .tmp + rename for atomic writes. IWDT timeout is 2000ms (`CONFIG_ESP_INT_WDT_TIMEOUT_MS=2000`).
 
 ## State Machine
 
@@ -118,16 +118,7 @@ Two-layer ESTOP architecture:
 - 16 program presets max, system settings
 - Debounced writes: 500ms presets, 1000ms settings
 - Atomic writes: .tmp + rename pattern prevents corruption on power failure
-- WiFi thread safety: all WiFi API calls via `wifi_process_pending()`, cached values for UI
 - storageTask NOT subscribed to WDT (does blocking I/O)
-
-### `src/ble/` — Bluetooth
-
-- **NimBLE** via Arduino BLE (baked into arduino-esp32 3.3.x)
-- **ESP-Hosted** SDIO transport to ESP32-C6 co-processor
-- **NUS service:** Command (RX), State+RPM+Direction (TX)
-- **Rate limiting:** Notify at 500ms max to avoid SDIO saturation
-- **Pending flags:** Write callbacks set flags, processed in `ble_update()`
 
 ### `src/ui/` — User Interface
 
@@ -176,8 +167,7 @@ LittleFS.write()  ──>  flash cache DISABLED  ──>  code in flash CRASHES
 Mitigations:
 1. **`CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y` + `CONFIG_SPIRAM_RODATA=y`** — moves instructions/rodata to PSRAM
 2. **Deferred UI saves** — never call `storage_save_*()` from LVGL event callbacks
-3. **storageTask not in WDT** — blocking I/O (flash, SDIO) can exceed 5s timeout
-4. **WiFi single-threaded** — all WiFi calls through `wifi_process_pending()` in storageTask
+3. **storageTask not in WDT** — blocking I/O (flash) can exceed 5s timeout
 
 ## Timer Screen (Countdown)
 

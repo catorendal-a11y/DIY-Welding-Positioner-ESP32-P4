@@ -149,6 +149,27 @@ void display_fill_black() {
   heap_caps_free(black_buf);
 }
 
+void display_fill_black_sync() {
+  if (!display_panel) return;
+  const int w = DISPLAY_H_RES_NATIVE;
+  const int h = DISPLAY_V_RES_NATIVE;
+  const int strip = 100;
+  uint16_t* black_buf = (uint16_t*)heap_caps_aligned_calloc(64, 1, (size_t)w * strip * 2, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+  if (!black_buf) return;
+  memset(black_buf, 0, (size_t)w * strip * 2);
+  for (int y = 0; y < h; y += strip) {
+    int y_end = (y + strip > h) ? h : (y + strip);
+    esp_lcd_panel_draw_bitmap(display_panel, 0, y, w, y_end, black_buf);
+  }
+  vTaskDelay(pdMS_TO_TICKS(20));
+  for (int y = 0; y < h; y += strip) {
+    int y_end = (y + strip > h) ? h : (y + strip);
+    esp_lcd_panel_draw_bitmap(display_panel, 0, y, w, y_end, black_buf);
+  }
+  vTaskDelay(pdMS_TO_TICKS(50));
+  heap_caps_free(black_buf);
+}
+
 // ───────────────────────────────────────────────────────────────────────────────
 // DISPLAY INITIALIZATION — MIPI-DSI + ST7701S
 // ───────────────────────────────────────────────────────────────────────────────

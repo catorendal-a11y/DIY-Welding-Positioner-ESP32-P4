@@ -10,8 +10,6 @@ All core features tested and confirmed working on real hardware:
 - All 5 welding modes (Continuous, Jog, Pulse, Step, Timer)
 - Hardware E-STOP with <0.5ms response + UI reset
 - 16 program preset save/load (LittleFS)
-- BLE remote control (NUS, phone app)
-- WiFi connectivity (scan, connect, credentials)
 - 23 UI screens including settings, system info, calibration
 - Direction switch (GPIO29), foot pedal support
 - 8 accent color themes, brightness control, dim timeout
@@ -34,7 +32,7 @@ Open-source welding positioner controller for rotary welding tables, pipe weldin
 
 | Parameter | Value |
 |-----------|-------|
-| MCU | ESP32-P4 (360MHz, dual-core RISC-V) + ESP32-C6 co-processor |
+| MCU | ESP32-P4 (360MHz, dual-core RISC-V) |
 | Display | GUITION JC4880P443C, 800x480 landscape, MIPI-DSI ST7701S |
 | Touch | GT911 capacitive |
 | UI Framework | LVGL 9.5.0 |
@@ -43,8 +41,6 @@ Open-source welding positioner controller for rotary welding tables, pipe weldin
 | Microstepping | 1/4, 1/8, 1/16, 1/32 (selectable) |
 | RPM Range | 0.02 - 1.0 RPM (TB6600), up to 5.0 (DM542T) |
 | Storage | LittleFS + ArduinoJson (16 presets, settings) |
-| BLE | NimBLE via ESP-Hosted (C6 co-processor, SDIO) |
-| WiFi | ESP-Hosted STA mode (C6 co-processor, SDIO) |
 
 ## Repository Structure
 
@@ -55,8 +51,7 @@ src/
   motor/                - FastAccelStepper wrapper, speed control, microstepping
   control/              - State machine, 5 welding modes
   safety/               - E-STOP ISR + watchdog
-  storage/              - LittleFS persistence, WiFi process, BLE update
-  ble/                  - NimBLE NUS service, scanning, C6 OTA
+  storage/              - LittleFS persistence
   ui/                   - LVGL screens, display init, touch, theme
 docs/
   images/               - SVG wiring diagrams, UI mockups

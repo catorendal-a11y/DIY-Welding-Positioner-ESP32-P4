@@ -4,7 +4,7 @@
 
 ### Precision Multi-Mode Welding Rotator for TIG, MIG, and Pipe Welding
 
-**ESP32-P4 / ESP32-C6 &nbsp;&middot;&nbsp; Firmware v2.0.2**
+**ESP32-P4 / ESP32-C6 &nbsp;&middot;&nbsp; Firmware v2.0.3**
 
 <br>
 

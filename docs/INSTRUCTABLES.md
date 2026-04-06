@@ -133,8 +133,9 @@ IMAGE: docs/images/Wiring_diagram.v2.svg
 | GPIO 34 (ESTOP) | E-STOP button | NC contact, pull-up |
 | GPIO 29 (DIR SW) | Direction toggle | Pull-up, CW/CCW |
 | GPIO 49 (POT) | 10k pot wiper | ADC input |
-| GPIO 35 (PEDAL) | Foot pedal pot | ADC input (optional) |
+| GPIO 35 (PEDAL) | Foot pedal pot | Digital only (no ADC on P4) |
 | GPIO 33 (PEDAL SW) | Foot pedal switch | Pull-up (optional) |
+| I2C (GPIO 7/8) | ADS1115 | Pedal pot ADC (optional, addr 0x48) |
 | 5V | TB6600 PUL-/DIR-/ENA+ | Logic power |
 | 24V PSU+ | TB6600 VCC | Motor power |
 | 24V PSU- | TB6600 GND | Common ground |
@@ -197,7 +198,7 @@ Two methods for adjusting speed:
 
 1. **Potentiometer** — turn the knob for analog speed control (0.02-1.0 RPM)
 2. **+/- buttons** — digital adjustment
-3. **Foot pedal** — analog speed via pedal potentiometer (if connected)
+3. **Foot pedal** — analog speed via ADS1115 I2C ADC (if connected)
 
 ### 5 Welding Modes
 

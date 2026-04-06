@@ -46,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - On-screen keyboard for SSID/password entry
   - WiFi status in System Info screen
   - OTA firmware updates for C6 co-processor
-- **Foot pedal support** — analog speed control (GPIO35) + digital start switch (GPIO33)
+- **Foot pedal support** — analog speed control (ADS1115 I2C ADC) + digital start switch (GPIO33)
 - **Direction switch** — physical CW/CCW toggle on GPIO29
 - **Settings hub screen** with 7 sub-screens: WiFi, Bluetooth, Display, System Info, Calibration, Motor Config, About
 - **Display Settings** — brightness slider, dim timeout configuration

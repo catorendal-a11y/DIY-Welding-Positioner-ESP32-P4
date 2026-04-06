@@ -99,10 +99,11 @@ Settings can also be changed from the touchscreen via **Settings > Motor Config*
 | GPIO 49 | POT (ADC Input) | 10k Pot wiper |
 | GPIO 29 | DIR SW (Input) | CW/CCW toggle |
 | GPIO 34 | E-STOP (Input, ISR) | NC E-STOP button |
-| GPIO 35 | PEDAL POT (ADC) | Foot pedal pot (optional) |
+| GPIO 35 | (no ADC) | Digital only |
 | GPIO 33 | PEDAL SW (Input) | Foot pedal switch (optional) |
+| I2C (GPIO 7/8) | ADS1115 | Pedal pot ADC (optional, addr 0x48) |
 
-**Reserved pins (do NOT use):** GPIO 28 (C6_U0TXD), GPIO 32 (C6_U0RXD) — PCB-routed to C6 co-processor for WiFi/BLE.
+**Available pins:** GPIO 28, GPIO 30, GPIO 31, GPIO 32 (digital only, no ADC).
 
 All TB6600 minus pins (PUL-, DIR-, ENA-) connect to ESP32 GND.
 

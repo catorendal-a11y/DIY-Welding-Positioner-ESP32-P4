@@ -61,7 +61,7 @@
 - [x] **Debounced flash writes** (500ms presets, 1000ms settings)
 
 ### Hardware
-- [x] **Foot pedal support** (analog speed GPIO35, digital switch GPIO33)
+- [x] **Foot pedal support** (analog speed via ADS1115 I2C ADC, digital switch GPIO33)
 - [x] **Direction switch** (GPIO29, CW/CCW toggle)
 - [x] **Gear ratio 199.5:1** (60 x 133 / 40)
 
@@ -121,8 +121,8 @@
 | GPIO 49 | POT | 10k speed potentiometer (ADC) |
 | GPIO 29 | DIR SWITCH | CW/CCW toggle, INPUT_PULLUP |
 | GPIO 34 | E-STOP | NC contact, interrupt, active LOW |
-| GPIO 35 | PEDAL POT | Foot pedal speed (ADC) |
+| GPIO 35 | (no ADC) | Digital only |
 | GPIO 33 | PEDAL SW | Foot pedal switch, active LOW |
-| GPIO 7/8 | Touch I2C | GT911 (internal) |
-| GPIO 28/32 | C6 UART | Reserved -- do not use |
+| GPIO 7/8 | Touch I2C | GT911 + ADS1115 (shared bus) |
+| GPIO 28/32 | Available | Digital GPIO (no ADC) |
 | GPIO 14-19, 54 | C6 SDIO | ESP-Hosted transport -- do not use |

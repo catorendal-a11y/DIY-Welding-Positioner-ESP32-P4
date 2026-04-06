@@ -115,9 +115,9 @@
     <rect x="330" y="272" width="50" height="16" rx="5" fill="#1A2A2A" stroke="#446666" stroke-width="1.5"/>
     <text x="355" y="283" font-family="sans-serif" font-size="8" fill="#558888" text-anchor="middle">USB-C</text>
 
-    <!-- Row 8: GPIO35 ★ PEDAL POT | GND -->
-    <rect x="64" y="306" width="18" height="18" rx="3" fill="#1A4400" stroke="#8BC34A" stroke-width="2"/>
-    <text x="88" y="320" font-family="monospace" font-size="15" fill="#CCEE66" font-weight="bold">GPIO35</text>
+    <!-- Row 8: GPIO35 (digital only, no ADC) | GND -->
+    <rect x="64" y="306" width="18" height="18" rx="3" fill="#1A4400" stroke="#6B8E23" stroke-width="1"/>
+    <text x="88" y="320" font-family="monospace" font-size="15" fill="#6B8E23">GPIO35</text>
     <text x="280" y="320" font-family="monospace" font-size="15" fill="#BBBBBB" text-anchor="end" font-weight="bold">GND</text>
     <rect x="290" y="306" width="18" height="18" rx="3" fill="#222" stroke="#555" stroke-width="1.5"/>
 
@@ -127,17 +127,17 @@
     <text x="280" y="350" font-family="monospace" font-size="15" fill="#FF9100" text-anchor="end" font-weight="bold">ESP_3V3</text>
     <rect x="290" y="336" width="18" height="18" rx="3" fill="#332200" stroke="#FF9100" stroke-width="1.5"/>
 
-    <!-- Row 10: GPIO32 -->
+    <!-- Row 10: GPIO32 (available) -->
     <rect x="64" y="366" width="18" height="18" rx="3" fill="#1A4400" stroke="#6B8E23" stroke-width="1"/>
     <text x="88" y="380" font-family="monospace" font-size="15" fill="#6B8E23">GPIO32</text>
-    <text x="280" y="380" font-family="monospace" font-size="14" fill="#5599DD" text-anchor="end">C6_U0RXD</text>
-    <rect x="290" y="366" width="18" height="18" rx="3" fill="#0A1A33" stroke="#5599DD" stroke-width="1"/>
+    <text x="280" y="380" font-family="monospace" font-size="15" fill="#6B8E23" text-anchor="end">GPIO31</text>
+    <rect x="290" y="366" width="18" height="18" rx="3" fill="#1A4400" stroke="#6B8E23" stroke-width="1"/>
 
-    <!-- Row 11: GPIO28 | C6_U0TXD -->
+    <!-- Row 11: GPIO28 (available) | GPIO30 (available) -->
     <rect x="64" y="396" width="18" height="18" rx="3" fill="#1A4400" stroke="#6B8E23" stroke-width="1"/>
     <text x="88" y="410" font-family="monospace" font-size="15" fill="#6B8E23">GPIO28</text>
-    <text x="280" y="410" font-family="monospace" font-size="14" fill="#5599DD" text-anchor="end">C6_U0TXD</text>
-    <rect x="290" y="396" width="18" height="18" rx="3" fill="#0A1A33" stroke="#5599DD" stroke-width="1"/>
+    <text x="280" y="410" font-family="monospace" font-size="15" fill="#6B8E23" text-anchor="end">GPIO30</text>
+    <rect x="290" y="396" width="18" height="18" rx="3" fill="#1A4400" stroke="#6B8E23" stroke-width="1"/>
 
     <!-- Row 12: I2C_SDA -->
     <rect x="64" y="426" width="18" height="18" rx="3" fill="#220044" stroke="#AA77DD" stroke-width="1"/>
@@ -158,7 +158,6 @@
   <text x="432" y="230" font-family="sans-serif" font-size="15" fill="#00E5FF" font-weight="bold">← DIR</text>
   <text x="432" y="260" font-family="sans-serif" font-size="15" fill="#00E5FF" font-weight="bold">← STEP</text>
   <text x="432" y="290" font-family="sans-serif" font-size="15" fill="#CC88FF" font-weight="bold">← POT</text>
-  <text x="432" y="320" font-family="sans-serif" font-size="15" fill="#CC88FF" font-weight="bold">← PEDAL POT</text>
   <text x="432" y="350" font-family="sans-serif" font-size="15" fill="#FF5252" font-weight="bold">← E-STOP</text>
   <text x="560" y="290" font-family="sans-serif" font-size="15" fill="#26C6DA" font-weight="bold">DIR SW →</text>
 
@@ -366,9 +365,9 @@
     <rect y="28" width="195" height="12" fill="#CC88FF" fill-opacity="0.10"/>
     <text x="98" y="22" font-family="sans-serif" font-size="16" fill="#CC88FF" text-anchor="middle" font-weight="bold">FOOT PEDAL</text>
     <text x="98" y="36" font-family="sans-serif" font-size="11" fill="#885588" text-anchor="middle">Analog POT + Momentary SW</text>
-    <text x="98" y="66" font-family="sans-serif" font-size="13" fill="#CC88FF" text-anchor="middle">POT  → GPIO35</text>
+    <text x="98" y="66" font-family="sans-serif" font-size="13" fill="#CC88FF" text-anchor="middle">POT  → ADS1115 AIN0</text>
     <text x="98" y="84" font-family="sans-serif" font-size="13" fill="#CC88FF" text-anchor="middle">SW   → GPIO33</text>
-    <text x="98" y="104" font-family="sans-serif" font-size="11" fill="#885588" text-anchor="middle">Speed + Start</text>
+    <text x="98" y="104" font-family="sans-serif" font-size="11" fill="#885588" text-anchor="middle">Speed (via I2C ADC) + Start</text>
     <circle cx="36" cy="0" r="5" fill="#CC88FF"/>
     <circle cx="80" cy="0" r="5" fill="#FF5252"/>
     <circle cx="124" cy="0" r="5" fill="#CC88FF"/>
@@ -477,11 +476,11 @@
   <circle cx="571" cy="840" r="4" fill="#26C6DA"/>
   <circle cx="348" cy="369" r="4" fill="#26C6DA"/>
 
-  <!-- ── FOOT PEDAL POT → ESP GPIO35 ── -->
-  <path d="M 1076,840 L 1076,755 L 40,755 L 40,399 L 113,399"
+  <!-- ── FOOT PEDAL POT → ADS1115 AIN0 ── -->
+  <path d="M 1076,840 L 1076,755 L 1240,755 L 1240,634 L 1214,634"
         fill="none" stroke="#CC44FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   <circle cx="1076" cy="840" r="4" fill="#CC44FF"/>
-  <circle cx="113" cy="399" r="4" fill="#CC44FF"/>
+  <circle cx="1214" cy="634" r="4" fill="#CC44FF"/>
 
   <!-- ── FOOT PEDAL SW → ESP GPIO33 ── -->
   <path d="M 1164,840 L 1164,745 L 365,745 L 365,279 L 339,279"
@@ -493,13 +492,61 @@
   <line x1="1200" y1="840" x2="1200" y2="770" stroke="#444" stroke-width="2" stroke-linecap="round"/>
   <circle cx="1200" cy="770" r="3.5" fill="#555"/>
 
-  <!-- ── FOOT PEDAL 3V3 (dashed) ── -->
-  <path d="M 1120,840 L 1120,798 Q 1120,790 1112,790 L 296,790 Q 288,790 288,782 L 288,189 L 113,189"
+  <!-- ── FOOT PEDAL 3V3 → ADS1115 VDD ── -->
+  <path d="M 1120,840 L 1120,798 Q 1120,790 1112,790 L 1030,790 Q 1022,790 1022,782 L 1022,680"
         fill="none" stroke="#FF5252" stroke-width="1.5" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" opacity="0.4"/>
   <circle cx="1120" cy="840" r="3" fill="#FF5252" opacity="0.4"/>
 
   <!-- ═══════════════════════════
-       MOTOR ROTATION ANIMATION
+        ADS1115 (I2C ADC for Pedal)
+        ═══════════════════════════ -->
+  <g transform="translate(1010, 580)">
+    <rect width="210" height="120" rx="10" fill="#0A0614" stroke="#AA77DD" stroke-width="2"/>
+    <rect width="210" height="36" rx="10" fill="#AA77DD" fill-opacity="0.10"/>
+    <rect y="24" width="210" height="12" fill="#AA77DD" fill-opacity="0.10"/>
+    <text x="105" y="20" font-family="sans-serif" font-size="15" fill="#AA77DD" text-anchor="middle" font-weight="bold" letter-spacing="1">ADS1115</text>
+    <text x="105" y="34" font-family="sans-serif" font-size="10" fill="#775599" text-anchor="middle">16-bit I2C ADC · Addr 0x48</text>
+
+    <text x="18" y="58" font-family="monospace" font-size="11" fill="#FF7070">VDD</text>
+    <text x="18" y="76" font-family="monospace" font-size="11" fill="#888">GND</text>
+    <text x="18" y="94" font-family="monospace" font-size="11" fill="#AA77DD">SCL</text>
+    <text x="18" y="112" font-family="monospace" font-size="11" fill="#AA77DD">SDA</text>
+    <text x="192" y="58" font-family="monospace" font-size="11" fill="#DD99FF" text-anchor="end">AIN0</text>
+    <text x="192" y="76" font-family="monospace" font-size="11" fill="#6B8E23" text-anchor="end">ADDR</text>
+
+    <circle cx="6" cy="54" r="4" fill="#FF5252"/>
+    <circle cx="6" cy="72" r="4" fill="#555"/>
+    <circle cx="6" cy="90" r="4" fill="#AA77DD"/>
+    <circle cx="6" cy="108" r="4" fill="#AA77DD"/>
+    <circle cx="204" cy="54" r="4" fill="#DD99FF"/>
+    <circle cx="204" cy="72" r="4" fill="#6B8E23"/>
+  </g>
+
+  <!-- ADS1115 VDD → 3V3 (dashed power) -->
+  <path d="M 1016,634 L 1016,700 L 280,700 L 280,189 L 113,189"
+        fill="none" stroke="#FF5252" stroke-width="1.5" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" opacity="0.4"/>
+  <circle cx="1016" cy="634" r="3" fill="#FF5252" opacity="0.4"/>
+
+  <!-- ADS1115 GND → GND bus -->
+  <line x1="1016" y1="652" x2="1016" y2="770" stroke="#444" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="1016" cy="770" r="3.5" fill="#555"/>
+
+  <!-- ADS1115 SCL → ESP I2C_SCL (row 13, abs 113,549) -->
+  <path d="M 1016,670 L 90,670 L 90,549 L 113,549"
+        fill="none" stroke="#AA77DD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 3"/>
+  <circle cx="113" cy="549" r="3" fill="#AA77DD"/>
+
+  <!-- ADS1115 SDA → ESP I2C_SDA (row 12, abs 113,519) -->
+  <path d="M 1016,688 L 80,688 L 80,519 L 113,519"
+        fill="none" stroke="#AA77DD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 3"/>
+  <circle cx="113" cy="519" r="3" fill="#AA77DD"/>
+  <text x="550" y="666" font-family="sans-serif" font-size="10" fill="#AA77DD" text-anchor="middle" opacity="0.7">I2C (touch bus)</text>
+
+  <!-- ADS1115 AIN0 ← Foot Pedal POT (already wired above) -->
+  <!-- ADS1115 ADDR → GND (already connected via internal pull) -->
+
+  <!-- ═══════════════════════════
+        MOTOR ROTATION ANIMATION
        (Snur retning synkronisert med DIR-switch)
        ═══════════════════════════ -->
   <g>
@@ -516,7 +563,7 @@
         PIN REFERENCE
         ═══════════════════════════ -->
   <g transform="translate(20, 960)">
-    <rect width="420" height="260" rx="12" fill="#060A08" stroke="#1A3322" stroke-width="1.5"/>
+    <rect width="420" height="288" rx="12" fill="#060A08" stroke="#1A3322" stroke-width="1.5"/>
     <text x="210" y="24" font-family="sans-serif" font-size="16" fill="#55AA77" text-anchor="middle" font-weight="bold" letter-spacing="1">PIN REFERENCE</text>
     <text x="18" y="50"  font-family="monospace" font-size="14" fill="#CCEE66">GPIO50</text><text x="106" y="50"  font-family="monospace" font-size="14" fill="#CCC">→  TB6600  PUL+  (STEP)</text>
     <text x="18" y="72"  font-family="monospace" font-size="14" fill="#CCEE66">GPIO51</text><text x="106" y="72"  font-family="monospace" font-size="14" fill="#CCC">→  TB6600  DIR+</text>
@@ -524,10 +571,11 @@
     <text x="18" y="116" font-family="monospace" font-size="14" fill="#DD99FF">GPIO49</text><text x="106" y="116" font-family="monospace" font-size="14" fill="#CCC">→  Potentiometer (ADC)</text>
     <text x="18" y="138" font-family="monospace" font-size="14" fill="#FF6666">GPIO34</text><text x="106" y="138" font-family="monospace" font-size="14" fill="#CCC">→  E-STOP  NC contact</text>
     <text x="18" y="160" font-family="monospace" font-size="14" fill="#DD99FF">GPIO33</text><text x="106" y="160" font-family="monospace" font-size="14" fill="#CCC">→  Foot Pedal SW (active LOW)</text>
-    <text x="18" y="182" font-family="monospace" font-size="14" fill="#DD99FF">GPIO35</text><text x="106" y="182" font-family="monospace" font-size="14" fill="#CCC">→  Foot Pedal POT (ADC)</text>
+    <text x="18" y="182" font-family="monospace" font-size="14" fill="#888">GPIO35</text><text x="106" y="182" font-family="monospace" font-size="14" fill="#888">→  Digital only (no ADC)</text>
     <text x="18" y="204" font-family="monospace" font-size="14" fill="#888">GND</text>   <text x="106" y="204" font-family="monospace" font-size="14" fill="#888">→  all minus (−) pins</text>
     <text x="18" y="226" font-family="monospace" font-size="14" fill="#4DD0E1">GPIO29</text><text x="106" y="226" font-family="monospace" font-size="14" fill="#CCC">→  DIR Switch (CW/CCW)</text>
-    <text x="18" y="248" font-family="monospace" font-size="14" fill="#5599DD">GPIO28/32</text><text x="106" y="248" font-family="monospace" font-size="14" fill="#888">→  C6 UART (reserved)</text>
+    <text x="18" y="248" font-family="monospace" font-size="14" fill="#6B8E23">GPIO28/32</text><text x="106" y="248" font-family="monospace" font-size="14" fill="#888">→  Available (no ADC)</text>
+    <text x="18" y="270" font-family="monospace" font-size="14" fill="#AA77DD">ADS1115</text><text x="106" y="270" font-family="monospace" font-size="14" fill="#CCC">→  Pedal POT via I2C ADC</text>
   </g>
 
   <!-- ═══════════════════════════

@@ -102,7 +102,7 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 |:---|:---|
 | **Welding Modes** | 5 modes — Continuous, Jog, Pulse, Step, and Countdown (configurable 1-10s delay) |
 | **Speed Control** | Live RPM adjustment via potentiometer and touchscreen buttons |
-| **Foot Pedal** | Analog speed input + digital start switch |
+| **Foot Pedal** | Analog speed input (via ADS1115 I2C ADC) + digital start switch |
 | **Direction Switch** | Physical CW/CCW toggle (GPIO 29) |
 | **Touch UI** | LVGL 9.x glove-safe interface, high-contrast dark theme, 8 accent colors |
 | **Program Presets** | Save/load up to 16 welding parameter sets to LittleFS flash |
@@ -131,7 +131,7 @@ The interface consists of **23 screens**, each purpose-built for industrial use 
 | **Program Edit** | Full preset editor with on-screen keyboard |
 | **Settings** | Hub for Display, System Info, Calibration, Motor Config, About |
 | **Display** | Brightness slider, dim timeout |
-| **System Info** | Core load, heap, PSRAM, WiFi, uptime |
+| **System Info** | Core load, heap, PSRAM, uptime |
 | **Calibration** | Motor calibration factor adjustment |
 | **Motor Config** | Microstepping, acceleration, direction switch, pedal enable |
 | **About** | Firmware version, hardware info |
@@ -199,9 +199,9 @@ controlTask  (pri 3, 4 KB)
 | **GPIO 49** | POT (ADC Input) | 10k speed potentiometer |
 | **GPIO 29** | DIR SWITCH (Input) | CW/CCW toggle, INPUT_PULLUP |
 | **GPIO 34** | E-STOP (Input, ISR) | NC contact, active LOW |
-| **GPIO 35** | PEDAL POT (ADC Input) | Foot pedal speed |
+| **GPIO 35** | (no ADC) | Digital only |
 | **GPIO 33** | PEDAL SW (Input) | Foot pedal switch, active LOW |
-| GPIO 7 / 8 | Touch I2C | GT911 (internal) |
+| GPIO 7 / 8 | Touch I2C | GT911 + ADS1115 (shared bus) |
 ---
 
 ---
@@ -226,6 +226,7 @@ controlTask  (pri 3, 4 KB)
 | **Direction Switch** | SPDT toggle switch | 1 |
 | **E-STOP** | NC mushroom button | 1 |
 | **Foot Pedal** | Analog pot + momentary switch | 1 |
+| **ADS1115** | 16-bit I2C ADC (0x48) for pedal pot | 1 |
 
 ---
 

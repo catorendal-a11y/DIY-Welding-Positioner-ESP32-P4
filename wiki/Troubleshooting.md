@@ -50,8 +50,15 @@
 - montserrat_48 and larger will crash ESP32-P4
 
 ### Blue flash during settings save
-- Storage writes can block for >5ms, pre-empting display refresh
-- This is normal — the flash lasts one frame cycle
+- NVS writes can block briefly while flash cache is toggled; firmware sets `g_flashWriting` to limit visible glitches
+- Allow **1-2 seconds** after edits — `storageTask` debounces settings (~1s) and presets (~500ms)
+
+## Storage
+
+### Settings or presets not persisting
+- Current firmware stores data in **NVS** (namespace `wrot`, keys `cfg` and `prs`), not LittleFS files
+- Wait for debounced flush (1-2 seconds) after saving
+- After a full flash erase, re-enter settings and presets; ensure the partition table includes an **NVS** data partition
 
 ## Build Issues
 

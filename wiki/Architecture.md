@@ -16,7 +16,7 @@ controlTask (pri 3, 4KB)
 
 **WDT:** motorTask, controlTask, safetyTask are subscribed to TWDT. lvglTask and storageTask are NOT subscribed (they do blocking I/O that can exceed WDT timeout).
 
-**Flash safety:** `CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y` + `CONFIG_SPIRAM_RODATA=y` ensures code remains accessible when flash cache is disabled during LittleFS writes. Storage uses .tmp + rename for atomic writes. IWDT timeout is 2000ms (`CONFIG_ESP_INT_WDT_TIMEOUT_MS=2000`).
+**Flash safety:** `CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y` + `CONFIG_SPIRAM_RODATA=y` keeps code reachable when flash cache is disabled during **NVS** (and any filesystem) writes. Settings/presets use NVS `putBytes`, not LittleFS `.tmp` + rename. IWDT timeout is 2000ms (`CONFIG_ESP_INT_WDT_TIMEOUT_MS=2000`).
 
 ## State Machine
 
@@ -113,12 +113,13 @@ Two-layer ESTOP architecture:
 
 ### `src/storage/` — Persistence
 
-- **LittleFS** filesystem for non-volatile storage
-- **ArduinoJson** for structured data serialization
-- 16 program presets max, system settings
-- Debounced writes: 500ms presets, 1000ms settings
-- Atomic writes: .tmp + rename pattern prevents corruption on power failure
-- storageTask NOT subscribed to WDT (does blocking I/O)
+- **NVS** via Arduino `Preferences`, namespace `wrot`, keys `cfg` (settings JSON blob) and `prs` (presets JSON array)
+- **ArduinoJson** serializes structs to UTF-8 JSON, stored with `putBytes` / read with `getBytes`
+- Up to **16** presets; mutexes: `g_nvs_mutex`, `g_presets_mutex`, `g_settings_mutex`
+- Debounced writes in `storageTask`: ~**500 ms** presets, ~**1000 ms** settings (`storage_flush()`)
+- **Legacy migration:** if NVS keys are empty, one-time copy from LittleFS `/settings.json` and `/presets.json` when that partition exists
+- **UI:** `g_flashWriting` pauses LVGL-sensitive paths during NVS commits to reduce visible glitches
+- storageTask NOT subscribed to WDT (blocking flash I/O)
 
 ### `src/ui/` — User Interface
 
@@ -157,17 +158,18 @@ control_start_continuous() ──────>  controlTask transitions state (C
 
 ## Flash & Storage Safety
 
-ESP32-P4 executes code from external flash. LittleFS writes temporarily disable the flash cache:
+ESP32-P4 executes code from external flash. **NVS commits** (and LittleFS, if used) can temporarily disable the flash cache:
 
 ```
-LittleFS.write()  ──>  flash cache DISABLED  ──>  code in flash CRASHES
-                        (code in PSRAM OK)
+NVS commit / flash write  ──>  flash cache DISABLED  ──>  code in flash CRASHES
+                               (code in PSRAM OK)
 ```
 
 Mitigations:
 1. **`CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y` + `CONFIG_SPIRAM_RODATA=y`** — moves instructions/rodata to PSRAM
-2. **Deferred UI saves** — never call `storage_save_*()` from LVGL event callbacks
+2. **Deferred UI saves** — UI sets pending flags; `storageTask` performs `putBytes` after debounce
 3. **storageTask not in WDT** — blocking I/O (flash) can exceed 5s timeout
+4. **`g_flashWriting`** — signals active NVS write so the display path can skip work during cache-off windows
 
 ## Timer Screen (Countdown)
 

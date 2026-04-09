@@ -33,7 +33,7 @@ This document outlines planned features and their current status.
 ## 3. Program Preset Storage
 
 > **STATUS: IMPLEMENTED**
-> Up to 16 presets saved to LittleFS flash with full CRUD from UI.
+> Up to 16 presets saved to **NVS** (JSON blob `prs`) with full CRUD from UI; legacy LittleFS files are migrated once if present.
 
 ---
 

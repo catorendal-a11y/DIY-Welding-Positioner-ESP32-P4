@@ -16,7 +16,7 @@ The system transitions through a rigorous state machine (defined in `control.h`)
 ## 2. Emergency Stop (E-STOP)
 - **Hardware Interrupt:** GPIO 34 configured with interrupt.
 - **Normally Closed (NC) Logic:** The button holds the pin LOW. When pressed (or wire cut), pin goes HIGH, triggering the ISR.
-- **ISR Response (<0.5ms):** Direct GPIO register write sets ENA HIGH (Disabled) + sets `g_estopPending` flag. NO function calls in ISR (flash may be disabled during LittleFS writes).
+- **ISR Response (<0.5ms):** Direct GPIO register write sets ENA HIGH (Disabled) + sets `g_estopPending` flag. NO function calls in ISR (flash may be disabled during NVS or other flash writes).
 - **State Transition (<5ms):** `safetyTask` (priority 5) checks pending flag with debounce, transitions to STATE_ESTOP via CAS.
 - **UI Overlay:** `lvglTask` detects STATE_ESTOP and shows full-screen red overlay on any active screen.
 - **ESTOP Reset:** UI sets `g_uiResetPending` flag. `controlTask` on Core 0 calls `safety_check_ui_reset()` and transitions to STATE_IDLE. Overlay auto-hides.

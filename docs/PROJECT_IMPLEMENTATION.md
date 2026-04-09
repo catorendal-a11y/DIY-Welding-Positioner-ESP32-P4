@@ -104,20 +104,21 @@
 - **Thread safety**: ALL WiFi calls via `wifi_process_pending()` in storageTask — never from UI thread
 - **Scan**: Async `WiFi.scanNetworks(true)`, results cached
 - **Polling**: WiFi.status() every 2s (reduced from 100ms to avoid SDIO blocking)
-- **Settings**: SSID/password stored in g_settings, persisted to /settings.json
+- **Settings**: When WiFi is enabled in a build, credential persistence follows that build’s storage layer; mainline settings/presets use **NVS** (`wrot` / `cfg`), not `/settings.json`
 
 ---
 
 ## 7. Storage & Presets
 
-- **Filesystem**: LittleFS
-- **Settings**: /settings.json (acceleration, microstep, calibration, brightness, WiFi, BLE name, etc.)
-- **Presets**: /presets.json (up to 16 slots with mode-specific parameters)
-- **Thread safety**: `g_presets_mutex` semaphore for all preset access
+- **Backend**: **NVS** using Arduino `Preferences`, namespace `wrot`
+- **Keys**: `cfg` — JSON object for `SystemSettings` (acceleration, microstep, calibration, brightness, themes, countdown, etc.); `prs` — JSON array for up to **16** presets
+- **Serialization**: ArduinoJson → buffer → `putBytes` / `getBytes` (plaintext JSON on flash)
+- **Legacy**: One-time import from LittleFS `/settings.json` and `/presets.json` if NVS keys are empty and those files exist
+- **Thread safety**: `g_nvs_mutex` around Preferences I/O; `g_presets_mutex` / `g_settings_mutex` for in-RAM structures
 - **Copy-based API**: `storage_get_preset()` returns copy, never pointer into vector
-- **Debounce**: 500ms for presets, 1000ms for settings
-- **Atomic writes**: .tmp + rename pattern (LittleFS.rename() crashes ESP32-P4 — reverted to direct FILE_WRITE)
-- **storageTask**: 12KB stack, handles all flash I/O off the UI thread
+- **Debounce**: ~500ms presets, ~1000ms settings in `storage_flush()` on **storageTask**
+- **UI coordination**: `g_flashWriting` during NVS writes; LVGL mutex held around the flag window where required
+- **storageTask**: 12KB stack, handles NVS I/O off the UI thread (not TWDT-subscribed)
 
 ---
 

@@ -53,7 +53,7 @@ controlTask (pri 3, 4KB)
 | `src/control/` | State machine, welding modes |
 | `src/motor/` | FastAccelStepper driver, speed, acceleration, microstep, calibration |
 | `src/safety/` | E-STOP interrupt, watchdog |
-| `src/storage/` | LittleFS persistence, presets, settings |
+| `src/storage/` | NVS persistence (`Preferences`), presets + settings as JSON blobs, optional LittleFS migration |
 | `src/ui/` | LVGL display, screens, theme |
 
 ## Coding Standards

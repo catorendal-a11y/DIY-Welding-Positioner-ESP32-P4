@@ -9,7 +9,7 @@ All core features tested and confirmed working on real hardware:
 - Motor rotation with live RPM adjustment (pot + buttons + foot pedal)
 - All 5 welding modes (Continuous, Jog, Pulse, Step, Timer)
 - Hardware E-STOP with <0.5ms response + UI reset
-- 16 program preset save/load (LittleFS)
+- 16 program preset save/load (NVS JSON blobs; legacy LittleFS migration on first boot if needed)
 - 23 UI screens including settings, system info, calibration
 - Direction switch (GPIO29), foot pedal support
 - 8 accent color themes, brightness control, dim timeout
@@ -40,7 +40,7 @@ Open-source welding positioner controller for rotary welding tables, pipe weldin
 | Gear Ratio | 199.5:1 worm gear (60 x 133 / 40) |
 | Microstepping | 1/4, 1/8, 1/16, 1/32 (selectable) |
 | RPM Range | 0.02 - 1.0 RPM (TB6600), up to 5.0 (DM542T) |
-| Storage | LittleFS + ArduinoJson (16 presets, settings) |
+| Storage | NVS (`Preferences`) + ArduinoJson blobs `cfg` / `prs` (16 presets, settings); one-time LittleFS import |
 
 ## Repository Structure
 
@@ -51,7 +51,7 @@ src/
   motor/                - FastAccelStepper wrapper, speed control, microstepping
   control/              - State machine, 5 welding modes
   safety/               - E-STOP ISR + watchdog
-  storage/              - LittleFS persistence
+  storage/              - NVS persistence (+ legacy LittleFS migration)
   ui/                   - LVGL screens, display init, touch, theme
 docs/
   images/               - SVG wiring diagrams, UI mockups

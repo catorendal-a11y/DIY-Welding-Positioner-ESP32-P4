@@ -87,7 +87,7 @@ All parameters are in `src/config.h`:
 #define START_SPEED     100       // Hz minimum for motor start
 ```
 
-Settings can also be changed from the touchscreen via **Settings > Motor Config** and are persisted to LittleFS.
+Settings can also be changed from the touchscreen via **Settings > Motor Config** and are persisted to **NVS** (namespace `wrot`, key `cfg`; see repository README *Persistence (NVS)*).
 
 ## Wiring Summary
 

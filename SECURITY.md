@@ -52,7 +52,7 @@ If you discover a safety-critical bug or security vulnerability:
 ## Embedded Security Considerations
 
 - **No OTA for P4 firmware** — only C6 co-processor receives OTA updates
-- **WiFi credentials stored in LittleFS** — plaintext on flash (no encryption on ESP32-P4 Arduino framework)
+- **WiFi credentials (if enabled in a given build)** — stored on flash without hardware encryption unless a release notes otherwise; mainline WiFi UI may be disabled
 - **BLE passkey is hardcoded** — change in `src/ble/ble.cpp` before deployment in sensitive environments
 - **No TLS/HTTPS** — WiFi remote does not use encrypted transport
-- **LittleFS has no encryption** — settings and presets stored in plaintext
+- **NVS has no application-layer encryption** — settings (`cfg`) and presets (`prs`) are **plaintext JSON blobs** in namespace `wrot` (same practical risk as unencrypted files on flash)

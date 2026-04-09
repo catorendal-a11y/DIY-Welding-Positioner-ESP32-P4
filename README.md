@@ -47,6 +47,7 @@ Open-source welding positioner controller with a glove-safe industrial touch UI 
 - [Performance Specifications](#performance-specifications)
 - [Welding Modes](#welding-modes)
 - [Configuration](#configuration)
+- [Persistence (NVS)](#persistence-nvs)
 - [Safety Notice](#safety-notice)
 - [Troubleshooting](#troubleshooting)
 - [Roadmap](#roadmap)
@@ -105,7 +106,7 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 | **Foot Pedal** | Analog speed input (via ADS1115 I2C ADC) + digital start switch |
 | **Direction Switch** | Physical CW/CCW toggle (GPIO 29) |
 | **Touch UI** | LVGL 9.x glove-safe interface, high-contrast dark theme, 8 accent colors |
-| **Program Presets** | Save/load up to 16 welding parameter sets to LittleFS flash |
+| **Program Presets** | Save/load up to 16 welding parameter sets to **NVS** (flash, JSON blobs) |
 | **Motor Config** | Microstepping (1/4 – 1/32), acceleration, calibration, direction invert |
 | **Display Settings** | Brightness slider, dim timeout, theme color selection |
 | **System Info** | Live CPU core load, free heap, PSRAM usage, uptime |
@@ -269,7 +270,29 @@ Open `src/config.h` to adjust hardware parameters:
 #define START_SPEED     100     // Hz minimum for motor start
 ```
 
-Settings can also be changed from the touchscreen via **Settings > Motor Config** and are persisted to LittleFS.
+Settings can also be changed from the touchscreen via **Settings > Motor Config** and are persisted to **NVS** (see [Persistence (NVS)](#persistence-nvs)).
+
+---
+
+## Persistence (NVS)
+
+Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-Volatile Storage) partition using the Arduino **`Preferences`** API (`src/storage/storage.cpp`).
+
+| Item | NVS namespace | Key | Format |
+|:---|:---|:---|:---|
+| System settings | `wrot` | `cfg` | JSON object (ArduinoJson serialized to a binary blob via `putBytes`) |
+| Program presets (max 16) | `wrot` | `prs` | JSON array of preset objects (same serialization) |
+
+**Behaviour**
+
+- **`storage_init()`** opens the namespace, then runs a **one-time migration**: if `cfg` / `prs` are empty but legacy LittleFS files exist (`/settings.json`, `/presets.json`), their contents are copied into NVS. After that, normal operation uses NVS only.
+- **Saves** run on **Core 1** in `storageTask`: debounced **~500 ms** after preset changes and **~1 s** after settings changes (`storage_flush()`). UI code sets a pending flag; it does not write flash directly.
+- **Flash cache:** NVS commits can disable the flash cache briefly. The firmware sets `g_flashWriting` so the UI can avoid glitches during writes; PSRAM code/rodata mitigations still apply (`CONFIG_SPIRAM_FETCH_INSTRUCTIONS`, `CONFIG_SPIRAM_RODATA` in sdkconfig).
+
+**Troubleshooting**
+
+- You do **not** need to upload a LittleFS filesystem for settings/presets on current firmware.
+- If the NVS partition is corrupt or full, erase flash or use the product’s storage format path (if exposed) and reconfigure.
 
 ---
 
@@ -321,8 +344,9 @@ Settings can also be changed from the touchscreen via **Settings > Motor Config*
 <details>
 <summary><b>Settings not saving</b></summary>
 
-- Check LittleFS partition is flashed (upload filesystem)
-- storageTask handles writes with debounce — allow 1-2 seconds
+- Data lives in **NVS** (`wrot` / `cfg` and `prs`), not LittleFS
+- `storageTask` debounces writes — wait **1-2 seconds** after changing settings or presets
+- If nothing persists after flash erase, confirm the **NVS** partition is present in your partition table (typical size 24 KB / `0x6000` in shipped configs)
 
 </details>
 
@@ -341,7 +365,7 @@ Settings can also be changed from the touchscreen via **Settings > Motor Config*
 **Completed:**
 
 - [x] 5 welding modes (Continuous, Jog, Pulse, Step, Timer)
-- [x] Program preset storage (LittleFS, 16 slots)
+- [x] Program preset storage (NVS JSON blobs, 16 slots; legacy LittleFS migration on boot)
 - [x] Live RPM adjustment (pot + buttons)
 - [x] Foot pedal support
 - [x] Direction switch
@@ -378,8 +402,8 @@ src/
     calibration.cpp           Calibration factor
   safety/                   E-STOP + watchdog
     safety.cpp                ISR, UI reset, state guard
-  storage/                  LittleFS persistence
-    storage.cpp               Settings/presets JSON, mutex
+  storage/                  NVS persistence (Preferences + JSON blobs)
+    storage.cpp               Settings/presets serialize, NVS mutex, LittleFS migration
   ui/                       LVGL display
     display.cpp               MIPI-DSI ST7701 init
     lvgl_hal.cpp              Flush callback, dim, touch polling

@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **Documentation & UI copy** — gear notation standardized to **1:108** (motor revolutions per output revolution), matching `GEAR_RATIO` (108) and `docs/images/motor.worm.svg`.
+
 ## [2.0.2] - 2026-04-05 (Stability & IWDT Crash Fix)
 
 ### Fixed
@@ -69,7 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`g_presets`** — protected by FreeRTOS mutex `g_presets_mutex`
 - **`storage_get_preset()`** — returns copy via output parameter (never pointer into vector)
 - **Settings screen items** — scaled up: 52px height, font 18, gap 5px
-- **Gear ratio** — corrected from 108:1 to 199.5:1 (60 x 133 / 40)
+- **Gear ratio (docs, superseded)** — interim text used 199.5:1; current model is **1:108** total (NMRV030 60:1 x spur 72/40, `GEAR_RATIO`=108 in `config.h`)
 - **LVGL** — upgraded from 9.5.0 to 9.6.0
 - **FastAccelStepper** — upgraded from 0.33.14 to 0.33.x (latest)
 - **Pinout** — ESTOP moved from GPIO33 to GPIO34 (internal pull-up), DIR SWITCH moved from GPIO28 to GPIO29 (C6 UART conflict)
@@ -135,7 +140,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ADC potentiometer reference** — calibrated to 3315 (10k pot on ESP32-P4 ADC with 11dB attenuation)
 - **RPM gauge range** — dynamically calculated from `MAX_RPM * 100`
 - **MAX_RPM** — temporarily set to 1.0 RPM pending DM542T driver upgrade
-- **Gear ratio** — corrected from 60:1 to 108:1
+- **Gear ratio (docs)** — clarified NMRV030 + spur as **1:108** total (`GEAR_RATIO` in `config.h`)
 - **FastAccelStepper** — upgraded from 0.31.x to 0.33.14
 - **LVGL** — upgraded from 8.x to 9.5.0
 

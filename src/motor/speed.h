@@ -7,8 +7,10 @@
 // ───────────────────────────────────────────────────────────────────────────────
 // SPEED CONVERSION FUNCTIONS
 // ───────────────────────────────────────────────────────────────────────────────
-// RPM on workpiece → motor step frequency
+// RPM on workpiece -> motor step Hz (geometry only, no calibration)
 float rpmToStepHz(float rpm_workpiece);
+// UI / pot RPM command -> step Hz (applies calibration so actual RPM display matches command)
+float rpmToStepHzCalibrated(float rpm_command);
 
 // Angle in degrees (on workpiece) → motor steps
 long angleToSteps(float degrees);
@@ -18,6 +20,9 @@ long angleToSteps(float degrees);
 // ───────────────────────────────────────────────────────────────────────────────
 void speed_init();                      // Initialize speed control
 void speed_update_adc();                // Read and filter potentiometer (call every 20ms)
+// Reload UI max RPM from g_settings (after NVS load or Motor Config save). Core 0 / motorTask safe.
+void speed_sync_rpm_limits_from_settings();
+float speed_get_rpm_max();              // Current UI/pot ceiling (atomic, MIN_RPM..MAX_RPM)
 void speed_slider_set(float rpm);       // Set speed from GUI slider
 float speed_get_target_rpm();           // Get current target RPM (pot or slider)
 float speed_get_actual_rpm();           // Get actual measured RPM from motor

@@ -5,6 +5,7 @@
 #include "../screens.h"
 #include "../theme.h"
 #include "../../config.h"
+#include "../../motor/speed.h"
 #include "../../storage/storage.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -171,10 +172,12 @@ void screen_boot_create() {
     uint32_t stepsPerRev = 200 * ms;
     static char microBuf[40];
     static char rpmBuf[32];
-    snprintf(microBuf, sizeof(microBuf), "Microstep: 1/%u (%lu steps/rev)", ms, (unsigned long)stepsPerRev);
-    snprintf(rpmBuf, sizeof(rpmBuf), "RPM Range: %.2f - %.1f", MIN_RPM, MAX_RPM);
+    snprintf(microBuf, sizeof(microBuf), "PULSE/REV: %lu (1/%u)", (unsigned long)stepsPerRev, ms);
+    snprintf(rpmBuf, sizeof(rpmBuf), "RPM Range: %.3f - %.3f", (double)MIN_RPM, (double)speed_get_rpm_max());
+    static char motorGearBuf[48];
+    snprintf(motorGearBuf, sizeof(motorGearBuf), "Motor: NEMA 23, 1:%.0f total", (double)GEAR_RATIO);
     const char* specsRight[] = {
-        "Motor: TB6600 200:1 worm gear",
+        motorGearBuf,
         microBuf,
         rpmBuf,
         "Firmware: " FW_VERSION " LVGL 9.x"

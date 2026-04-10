@@ -5,17 +5,17 @@
 ### Motor does not move
 - Check STEP/DIR/ENA wiring continuity
 - Verify ENA pin logic: HIGH = disabled, LOW = enabled
-- Confirm TB6600 power supply outputs 24V at >=5A
+- Confirm motor supply outputs 24V at >=5A
 - Check that microstepping DIP switches match the UI setting
 
 ### Motor stalls under load
-- TB6600 has no anti-resonance DSP — stalling at certain RPMs is expected
+- Basic PUL/DIR drivers have no anti-resonance DSP — stalling at certain RPMs is expected
 - Use 1/8 or finer microstepping to reduce resonance
 - DM542T upgrade planned with built-in anti-resonance
 
 ### Motor stalls at low RPM with 1/4 microstepping
 - NEMA 23 resonance zone is 100-300 motor RPM
-- At 0.5 RPM workpiece: motor speed = 0.5 x 199.5 x 3.75 = 374 RPM (above resonance zone)
+- At 0.5 RPM workpiece: motor speed ≈ 0.5 x 108 x 3.75 = 202.5 RPM (above coarse-microstep resonance zone for some drivers)
 - Solution: use 1/8 microstepping or upgrade to DM542T
 
 ### Wrong rotation direction

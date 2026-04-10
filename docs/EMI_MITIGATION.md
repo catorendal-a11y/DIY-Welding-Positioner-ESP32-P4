@@ -11,18 +11,18 @@ To ensure your ESP32-P4 positioner runs flawlessly in an industrial welding envi
 - **Metal Enclosure:** House the entire controller in a grounded **aluminum or steel enclosure**. Plastic cases provide zero protection against the high-frequency RF noise of a TIG arc.
 
 ## 2. Cable Shielding
-- Use **shielded cables** for the STEP, DIR, and ENA signal lines between the ESP32 and the TB6600.
+- Use **shielded cables** for the STEP, DIR, and ENA signal lines between the ESP32 and the stepper driver.
 - Use **shielded cables** for the stepper motor coils (A+, A-, B+, B-).
 - Ground the shielding braided mesh on **ONE END ONLY** (typically at the controller enclosure side). Grounding both ends creates a ground loop antenna.
 
 ## 3. Optoisolation
-The TB6600 stepper driver already has internal optocouplers separating the ESP32 3.3V logic circuit from the 24V motor drive circuit.
-- Ensure you do not accidentally bridge the ESP32 ground and the 24V motor power ground. They should only interact through the optocouplers inside the TB6600.
+Many stepper drivers have internal optocouplers separating the ESP32 3.3V logic circuit from the 24V motor drive circuit.
+- Ensure you do not accidentally bridge the ESP32 ground and the 24V motor power ground. They should only interact through the optocouplers inside the driver.
 
 ## 4. Ferrite Chokes
 Snap-on ferrite bead chokes absorb high-frequency EMI spikes.
 - Place a ferrite choke on the USB-C power cable right where it enters the ESP32.
-- Place a ferrite choke on the stepper motor cable right where it exits the TB6600.
+- Place a ferrite choke on the stepper motor cable right where it exits the driver.
 - Place a ferrite choke on the E-STOP logic wire to prevent the long wire from acting as an antenna and triggering false E-STOPS.
 
 ## 5. E-STOP Hardware Filtering (RC Filter)

@@ -14,11 +14,11 @@ void setUp(void) {}
 void tearDown(void) {}
 
 // Hardware constants (mirror of config.h)
-static const float GEAR_RATIO     = 60.0f * 133.0f / 40.0f;  // 199.5
+static const float GEAR_RATIO     = 60.0f * 72.0f / 40.0f;  // 108
 static const float D_EMNE         = 0.300f;
 static const float D_RULLE        = 0.080f;
-static const float MIN_RPM        = 0.02f;
-static const float MAX_RPM        = 1.0f;
+static const float MIN_RPM        = 0.001f;
+static const float MAX_RPM        = 3.0f;
 static const uint32_t STEPS_1_8   = 1600;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -640,7 +640,7 @@ void test_format_details_truncation() {
 }
 
 void test_pulse_bar_rpm_below_min() {
-  TEST_ASSERT_EQUAL(0, pulse_bar_percent_rpm(-0.1f, 0.02f, 1.0f));
+  TEST_ASSERT_EQUAL(0, pulse_bar_percent_rpm(-0.1f, MIN_RPM, MAX_RPM));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

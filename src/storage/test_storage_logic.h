@@ -22,7 +22,7 @@ inline void sanitize_ascii_testable(char* buf, unsigned int len) {
 
 inline int settings_constrain_acceleration(int val) {
   if (val < 1000) return 1000;
-  if (val > 20000) return 20000;
+  if (val > 30000) return 30000;
   return val;
 }
 

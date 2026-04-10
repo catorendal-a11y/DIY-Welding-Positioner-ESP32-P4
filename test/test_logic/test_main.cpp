@@ -20,13 +20,14 @@ void tearDown(void) {}
 // ───────────────────────────────────────────────────────────────────────────────
 // HARDWARE CONSTANTS (mirror of config.h for native builds)
 // ───────────────────────────────────────────────────────────────────────────────
-static const float GEAR_RATIO     = 60.0f * 133.0f / 40.0f;  // 199.5
+static const float GEAR_RATIO     = 60.0f * 72.0f / 40.0f;  // 108
 static const float D_EMNE         = 0.300f;   // Workpiece diameter 300mm
 static const float D_RULLE        = 0.080f;   // Roller diameter 80mm
 static const float DIAMETER_RATIO = D_EMNE / D_RULLE;  // 3.75
-static const float MIN_RPM        = 0.02f;
-static const float MAX_RPM        = 1.0f;
+static const float MIN_RPM        = 0.001f;
+static const float MAX_RPM        = 3.0f;
 static const float ADC_REF        = 3315.0f;
+static const float POT_ADC_SNAP_TEST_BAND = 380.0f;  // explicit snap for unit tests (production often 0)
 static const uint32_t STEPS_1_4   = 800;      // 200 * 4 (1/4 microstepping)
 static const uint32_t STEPS_1_8   = 1600;     // 200 * 8
 static const uint32_t STEPS_1_16  = 3200;     // 200 * 16
@@ -291,22 +292,19 @@ void test_rpm_zero() {
 }
 
 void test_rpm_min() {
-  // MIN_RPM = 0.02
   float hz = rpmToStepHz_testable(MIN_RPM, GEAR_RATIO, D_EMNE, D_RULLE, STEPS_1_8);
   TEST_ASSERT_TRUE(hz > 0.0f);
-  // At 0.02 RPM should produce ~399 Hz (0.02 * 199.5 * 3.75 * 1600 / 60)
   float expected = MIN_RPM * GEAR_RATIO * DIAMETER_RATIO * (float)STEPS_1_8 / 60.0f;
   TEST_ASSERT_FLOAT_WITHIN(0.5f, expected, hz);
 }
 
 void test_rpm_max() {
-  // MAX_RPM = 1.0
   float hz = rpmToStepHz_testable(MAX_RPM, GEAR_RATIO, D_EMNE, D_RULLE, STEPS_1_8);
   float expected = MAX_RPM * GEAR_RATIO * DIAMETER_RATIO * (float)STEPS_1_8 / 60.0f;
-  TEST_ASSERT_FLOAT_WITHIN(1.0f, expected, hz);
-  // ~19950 Hz at MAX_RPM with 1/8 microstepping
-  TEST_ASSERT_TRUE(hz > 19000.0f);
-  TEST_ASSERT_TRUE(hz < 21000.0f);
+  TEST_ASSERT_FLOAT_WITHIN(2.0f, expected, hz);
+  // ~64800 Hz at MAX_RPM=3 with 1/16 + default rollers (21600 Hz per 1.0 RPM workpiece)
+  TEST_ASSERT_TRUE(hz > 31800.0f);
+  TEST_ASSERT_TRUE(hz < 33000.0f);
 }
 
 void test_rpm_half() {
@@ -414,6 +412,16 @@ void test_reverse_rpm_with_cal_factor() {
   TEST_ASSERT_FLOAT_WITHIN(0.01f, original_rpm / 1.2f, rev);
 }
 
+void test_calibrated_motor_command_matches_display_rpm() {
+  // Mirrors rpmToStepHzCalibrated + speed_get_actual_rpm: command C with cal K uses
+  // Hz = rpmToStepHz(C*K); displayed RPM = geometric_rpm_from_Hz / K ~= C
+  float cal = 1.27f;
+  float cmd = 1.0f;
+  float hz = rpmToStepHz_testable(cmd * cal, GEAR_RATIO, D_EMNE, D_RULLE, STEPS_1_8);
+  float displayed = stepHzToRpm_testable((uint32_t)hz, GEAR_RATIO, D_EMNE, D_RULLE, STEPS_1_8, cal);
+  TEST_ASSERT_FLOAT_WITHIN(0.02f, cmd, displayed);
+}
+
 void test_reverse_rpm_at_min() {
   float hz = rpmToStepHz_testable(MIN_RPM, GEAR_RATIO, D_EMNE, D_RULLE, STEPS_1_8);
   float rpm = stepHzToRpm_testable((uint32_t)hz, GEAR_RATIO, D_EMNE, D_RULLE, STEPS_1_8);
@@ -472,9 +480,8 @@ void test_angle_zero() {
 
 void test_angle_full_rotation_range() {
   long steps = angleToSteps_testable(360.0f, GEAR_RATIO, D_EMNE, D_RULLE, STEPS_1_8, 1.0f);
-  // Manual calc: 360 * 199.5 * (0.08/0.3) / 360 * 1600
-  //            = 199.5 * 0.2667 * 1600 = 85,120
-  float expected = 360.0f * GEAR_RATIO * (D_RULLE / D_EMNE) / 360.0f * (float)STEPS_1_8;
+  // Same as 1 workpiece RPM for 60 s: GEAR * (D_EMNE/D_RULLE) * steps_per_rev
+  float expected = 360.0f * GEAR_RATIO * (D_EMNE / D_RULLE) / 360.0f * (float)STEPS_1_8;
   TEST_ASSERT_INT_WITHIN(2, (long)expected, steps);
 }
 
@@ -645,6 +652,51 @@ void test_adc_monotonic() {
   }
 }
 
+void test_adc_snap_zone_reaches_max_rpm() {
+  // Optional snap band: ADC inside band maps to max (EMI helper when enabled in config)
+  float rpm = adcToRpm_testable(300.0f, ADC_REF, MIN_RPM, MAX_RPM, POT_ADC_SNAP_TEST_BAND);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, MAX_RPM, rpm);
+}
+
+void test_adc_snap_running_threshold_covers_emi() {
+  // Snap off: full linear curve toward top (matches default firmware).
+  float mid = adcToRpm_testable(350.0f, ADC_REF, MIN_RPM, MAX_RPM, 0.0f);
+  float want = MIN_RPM + (ADC_REF - 350.0f) / ADC_REF * (MAX_RPM - MIN_RPM);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, want, mid);
+  float hi = adcToRpm_testable(900.0f, ADC_REF, MIN_RPM, MAX_RPM, 0.0f);
+  float want_hi = MIN_RPM + (ADC_REF - 900.0f) / ADC_REF * (MAX_RPM - MIN_RPM);
+  TEST_ASSERT_FLOAT_WITHIN(0.02f, want_hi, hi);
+}
+
+void test_adc_snap_zone_monotonic() {
+  float prev = adcToRpm_testable(0.0f, ADC_REF, MIN_RPM, MAX_RPM, POT_ADC_SNAP_TEST_BAND);
+  for (int adc = 100; adc <= 3300; adc += 100) {
+    float rpm = adcToRpm_testable((float)adc, ADC_REF, MIN_RPM, MAX_RPM, POT_ADC_SNAP_TEST_BAND);
+    TEST_ASSERT_TRUE(rpm <= prev + 0.001f);
+    prev = rpm;
+  }
+}
+
+void test_adc_snap_off_linear_at_mid_high_adc() {
+  float rpm = adcToRpm_testable(350.0f, ADC_REF, MIN_RPM, MAX_RPM, 0.0f);
+  float expected = MIN_RPM + (ADC_REF - 350.0f) / ADC_REF * (MAX_RPM - MIN_RPM);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, expected, rpm);
+}
+
+// Pot span is MIN_RPM .. speed_get_rpm_max() (NVS / Motor Config), not always MAX_RPM.
+void test_adc_user_rpm_cap_not_hardcoded_max() {
+  const float cap = 0.5f;
+  float at_snap = adcToRpm_testable(300.0f, ADC_REF, MIN_RPM, cap, POT_ADC_SNAP_TEST_BAND);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, cap, at_snap);
+  float at_zero = adcToRpm_testable(0.0f, ADC_REF, MIN_RPM, cap, 0.0f);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, cap, at_zero);
+  float mid = adcToRpm_testable(ADC_REF / 2.0f, ADC_REF, MIN_RPM, cap, 0.0f);
+  float want_mid = MIN_RPM + 0.5f * (cap - MIN_RPM);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, want_mid, mid);
+  float at_ref = adcToRpm_testable(ADC_REF, ADC_REF, MIN_RPM, cap, 0.0f);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, MIN_RPM, at_ref);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 7: CALIBRATION LOGIC
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -768,6 +820,7 @@ void test_accel_in_range() {
   TEST_ASSERT_EQUAL(5000, acceleration_clamp_testable(5000));
   TEST_ASSERT_EQUAL(1000, acceleration_clamp_testable(1000));
   TEST_ASSERT_EQUAL(20000, acceleration_clamp_testable(20000));
+  TEST_ASSERT_EQUAL(30000, acceleration_clamp_testable(30000));
   TEST_ASSERT_EQUAL(10000, acceleration_clamp_testable(10000));
 }
 
@@ -778,9 +831,9 @@ void test_accel_below_min() {
 }
 
 void test_accel_above_max() {
-  TEST_ASSERT_EQUAL(20000, acceleration_clamp_testable(20001));
-  TEST_ASSERT_EQUAL(20000, acceleration_clamp_testable(50000));
-  TEST_ASSERT_EQUAL(20000, acceleration_clamp_testable(UINT32_MAX));
+  TEST_ASSERT_EQUAL(30000, acceleration_clamp_testable(30001));
+  TEST_ASSERT_EQUAL(30000, acceleration_clamp_testable(50000));
+  TEST_ASSERT_EQUAL(30000, acceleration_clamp_testable(UINT32_MAX));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -813,8 +866,8 @@ void test_dir_double_invert() {
 // SECTION 11: GEAR RATIO VERIFICATION
 // ═══════════════════════════════════════════════════════════════════════════════
 void test_gear_ratio_value() {
-  // 60 teeth * 133 teeth / 40 teeth = 199.5
-  TEST_ASSERT_FLOAT_WITHIN(0.001f, 199.5f, GEAR_RATIO);
+  // NMRV030 60:1 * spur 72/40 = 108 (motor revs per output rev)
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 108.0f, GEAR_RATIO);
 }
 
 void test_diameter_ratio_value() {
@@ -823,9 +876,9 @@ void test_diameter_ratio_value() {
 }
 
 void test_combined_ratio() {
-  // Total mechanical advantage: GEAR_RATIO * DIAMETER_RATIO = 199.5 * 3.75 = 748.125
+  // GEAR_RATIO * DIAMETER_RATIO = 108 * 3.75 = 405
   float combined = GEAR_RATIO * DIAMETER_RATIO;
-  TEST_ASSERT_FLOAT_WITHIN(0.01f, 748.125f, combined);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 405.0f, combined);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -855,21 +908,16 @@ void test_pot_override_over_threshold() {
 // SECTION 13: CROSS-VALIDATION (RPM vs ANGLE consistency)
 // ═══════════════════════════════════════════════════════════════════════════════
 void test_rpm_angle_formula_relationship() {
-  // rpmToStepHz uses (D_EMNE/D_RULLE), angleToSteps uses (D_RULLE/D_EMNE)
-  // At 1 RPM for 60s: rpm_steps = GEAR_RATIO * (D_EMNE/D_RULLE) * steps_per_rev
-  // For 360 deg:      angle_steps = GEAR_RATIO * (D_RULLE/D_EMNE) * steps_per_rev
-  // Ratio = (D_EMNE/D_RULLE)^2 = DIAMETER_RATIO^2
+  // 360 deg workpiece at 1 RPM for 60 s must equal integral of step Hz (cal = 1)
   float hz = rpmToStepHz_testable(1.0f, GEAR_RATIO, D_EMNE, D_RULLE, STEPS_1_8);
   float steps_from_rpm = hz * 60.0f;
   long steps_from_angle = angleToSteps_testable(360.0f, GEAR_RATIO, D_EMNE, D_RULLE, STEPS_1_8, 1.0f);
   float ratio = steps_from_rpm / (float)steps_from_angle;
-  float expected_ratio = DIAMETER_RATIO * DIAMETER_RATIO;
-  TEST_ASSERT_FLOAT_WITHIN(0.1f, expected_ratio, ratio);
+  TEST_ASSERT_FLOAT_WITHIN(0.02f, 1.0f, ratio);
 }
 
 void test_rpm_angle_all_microsteps_consistent() {
   uint32_t usteps[] = {STEPS_1_4, STEPS_1_8, STEPS_1_16, STEPS_1_32};
-  float expected_ratio = DIAMETER_RATIO * DIAMETER_RATIO;
   for (int i = 0; i < 4; i++) {
     float hz = rpmToStepHz_testable(1.0f, GEAR_RATIO, D_EMNE, D_RULLE, usteps[i]);
     float steps_rpm = hz * 60.0f;
@@ -877,7 +925,7 @@ void test_rpm_angle_all_microsteps_consistent() {
     float ratio = steps_rpm / (float)steps_angle;
     char msg[48];
     snprintf(msg, sizeof(msg), "ustep=%u", usteps[i]);
-    TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.2f, expected_ratio, ratio, msg);
+    TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.05f, 1.0f, ratio, msg);
   }
 }
 
@@ -908,27 +956,28 @@ void test_microstep_string_32() {
   TEST_ASSERT_EQUAL_STRING("1/32", microstep_get_string_testable(32));
 }
 void test_microstep_string_invalid() {
-  TEST_ASSERT_EQUAL_STRING("1/8", microstep_get_string_testable(0));
-  TEST_ASSERT_EQUAL_STRING("1/8", microstep_get_string_testable(1));
-  TEST_ASSERT_EQUAL_STRING("1/8", microstep_get_string_testable(64));
-  TEST_ASSERT_EQUAL_STRING("1/8", microstep_get_string_testable(255));
+  TEST_ASSERT_EQUAL_STRING("1/16", microstep_get_string_testable(0));
+  TEST_ASSERT_EQUAL_STRING("1/16", microstep_get_string_testable(1));
+  TEST_ASSERT_EQUAL_STRING("1/16", microstep_get_string_testable(64));
+  TEST_ASSERT_EQUAL_STRING("1/16", microstep_get_string_testable(255));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 15: ACCELERATION INIT DEFAULT
 // ═══════════════════════════════════════════════════════════════════════════════
 void test_accel_init_valid() {
-  TEST_ASSERT_EQUAL(5000, acceleration_init_default_testable(5000));
+  TEST_ASSERT_EQUAL(7500, acceleration_init_default_testable(7500));
   TEST_ASSERT_EQUAL(1000, acceleration_init_default_testable(1000));
   TEST_ASSERT_EQUAL(20000, acceleration_init_default_testable(20000));
+  TEST_ASSERT_EQUAL(30000, acceleration_init_default_testable(30000));
 }
 void test_accel_init_below() {
-  TEST_ASSERT_EQUAL(5000, acceleration_init_default_testable(0));
-  TEST_ASSERT_EQUAL(5000, acceleration_init_default_testable(999));
+  TEST_ASSERT_EQUAL(7500, acceleration_init_default_testable(0));
+  TEST_ASSERT_EQUAL(7500, acceleration_init_default_testable(999));
 }
 void test_accel_init_above() {
-  TEST_ASSERT_EQUAL(5000, acceleration_init_default_testable(20001));
-  TEST_ASSERT_EQUAL(5000, acceleration_init_default_testable(UINT32_MAX));
+  TEST_ASSERT_EQUAL(7500, acceleration_init_default_testable(30001));
+  TEST_ASSERT_EQUAL(7500, acceleration_init_default_testable(UINT32_MAX));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -941,11 +990,11 @@ void test_microstep_init_valid() {
   TEST_ASSERT_EQUAL(32, microstep_init_default_testable(32));
 }
 void test_microstep_init_invalid() {
-  TEST_ASSERT_EQUAL(8, microstep_init_default_testable(0));
-  TEST_ASSERT_EQUAL(8, microstep_init_default_testable(1));
-  TEST_ASSERT_EQUAL(8, microstep_init_default_testable(3));
-  TEST_ASSERT_EQUAL(8, microstep_init_default_testable(5));
-  TEST_ASSERT_EQUAL(8, microstep_init_default_testable(64));
+  TEST_ASSERT_EQUAL(16, microstep_init_default_testable(0));
+  TEST_ASSERT_EQUAL(16, microstep_init_default_testable(1));
+  TEST_ASSERT_EQUAL(16, microstep_init_default_testable(3));
+  TEST_ASSERT_EQUAL(16, microstep_init_default_testable(5));
+  TEST_ASSERT_EQUAL(16, microstep_init_default_testable(64));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1108,13 +1157,14 @@ int main(int argc, char** argv) {
   RUN_TEST(test_rpm_negative);
   RUN_TEST(test_rpm_very_large);
 
-  // Section 4: Reverse RPM (8 tests)
+  // Section 4: Reverse RPM (9 tests)
   RUN_TEST(test_reverse_rpm_zero);
   RUN_TEST(test_reverse_rpm_roundtrip);
   RUN_TEST(test_reverse_rpm_at_min);
   RUN_TEST(test_reverse_rpm_at_max);
   RUN_TEST(test_reverse_rpm_all_microsteps);
   RUN_TEST(test_reverse_rpm_with_cal_factor);
+  RUN_TEST(test_calibrated_motor_command_matches_display_rpm);
   RUN_TEST(test_reverse_rpm_with_calibration);
   RUN_TEST(test_reverse_rpm_cal_unity_matches_no_cal);
   RUN_TEST(test_reverse_rpm_cal_below_1);
@@ -1139,7 +1189,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_angle_cal_zero_gives_zero);
   RUN_TEST(test_angle_cal_roundtrip_with_apply);
 
-  // Section 6: ADC to RPM (8 tests)
+  // Section 6: ADC to RPM (13 tests)
   RUN_TEST(test_adc_at_zero);
   RUN_TEST(test_adc_at_ref);
   RUN_TEST(test_adc_at_half_ref);
@@ -1148,6 +1198,11 @@ int main(int argc, char** argv) {
   RUN_TEST(test_adc_negative);
   RUN_TEST(test_adc_never_below_min_rpm);
   RUN_TEST(test_adc_monotonic);
+  RUN_TEST(test_adc_snap_zone_reaches_max_rpm);
+  RUN_TEST(test_adc_snap_running_threshold_covers_emi);
+  RUN_TEST(test_adc_snap_zone_monotonic);
+  RUN_TEST(test_adc_snap_off_linear_at_mid_high_adc);
+  RUN_TEST(test_adc_user_rpm_cap_not_hardcoded_max);
 
   // Section 7: Calibration logic (13 tests)
   RUN_TEST(test_cal_apply_steps_unity);

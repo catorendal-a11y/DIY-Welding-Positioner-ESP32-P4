@@ -88,6 +88,7 @@ void test_settings_accel_in_range() {
   TEST_ASSERT_EQUAL(5000, settings_constrain_acceleration(5000));
   TEST_ASSERT_EQUAL(1000, settings_constrain_acceleration(1000));
   TEST_ASSERT_EQUAL(20000, settings_constrain_acceleration(20000));
+  TEST_ASSERT_EQUAL(30000, settings_constrain_acceleration(30000));
 }
 
 void test_settings_accel_below() {
@@ -96,8 +97,8 @@ void test_settings_accel_below() {
 }
 
 void test_settings_accel_above() {
-  TEST_ASSERT_EQUAL(20000, settings_constrain_acceleration(20001));
-  TEST_ASSERT_EQUAL(20000, settings_constrain_acceleration(99999));
+  TEST_ASSERT_EQUAL(30000, settings_constrain_acceleration(30001));
+  TEST_ASSERT_EQUAL(30000, settings_constrain_acceleration(99999));
 }
 
 void test_settings_brightness_in_range() {
@@ -157,15 +158,15 @@ void test_settings_calibration_above() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 void test_preset_rpm_in_range() {
-  TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.5f, preset_constrain_rpm(0.5f, 0.02f, 1.0f));
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.5f, preset_constrain_rpm(0.5f, 0.01f, 3.0f));
 }
 
 void test_preset_rpm_below() {
-  TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.02f, preset_constrain_rpm(0.0f, 0.02f, 1.0f));
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.01f, preset_constrain_rpm(0.0f, 0.01f, 3.0f));
 }
 
 void test_preset_rpm_above() {
-  TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, preset_constrain_rpm(5.0f, 0.02f, 1.0f));
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.0f, preset_constrain_rpm(5.0f, 0.01f, 3.0f));
 }
 
 void test_preset_pulse_on_in_range() {

@@ -134,14 +134,14 @@ static void custom_btn_cb(lv_event_t* e) {
 static void rpm_minus_cb(lv_event_t* e) {
   if (targetRpm > 0.1f) targetRpm -= 0.1f;
   if (targetRpm < MIN_RPM) targetRpm = MIN_RPM;
-  if (targetRpm > MAX_RPM) targetRpm = MAX_RPM;
+  if (targetRpm > speed_get_rpm_max()) targetRpm = speed_get_rpm_max();
   if (rpmLabel) lv_label_set_text_fmt(rpmLabel, "%.1f RPM", targetRpm);
 }
 
 static void rpm_plus_cb(lv_event_t* e) {
   targetRpm += 0.1f;
   if (targetRpm < MIN_RPM) targetRpm = MIN_RPM;
-  if (targetRpm > MAX_RPM) targetRpm = MAX_RPM;
+  if (targetRpm > speed_get_rpm_max()) targetRpm = speed_get_rpm_max();
   if (rpmLabel) lv_label_set_text_fmt(rpmLabel, "%.1f RPM", targetRpm);
 }
 

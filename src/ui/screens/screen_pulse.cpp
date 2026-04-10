@@ -8,7 +8,6 @@
 #include "../../control/control.h"
 #include "../../motor/speed.h"
 #include "../../config.h"
-#include "../../motor/microstep.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STATE
@@ -43,8 +42,8 @@ static void update_computed_info() {
   float cycleSec = onSec + offSec;
   float duty = (cycleSec > 0.0f) ? (onSec / cycleSec * 100.0f) : 0.0f;
   float freq = (cycleSec > 0.0f) ? (1.0f / cycleSec) : 0.0f;
-  // steps/s = RPM * gear_ratio * steps_per_rev / 60
-  float stepsPerSec = targetRpm * GEAR_RATIO * microstep_get_steps_per_rev() / 60.0f;
+  // Step pulse rate matches motorTask (roller + gear + microstep + calibration)
+  float stepsPerSec = rpmToStepHzCalibrated(targetRpm);
 
   if (infoDutyLabel)
     lv_label_set_text_fmt(infoDutyLabel, "DUTY %d%%", (int)(duty + 0.5f));
@@ -72,7 +71,10 @@ static void update_computed_info() {
   }
   // RPM bar: 0.1..3.0 mapped to 0..100
   if (rpmBar) {
-    int rpmPct = (int)((targetRpm - MIN_RPM) * 100 / (MAX_RPM - MIN_RPM));
+    float mx = speed_get_rpm_max();
+    float span = mx - MIN_RPM;
+    if (span < 1e-6f) span = 1e-6f;
+    int rpmPct = (int)((targetRpm - MIN_RPM) * 100.0f / span + 0.5f);
     if (rpmPct < 0) rpmPct = 0;
     if (rpmPct > 100) rpmPct = 100;
     lv_bar_set_value(rpmBar, rpmPct, LV_ANIM_OFF);
@@ -136,8 +138,9 @@ static void rpm_adj_cb(lv_event_t* e) {
   int delta = (intptr_t)(lv_obj_t*)lv_event_get_user_data(e);
   if (delta > 0) targetRpm += 0.1f;
   else if (targetRpm > MIN_RPM) targetRpm -= 0.1f;
+  float mx = speed_get_rpm_max();
   if (targetRpm < MIN_RPM) targetRpm = MIN_RPM;
-  if (targetRpm > MAX_RPM) targetRpm = MAX_RPM;
+  if (targetRpm > mx) targetRpm = mx;
   lv_label_set_text_fmt(rpmLabel, "%.1f", targetRpm);
   update_computed_info();
 }
@@ -339,7 +342,9 @@ void screen_pulse_create() {
 
   // Range hint
   lv_obj_t* rpmHint = lv_label_create(screen);
-  lv_label_set_text(rpmHint, "0.02-1.0");
+  char rpmHintBuf[24];
+  snprintf(rpmHintBuf, sizeof(rpmHintBuf), "%.3f-%.3f", (double)MIN_RPM, (double)speed_get_rpm_max());
+  lv_label_set_text(rpmHint, rpmHintBuf);
   lv_obj_set_style_text_font(rpmHint, FONT_SMALL, 0);
   lv_obj_set_style_text_color(rpmHint, COL_TEXT_VDIM, 0);
   lv_obj_set_pos(rpmHint, 710, rpmY);

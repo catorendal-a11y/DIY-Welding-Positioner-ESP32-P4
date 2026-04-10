@@ -171,8 +171,8 @@ controlTask  (pri 3, 4 KB)
 </div>
 
 <div align="center">
-  <img src="docs/images/stepper_setup.png" width="700" alt="Motor Assembly — NEMA 23 with Worm Gearbox and TB6600 Driver">
-  <br><sub>NEMA 23 stepper with worm gear reducer and TB6600 microstep driver</sub>
+  <img src="docs/images/stepper_setup.png" width="700" alt="Motor Assembly — NEMA 23 with worm gearbox and stepper driver">
+  <br><sub>NEMA 23 stepper with worm gear reducer and PUL/DIR driver</sub>
 </div>
 
 ---
@@ -194,9 +194,9 @@ controlTask  (pri 3, 4 KB)
 
 | ESP32-P4 Pin | Function | Notes |
 |:---|:---|:---|
-| **GPIO 50** | STEP (Output) | RMT pulse to TB6600 PUL+ |
-| **GPIO 51** | DIR (Output) | Direction to TB6600 DIR+ |
-| **GPIO 52** | ENABLE (Output) | Active LOW to TB6600 EN+ |
+| **GPIO 50** | STEP (Output) | RMT pulse to driver PUL+ |
+| **GPIO 51** | DIR (Output) | Direction to driver DIR+ |
+| **GPIO 52** | ENABLE (Output) | Active LOW to driver ENA |
 | **GPIO 49** | POT (ADC Input) | 10k speed potentiometer |
 | **GPIO 29** | DIR SWITCH (Input) | CW/CCW toggle, INPUT_PULLUP |
 | **GPIO 34** | E-STOP (Input, ISR) | NC contact, active LOW |
@@ -219,9 +219,9 @@ controlTask  (pri 3, 4 KB)
 | Component | Model / Specs | Qty |
 |:---|:---|:---:|
 | **MCU Board** | GUITION JC4880P443C (800x480, ESP32-P4 + ESP32-C6, MIPI-DSI) | 1 |
-| **Stepper Driver** | TB6600 (DM542T planned upgrade) | 1 |
+| **Stepper Driver** | PUL/DIR or DM542T | 1 |
 | **Stepper Motor** | NEMA 23 (3 Nm torque) | 1 |
-| **Gearbox** | Worm gear reducer (~200:1) | 1 |
+| **Gearbox** | NMRV030 + spur (**1:108** total) | 1 |
 | **Power Supply** | 24V DC, 5A+ | 1 |
 | **Speed Pot** | 10k potentiometer | 1 |
 | **Direction Switch** | SPDT toggle switch | 1 |
@@ -235,8 +235,8 @@ controlTask  (pri 3, 4 KB)
 
 | Parameter | Value |
 |:---|:---|
-| **Output RPM Range** | 0.02 – 1.0 RPM (TB6600), up to 5.0 RPM (DM542T) |
-| **Gear Ratio** | 199.5 : 1 &ensp; (60 x 133 / 40) |
+| **Output RPM Range** | 0.01 – 3.0 RPM (default UI cap in `config.h`), higher possible with driver/microstep limits |
+| **Gear Ratio** | **1 : 108** total &ensp; (NMRV030 60:1 x spur 72/40) |
 | **Microstepping** | 1/4, 1/8, 1/16, 1/32 (configurable) |
 | **Motor Torque** | 3.0 Nm (NEMA 23) |
 | **Control Resolution** | 0.01 RPM |
@@ -264,10 +264,10 @@ Open `src/config.h` to adjust hardware parameters:
 
 ```cpp
 #define MIN_RPM         0.02f   // Minimum workpiece RPM
-#define MAX_RPM         1.0f    // Maximum workpiece RPM
-#define GEAR_RATIO      199.5f  // Worm gear ratio (60 * 133 / 40)
-#define ACCELERATION    10000   // Steps/s^2
-#define START_SPEED     100     // Hz minimum for motor start
+#define MAX_RPM         3.0f    // Maximum workpiece RPM (UI cap)
+#define GEAR_RATIO      (60.0f * 72.0f / 40.0f)  // 108 = total 1:108
+// Acceleration and microstep are stored in NVS (Motor Config); defaults 7500 steps/s^2, 1/16
+#define START_SPEED     100     // Hz ramp start
 ```
 
 Settings can also be changed from the touchscreen via **Settings > Motor Config** and are persisted to **NVS** (see [Persistence (NVS)](#persistence-nvs)).
@@ -355,7 +355,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 ## Known Limitations
 
 - Single-axis control only
-- TB6600 has no anti-resonance DSP — DM542T recommended for higher RPM
+- Basic PUL/DIR drivers have no anti-resonance DSP — DM542T recommended for higher RPM
 - GPIO 28/32 unavailable for GPIO use (C6 co-processor)
 
 ---
@@ -423,6 +423,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 <div align="center">
 
-<sub>DIY welding positioner &middot; ESP32-P4 &middot; Rotary welding table &middot; Pipe welding rotator &middot; TB6600 stepper driver &middot; NEMA 23 &middot; LVGL touch UI &middot; FreeRTOS</sub>
+<sub>DIY welding positioner &middot; ESP32-P4 &middot; Rotary welding table &middot; Pipe welding rotator &middot; Stepper driver &middot; NEMA 23 &middot; LVGL touch UI &middot; FreeRTOS</sub>
 
 </div>

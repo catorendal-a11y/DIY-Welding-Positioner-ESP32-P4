@@ -20,13 +20,13 @@ All core features tested and confirmed working on real hardware:
 |------|-------------|
 | [[Getting Started]] | Build, flash, and first run |
 | [[Architecture]] | FreeRTOS dual-core design, state machine, thread safety |
-| [[Hardware Setup]] | Wiring diagram, TB6600 config, BOM |
+| [[Hardware Setup]] | Wiring diagram, driver config, BOM |
 | [[Troubleshooting]] | Common issues and solutions |
 | [[Roadmap]] | Completed features and future plans |
 
 ## Project Overview
 
-Open-source welding positioner controller for rotary welding tables, pipe welding rotators, and automated fabrication systems. Controls a NEMA 23 stepper motor through a 199.5:1 worm gear with precise RPM control from 0.02 to 1.0 RPM.
+Open-source welding positioner controller for rotary welding tables, pipe welding rotators, and automated fabrication systems. Controls a NEMA 23 stepper motor through a **1:108** drivetrain (NMRV030 + spur) with precise RPM control (default UI range 0.02–3.0 RPM workpiece).
 
 ### Key Specs
 
@@ -37,9 +37,9 @@ Open-source welding positioner controller for rotary welding tables, pipe weldin
 | Touch | GT911 capacitive |
 | UI Framework | LVGL 9.5.0 |
 | Motor Driver | FastAccelStepper 0.33.x (RMT hardware pulses) |
-| Gear Ratio | 199.5:1 worm gear (60 x 133 / 40) |
+| Gear Ratio | **1:108** total (60 x 72/40, NMRV030 + spur) |
 | Microstepping | 1/4, 1/8, 1/16, 1/32 (selectable) |
-| RPM Range | 0.02 - 1.0 RPM (TB6600), up to 5.0 (DM542T) |
+| RPM Range | 0.02 - 1.0 RPM (default cap), up to 5.0 (DM542T + config) |
 | Storage | NVS (`Preferences`) + ArduinoJson blobs `cfg` / `prs` (16 presets, settings); one-time LittleFS import |
 
 ## Repository Structure

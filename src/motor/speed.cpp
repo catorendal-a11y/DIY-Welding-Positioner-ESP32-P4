@@ -78,6 +78,7 @@ static int16_t ads_read_channel0_blocking() {
 
 static float adcFiltered = 2047.5f;
 static std::atomic<float> sliderRPM{MIN_RPM};
+static std::atomic<float> rpmMaxUi{MAX_RPM};
 static std::atomic<uint32_t> lastSliderMs{0};
 static std::atomic<uint8_t> currentDir{DIR_CW};
 static std::atomic<bool> buttonsActive{false};
@@ -98,8 +99,14 @@ float rpmToStepHz(float rpm_workpiece) {
   return rpm_workpiece * GEAR_RATIO * (D_EMNE / D_RULLE) * microstep_get_steps_per_rev() / 60.0f;
 }
 
+float rpmToStepHzCalibrated(float rpm_command) {
+  return rpmToStepHz(rpm_command * calibration_get_factor());
+}
+
 long angleToSteps(float degrees) {
-  float motor_deg = degrees * GEAR_RATIO * (D_RULLE / D_EMNE);
+  // Same kinematics as rpmToStepHz: workpiece angle -> motor rotation via GEAR_RATIO
+  // and roller/emne diameter (surface speed matching).
+  float motor_deg = degrees * GEAR_RATIO * (D_EMNE / D_RULLE);
   long steps = (long)(motor_deg / 360.0f * microstep_get_steps_per_rev());
   return calibration_apply_steps(steps);
 }
@@ -147,7 +154,28 @@ void speed_init() {
     pedalFiltered = adcFiltered;
   }
   lastDirSwitchState = digitalRead(PIN_DIR_SWITCH);
+  speed_sync_rpm_limits_from_settings();
   LOG_I("Speed control init: pot=%.0f pedal=%.0f", adcFiltered, pedalFiltered);
+}
+
+void speed_sync_rpm_limits_from_settings() {
+  float mx = MAX_RPM;
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  mx = g_settings.max_rpm;
+  xSemaphoreGive(g_settings_mutex);
+  if (mx < MIN_RPM) mx = MIN_RPM;
+  if (mx > MAX_RPM) mx = MAX_RPM;
+  rpmMaxUi.store(mx, std::memory_order_release);
+
+  float cap = rpmMaxUi.load(std::memory_order_relaxed);
+  float sr = sliderRPM.load(std::memory_order_relaxed);
+  if (sr > cap) sliderRPM.store(cap, std::memory_order_relaxed);
+  float ct = cachedTargetRpm.load(std::memory_order_relaxed);
+  if (ct > cap) cachedTargetRpm.store(cap, std::memory_order_relaxed);
+}
+
+float speed_get_rpm_max() {
+  return rpmMaxUi.load(std::memory_order_acquire);
 }
 
 void speed_update_adc() {
@@ -186,7 +214,8 @@ void speed_update_adc() {
 }
 
 void speed_slider_set(float rpm) {
-  sliderRPM.store(constrain(rpm, MIN_RPM, MAX_RPM), std::memory_order_release);
+  float cap = rpmMaxUi.load(std::memory_order_relaxed);
+  sliderRPM.store(constrain(rpm, MIN_RPM, cap), std::memory_order_release);
   lastSliderMs.store(millis(), std::memory_order_release);
   buttonsActive.store(true, std::memory_order_release);
   lastPotAdc.store(adcFiltered, std::memory_order_release);
@@ -214,13 +243,23 @@ void speed_apply() {
   float activeAdc = usePedal ? pedalFiltered : adcFiltered;
   float adc = constrain(activeAdc, 0.0f, 4095.0f);
   float normalized = (3315.0f - adc) / 3315.0f;
-  float pot_rpm = MIN_RPM + constrain(normalized, 0.0f, 1.0f) * (MAX_RPM - MIN_RPM);
+  normalized = constrain(normalized, 0.0f, 1.0f);
+  float snapMax = motor_is_running() ? (float)POT_ADC_SNAP_MAX_RPM_RUNNING
+                                     : (float)POT_ADC_SNAP_MAX_RPM;
+  if (snapMax > 0.0f && adc <= snapMax) {
+    normalized = 1.0f;
+  }
+  float cap = rpmMaxUi.load(std::memory_order_relaxed);
+  float pot_rpm = MIN_RPM + normalized * (cap - MIN_RPM);
 
   bool active = buttonsActive.load(std::memory_order_acquire);
   float srpm = sliderRPM.load(std::memory_order_relaxed);
 
   if (active) {
-    if (fabs(activeAdc - lastPotAdc.load(std::memory_order_relaxed)) > 200.0f) {
+    float lastAdc = lastPotAdc.load(std::memory_order_relaxed);
+    float adcDelta = fabsf(activeAdc - lastAdc);
+    float rpmDelta = fabsf(pot_rpm - srpm);
+    if (adcDelta > 200.0f || rpmDelta > POT_SLIDER_OVERRIDE_RPM_DELTA) {
       buttonsActive.store(false, std::memory_order_release);
       sliderRPM.store(pot_rpm, std::memory_order_relaxed);
       cachedTargetRpm.store(pot_rpm, std::memory_order_relaxed);
@@ -235,7 +274,7 @@ void speed_apply() {
   SystemState state = control_get_state();
   if (state == STATE_JOG || state == STATE_STEP || state == STATE_STOPPING) return;
 
-  uint32_t mhz = (uint32_t)(rpmToStepHz(cachedTargetRpm) * 1000);
+  uint32_t mhz = (uint32_t)(rpmToStepHzCalibrated(cachedTargetRpm) * 1000);
 
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   FastAccelStepper* stepper = motor_get_stepper();

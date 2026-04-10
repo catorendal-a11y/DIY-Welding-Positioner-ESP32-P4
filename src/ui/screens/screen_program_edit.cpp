@@ -153,8 +153,9 @@ static void rpm_minus_cb(lv_event_t* e) {
   float adj = (delta < 0) ? -0.1f : 0.1f;
   editPreset.rpm += adj;
 
+  float mx = speed_get_rpm_max();
   if (editPreset.rpm < MIN_RPM) editPreset.rpm = MIN_RPM;
-  if (editPreset.rpm > MAX_RPM) editPreset.rpm = MAX_RPM;
+  if (editPreset.rpm > mx) editPreset.rpm = mx;
 
   if (rpmLabel) {
     lv_label_set_text_fmt(rpmLabel, "%.1f", editPreset.rpm);
@@ -390,15 +391,21 @@ void screen_program_edit_create(int slot) {
   lv_obj_set_style_bg_color(rpmBar, COL_GAUGE_BG, 0);
   lv_obj_set_style_border_width(rpmBar, 0, 0);
   lv_obj_set_style_radius(rpmBar, 1, 0);
-  lv_bar_set_range(rpmBar, (int32_t)(MIN_RPM * 10), (int32_t)(MAX_RPM * 10));
-  lv_bar_set_value(rpmBar, (int32_t)(editPreset.rpm * 10), LV_ANIM_OFF);
+  {
+    float mx = speed_get_rpm_max();
+    lv_bar_set_range(rpmBar, (int32_t)(MIN_RPM * 1000.0f + 0.5f), (int32_t)(mx * 1000.0f + 0.5f));
+  }
+  lv_bar_set_value(rpmBar, (int32_t)(editPreset.rpm * 1000.0f + 0.5f), LV_ANIM_OFF);
 
-  // Scale marks on progress bar (derived from MIN_RPM / MAX_RPM)
-  char t0[8], t1[8], t2[8], t3[8];
-  snprintf(t0, sizeof(t0), "%.2f", MIN_RPM);
-  snprintf(t1, sizeof(t1), "%.2f", MIN_RPM + (MAX_RPM - MIN_RPM) * 0.33f);
-  snprintf(t2, sizeof(t2), "%.2f", MIN_RPM + (MAX_RPM - MIN_RPM) * 0.66f);
-  snprintf(t3, sizeof(t3), "%.1f", MAX_RPM);
+  // Scale marks on progress bar (derived from MIN_RPM / speed_get_rpm_max())
+  char t0[12], t1[12], t2[12], t3[12];
+  snprintf(t0, sizeof(t0), "%.3f", (double)MIN_RPM);
+  {
+    float mx = speed_get_rpm_max();
+    snprintf(t1, sizeof(t1), "%.3f", (double)(MIN_RPM + (mx - MIN_RPM) * 0.33f));
+    snprintf(t2, sizeof(t2), "%.3f", (double)(MIN_RPM + (mx - MIN_RPM) * 0.66f));
+    snprintf(t3, sizeof(t3), "%.3f", (double)mx);
+  }
   const char* rpmTicks[] = {t0, t1, t2, t3};
   const int tickX[] = {20, 200, 400, 560};
   for (int i = 0; i < 4; i++) {

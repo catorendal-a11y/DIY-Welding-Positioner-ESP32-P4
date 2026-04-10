@@ -8,10 +8,10 @@
 // ───────────────────────────────────────────────────────────────────────────────
 // RPM CONVERSION — workpiece RPM to motor step frequency (Hz)
 // Parameters match the runtime values from config.h and microstep.h:
-//   gear_ratio     = GEAR_RATIO (199.5)
+//   gear_ratio     = GEAR_RATIO (108)
 //   d_emne         = D_EMNE (0.300)
 //   d_rulle        = D_RULLE (0.080)
-//   steps_per_rev  = microstep_get_steps_per_rev() (e.g. 1600 for 1/8)
+//   steps_per_rev  = microstep_get_steps_per_rev() (e.g. 3200 for 1/16 default)
 // ───────────────────────────────────────────────────────────────────────────────
 inline float rpmToStepHz_testable(float rpm_workpiece, float gear_ratio,
                                   float d_emne, float d_rulle,
@@ -37,12 +37,13 @@ inline float stepHzToRpm_testable(uint32_t hz, float gear_ratio,
 
 // ───────────────────────────────────────────────────────────────────────────────
 // ANGLE CONVERSION — workpiece angle (degrees) to motor steps
+// Must match rpmToStepHz_testable (same d_emne/d_rulle factor).
 // cal_factor = calibration factor (1.0 = no correction)
 // ───────────────────────────────────────────────────────────────────────────────
 inline long angleToSteps_testable(float degrees, float gear_ratio,
                                   float d_emne, float d_rulle,
                                   uint32_t steps_per_rev, float cal_factor) {
-  float motor_deg = degrees * gear_ratio * (d_rulle / d_emne);
+  float motor_deg = degrees * gear_ratio * (d_emne / d_rulle);
   long steps = (long)(motor_deg / 360.0f * (float)steps_per_rev);
   return (long)((float)steps * cal_factor);
 }
@@ -51,15 +52,18 @@ inline long angleToSteps_testable(float degrees, float gear_ratio,
 // ADC TO RPM — potentiometer ADC reading to workpiece RPM
 // Mirrors the normalization logic from speed_apply() in speed.cpp
 // adc_ref = 3315 (calibrated pot reference for ESP32-P4)
+// snap_max_rpm_adc: if > 0 and clamped ADC <= this, normalized = 1 (matches speed_apply)
 // ───────────────────────────────────────────────────────────────────────────────
 inline float adcToRpm_testable(float adc_value, float adc_ref,
-                               float min_rpm, float max_rpm) {
+                               float min_rpm, float max_rpm,
+                               float snap_max_rpm_adc = 0.0f) {
   float clamped = adc_value;
   if (clamped < 0.0f) clamped = 0.0f;
   if (clamped > 4095.0f) clamped = 4095.0f;
   float normalized = (adc_ref - clamped) / adc_ref;
   if (normalized < 0.0f) normalized = 0.0f;
   if (normalized > 1.0f) normalized = 1.0f;
+  if (snap_max_rpm_adc > 0.0f && clamped <= snap_max_rpm_adc) normalized = 1.0f;
   return min_rpm + normalized * (max_rpm - min_rpm);
 }
 
@@ -118,20 +122,20 @@ inline bool microstep_is_valid_testable(uint32_t microstep) {
 
 // ───────────────────────────────────────────────────────────────────────────────
 // ACCELERATION — clamp to valid range
-// Mirrors acceleration.cpp logic (ACCEL_MIN=1000, ACCEL_MAX=20000)
+// Mirrors acceleration.cpp logic (ACCEL_MIN=1000, ACCEL_MAX=30000)
 // ───────────────────────────────────────────────────────────────────────────────
 inline uint32_t acceleration_clamp_testable(uint32_t accel) {
   if (accel < 1000) return 1000;
-  if (accel > 20000) return 20000;
+  if (accel > 30000) return 30000;
   return accel;
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
 // ACCELERATION INIT DEFAULT — mirrors acceleration_init() in acceleration.cpp
-// Falls back to 5000 if stored value is outside [1000, 20000]
+// Falls back to 7500 if stored value is outside [1000, 30000]
 // ───────────────────────────────────────────────────────────────────────────────
 inline uint32_t acceleration_init_default_testable(uint32_t stored) {
-  if (stored < 1000 || stored > 20000) return 5000;
+  if (stored < 1000 || stored > 30000) return 7500;
   return stored;
 }
 
@@ -174,15 +178,15 @@ inline const char* microstep_get_string_testable(uint32_t ms) {
     case 8:  return "1/8";
     case 16: return "1/16";
     case 32: return "1/32";
-    default: return "1/8";
+    default: return "1/16";
   }
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
 // MICROSTEP INIT DEFAULT — mirrors microstep_init() in microstep.cpp
-// Falls back to 8 if stored value is not valid (4/8/16/32)
+// Falls back to 16 if stored value is not valid (4/8/16/32)
 // ───────────────────────────────────────────────────────────────────────────────
 inline uint32_t microstep_init_default_testable(uint32_t stored) {
-  if (stored != 4 && stored != 8 && stored != 16 && stored != 32) return 8;
+  if (stored != 4 && stored != 8 && stored != 16 && stored != 32) return 16;
   return stored;
 }

@@ -5,9 +5,9 @@
 | Component | Model | Qty | Notes |
 |-----------|-------|-----|-------|
 | **MCU Board** | GUITION JC4880P443C (800x480) | 1 | ESP32-P4 + ESP32-C6, MIPI-DSI, GT911 touch |
-| **Stepper Driver** | TB6600 | 1 | DM542T upgrade planned |
+| **Stepper Driver** | PUL/DIR or DM542T | 1 | Motor Config: Standard vs DM542T |
 | **Stepper Motor** | NEMA 23 (3 Nm) | 1 | |
-| **Gearbox** | Worm gear (~200:1) | 1 | 60T/40T + 133:1 worm = 199.5:1 |
+| **Gearbox** | NMRV030 + spur | 1 | **1:108** total (60:1 x 72/40) |
 | **Power Supply** | 24V DC, >=5A | 1 | Dedicated for stepper driver |
 | **Potentiometer** | 10k linear (LA42DWQ-22) | 1 | Speed control, IP65 |
 | **E-STOP Button** | NC (Normally Closed) | 1 | Mushroom button |
@@ -15,7 +15,7 @@
 | **Foot Pedal** | Analog pot + momentary switch | 1 | Optional |
 | **DC-DC Converter** | 24V -> 5V 2A | 1 | If not using USB-C for ESP32 |
 
-## TB6600 DIP Switch Configuration
+## DIP stepper driver configuration
 
 Set microstepping to match the Settings screen on the device:
 
@@ -24,13 +24,13 @@ Set microstepping to match the Settings screen on the device:
 | Microsteps | Must match UI Settings > Microstepping |
 | Current | Match your NEMA 23 rating (typically 2.5-3.0A) |
 
-Default firmware uses 1/8 microstepping. Other options: 1/4, 1/16, 1/32.
+Default firmware uses **1/16** (3200 pulses/rev with DM542T). Motor Config also offers 1/8 and 1/32.
 
 ## Wiring Connections
 
-### ESP32-P4 to TB6600 (Signal Wires)
+### ESP32-P4 to driver (signal wires)
 
-The TB6600 uses optically isolated inputs. Wire in **Common Ground** configuration:
+Most PUL/DIR boards use optically isolated inputs. Wire in **Common Ground** configuration:
 
 1. Connect **PUL-**, **DIR-**, and **ENA-** together -> ESP32-P4 **GND**
 2. **PUL+** (Step) -> **GPIO 50**
@@ -72,9 +72,9 @@ Uses internal INPUT_PULLUP. Enable via Settings > Motor Config > Direction Switc
 | Pot wiper | GPIO 35 |
 | Start switch | GPIO 33 |
 
-### Stepper Motor to TB6600
+### Stepper motor to driver
 
-| Motor Wire | TB6600 Terminal |
+| Motor Wire | Driver terminal |
 |-------------|-----------------|
 | A+ | A+ |
 | A- | A- |
@@ -98,16 +98,16 @@ GPIO 28 (C6_U0TXD) and GPIO 32 (C6_U0RXD) are PCB-routed to the ESP32-C6 co-proc
 | Component | Status |
 |-----------|--------|
 | GUITION JC4880P443C | Tested |
-| TB6600 (1/4 and 1/8 microstepping) | Tested |
+| PUL/DIR driver (1/4 and 1/8 microstepping) | Tested |
 | NEMA 23 (3 Nm) | Tested |
-| Worm gear (~200:1) | Tested |
+| NMRV030 + spur (**1:108** total) | Tested |
 | 24V DC PSU | Tested |
 | 10k Pot (LA42DWQ-22) | Tested |
 | NC E-STOP Button | Tested |
 | Direction switch (GPIO 29) | Tested |
 | Foot pedal | Tested |
 
-### Known TB6600 Limitations
+### Known limitations (basic PUL/DIR drivers)
 
 - Motor resonance at 100-300 motor RPM causes stalling at coarse microstepping (1/4)
 - Use 1/8 or finer for stable operation

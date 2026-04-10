@@ -63,7 +63,7 @@
 ### Hardware
 - [x] **Foot pedal support** (analog speed via ADS1115 I2C ADC, digital switch GPIO33)
 - [x] **Direction switch** (GPIO29, CW/CCW toggle)
-- [x] **Gear ratio 199.5:1** (60 x 133 / 40)
+- [x] **Gear ratio 1:108** total (60 x 72/40, NMRV030 + spur)
 
 ### Documentation
 - [x] **README** (v2.0.0, complete feature list, wiring diagram, BOM)
@@ -115,9 +115,9 @@
 
 | Pin | Function | Notes |
 |-----|----------|-------|
-| GPIO 50 | STEP | RMT pulse to TB6600 PUL+ |
-| GPIO 51 | DIR | Direction to TB6600 DIR+ |
-| GPIO 52 | ENABLE | Active LOW to TB6600 EN+ |
+| GPIO 50 | STEP | RMT pulse to driver PUL+ |
+| GPIO 51 | DIR | Direction to driver DIR+ |
+| GPIO 52 | ENABLE | Active LOW to driver ENA |
 | GPIO 49 | POT | 10k speed potentiometer (ADC) |
 | GPIO 29 | DIR SWITCH | CW/CCW toggle, INPUT_PULLUP |
 | GPIO 34 | E-STOP | NC contact, interrupt, active LOW |

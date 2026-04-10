@@ -29,12 +29,15 @@ static void rpm_adj_cb(lv_event_t* e) {
   float currentRpm = control_get_jog_speed();
   if (delta > 0) currentRpm += 0.1f;
   else if (currentRpm > 0.1f) currentRpm -= 0.1f;
+  float mx = speed_get_rpm_max();
   if (currentRpm < MIN_RPM) currentRpm = MIN_RPM;
-  if (currentRpm > MAX_RPM) currentRpm = MAX_RPM;
+  if (currentRpm > mx) currentRpm = mx;
   control_set_jog_speed(currentRpm);
   lv_label_set_text_fmt(rpmLabel, "%.1f", currentRpm);
   if (rpmBar) {
-    int pct = (int)((currentRpm - MIN_RPM) * 100 / (MAX_RPM - MIN_RPM));
+    float span = mx - MIN_RPM;
+    if (span < 1e-6f) span = 1e-6f;
+    int pct = (int)((currentRpm - MIN_RPM) * 100.0f / span + 0.5f);
     if (pct < 0) pct = 0;
     if (pct > 100) pct = 100;
     lv_bar_set_value(rpmBar, pct, LV_ANIM_OFF);
@@ -153,10 +156,15 @@ void screen_jog_create() {
   lv_obj_set_style_bg_color(rpmBar, COL_GAUGE_BG, 0);
   lv_obj_set_style_bg_color(rpmBar, COL_ACCENT, LV_PART_INDICATOR);
   lv_bar_set_range(rpmBar, 0, 100);
-  int rpmPct = (int)((control_get_jog_speed() - MIN_RPM) * 100 / (MAX_RPM - MIN_RPM));
-  if (rpmPct < 0) rpmPct = 0;
-  if (rpmPct > 100) rpmPct = 100;
-  lv_bar_set_value(rpmBar, rpmPct, LV_ANIM_OFF);
+  {
+    float mx = speed_get_rpm_max();
+    float span = mx - MIN_RPM;
+    if (span < 1e-6f) span = 1e-6f;
+    int rpmPct = (int)((control_get_jog_speed() - MIN_RPM) * 100.0f / span + 0.5f);
+    if (rpmPct < 0) rpmPct = 0;
+    if (rpmPct > 100) rpmPct = 100;
+    lv_bar_set_value(rpmBar, rpmPct, LV_ANIM_OFF);
+  }
 
   create_pm_btn(screen, btnMinusX, rpmY - 3, 64, 52,
                  "-", rpm_adj_cb, (void*)(intptr_t)-1);
@@ -164,7 +172,9 @@ void screen_jog_create() {
                  "+", rpm_adj_cb, (void*)(intptr_t)1);
 
   lv_obj_t* rpmHint = lv_label_create(screen);
-  lv_label_set_text(rpmHint, "0.02-1.0");
+  char rpmHintBuf[24];
+  snprintf(rpmHintBuf, sizeof(rpmHintBuf), "%.3f-%.3f", (double)MIN_RPM, (double)speed_get_rpm_max());
+  lv_label_set_text(rpmHint, rpmHintBuf);
   lv_obj_set_style_text_font(rpmHint, FONT_SMALL, 0);
   lv_obj_set_style_text_color(rpmHint, COL_TEXT_VDIM, 0);
   lv_obj_set_pos(rpmHint, 710, rpmY);
@@ -275,11 +285,14 @@ void screen_jog_update() {
   if (!screens_is_active(SCREEN_JOG)) return;
 
   SystemState state = control_get_state();
+  float mx = speed_get_rpm_max();
+  float span = mx - MIN_RPM;
+  if (span < 1e-6f) span = 1e-6f;
   if (state == STATE_JOG) {
     float actual_rpm = speed_get_actual_rpm();
     lv_label_set_text_fmt(rpmLabel, "%.1f", actual_rpm);
     if (rpmBar) {
-      int pct = (int)((actual_rpm - MIN_RPM) * 100 / (MAX_RPM - MIN_RPM));
+      int pct = (int)((actual_rpm - MIN_RPM) * 100.0f / span + 0.5f);
       if (pct < 0) pct = 0;
       if (pct > 100) pct = 100;
       lv_bar_set_value(rpmBar, pct, LV_ANIM_OFF);
@@ -288,7 +301,7 @@ void screen_jog_update() {
     float jogRpm = control_get_jog_speed();
     lv_label_set_text_fmt(rpmLabel, "%.1f", jogRpm);
     if (rpmBar) {
-      int pct = (int)((jogRpm - MIN_RPM) * 100 / (MAX_RPM - MIN_RPM));
+      int pct = (int)((jogRpm - MIN_RPM) * 100.0f / span + 0.5f);
       if (pct < 0) pct = 0;
       if (pct > 100) pct = 100;
       lv_bar_set_value(rpmBar, pct, LV_ANIM_OFF);

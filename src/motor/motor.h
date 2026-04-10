@@ -1,5 +1,5 @@
 // TIG Rotator Controller - Motor Control Interface
-// ESP32-P4: TB6600 stepper driver via FastAccelStepper
+// ESP32-P4: stepper driver via FastAccelStepper (timing from g_settings.stepper_driver)
 
 #pragma once
 #include <Arduino.h>

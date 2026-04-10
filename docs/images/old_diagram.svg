@@ -5,7 +5,7 @@
 
   <!-- Title -->
   <text x="725" y="38" font-family="sans-serif" font-size="30" fill="#FFF" text-anchor="middle" font-weight="bold">TIG Rotator — Wiring Diagram</text>
-  <text x="725" y="62" font-family="sans-serif" font-size="15" fill="#669999" text-anchor="middle">ESP32-P4  ·  TB6600 Stepper Driver  ·  NEMA 23  ·  24V DC PSU</text>
+  <text x="725" y="62" font-family="sans-serif" font-size="15" fill="#669999" text-anchor="middle">ESP32-P4  ·  Stepper driver  ·  NEMA 23  ·  24V DC PSU</text>
   <rect x="30" y="72" width="1380" height="2" fill="#1A3333"/>
 
   <!-- ═══════════════════════════════════════
@@ -115,11 +115,11 @@
   <text x="432" y="410" font-family="sans-serif" font-size="15" fill="#26C6DA" font-weight="bold">← DIR SW</text>
 
   <!-- ═══════════════════════════════════════
-       TB6600
+       Driver
        ═══════════════════════════════════════ -->
   <g transform="translate(540, 84)">
     <rect width="400" height="280" rx="10" fill="#140F06" stroke="#6B3A2A" stroke-width="3"/>
-    <text x="200" y="80" font-family="sans-serif" font-size="22" fill="#FF9100" text-anchor="middle" font-weight="bold">TB6600</text>
+    <text x="200" y="80" font-family="sans-serif" font-size="22" fill="#FF9100" text-anchor="middle" font-weight="bold">Driver</text>
     <text x="200" y="108" font-family="sans-serif" font-size="17" fill="#996633" text-anchor="middle">Stepper Motor Driver</text>
     <text x="200" y="150" font-family="sans-serif" font-size="14" fill="#553311" text-anchor="middle">1/8 microstep · 3.0A peak</text>
     <text x="200" y="174" font-family="sans-serif" font-size="13" fill="#443311" text-anchor="middle">DIP: OFF OFF ON OFF ON OFF</text>
@@ -158,7 +158,7 @@
     <line x1="378" y1="259" x2="390" y2="271" stroke="#666" stroke-width="1.5"/>
   </g>
 
-  <!-- TB6600 pin labels -->
+  <!-- Driver pin labels -->
   <line x1="568" y1="364" x2="568" y2="390" stroke="#FF6666" stroke-width="1.5"/>
   <text x="568"  y="404" font-family="monospace" font-size="13" fill="#FF6666" text-anchor="middle" font-weight="bold">VCC</text>
   <line x1="600" y1="364" x2="600" y2="390" stroke="#666" stroke-width="1"/>
@@ -309,7 +309,7 @@
   ═══════════════════════════════════════════
   -->
 
-  <!-- ── SIGNAL BUNDLE (cyan): ESP → TB6600 ── -->
+  <!-- ── SIGNAL BUNDLE (cyan): ESP → Driver ── -->
 
   <!-- ENA (GPIO52→EN+): via x=28 -->
   <path d="M 113 279 L 28 279 L 28 670 L 892 670 L 892 420"
@@ -333,7 +333,7 @@
   <path d="M 796 718 L 796 420" fill="none" stroke="#555" stroke-width="2"/>
   <text x="460" y="714" font-family="sans-serif" font-size="11" fill="#444">GND bus (EN−, DIR−, PUL−)</text>
 
-  <!-- ── MOTOR BUNDLE: TB6600 → NEMA ── -->
+  <!-- ── MOTOR BUNDLE: Driver → NEMA ── -->
   <path d="M 632 420 L 632 480 L 1172 480 L 1172 474"
         fill="none" stroke="#F44336" stroke-width="3"/>
   <text x="900" y="476" font-family="sans-serif" font-size="14" fill="#F44336" font-weight="bold">RED  A+</text>
@@ -350,7 +350,7 @@
         fill="none" stroke="#AAA" stroke-width="3"/>
   <text x="1014" y="530" font-family="sans-serif" font-size="14" fill="#AAA" font-weight="bold">BLACK  B−</text>
 
-  <!-- ── POWER: PSU → TB6600 ── -->
+  <!-- ── POWER: PSU → Driver ── -->
   <path d="M 604 840 L 604 770 L 568 770 L 568 420"
         fill="none" stroke="#FF5252" stroke-width="3" stroke-dasharray="12 5"/>
   <text x="556" y="826" font-family="sans-serif" font-size="13" fill="#FF7070" font-weight="bold">24V</text>
@@ -390,9 +390,9 @@
   <g transform="translate(1060, 570)">
     <rect width="420" height="216" rx="12" fill="#060A08" stroke="#1A3322" stroke-width="1.5"/>
     <text x="210" y="24" font-family="sans-serif" font-size="16" fill="#55AA77" text-anchor="middle" font-weight="bold" letter-spacing="1">PIN REFERENCE</text>
-    <text x="18" y="52"  font-family="monospace" font-size="15" fill="#CCEE66">GPIO50</text><text x="106" y="52"  font-family="monospace" font-size="15" fill="#CCC">→  TB6600  PUL+  (STEP)</text>
-    <text x="18" y="76"  font-family="monospace" font-size="15" fill="#CCEE66">GPIO51</text><text x="106" y="76"  font-family="monospace" font-size="15" fill="#CCC">→  TB6600  DIR+</text>
-    <text x="18" y="100" font-family="monospace" font-size="15" fill="#CCEE66">GPIO52</text><text x="106" y="100" font-family="monospace" font-size="15" fill="#CCC">→  TB6600  EN+  (ENA)</text>
+    <text x="18" y="52"  font-family="monospace" font-size="15" fill="#CCEE66">GPIO50</text><text x="106" y="52"  font-family="monospace" font-size="15" fill="#CCC">→  Driver  PUL+  (STEP)</text>
+    <text x="18" y="76"  font-family="monospace" font-size="15" fill="#CCEE66">GPIO51</text><text x="106" y="76"  font-family="monospace" font-size="15" fill="#CCC">→  Driver  DIR+</text>
+    <text x="18" y="100" font-family="monospace" font-size="15" fill="#CCEE66">GPIO52</text><text x="106" y="100" font-family="monospace" font-size="15" fill="#CCC">→  Driver  EN+  (ENA)</text>
     <text x="18" y="124" font-family="monospace" font-size="15" fill="#DD99FF">GPIO49</text><text x="106" y="124" font-family="monospace" font-size="15" fill="#CCC">→  Potentiometer (ADC)</text>
     <text x="18" y="148" font-family="monospace" font-size="15" fill="#FF6666">GPIO34</text><text x="106" y="148" font-family="monospace" font-size="15" fill="#CCC">→  E-STOP  NC contact</text>
     <text x="18" y="172" font-family="monospace" font-size="15" fill="#888">GND</text>   <text x="106" y="172" font-family="monospace" font-size="15" fill="#888">→  all minus (−) pins</text>

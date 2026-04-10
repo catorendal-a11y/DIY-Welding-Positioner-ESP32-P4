@@ -10,11 +10,11 @@
 
 - **Workpiece:** 50 kg steel pipe
 - **Diameter:** 300 mm
-- **RPM:** 1.0 (TB6600 maximum)
+- **RPM:** 1.0 (default MAX_RPM cap)
 - **Duration:** 60 minutes continuous
 - **Ambient Temperature:** ___ C
 - **Motor:** NEMA 23 (3 Nm rated)
-- **Driver:** TB6600 (24V supply)
+- **Driver:** PUL/DIR (24V supply)
 
 ---
 
@@ -23,7 +23,7 @@
 | Component | Start (C) | 30 min (C) | 60 min (C) | Max Rating | Result |
 |-----------|-----------|-------------|-------------|------------|--------|
 | Motor | ___ | ___ | ___ | 80C | [ ] |
-| TB6600 | ___ | ___ | ___ | 80C | [ ] |
+| Driver | ___ | ___ | ___ | 80C | [ ] |
 | ESP32-P4 board | ___ | ___ | ___ | 60C | [ ] |
 
 ---

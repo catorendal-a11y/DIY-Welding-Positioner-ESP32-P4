@@ -69,7 +69,7 @@ static void update_rpm_display() {
     lv_label_set_text_fmt(rpmValueLabel, "%.1f", editRpm);
   }
   if (rpmBar) {
-    lv_bar_set_value(rpmBar, (int32_t)(editRpm * 10), LV_ANIM_OFF);
+    lv_bar_set_value(rpmBar, (int32_t)(editRpm * 1000.0f + 0.5f), LV_ANIM_OFF);
   }
 }
 
@@ -84,8 +84,9 @@ static void back_event_cb(lv_event_t* e) {
 static void rpm_adj_cb(lv_event_t* e) {
   intptr_t delta = (intptr_t)lv_event_get_user_data(e);
   editRpm += (float)delta * 0.1f;  // delta in tenths: -1→-0.1, -10→-1.0, etc.
+  float mx = speed_get_rpm_max();
   if (editRpm < MIN_RPM) editRpm = MIN_RPM;
-  if (editRpm > MAX_RPM) editRpm = MAX_RPM;
+  if (editRpm > mx) editRpm = mx;
 
   update_rpm_display();
 }
@@ -135,7 +136,7 @@ static void save_cb(lv_event_t* e) {
 // DIRECTION (y=266): CW/CCW toggle (200x42 each)
 // SOFT START: ON/OFF toggle (140x42 each)
 // Separator at y=340
-// Info: "ACCEL MED . STEPS/S 3556 . GEAR 10:1 . MICRO 16x"
+// Info: "ACCEL MED . STEPS/S 3556 . GEAR 1:108 . MICRO 8x" (decorative; gear from GEAR_RATIO)
 // CANCEL + SAVE buttons
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_edit_cont_create() {
@@ -212,15 +213,21 @@ void screen_edit_cont_create() {
     lv_obj_set_style_bg_color(rpmBar, COL_GAUGE_BG, 0);
     lv_obj_set_style_border_width(rpmBar, 0, 0);
     lv_obj_set_style_radius(rpmBar, 1, 0);
-    lv_bar_set_range(rpmBar, (int32_t)(MIN_RPM * 10), (int32_t)(MAX_RPM * 10));
-    lv_bar_set_value(rpmBar, (int32_t)(rpm * 10), LV_ANIM_OFF);
+    {
+      float mx = speed_get_rpm_max();
+      lv_bar_set_range(rpmBar, (int32_t)(MIN_RPM * 1000.0f + 0.5f), (int32_t)(mx * 1000.0f + 0.5f));
+    }
+    lv_bar_set_value(rpmBar, (int32_t)(rpm * 1000.0f + 0.5f), LV_ANIM_OFF);
 
-    // Scale marks below progress bar (derived from MIN_RPM / MAX_RPM)
-    char s0[8], s1[8], s2[8], s3[8];
-    snprintf(s0, sizeof(s0), "%.2f", MIN_RPM);
-    snprintf(s1, sizeof(s1), "%.2f", MIN_RPM + (MAX_RPM - MIN_RPM) * 0.33f);
-    snprintf(s2, sizeof(s2), "%.2f", MIN_RPM + (MAX_RPM - MIN_RPM) * 0.66f);
-    snprintf(s3, sizeof(s3), "%.1f", MAX_RPM);
+    // Scale marks below progress bar (derived from MIN_RPM / speed_get_rpm_max())
+    char s0[12], s1[12], s2[12], s3[12];
+    {
+      float mx = speed_get_rpm_max();
+      snprintf(s0, sizeof(s0), "%.3f", (double)MIN_RPM);
+      snprintf(s1, sizeof(s1), "%.3f", (double)(MIN_RPM + (mx - MIN_RPM) * 0.33f));
+      snprintf(s2, sizeof(s2), "%.3f", (double)(MIN_RPM + (mx - MIN_RPM) * 0.66f));
+      snprintf(s3, sizeof(s3), "%.3f", (double)mx);
+    }
     const char* scaleLabels[] = {s0, s1, s2, s3};
     const int scaleX[] = {20, 265, 510, 740};
     for (int i = 0; i < 4; i++) {
@@ -406,9 +413,11 @@ void screen_edit_cont_create() {
     lv_obj_set_style_radius(line3, 0, 0);
     lv_obj_remove_flag(line3, LV_OBJ_FLAG_SCROLLABLE);
 
-    // ── Info line (SVG: "ACCEL MED . STEPS/S 3556 . GEAR 10:1 . MICRO 16x") ──
+    // ── Info line (decorative; gear matches config GEAR_RATIO) ──
     lv_obj_t* infoLabel = lv_label_create(screen);
-    lv_label_set_text(infoLabel, "ACCEL MED . STEPS/S 3556 . GEAR 200:1 . MICRO 8x");
+    char infoBuf[72];
+    snprintf(infoBuf, sizeof(infoBuf), "ACCEL MED . STEPS/S 3556 . GEAR 1:%.0f . MICRO 8x", (double)GEAR_RATIO);
+    lv_label_set_text(infoLabel, infoBuf);
     lv_obj_set_style_text_font(infoLabel, FONT_TINY, 0);
     lv_obj_set_style_text_color(infoLabel, COL_TEXT_VDIM, 0);
     lv_obj_set_pos(infoLabel, 20, 256);

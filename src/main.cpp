@@ -190,10 +190,11 @@ void motorTask(void* pvParameters) {
       motor_apply_settings();
     }
 
-    if (motorConfigApplyPending) {
-      motorConfigApplyPending = false;
+    if (motorConfigApplyPending.load(std::memory_order_acquire)) {
+      motorConfigApplyPending.store(false, std::memory_order_release);
       microstep_init();
       acceleration_init();
+      speed_sync_rpm_limits_from_settings();
       motor_apply_settings();
     }
 
@@ -232,7 +233,7 @@ void motorTask(void* pvParameters) {
 }
 
 // Storage task (Core 1, priority 1) — program save/load + health monitoring
-// NOT subscribed to WDT — does blocking I/O (LittleFS flash writes)
+// NOT subscribed to WDT — does blocking I/O (NVS flash writes)
 void storageTask(void* pvParameters) {
   LOG_I("Storage task started on Core %d", xPortGetCoreID());
   TickType_t t = xTaskGetTickCount();
@@ -297,6 +298,10 @@ void setup() {
   // Step/dir/ENA/ESTOP + DIR switch — before speed_init() (pot + digitalRead DIR_SW)
   motor_gpio_init();
 
+  // Load NVS settings BEFORE display/motor so saved brightness, acceleration, microstep, etc.
+  // apply on first init (previously storage ran after motor_apply_settings and stepper kept defaults).
+  storage_init();
+
   // Initialize display (MIPI-DSI + GT911 touch)
   display_init();
 
@@ -321,9 +326,6 @@ void setup() {
 
   // Cache stepper pointer for ESTOP ISR
   safety_cache_stepper();
-
-  // Initialize storage (LittleFS + Presets API)
-  storage_init();
 
   // Initialize control state machine
   control_init();

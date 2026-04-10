@@ -40,7 +40,7 @@ This document outlines planned features and their current status.
 ## 4. DM542T Driver Support
 
 > **STATUS: PARTIAL**
-> Motor config UI supports microstepping up to 1/32. MAX_RPM limited to 1.0 with TB6600.
+> Motor config UI supports microstepping up to 1/32. MAX_RPM limited to 1.0 with standard driver timing by default.
 
 ### What's Needed
 - Increase MAX_RPM to 5.0 when DM542T is connected
@@ -59,4 +59,4 @@ This document outlines planned features and their current status.
 ## 6. Higher RPM
 
 > **STATUS: PLANNED**
-> Requires DM542T driver upgrade. Current TB6600 limits to ~1.0 RPM workpiece speed.
+> Requires DM542T driver upgrade for comfortable headroom. Default MAX_RPM keeps ~1.0 RPM workpiece speed.

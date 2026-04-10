@@ -64,7 +64,7 @@ static void rpm_adj_cb(lv_event_t* e) {
   float rpm = speed_get_target_rpm();
   rpm += delta * 0.1f;
   if (rpm < MIN_RPM) rpm = MIN_RPM;
-  if (rpm > MAX_RPM) rpm = MAX_RPM;
+  if (rpm > speed_get_rpm_max()) rpm = speed_get_rpm_max();
   speed_slider_set(rpm);
   if (rpmLabel) lv_label_set_text_fmt(rpmLabel, "%.1f", rpm);
 }

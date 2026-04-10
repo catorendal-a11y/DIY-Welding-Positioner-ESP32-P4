@@ -94,7 +94,7 @@ static void speed_down_cb(lv_event_t*) {
 static void speed_up_cb(lv_event_t*) {
   float rpm = speed_get_target_rpm();
   rpm += 0.1f;
-  if (rpm > MAX_RPM) rpm = MAX_RPM;
+  if (rpm > speed_get_rpm_max()) rpm = speed_get_rpm_max();
   speed_slider_set(rpm);
   screen_main_set_dirty();
 }
@@ -221,7 +221,7 @@ void screen_main_create() {
   lv_obj_set_pos(rpmIndicatorArc, arcCX - activeSize/2, arcCY - activeSize/2);
   lv_arc_set_rotation(rpmIndicatorArc, 135);
   lv_arc_set_bg_angles(rpmIndicatorArc, 0, 270);
-  lv_arc_set_range(rpmIndicatorArc, 0, (int32_t)(MAX_RPM * 100));
+  lv_arc_set_range(rpmIndicatorArc, 0, (int32_t)(speed_get_rpm_max() * 100.0f + 0.5f));
   lv_arc_set_value(rpmIndicatorArc, 0);
   lv_obj_remove_style(rpmIndicatorArc, nullptr, LV_PART_KNOB);
   lv_obj_remove_flag(rpmIndicatorArc, LV_OBJ_FLAG_CLICKABLE);
@@ -414,7 +414,14 @@ void screen_main_update() {
   prevRpm = rpm;
   prevPedalEnabled = speed_get_pedal_enabled();
 
+  float mx = speed_get_rpm_max();
+  int32_t arcMax = (int32_t)(mx * 100.0f + 0.5f);
+  if (arcMax < 1) arcMax = 1;
+  lv_arc_set_range(rpmIndicatorArc, 0, arcMax);
+
   int32_t val = (int32_t)(rpm * 100.0f);
+  if (val > arcMax) val = arcMax;
+  if (val < 0) val = 0;
 
   // Header state
   if (state < (int)(sizeof(state_strings) / sizeof(state_strings[0]))) {

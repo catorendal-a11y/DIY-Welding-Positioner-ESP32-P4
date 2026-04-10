@@ -6,6 +6,7 @@
 #include "../screens.h"
 #include "../theme.h"
 #include "../../config.h"
+#include "../../motor/speed.h"
 #include <cstdio>
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -69,7 +70,10 @@ static void update_computed_info() {
     lv_bar_set_value(offBar, pct, LV_ANIM_OFF);
   }
   if (rpmBar) {
-    int pct = (int)((editRpm - MIN_RPM) * 100 / (MAX_RPM - MIN_RPM));
+    float mx = speed_get_rpm_max();
+    float span = mx - MIN_RPM;
+    if (span < 1e-6f) span = 1e-6f;
+    int pct = (int)((editRpm - MIN_RPM) * 100.0f / span + 0.5f);
     if (pct < 0) pct = 0; if (pct > 100) pct = 100;
     lv_bar_set_value(rpmBar, pct, LV_ANIM_OFF);
   }
@@ -109,7 +113,7 @@ static void rpm_adj_cb(lv_event_t* e) {
   if (delta > 0) editRpm += 0.1f;
   else if (editRpm > MIN_RPM) editRpm -= 0.1f;
   if (editRpm < MIN_RPM) editRpm = MIN_RPM;
-  if (editRpm > MAX_RPM) editRpm = MAX_RPM;
+  if (editRpm > speed_get_rpm_max()) editRpm = speed_get_rpm_max();
   lv_label_set_text_fmt(rpmLabel, "%.1f", editRpm);
   update_computed_info();
 }
@@ -354,7 +358,7 @@ void screen_edit_pulse_create() {
   // Range hint
   lv_obj_t* rpmHint = lv_label_create(screen);
   char hintBuf[16];
-  snprintf(hintBuf, sizeof(hintBuf), "%.2f-%.1f", MIN_RPM, MAX_RPM);
+  snprintf(hintBuf, sizeof(hintBuf), "%.3f-%.3f", (double)MIN_RPM, (double)speed_get_rpm_max());
   lv_label_set_text(rpmHint, hintBuf);
   lv_obj_set_style_text_font(rpmHint, FONT_SMALL, 0);
   lv_obj_set_style_text_color(rpmHint, COL_TEXT_VDIM, 0);

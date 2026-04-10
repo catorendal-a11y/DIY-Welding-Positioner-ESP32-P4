@@ -11,7 +11,7 @@ void setUp(void) {}
 void tearDown(void) {}
 
 // ────────────────────────────────────────────────────────────────────────────
-// ENA PIN — Motor enable (active LOW to TB6600, HIGH = disabled)
+// ENA PIN — Motor enable (active LOW to driver, HIGH = disabled)
 // ────────────────────────────────────────────────────────────────────────────
 
 void test_ena_pin_starts_high(void) {

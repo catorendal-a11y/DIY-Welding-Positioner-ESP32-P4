@@ -110,7 +110,7 @@ void screen_about_create() {
   make_info_row(screen, PX, y, CW, 32, "FRAMEWORK", "LVGL 9.x + FastAccelStepper");
   y += 36;
 
-  make_info_row(screen, PX, y, CW, 32, "MOTOR", "TB6600 + NEMA 23, 200:1 worm gear");
+  make_info_row(screen, PX, y, CW, 32, "MOTOR", "NEMA 23, NMRV030 + spur (1:108)");
   y += 36;
 
   int footerY = SET_FOOTER_Y;

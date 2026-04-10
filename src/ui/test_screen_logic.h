@@ -46,7 +46,8 @@ inline int pulse_bar_percent_time(uint32_t ms, uint32_t min_ms, uint32_t max_ms)
 
 inline int pulse_bar_percent_rpm(float rpm, float min_rpm, float max_rpm) {
   if (max_rpm <= min_rpm) return 0;
-  int pct = (int)((rpm - min_rpm) * 100.0f / (max_rpm - min_rpm));
+  float span = max_rpm - min_rpm;
+  int pct = (int)((rpm - min_rpm) * 100.0f / span + 0.5f);
   if (pct < 0) pct = 0;
   if (pct > 100) pct = 100;
   return pct;
@@ -96,7 +97,7 @@ inline float step_compute_total_angle(float angle, int repeats) {
 inline long step_compute_total_steps(float angle, int repeats,
                                      float gear_ratio, float d_rulle,
                                      float d_emne, uint32_t spr, float cal) {
-  float motor_deg = angle * gear_ratio * (d_rulle / d_emne);
+  float motor_deg = angle * gear_ratio * (d_emne / d_rulle);
   long steps_one = (long)(motor_deg / 360.0f * (float)spr);
   steps_one = (long)((float)steps_one * cal);
   return steps_one * repeats;

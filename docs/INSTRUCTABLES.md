@@ -23,7 +23,7 @@ Commercial welding rotators cost $500-5000. This controller gives you profession
 
 ### Features
 - 5 welding modes: Continuous, Pulse, Step, Jog, Timer
-- 0.02-1.0 RPM range with live pot and button adjustment
+- 0.01-3.0 RPM range (default UI cap) with live pot and button adjustment
 - 4.3" capacitive touchscreen (800x480, LVGL 9.x UI)
 - 8 selectable accent color themes
 - BLE remote control (phone app via NUS)
@@ -49,7 +49,7 @@ IMAGE: docs/images/social_preview.png (or embed YouTube: https://youtu.be/GygLl6
 |------|-----|-------------|
 | GUITION JC4880P443C dev board (ESP32-P4 + C6 + 4.3" display) | 1 | AliExpress: search "JC4880P443C" |
 | NEMA 23 stepper motor | 1 | Any NEMA 23 (check current rating matches driver) |
-| TB6600 stepper driver (or DM542T) | 1 | AliExpress / Amazon |
+| PUL/DIR stepper driver (or DM542T) | 1 | AliExpress / Amazon |
 | 10k potentiometer (LA42DWQ-22 panel mount) | 1 | AliExpress |
 | NC momentary push button (E-STOP) | 1 | Any NC mushroom button |
 | SPDT toggle switch (direction CW/CCW) | 1 | Any toggle switch |
@@ -62,7 +62,7 @@ IMAGE: docs/images/social_preview.png (or embed YouTube: https://youtu.be/GygLl6
 
 | Part | Qty | Notes |
 |------|-----|-------|
-| Worm gear reducer (~200:1 ratio) | 1 | 60T/40T + 133:1 worm = 199.5:1 |
+| NMRV030 worm + spur stage | 1 | **1:108** total (60:1 x 72/40); see `docs/images/motor.worm.svg` |
 | Drive roller (80mm diameter) | 1 | Rubber-coated |
 | Pipe/workpiece support rollers | 2 | Match your pipe size |
 
@@ -127,18 +127,18 @@ IMAGE: docs/images/Wiring_diagram.v2.svg
 
 | ESP32-P4 Pin | Connects To | Notes |
 |---|---|---|
-| GPIO 50 (STEP) | TB6600 PUL+ | Step pulse |
-| GPIO 51 (DIR) | TB6600 DIR+ | Direction |
-| GPIO 52 (ENA) | TB6600 ENA- | LOW = motor ON |
+| GPIO 50 (STEP) | Driver PUL+ | Step pulse |
+| GPIO 51 (DIR) | Driver DIR+ | Direction |
+| GPIO 52 (ENA) | Driver ENA- | LOW = motor ON |
 | GPIO 34 (ESTOP) | E-STOP button | NC contact, pull-up |
 | GPIO 29 (DIR SW) | Direction toggle | Pull-up, CW/CCW |
 | GPIO 49 (POT) | 10k pot wiper | ADC input |
 | GPIO 35 (PEDAL) | Foot pedal pot | Digital only (no ADC on P4) |
 | GPIO 33 (PEDAL SW) | Foot pedal switch | Pull-up (optional) |
 | I2C (GPIO 7/8) | ADS1115 | Pedal pot ADC (optional, addr 0x48) |
-| 5V | TB6600 PUL-/DIR-/ENA+ | Logic power |
-| 24V PSU+ | TB6600 VCC | Motor power |
-| 24V PSU- | TB6600 GND | Common ground |
+| 5V | Driver PUL-/DIR-/ENA+ | Logic power |
+| 24V PSU+ | Driver VCC / VM | Motor power |
+| 24V PSU- | Driver GND | Common ground |
 
 ### Important Notes
 
@@ -154,19 +154,21 @@ IMAGE: Photo of wired breadboard/connections
 
 ## STEP 3: Mechanical Assembly
 
-### Worm Gear Setup
+### Drivetrain (NMRV030 + spur)
 
 IMAGE: docs/images/motor.worm.svg
 
-The worm gear provides 199.5:1 reduction. With 1/8 microstepping (1600 steps/rev), the system delivers:
+Total motor-to-output reduction is **1:108** (`GEAR_RATIO` = 60 x 72/40). Firmware also applies roller geometry (300 mm workpiece / 80 mm roller in `config.h`), so motor RPM = workpiece RPM x 108 x (300/80) = workpiece RPM x 405.
 
-| Workpiece RPM | Motor RPM | Step Frequency |
+With **1/16 microstepping** (3200 steps/rev, default in Motor Config / `config.h` comment), step frequency = motor RPM x 3200 / 60:
+
+| Workpiece RPM | Motor RPM | Step frequency |
 |---|---|---|
-| 0.02 | 4.0 | 399 Hz |
-| 0.1 | 20.0 | 1,995 Hz |
-| 1.0 | 199.5 | 19,950 Hz |
+| 0.02 | 8.1 | 432 Hz |
+| 0.1 | 40.5 | 2,160 Hz |
+| 1.0 | 405 | 21,600 Hz |
 
-Mount the NEMA 23 motor to the worm gear input shaft. Mount the drive roller on the output shaft. Position support rollers to hold your workpiece.
+Mount the NEMA 23 on the NMRV030 input. Mount the drive roller on the output stage. Position support rollers to hold your workpiece.
 
 IMAGE: Photo of mechanical assembly
 
@@ -182,7 +184,7 @@ IMAGE: Photo of boot screen
 
 IMAGE: docs/images/main_screen.svg
 
-- **Gauge** — shows current RPM (0.02-1.0 range)
+- **Gauge** — shows current RPM (default range per `MIN_RPM`/`MAX_RPM` in `config.h`)
 - **CW/CCW button** — toggle rotation direction
 - **RPM +/- buttons** — adjust speed
 - **START/STOP** — continuous rotation mode
@@ -196,7 +198,7 @@ IMAGE: docs/images/main_screen.svg
 
 Two methods for adjusting speed:
 
-1. **Potentiometer** — turn the knob for analog speed control (0.02-1.0 RPM)
+1. **Potentiometer** — turn the knob for analog speed control (full range per `config.h`)
 2. **+/- buttons** — digital adjustment
 3. **Foot pedal** — analog speed via ADS1115 I2C ADC (if connected)
 
@@ -254,15 +256,15 @@ Save up to 16 presets with mode-specific parameters (RPM, pulse times, step angl
 
 | Parameter | Value | Notes |
 |---|---|---|
-| MIN_RPM | 0.02 | Minimum workpiece speed |
-| MAX_RPM | 1.0 | Limited by TB6600 (DM542T allows 5.0) |
-| GEAR_RATIO | 199.5 | (60 * 133 / 40) worm gear |
-| ACCELERATION | 10000 steps/s^2 | Smooth through resonance |
-| START_SPEED | 100 Hz | Safe startup below minimum |
+| MIN_RPM | 0.01 | Minimum workpiece speed (`config.h`) |
+| MAX_RPM | 3.0 | Default UI cap (`config.h`) |
+| GEAR_RATIO | (60 x 72 / 40) = 108 | Total **1:108** motor:output |
+| ACCELERATION | NVS / Motor Config | Default 7500 steps/s^2 in fresh settings |
+| START_SPEED | 100 Hz | Accel ramp start (`config.h`) |
 
 ### Upgrading to DM542T
 
-The TB6600 has no anti-resonance DSP. Upgrading to DM542T allows:
+Basic PUL/DIR drivers have no anti-resonance DSP. Upgrading to DM542T allows:
 - MAX_RPM increase to 5.0
 - Microstepping up to 1/32 without stalling
 - Built-in stall detection

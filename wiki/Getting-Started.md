@@ -6,7 +6,7 @@
 - **Python** PlatformIO bundled Python (system Python 3.14 is incompatible)
 - **GUITION JC4880P443C** ESP32-P4 4.3" Touch Display dev board
 - **USB-C cable** for power and serial
-- **Hardware:** TB6600 driver, NEMA 23 motor, 24V PSU, 10k pot, NC E-STOP button
+- **Hardware:** Stepper driver, NEMA 23 motor, 24V PSU, 10k pot, NC E-STOP button
 
 See [[Hardware Setup]] for full wiring details.
 
@@ -82,7 +82,7 @@ All parameters are in `src/config.h`:
 ```cpp
 #define MIN_RPM         0.02f     // Minimum workpiece RPM
 #define MAX_RPM         1.0f      // Maximum workpiece RPM (temporary)
-#define GEAR_RATIO      199.5f    // Worm gear ratio (60 * 133 / 40)
+#define GEAR_RATIO      (60.0f * 72.0f / 40.0f)   // = 108, total **1:108**
 #define ACCELERATION    10000     // Steps/s^2
 #define START_SPEED     100       // Hz minimum for motor start
 ```
@@ -93,9 +93,9 @@ Settings can also be changed from the touchscreen via **Settings > Motor Config*
 
 | ESP32 Pin | Function | Connect To |
 |-----------|----------|------------|
-| GPIO 50 | STEP (Output) | TB6600 PUL+ |
-| GPIO 51 | DIR (Output) | TB6600 DIR+ |
-| GPIO 52 | ENABLE (Output) | TB6600 ENA- |
+| GPIO 50 | STEP (Output) | Driver PUL+ |
+| GPIO 51 | DIR (Output) | Driver DIR+ |
+| GPIO 52 | ENABLE (Output) | Driver ENA- |
 | GPIO 49 | POT (ADC Input) | 10k Pot wiper |
 | GPIO 29 | DIR SW (Input) | CW/CCW toggle |
 | GPIO 34 | E-STOP (Input, ISR) | NC E-STOP button |
@@ -105,6 +105,6 @@ Settings can also be changed from the touchscreen via **Settings > Motor Config*
 
 **Available pins:** GPIO 28, GPIO 30, GPIO 31, GPIO 32 (digital only, no ADC).
 
-All TB6600 minus pins (PUL-, DIR-, ENA-) connect to ESP32 GND.
+All driver minus pins (PUL-, DIR-, ENA-) connect to ESP32 GND.
 
 See [[Hardware Setup]] for full details with diagrams.

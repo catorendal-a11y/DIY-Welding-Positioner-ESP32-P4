@@ -1,19 +1,18 @@
-// Device Storage Tests - LittleFS, settings persistence, preset CRUD
+// Device Storage Tests - NVS settings persistence, preset CRUD
 // Runs on ESP32-P4 hardware via: pio test -e esp32p4-test -f test_device_storage
 //
-// These tests exercise the REAL storage_init(), storage_load/save_settings(),
-// and storage_load/save_presets() functions against LittleFS on flash.
+// These tests exercise storage_init(), storage_load/save_settings(),
+// and storage_load/save_presets() against NVS on flash.
 //
 // IMPORTANT: Tests modify g_settings and g_presets, then restore defaults.
 
 #include <Arduino.h>
 #include <unity.h>
-#include <LittleFS.h>
 #include <cstring>
+#include <nvs.h>
 #include "../../src/storage/storage.h"
 #include "../../src/config.h"
 
-// Snapshot of default settings for restoration
 static SystemSettings s_defaultSettings;
 static bool s_storageInited = false;
 
@@ -30,23 +29,40 @@ void setUp(void) {
 
 void tearDown(void) {}
 
+// Raw NVS writes (separate handle from Preferences) for corrupt/clamp tests
+static void test_nvs_put_cfg_blob(const char* json, size_t len) {
+  nvs_handle_t h;
+  TEST_ASSERT_EQUAL(ESP_OK, nvs_open("wrot", NVS_READWRITE, &h));
+  TEST_ASSERT_EQUAL(ESP_OK, nvs_set_blob(h, "cfg", json, len));
+  TEST_ASSERT_EQUAL(ESP_OK, nvs_commit(h));
+  nvs_close(h);
+}
+
+static void test_nvs_put_prs_blob(const char* json, size_t len) {
+  nvs_handle_t h;
+  TEST_ASSERT_EQUAL(ESP_OK, nvs_open("wrot", NVS_READWRITE, &h));
+  TEST_ASSERT_EQUAL(ESP_OK, nvs_set_blob(h, "prs", json, len));
+  TEST_ASSERT_EQUAL(ESP_OK, nvs_commit(h));
+  nvs_close(h);
+}
+
 // ────────────────────────────────────────────────────────────────────────────
-// LITTLEFS MOUNT
+// NVS USAGE
 // ────────────────────────────────────────────────────────────────────────────
 
-void test_littlefs_mounted(void) {
+void test_nvs_storage_reports_partition(void) {
   size_t used = 0, total = 0;
   storage_get_usage(&used, &total);
   TEST_ASSERT_GREATER_THAN(0, total);
 }
 
-void test_littlefs_total_size_reasonable(void) {
+void test_nvs_total_matches_partition_table(void) {
   size_t used = 0, total = 0;
   storage_get_usage(&used, &total);
-  TEST_ASSERT_GREATER_OR_EQUAL(64 * 1024, total);
+  TEST_ASSERT_EQUAL(0x6000, total);
 }
 
-void test_littlefs_used_less_than_total(void) {
+void test_nvs_used_not_greater_than_total(void) {
   size_t used = 0, total = 0;
   storage_get_usage(&used, &total);
   TEST_ASSERT_LESS_OR_EQUAL(total, used);
@@ -58,7 +74,7 @@ void test_littlefs_used_less_than_total(void) {
 
 void test_settings_default_acceleration(void) {
   TEST_ASSERT_GREATER_OR_EQUAL(1000, g_settings.acceleration);
-  TEST_ASSERT_LESS_OR_EQUAL(20000, g_settings.acceleration);
+  TEST_ASSERT_LESS_OR_EQUAL(30000, g_settings.acceleration);
 }
 
 void test_settings_default_microstep(void) {
@@ -86,18 +102,23 @@ void test_settings_default_accent_color_range(void) {
   TEST_ASSERT_LESS_OR_EQUAL(7, g_settings.accent_color);
 }
 
+void test_settings_stepper_driver_valid(void) {
+  TEST_ASSERT_TRUE(
+    g_settings.stepper_driver == STEPPER_DRIVER_STANDARD ||
+    g_settings.stepper_driver == STEPPER_DRIVER_DM542T
+  );
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // SETTINGS SAVE/LOAD ROUNDTRIP
 // ────────────────────────────────────────────────────────────────────────────
 
 void test_settings_save_load_roundtrip(void) {
-  // Save current settings as backup
   SystemSettings backup;
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   backup = g_settings;
   xSemaphoreGive(g_settings_mutex);
 
-  // Modify settings with known test values
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   g_settings.acceleration = 7777;
   g_settings.microstep = 16;
@@ -106,17 +127,18 @@ void test_settings_save_load_roundtrip(void) {
   g_settings.countdown_seconds = 7;
   g_settings.invert_direction = true;
   g_settings.accent_color = 3;
-  strlcpy(g_settings.wifi_ssid, "TestNet", sizeof(g_settings.wifi_ssid));
-  strlcpy(g_settings.ble_name, "TestBLE", sizeof(g_settings.ble_name));
+  g_settings.dim_timeout = 120;
+  g_settings.rpm_buttons_enabled = false;
+  g_settings.dir_switch_enabled = false;
+  g_settings.stepper_driver = STEPPER_DRIVER_STANDARD;
+  g_settings.max_rpm = 2.5f;
   xSemaphoreGive(g_settings_mutex);
 
-  // Trigger save and force flush
   storage_save_settings();
   delay(1200);
   storage_flush();
   delay(100);
 
-  // Overwrite in-memory settings to prove reload works
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   g_settings.acceleration = 9999;
   g_settings.microstep = 4;
@@ -124,11 +146,9 @@ void test_settings_save_load_roundtrip(void) {
   g_settings.brightness = 10;
   xSemaphoreGive(g_settings_mutex);
 
-  // Reload from flash
   bool ok = storage_load_settings();
   TEST_ASSERT_TRUE(ok);
 
-  // Verify all fields match what we saved
   TEST_ASSERT_EQUAL(7777, g_settings.acceleration);
   TEST_ASSERT_EQUAL(16, g_settings.microstep);
   TEST_ASSERT_FLOAT_WITHIN(0.01f, 1.25f, g_settings.calibration_factor);
@@ -136,52 +156,18 @@ void test_settings_save_load_roundtrip(void) {
   TEST_ASSERT_EQUAL(7, g_settings.countdown_seconds);
   TEST_ASSERT_TRUE(g_settings.invert_direction);
   TEST_ASSERT_EQUAL(3, g_settings.accent_color);
-  TEST_ASSERT_EQUAL_STRING("TestNet", g_settings.wifi_ssid);
-  TEST_ASSERT_EQUAL_STRING("TestBLE", g_settings.ble_name);
+  TEST_ASSERT_EQUAL(120, g_settings.dim_timeout);
+  TEST_ASSERT_FALSE(g_settings.rpm_buttons_enabled);
+  TEST_ASSERT_FALSE(g_settings.dir_switch_enabled);
+  TEST_ASSERT_EQUAL(STEPPER_DRIVER_STANDARD, g_settings.stepper_driver);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 2.5f, g_settings.max_rpm);
 
-  // Restore original settings
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   g_settings = backup;
   xSemaphoreGive(g_settings_mutex);
   storage_save_settings();
   delay(1200);
   storage_flush();
-}
-
-void test_settings_wifi_password_persists(void) {
-  SystemSettings backup;
-  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  backup = g_settings;
-  strlcpy(g_settings.wifi_pass, "S3cur3P@ss!", sizeof(g_settings.wifi_pass));
-  xSemaphoreGive(g_settings_mutex);
-
-  storage_save_settings();
-  delay(1200);
-  storage_flush();
-  delay(100);
-
-  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  memset(g_settings.wifi_pass, 0, sizeof(g_settings.wifi_pass));
-  xSemaphoreGive(g_settings_mutex);
-
-  storage_load_settings();
-  TEST_ASSERT_EQUAL_STRING("S3cur3P@ss!", g_settings.wifi_pass);
-
-  // Restore
-  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  g_settings = backup;
-  xSemaphoreGive(g_settings_mutex);
-  storage_save_settings();
-  delay(1200);
-  storage_flush();
-}
-
-void test_settings_tmp_file_cleaned_up(void) {
-  storage_save_settings();
-  delay(1200);
-  storage_flush();
-  delay(100);
-  TEST_ASSERT_FALSE(LittleFS.exists(SETTINGS_FILE ".tmp"));
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -189,44 +175,55 @@ void test_settings_tmp_file_cleaned_up(void) {
 // ────────────────────────────────────────────────────────────────────────────
 
 void test_settings_acceleration_clamped_on_load(void) {
-  // Write a raw JSON with out-of-range values directly to flash
-  File f = LittleFS.open(SETTINGS_FILE, FILE_WRITE);
-  TEST_ASSERT_TRUE((bool)f);
-  f.print("{\"acceleration\":99999,\"microstep\":8,\"brightness\":255}");
-  f.close();
+  const char* raw = "{\"acceleration\":99999,\"microstep\":8,\"brightness\":255}";
+  test_nvs_put_cfg_blob(raw, strlen(raw));
 
   storage_load_settings();
-  TEST_ASSERT_LESS_OR_EQUAL(20000, g_settings.acceleration);
+  TEST_ASSERT_EQUAL(30000, g_settings.acceleration);
 }
 
 void test_settings_brightness_clamped_on_load(void) {
-  File f = LittleFS.open(SETTINGS_FILE, FILE_WRITE);
-  TEST_ASSERT_TRUE((bool)f);
-  f.print("{\"brightness\":0}");
-  f.close();
+  const char* raw = "{\"brightness\":0}";
+  test_nvs_put_cfg_blob(raw, strlen(raw));
 
   storage_load_settings();
   TEST_ASSERT_GREATER_OR_EQUAL(10, g_settings.brightness);
 }
 
+void test_settings_max_rpm_clamped_on_load(void) {
+  const char* raw = "{\"max_rpm\":10.0}";
+  test_nvs_put_cfg_blob(raw, strlen(raw));
+  storage_load_settings();
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, MAX_RPM, g_settings.max_rpm);
+
+  const char* raw2 = "{\"max_rpm\":0.0001}";
+  test_nvs_put_cfg_blob(raw2, strlen(raw2));
+  storage_load_settings();
+  TEST_ASSERT_FLOAT_WITHIN(0.0002f, MIN_RPM, g_settings.max_rpm);
+}
+
 void test_settings_countdown_clamped_on_load(void) {
-  File f = LittleFS.open(SETTINGS_FILE, FILE_WRITE);
-  TEST_ASSERT_TRUE((bool)f);
-  f.print("{\"countdown_seconds\":50}");
-  f.close();
+  const char* raw = "{\"countdown_seconds\":50}";
+  test_nvs_put_cfg_blob(raw, strlen(raw));
 
   storage_load_settings();
   TEST_ASSERT_LESS_OR_EQUAL(10, g_settings.countdown_seconds);
 }
 
 void test_settings_calibration_clamped_on_load(void) {
-  File f = LittleFS.open(SETTINGS_FILE, FILE_WRITE);
-  TEST_ASSERT_TRUE((bool)f);
-  f.print("{\"calibration_factor\":5.0}");
-  f.close();
+  const char* raw = "{\"calibration_factor\":5.0}";
+  test_nvs_put_cfg_blob(raw, strlen(raw));
 
   storage_load_settings();
   TEST_ASSERT_FLOAT_WITHIN(0.01f, 1.5f, g_settings.calibration_factor);
+}
+
+void test_settings_stepper_driver_clamped_on_load(void) {
+  const char* raw = "{\"stepper_driver\":9}";
+  test_nvs_put_cfg_blob(raw, strlen(raw));
+
+  storage_load_settings();
+  TEST_ASSERT_EQUAL(STEPPER_DRIVER_DM542T, g_settings.stepper_driver);
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -255,7 +252,6 @@ void test_presets_add_and_retrieve(void) {
   storage_flush();
   delay(100);
 
-  // Clear and reload
   xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
   g_presets.clear();
   xSemaphoreGive(g_presets_mutex);
@@ -269,10 +265,10 @@ void test_presets_add_and_retrieve(void) {
   TEST_ASSERT_EQUAL(STATE_RUNNING, out.mode);
   TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.5f, out.rpm);
 
-  // Cleanup
   storage_delete_preset(200);
   delay(600);
   storage_flush();
+  (void)before;
 }
 
 void test_presets_delete(void) {
@@ -336,7 +332,6 @@ void test_presets_max_limit(void) {
 
   TEST_ASSERT_EQUAL(MAX_PRESETS, count);
 
-  // Cleanup
   xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
   g_presets.clear();
   xSemaphoreGive(g_presets_mutex);
@@ -424,7 +419,7 @@ void test_preset_name_sanitized(void) {
   Preset p = {};
   p.id = 204;
   p.name[0] = 'A';
-  p.name[1] = (char)0x80;  // non-ASCII byte
+  p.name[1] = (char)0x80;
   p.name[2] = 'B';
   p.name[3] = '\0';
   p.mode = STATE_RUNNING;
@@ -445,7 +440,6 @@ void test_preset_name_sanitized(void) {
   Preset out = {};
   bool found = storage_get_preset(204, &out);
   TEST_ASSERT_TRUE(found);
-  // sanitize_ascii replaces 0x80 with '?'
   TEST_ASSERT_EQUAL('A', out.name[0]);
   TEST_ASSERT_EQUAL('?', out.name[1]);
   TEST_ASSERT_EQUAL('B', out.name[2]);
@@ -456,11 +450,8 @@ void test_preset_name_sanitized(void) {
 }
 
 void test_preset_rpm_clamped(void) {
-  // Write raw JSON with out-of-range RPM
-  File f = LittleFS.open(PRESETS_FILE, FILE_WRITE);
-  TEST_ASSERT_TRUE((bool)f);
-  f.print("[{\"id\":205,\"name\":\"Clamp\",\"mode\":1,\"rpm\":99.0}]");
-  f.close();
+  const char* raw = "[{\"id\":205,\"name\":\"Clamp\",\"mode\":1,\"rpm\":99.0}]";
+  test_nvs_put_prs_blob(raw, strlen(raw));
 
   storage_load_presets();
 
@@ -469,7 +460,6 @@ void test_preset_rpm_clamped(void) {
   TEST_ASSERT_TRUE(found);
   TEST_ASSERT_FLOAT_WITHIN(0.01f, MAX_RPM, out.rpm);
 
-  // Cleanup
   xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
   g_presets.clear();
   xSemaphoreGive(g_presets_mutex);
@@ -483,34 +473,11 @@ void test_preset_get_null_ptr_returns_false(void) {
   TEST_ASSERT_FALSE(found);
 }
 
-void test_presets_tmp_file_cleaned(void) {
-  xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
-  Preset p = {};
-  p.id = 206;
-  strlcpy(p.name, "TmpClean", sizeof(p.name));
-  p.mode = STATE_RUNNING;
-  p.rpm = 0.3f;
-  g_presets.push_back(p);
-  xSemaphoreGive(g_presets_mutex);
-
-  storage_save_presets();
-  delay(600);
-  storage_flush();
-  delay(100);
-
-  TEST_ASSERT_FALSE(LittleFS.exists(PRESETS_FILE ".tmp"));
-
-  storage_delete_preset(206);
-  delay(600);
-  storage_flush();
-}
-
 // ────────────────────────────────────────────────────────────────────────────
 // STORAGE FORMAT & RECOVERY
 // ────────────────────────────────────────────────────────────────────────────
 
 void test_storage_format_clears_data(void) {
-  // Add a preset first
   xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
   Preset p = {};
   p.id = 207;
@@ -560,8 +527,8 @@ void test_presets_mutex_exists(void) {
   TEST_ASSERT_NOT_NULL(g_presets_mutex);
 }
 
-void test_wifi_mutex_exists(void) {
-  TEST_ASSERT_NOT_NULL(g_wifi_mutex);
+void test_nvs_mutex_exists(void) {
+  TEST_ASSERT_NOT_NULL(g_nvs_mutex);
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -570,15 +537,16 @@ void test_wifi_mutex_exists(void) {
 
 void setup() {
   delay(2000);
-
-  // Save defaults before tests modify anything
+  ensure_storage_init();
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   s_defaultSettings = g_settings;
+  xSemaphoreGive(g_settings_mutex);
 
   UNITY_BEGIN();
 
-  RUN_TEST(test_littlefs_mounted);
-  RUN_TEST(test_littlefs_total_size_reasonable);
-  RUN_TEST(test_littlefs_used_less_than_total);
+  RUN_TEST(test_nvs_storage_reports_partition);
+  RUN_TEST(test_nvs_total_matches_partition_table);
+  RUN_TEST(test_nvs_used_not_greater_than_total);
 
   RUN_TEST(test_settings_default_acceleration);
   RUN_TEST(test_settings_default_microstep);
@@ -586,15 +554,16 @@ void setup() {
   RUN_TEST(test_settings_default_brightness_range);
   RUN_TEST(test_settings_default_countdown_range);
   RUN_TEST(test_settings_default_accent_color_range);
+  RUN_TEST(test_settings_stepper_driver_valid);
 
   RUN_TEST(test_settings_save_load_roundtrip);
-  RUN_TEST(test_settings_wifi_password_persists);
-  RUN_TEST(test_settings_tmp_file_cleaned_up);
 
   RUN_TEST(test_settings_acceleration_clamped_on_load);
   RUN_TEST(test_settings_brightness_clamped_on_load);
+  RUN_TEST(test_settings_max_rpm_clamped_on_load);
   RUN_TEST(test_settings_countdown_clamped_on_load);
   RUN_TEST(test_settings_calibration_clamped_on_load);
+  RUN_TEST(test_settings_stepper_driver_clamped_on_load);
 
   RUN_TEST(test_presets_initially_loads);
   RUN_TEST(test_presets_add_and_retrieve);
@@ -605,18 +574,16 @@ void setup() {
   RUN_TEST(test_preset_name_sanitized);
   RUN_TEST(test_preset_rpm_clamped);
   RUN_TEST(test_preset_get_null_ptr_returns_false);
-  RUN_TEST(test_presets_tmp_file_cleaned);
 
   RUN_TEST(test_storage_format_clears_data);
   RUN_TEST(test_storage_load_after_format);
 
   RUN_TEST(test_settings_mutex_exists);
   RUN_TEST(test_presets_mutex_exists);
-  RUN_TEST(test_wifi_mutex_exists);
+  RUN_TEST(test_nvs_mutex_exists);
 
   UNITY_END();
 
-  // Restore defaults
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   g_settings = s_defaultSettings;
   xSemaphoreGive(g_settings_mutex);

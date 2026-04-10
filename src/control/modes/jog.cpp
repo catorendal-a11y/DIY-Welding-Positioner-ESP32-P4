@@ -20,7 +20,7 @@ void jog_start(Direction dir) {
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   FastAccelStepper* stepper = motor_get_stepper();
   if (stepper != nullptr) {
-    uint32_t hz = (uint32_t)rpmToStepHz(jogRPM.load(std::memory_order_relaxed));
+    uint32_t hz = (uint32_t)rpmToStepHzCalibrated(jogRPM.load(std::memory_order_relaxed));
     stepper->setSpeedInHz(hz);
     stepper->applySpeedAcceleration();
   }
@@ -40,7 +40,7 @@ void jog_stop() {
 }
 
 void jog_set_speed(float rpm) {
-  float constrained = constrain(rpm, MIN_RPM, MAX_RPM);
+  float constrained = constrain(rpm, MIN_RPM, speed_get_rpm_max());
   jogRPM.store(constrained, std::memory_order_relaxed);
   pendingJogSpeed.store(constrained, std::memory_order_release);
 }
@@ -52,7 +52,7 @@ void jog_update() {
     xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
     FastAccelStepper* stepper = motor_get_stepper();
     if (stepper != nullptr) {
-      uint32_t hz = (uint32_t)rpmToStepHz(jogRPM.load(std::memory_order_relaxed));
+      uint32_t hz = (uint32_t)rpmToStepHzCalibrated(jogRPM.load(std::memory_order_relaxed));
       stepper->setSpeedInHz(hz);
       stepper->applySpeedAcceleration();
     }

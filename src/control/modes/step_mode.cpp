@@ -38,7 +38,7 @@ void step_execute(float angle_deg) {
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   FastAccelStepper* stepper = motor_get_stepper();
   if (stepper != nullptr) {
-    uint32_t hz = (uint32_t)rpmToStepHz(speed_get_target_rpm());
+    uint32_t hz = (uint32_t)rpmToStepHzCalibrated(speed_get_target_rpm());
     stepper->setSpeedInHz(hz);
     stepper->applySpeedAcceleration();
     stepper->move(steps);

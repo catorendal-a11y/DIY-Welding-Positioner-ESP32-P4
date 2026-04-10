@@ -35,7 +35,7 @@ void pulse_start(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   FastAccelStepper* stepper = motor_get_stepper();
   if (stepper != nullptr) {
-    uint32_t hz = (uint32_t)rpmToStepHz(speed_get_target_rpm());
+    uint32_t hz = (uint32_t)rpmToStepHzCalibrated(speed_get_target_rpm());
     stepper->setSpeedInHz(hz);
     stepper->applySpeedAcceleration();
   }
@@ -71,7 +71,7 @@ void pulse_update() {
       xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
       FastAccelStepper* s = motor_get_stepper();
       if (s != nullptr) {
-        uint32_t hz = (uint32_t)rpmToStepHz(speed_get_target_rpm());
+        uint32_t hz = (uint32_t)rpmToStepHzCalibrated(speed_get_target_rpm());
         s->setSpeedInHz(hz);
         s->applySpeedAcceleration();
       }

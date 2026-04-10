@@ -63,9 +63,9 @@
       <!-- Hardware specs panel -->
       <rect x="0" y="364" width="800" height="116" fill="#080808"/>
       <text x="8" y="382" font-family="sans-serif" font-size="14" fill="#333333">CPU: ESP32-P4 400MHz Dual-Core</text>
-      <text x="420" y="382" font-family="sans-serif" font-size="14" fill="#333333">Motor: TB6600 108:1 worm gear</text>
+      <text x="420" y="382" font-family="sans-serif" font-size="14" fill="#333333">Motor: NEMA 23 1:108 gear train</text>
       <text x="8" y="408" font-family="sans-serif" font-size="14" fill="#333333">RAM: 32MB PSRAM + 768KB SRAM</text>
-      <text x="420" y="408" font-family="sans-serif" font-size="14" fill="#333333">Microstep: 1/8 (1600 steps/rev)</text>
+      <text x="420" y="408" font-family="sans-serif" font-size="14" fill="#333333">Microstep: 1/16 (3200 steps/rev)</text>
       <text x="8" y="434" font-family="sans-serif" font-size="14" fill="#333333">Flash: 16MB SPI-NOR</text>
       <text x="420" y="434" font-family="sans-serif" font-size="14" fill="#333333">RPM Range: 0.1 - 5.0</text>
       <text x="8" y="460" font-family="sans-serif" font-size="14" fill="#333333">Display: MIPI-DSI 800x480</text>
@@ -389,56 +389,29 @@
   <g transform="translate(1070, 280)">
     <rect width="320" height="192" rx="4" fill="#050505" stroke="#2E2E2E" stroke-width="1"/>
     <g transform="scale(0.4)">
-      <!-- Header -->
-      <rect width="800" height="30" fill="#090909"/>
+      <!-- Header (SET_HEADER_H 28) -->
+      <rect width="800" height="28" fill="#090909"/>
       <text x="12" y="20" font-family="sans-serif" font-size="14" fill="#FF9500">SETTINGS</text>
-      <rect x="12" y="30" width="148" height="1" fill="#FF9500" opacity="0.3"/>
-      <!-- Section label -->
-      <text x="12" y="50" font-family="sans-serif" font-size="14" fill="#333333">-- MOTOR ---------------------------</text>
-      <!-- Setting rows: 776x44, 48px spacing -->
-      <!-- Row 1: Max RPM -->
-      <rect x="12" y="50" width="776" height="44" fill="#0E0E0E" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="28" y="78" font-family="sans-serif" font-size="14" fill="#AAAAAA">Max RPM</text>
-      <text x="764" y="78" font-family="sans-serif" font-size="18" fill="#FF9500" text-anchor="end">3.0  &gt;</text>
-      <!-- Row 2: Acceleration -->
-      <rect x="12" y="98" width="776" height="44" fill="#0E0E0E" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="28" y="126" font-family="sans-serif" font-size="14" fill="#AAAAAA">Acceleration</text>
-      <text x="764" y="126" font-family="sans-serif" font-size="18" fill="#FF9500" text-anchor="end">HIGH  &gt;</text>
-      <!-- Row 3: Microstepping -->
-      <rect x="12" y="146" width="776" height="44" fill="#0E0E0E" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="28" y="174" font-family="sans-serif" font-size="14" fill="#AAAAAA">Microstepping</text>
-      <text x="764" y="174" font-family="sans-serif" font-size="18" fill="#FF9500" text-anchor="end">1/8  &gt;</text>
-      <!-- Row 4: RPM Buttons -->
-      <rect x="12" y="194" width="776" height="44" fill="#0E0E0E" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="28" y="222" font-family="sans-serif" font-size="14" fill="#AAAAAA">RPM Buttons</text>
-      <text x="764" y="222" font-family="sans-serif" font-size="18" fill="#FF9500" text-anchor="end">ON  &gt;</text>
-      <!-- Row 5: Brightness -->
-      <rect x="12" y="242" width="776" height="44" fill="#0E0E0E" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="28" y="270" font-family="sans-serif" font-size="14" fill="#AAAAAA">Brightness</text>
-      <text x="764" y="270" font-family="sans-serif" font-size="18" fill="#FF9500" text-anchor="end">100%  &gt;</text>
-      <rect x="594" y="244" width="80" height="48" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="634" y="274" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">-10%</text>
-      <rect x="682" y="244" width="80" height="48" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="722" y="274" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">+10%</text>
-      <!-- Row 6: Auto-dim -->
-      <rect x="12" y="290" width="776" height="44" fill="#0E0E0E" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="28" y="318" font-family="sans-serif" font-size="14" fill="#AAAAAA">Auto-dim</text>
-      <text x="764" y="318" font-family="sans-serif" font-size="18" fill="#FF9500" text-anchor="end">1m  &gt;</text>
-      <!-- Row 7: Dir Switch -->
-      <rect x="12" y="338" width="776" height="44" fill="#0E0E0E" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="28" y="366" font-family="sans-serif" font-size="14" fill="#AAAAAA">Dir Switch</text>
-      <text x="764" y="366" font-family="sans-serif" font-size="18" fill="#FF9500" text-anchor="end">ON  &gt;</text>
-      <!-- Row 8: Storage -->
-      <rect x="12" y="386" width="776" height="44" fill="#0E0E0E" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="28" y="414" font-family="sans-serif" font-size="14" fill="#AAAAAA">Storage</text>
-      <text x="764" y="414" font-family="sans-serif" font-size="18" fill="#FF9500" text-anchor="end">4 / 1024 KB</text>
-      <!-- Bottom: BACK + DELETE ALL + SAVE -->
-      <rect x="12" y="432" width="160" height="48" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="92" y="462" font-family="sans-serif" font-size="16" fill="#AAAAAA" text-anchor="middle">&lt;  BACK</text>
-      <rect x="290" y="432" width="200" height="48" rx="4" fill="#1A0A0A" stroke="#FF1744" stroke-width="2"/>
-      <text x="390" y="462" font-family="sans-serif" font-size="16" fill="#FF1744" text-anchor="middle">DELETE ALL</text>
-      <rect x="628" y="432" width="160" height="48" rx="4" fill="#1A1600" stroke="#FF9500" stroke-width="2"/>
-      <text x="708" y="462" font-family="sans-serif" font-size="16" fill="#FF9500" text-anchor="middle">SAVE</text>
+      <!-- Nav rows: 776x48, gap 5 (screen_settings.cpp) -->
+      <rect x="12" y="36" width="776" height="48" fill="#0E0E0E" stroke="#2E2E2E" stroke-width="1"/>
+      <text x="28" y="66" font-family="sans-serif" font-size="14" fill="#AAAAAA">Motor Configuration</text>
+      <text x="748" y="66" font-family="sans-serif" font-size="14" fill="#4A4A4A" text-anchor="end">&gt;</text>
+      <rect x="12" y="89" width="776" height="48" fill="#0E0E0E" stroke="#2E2E2E" stroke-width="1"/>
+      <text x="28" y="119" font-family="sans-serif" font-size="14" fill="#AAAAAA">Calibration</text>
+      <text x="748" y="119" font-family="sans-serif" font-size="14" fill="#4A4A4A" text-anchor="end">&gt;</text>
+      <rect x="12" y="142" width="776" height="48" fill="#0E0E0E" stroke="#2E2E2E" stroke-width="1"/>
+      <text x="28" y="172" font-family="sans-serif" font-size="14" fill="#AAAAAA">Display Settings</text>
+      <text x="748" y="172" font-family="sans-serif" font-size="14" fill="#4A4A4A" text-anchor="end">&gt;</text>
+      <rect x="12" y="195" width="776" height="48" fill="#0E0E0E" stroke="#2E2E2E" stroke-width="1"/>
+      <text x="28" y="225" font-family="sans-serif" font-size="14" fill="#AAAAAA">System Info</text>
+      <text x="748" y="225" font-family="sans-serif" font-size="14" fill="#4A4A4A" text-anchor="end">&gt;</text>
+      <rect x="12" y="248" width="776" height="48" fill="#0E0E0E" stroke="#2E2E2E" stroke-width="1"/>
+      <text x="28" y="278" font-family="sans-serif" font-size="14" fill="#AAAAAA">About</text>
+      <text x="748" y="278" font-family="sans-serif" font-size="14" fill="#4A4A4A" text-anchor="end">&gt;</text>
+      <!-- Footer BACK -->
+      <rect x="12" y="440" width="160" height="36" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+      <text x="92" y="462" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">&lt;  BACK</text>
+      <text x="400" y="472" font-family="sans-serif" font-size="12" fill="#333333" text-anchor="middle">v1.0</text>
     </g>
     <text x="160" y="208" class="label">8. SETTINGS</text>
   </g>
@@ -610,7 +583,7 @@
       <!-- Separator y=248 -->
       <rect x="0" y="248" width="800" height="1" fill="#2E2E2E"/>
       <!-- Info line -->
-      <text x="20" y="270" font-family="sans-serif" font-size="12" fill="#333333">ACCEL MED . STEPS/S 3556 . GEAR 108:1 . MICRO 8x</text>
+      <text x="20" y="270" font-family="sans-serif" font-size="12" fill="#333333">ACCEL MED . STEPS/S 3556 . GEAR 1:108 . MICRO 8x</text>
       <!-- CANCEL + SAVE -->
       <rect x="120" y="400" width="260" height="52" rx="4" fill="#141414" stroke="#444444" stroke-width="1"/>
       <text x="250" y="432" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">CANCEL</text>
@@ -759,74 +732,63 @@
   </g>
 
   <!-- ============================================================ -->
-  <!-- SCREEN 14: EDIT TIMER (REMOVED) (Col 2, Row 4) x=370, y=720 -->
+  <!-- SCREEN 14: MOTOR CONFIG (Col 2, Row 4) x=370, y=720 — screen_motor_config.cpp -->
   <!-- ============================================================ -->
   <g transform="translate(370, 720)">
     <rect width="320" height="192" rx="4" fill="#050505" stroke="#2E2E2E" stroke-width="1"/>
     <g transform="scale(0.4)">
-      <!-- Header -->
-      <rect width="800" height="30" fill="#090909"/>
-      <text x="16" y="20" font-family="sans-serif" font-size="14" fill="#FF9500">EDIT TIMER (removed)</text>
-      <rect x="728" y="3" width="60" height="24" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="758" y="20" font-family="sans-serif" font-size="14" fill="#4A4A4A" text-anchor="middle">[ESC]</text>
-      <!-- DURATION label -->
-      <text x="20" y="52" font-family="sans-serif" font-size="14" fill="#4A4A4A">DURATION</text>
-      <!-- Large duration value -->
-      <text x="20" y="92" font-family="sans-serif" font-size="40" fill="#FF9500">00:30</text>
-      <text x="190" y="92" font-family="sans-serif" font-size="14" fill="#4A4A4A">sec</text>
-      <!-- Progress bar with scale -->
-      <rect x="20" y="104" width="760" height="3" rx="1" fill="#111111"/>
-      <rect x="20" y="104" width="40" height="3" rx="1" fill="#FF9500"/>
-      <text x="20" y="120" font-family="sans-serif" font-size="12" fill="#333333">0</text>
-      <text x="100" y="120" font-family="sans-serif" font-size="12" fill="#333333">60s</text>
-      <text x="273" y="120" font-family="sans-serif" font-size="12" fill="#333333">2min</text>
-      <text x="580" y="120" font-family="sans-serif" font-size="12" fill="#333333">5min</text>
-      <text x="780" y="120" font-family="sans-serif" font-size="12" fill="#333333">10min</text>
-      <!-- 6 adjustment buttons y=128 -->
-      <rect x="45" y="128" width="130" height="40" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="110" y="154" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">-1s</text>
-      <rect x="183" y="128" width="130" height="40" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="248" y="154" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">+1s</text>
-      <rect x="321" y="128" width="130" height="40" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="386" y="154" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">-10s</text>
-      <rect x="459" y="128" width="130" height="40" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="524" y="154" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">+10s</text>
-      <rect x="597" y="128" width="144" height="40" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="669" y="154" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">-1min</text>
-      <rect x="749" y="128" width="40" height="40" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="769" y="154" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">+</text>
-      <!-- Separator y=178 -->
-      <rect x="0" y="178" width="800" height="2" fill="#2E2E2E"/>
-      <!-- RPM section (left y=192) -->
-      <text x="20" y="204" font-family="sans-serif" font-size="14" fill="#4A4A4A">RPM</text>
-      <text x="20" y="228" font-family="sans-serif" font-size="24" fill="#CCCCCC">2.0</text>
-      <rect x="100" y="206" width="48" height="30" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="124" y="226" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">-</text>
-      <rect x="152" y="206" width="48" height="30" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="176" y="226" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">+</text>
-      <!-- DIRECTION section (right y=192) -->
-      <text x="420" y="204" font-family="sans-serif" font-size="14" fill="#4A4A4A">DIRECTION</text>
-      <rect x="420" y="204" width="168" height="38" rx="4" fill="#1A1600" stroke="#FF9500" stroke-width="2"/>
-      <text x="504" y="229" font-family="sans-serif" font-size="14" fill="#FF9500" text-anchor="middle">CW</text>
-      <rect x="612" y="204" width="168" height="38" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="696" y="229" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">CCW</text>
-      <!-- AUTO-STOP AT END y=252 -->
-      <text x="20" y="268" font-family="sans-serif" font-size="14" fill="#4A4A4A">AUTO-STOP AT END</text>
-      <rect x="240" y="252" width="130" height="32" rx="4" fill="#1A1600" stroke="#FF9500" stroke-width="2"/>
-      <text x="305" y="274" font-family="sans-serif" font-size="14" fill="#FF9500" text-anchor="middle">ON</text>
-      <rect x="378" y="252" width="130" height="32" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="443" y="274" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">OFF</text>
-      <!-- Separator y=294 -->
-      <rect x="0" y="294" width="800" height="2" fill="#2E2E2E"/>
-      <!-- Computed info -->
-      <text x="20" y="318" font-family="sans-serif" font-size="14" fill="#4A4A4A">TOTAL 1.0 rev (360 deg) * STEPS 172800</text>
-      <!-- CANCEL + SAVE -->
-      <rect x="560" y="434" width="100" height="32" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="610" y="456" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">CANCEL</text>
-      <rect x="668" y="434" width="100" height="32" rx="4" fill="#1A1600" stroke="#FF9500" stroke-width="2"/>
-      <text x="718" y="456" font-family="sans-serif" font-size="14" fill="#FF9500" text-anchor="middle">SAVE</text>
+      <rect width="800" height="480" fill="#050505"/>
+      <!-- Header 800x28 -->
+      <rect width="800" height="28" fill="#090909"/>
+      <text x="16" y="20" font-family="sans-serif" font-size="14" fill="#FF9500">MOTOR CONFIG</text>
+      <!-- Micro row y=33, h=46, content x=16 w=768 -->
+      <text x="16" y="62" font-family="sans-serif" font-size="12" fill="#4A4A4A">PULSE/REV</text>
+      <rect x="140" y="38" width="108" height="36" rx="4" fill="#1A1600" stroke="#FF9500" stroke-width="2"/>
+      <text x="194" y="60" font-family="sans-serif" font-size="14" fill="#FF9500" text-anchor="middle">1600</text>
+      <rect x="256" y="38" width="108" height="36" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+      <text x="310" y="60" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">3200</text>
+      <rect x="372" y="38" width="108" height="36" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+      <text x="426" y="60" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">6400</text>
+      <!-- Accel row y=84 h=72: title left, value right, full-width slider -->
+      <text x="24" y="96" font-family="sans-serif" font-size="12" fill="#4A4A4A">ACCELERATION</text>
+      <text x="24" y="112" font-family="sans-serif" font-size="12" fill="#333333">steps/s2</text>
+      <text x="772" y="100" font-family="sans-serif" font-size="18" fill="#CCCCCC" text-anchor="end">8000</text>
+      <rect x="24" y="124" width="752" height="26" rx="4" fill="#3A3A3A" stroke="#2E2E2E" stroke-width="1"/>
+      <rect x="24" y="124" width="280" height="26" rx="4" fill="#FF9500"/>
+      <rect x="292" y="130" width="20" height="14" rx="7" fill="#FF9500" stroke="#4A4A4A" stroke-width="2"/>
+      <!-- Max RPM row y=161 -->
+      <text x="24" y="173" font-family="sans-serif" font-size="12" fill="#4A4A4A">MAX RPM</text>
+      <text x="24" y="189" font-family="sans-serif" font-size="12" fill="#333333">0.001 - 3.0</text>
+      <text x="772" y="177" font-family="sans-serif" font-size="18" fill="#CCCCCC" text-anchor="end">1.000</text>
+      <rect x="24" y="201" width="752" height="26" rx="4" fill="#3A3A3A" stroke="#2E2E2E" stroke-width="1"/>
+      <rect x="24" y="201" width="360" height="26" rx="4" fill="#FF9500"/>
+      <rect x="372" y="207" width="20" height="14" rx="7" fill="#FF9500" stroke="#4A4A4A" stroke-width="2"/>
+      <!-- Info row y=238 h=40 -->
+      <rect x="16" y="238" width="768" height="40" rx="4" fill="#0E0E0E" stroke="#2E2E2E" stroke-width="1"/>
+      <text x="26" y="262" font-family="sans-serif" font-size="12" fill="#4A4A4A">GEAR</text>
+      <text x="70" y="260" font-family="sans-serif" font-size="14" fill="#AAAAAA">1:108</text>
+      <text x="226" y="262" font-family="sans-serif" font-size="12" fill="#4A4A4A">RPM</text>
+      <text x="284" y="260" font-family="sans-serif" font-size="14" fill="#AAAAAA">0.001 - 1.000</text>
+      <!-- Toggle row y=283 h=50 -->
+      <text x="24" y="312" font-family="sans-serif" font-size="12" fill="#4A4A4A">INVERT</text>
+      <rect x="112" y="288" width="80" height="40" rx="12" fill="#2A2A2A"/>
+      <text x="152" y="314" font-family="sans-serif" font-size="12" fill="#CCCCCC" text-anchor="middle">OFF</text>
+      <text x="408" y="312" font-family="sans-serif" font-size="12" fill="#4A4A4A">DIR SW</text>
+      <rect x="516" y="288" width="80" height="40" rx="12" fill="#00C853"/>
+      <text x="556" y="314" font-family="sans-serif" font-size="12" fill="#CCCCCC" text-anchor="middle">ON</text>
+      <!-- Warn bar y=338 -->
+      <rect x="16" y="338" width="768" height="32" rx="4" fill="#1A0A0A" stroke="#FF1744" stroke-width="1"/>
+      <text x="24" y="358" font-family="sans-serif" font-size="12" fill="#FF1744">! Stop motor before microstep change</text>
+      <!-- Status row y=375 -->
+      <rect x="16" y="375" width="768" height="32" rx="2" fill="#0A0A0A"/>
+      <text x="24" y="395" font-family="sans-serif" font-size="12" fill="#4A4A4A">MOTOR: IDLE</text>
+      <!-- Footer y=440 -->
+      <rect x="16" y="440" width="170" height="36" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+      <text x="101" y="462" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">BACK</text>
+      <rect x="194" y="440" width="250" height="36" rx="4" fill="#1A1600" stroke="#FF9500" stroke-width="2"/>
+      <text x="319" y="462" font-family="sans-serif" font-size="14" fill="#FF9500" text-anchor="middle">SAVE &amp; APPLY</text>
     </g>
-    <text x="160" y="208" class="label">14. EDIT TIMER (removed)</text>
+    <text x="160" y="208" class="label">14. MOTOR CONFIG</text>
   </g>
 
   <!-- ============================================================ -->

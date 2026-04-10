@@ -5,11 +5,11 @@
 #include <atomic>
 
 #define ACCEL_MIN  1000
-#define ACCEL_MAX  20000
+#define ACCEL_MAX  30000
 
 void acceleration_init() {
   if (g_settings.acceleration < ACCEL_MIN || g_settings.acceleration > ACCEL_MAX) {
-    g_settings.acceleration = 5000;
+    g_settings.acceleration = 7500;
   }
   LOG_I("Acceleration: %u", g_settings.acceleration);
 }

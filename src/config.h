@@ -10,7 +10,7 @@
 // ───────────────────────────────────────────────────────────────────────────────
 #define PIN_STEP        50   // Step pulse output (FastAccelStepper RMT)
 #define PIN_DIR         51   // Direction: CW=HIGH, CCW=LOW
-#define PIN_ENA         52   // Enable: Active LOW to TB6600
+#define PIN_ENA         52   // Enable: Active LOW (typical PUL/DIR driver when wired same)
 #define PIN_ESTOP       34   // Emergency Stop: Active LOW, NC contact
                             // NOTE: GPIO34 is a strapping pin (JTAG source control).
                             // Default eFuse config ignores GPIO34, so ESTOP is safe.
@@ -53,16 +53,35 @@
 // ───────────────────────────────────────────────────────────────────────────────
 // MOTOR & MECHANICAL PARAMETERS
 // ───────────────────────────────────────────────────────────────────────────────
-#define MIN_RPM         0.02f     // Minimum workpiece RPM
-#define MAX_RPM         1.0f      // Maximum workpiece RPM (temporary until DM542T)
+// DM542T: DIP microstep must match Motor Config (default 1/16 = 3200 pulses/rev). See docs/HARDWARE_SETUP.md §3.
+// Workpiece RPM: pot/slider span MIN_RPM .. speed_get_rpm_max() (max stored in NVS, Motor Config).
+#define MIN_RPM         0.001f    // Minimum workpiece RPM (pot CCW / clamp floor)
+#define MAX_RPM         3.0f      // Absolute ceiling for Max RPM setting and firmware clamp
+
+// Saved as g_settings.stepper_driver — must match screen + motor.cpp
+#define STEPPER_DRIVER_STANDARD 0u  // PUL/DIR without extra DIR holdoff
+#define STEPPER_DRIVER_DM542T   1u
 
 // GEAR & ROLLER SYSTEM
-#define GEAR_RATIO      (60.0f * 133.0f / 40.0f)   // = 199.5 (worm gear)
+// Stage 1: NMRV030 worm gearbox, 60:1 motor to worm-wheel shaft.
+// Stage 2: spur m=1.5, 40T (on worm shaft) drives 72T output => x1.8 (see docs/images/motor.worm.svg).
+// Total motor:output = 60 * (72/40) = 108.
+#define GEAR_RATIO      (60.0f * 72.0f / 40.0f)   // = 108
 #define D_EMNE          0.300f    // Workpiece diameter: 300mm
 #define D_RULLE         0.080f    // Roller diameter: 80mm
+// Kinematics note: at 3200 spr and total 1:108 only (no roller), output shaft ~960 full steps per degree.
+// Workpiece RPM uses rpmToStepHz() with (D_EMNE/D_RULLE) in speed.cpp.
 
 // SPEED CHARACTERISTICS
-#define START_SPEED     100       // Hz — under 199 Hz min for 0.01 RPM
+#define START_SPEED     100       // Hz — accel ramp start (MIN_RPM target ~216 Hz at 1/16 + default rollers)
+
+// Pot ADC (PIN_POT): ref 3315 matches MIN-RPM end of travel (see speed.cpp).
+// Snap band (0 = off): if > 0, ADC at/below this maps to RPM ceiling (EMI helper; hurts top-end precision).
+#define POT_ADC_SNAP_MAX_RPM           0
+#define POT_ADC_SNAP_MAX_RPM_RUNNING   0
+// After +/- buttons, pot must move 200 ADC counts OR change mapped RPM by this
+// much to take over (else user at pot end stop cannot override a lower slider value).
+#define POT_SLIDER_OVERRIDE_RPM_DELTA  0.04f
 
 // ───────────────────────────────────────────────────────────────────────────────
 // BUILD CONFIGURATION

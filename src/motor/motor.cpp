@@ -1,5 +1,5 @@
 // TIG Rotator Controller - Motor Control Implementation
-// TB6600 stepper driver + FastAccelStepper library
+// Stepper driver (standard PUL/DIR or DM542T timing) + FastAccelStepper library
 
 #include "motor.h"
 #include "../storage/storage.h"
@@ -20,6 +20,31 @@ static FastAccelStepper* stepper = nullptr;
 // FreeRTOS mutex keeps tick interrupts enabled (prevents IWDT on cross-core contention)
 // ───────────────────────────────────────────────────────────────────────────────
 SemaphoreHandle_t g_stepperMutex = nullptr;
+
+// DM542T datasheet: DIR setup >=5us before STEP; min pulse >=2.5us; input to 200kHz.
+// FastAccelStepper on ESP32 uses MIN_DIR_DELAY_US=200 when a non-zero dir delay is set.
+// Standard PUL/DIR: no extra DIR holdoff (delay 0).
+static uint16_t motor_dir_delay_us_from_settings() {
+  return (g_settings.stepper_driver == STEPPER_DRIVER_DM542T) ? 200u : 0u;
+}
+
+// Re-applying setDirectionPin while stepping corrupts timing / can stall the motor.
+static uint16_t s_applied_dir_delay_us = 0;
+static bool s_dir_timing_applied = false;
+
+static void motor_apply_stepper_dir_timing() {
+  if (stepper == nullptr) return;
+  const uint16_t want = motor_dir_delay_us_from_settings();
+  if (s_dir_timing_applied && want == s_applied_dir_delay_us) return;
+
+  if (s_dir_timing_applied && want != s_applied_dir_delay_us && stepper->isRunning()) {
+    stepper->forceStop();
+    digitalWrite(PIN_ENA, HIGH);
+  }
+  stepper->setDirectionPin(PIN_DIR, true, want);
+  s_applied_dir_delay_us = want;
+  s_dir_timing_applied = true;
+}
 
 // ───────────────────────────────────────────────────────────────────────────────
 // GPIO INITIALIZATION — ENA MUST BE HIGH BEFORE CALLING
@@ -72,8 +97,8 @@ void motor_init() {
     ESP.restart();
   }
 
-  // Configure stepper
-  stepper->setDirectionPin(PIN_DIR);
+  // Configure stepper (DIR delay depends on g_settings.stepper_driver)
+  motor_apply_stepper_dir_timing();
   // NOTE: Do NOT call setEnablePin() — ENA is controlled manually via digitalWrite()
   // Wiring: ENA+→5V, ENA-→GPIO52. LOW=enable, HIGH=disable (active LOW)
   // FastAccelStepper's setEnablePin conflicts with manual control.
@@ -158,9 +183,13 @@ void motor_apply_settings() {
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   if (stepper != nullptr) {
     stepper->setAcceleration(g_settings.acceleration);
+    motor_apply_stepper_dir_timing();
   }
   xSemaphoreGive(g_stepperMutex);
-  LOG_I("Motor: acceleration set to %d", g_settings.acceleration);
+  LOG_I("Motor: accel=%d driver=%s (DIR delay %u us)",
+        g_settings.acceleration,
+        g_settings.stepper_driver == STEPPER_DRIVER_DM542T ? "DM542T" : "Standard",
+        (unsigned)motor_dir_delay_us_from_settings());
 }
 
 FastAccelStepper* motor_get_stepper() {

@@ -6,7 +6,7 @@
 void microstep_init() {
   uint8_t val = g_settings.microstep;
   if (val != MICROSTEP_4 && val != MICROSTEP_8 && val != MICROSTEP_16 && val != MICROSTEP_32) {
-    g_settings.microstep = 8;
+    g_settings.microstep = 16;
   }
   LOG_I("Microstep: %s", microstep_get_string());
 }
@@ -28,7 +28,7 @@ const char* microstep_get_string() {
     case MICROSTEP_8:  return "1/8";
     case MICROSTEP_16: return "1/16";
     case MICROSTEP_32: return "1/32";
-    default: return "1/8";
+    default: return "1/16";
   }
 }
 

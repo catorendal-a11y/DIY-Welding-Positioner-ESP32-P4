@@ -3,19 +3,20 @@
 #include <Arduino.h>
 #include <vector>
 #include <atomic>
-#include <LittleFS.h>
 #include <ArduinoJson.h>
 #include "../config.h"
 #include "../control/control.h"
 
 // Maximum number of presets the system can hold
 #define MAX_PRESETS 16
+// Legacy LittleFS paths (used only for one-time migration in storage.cpp)
 #define PRESETS_FILE "/presets.json"
 #define SETTINGS_FILE "/settings.json"
 
 struct SystemSettings {
     int acceleration;
-    int microstep;         // e.g., 8 for 1/8, 16 for 1/16
+    int microstep;         // divisor: 8/16/32 -> 1600/3200/6400 PULSE/REV on NEMA 23
+    float max_rpm;         // UI/pot ceiling [MIN_RPM .. MAX_RPM], default MAX_RPM
     float calibration_factor;
     bool rpm_buttons_enabled;
     uint8_t brightness;    // 0-255 backlight PWM
@@ -24,6 +25,7 @@ struct SystemSettings {
     bool invert_direction;   // Invert CW/CCW direction
     uint8_t accent_color;  // Index into theme palette (0=Orange, 1=Cyan, etc.)
     uint8_t countdown_seconds; // Countdown before rotation start (1-10, default 3)
+    uint8_t stepper_driver;    // STEPPER_DRIVER_STANDARD or STEPPER_DRIVER_DM542T (pulse/dir timing)
     uint8_t settings_version;
 };
 
@@ -60,9 +62,10 @@ extern SemaphoreHandle_t g_presets_mutex;
 // Global settings
 extern SystemSettings g_settings;
 extern SemaphoreHandle_t g_settings_mutex;
+extern SemaphoreHandle_t g_nvs_mutex;
 extern std::atomic<bool> g_dir_switch_cache;
 
-// Flash write coordination — set true during LittleFS writes.
+// Flash write coordination — set true during NVS writes (flash cache may be disabled).
 // lvglTask skips rendering while this is true to prevent blue screen flashes
 // caused by CPU cache being disabled during flash operations.
 extern std::atomic<bool> g_flashWriting;

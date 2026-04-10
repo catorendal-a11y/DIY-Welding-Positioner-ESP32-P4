@@ -6,6 +6,7 @@
 #include "../theme.h"
 #include "../../config.h"
 #include "../../motor/microstep.h"
+#include "../../motor/speed.h"
 #include <cstdio>
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -92,7 +93,7 @@ static void rpm_adj_cb(lv_event_t* e) {
   float delta = (float)(intptr_t)(lv_obj_t*)lv_event_get_user_data(e) * 0.1f;
   editRpm += delta;
   if (editRpm < MIN_RPM) editRpm = MIN_RPM;
-  if (editRpm > MAX_RPM) editRpm = MAX_RPM;
+  if (editRpm > speed_get_rpm_max()) editRpm = speed_get_rpm_max();
   if (rpmLabel) lv_label_set_text_fmt(rpmLabel, "%.1f", editRpm);
   update_computed();
 }

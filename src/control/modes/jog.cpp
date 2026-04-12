@@ -20,9 +20,7 @@ void jog_start(Direction dir) {
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   FastAccelStepper* stepper = motor_get_stepper();
   if (stepper != nullptr) {
-    uint32_t hz = (uint32_t)rpmToStepHzCalibrated(jogRPM.load(std::memory_order_relaxed));
-    stepper->setSpeedInHz(hz);
-    stepper->applySpeedAcceleration();
+    motor_apply_speed_for_rpm_locked(jogRPM.load(std::memory_order_relaxed));
   }
   xSemaphoreGive(g_stepperMutex);
 
@@ -52,9 +50,7 @@ void jog_update() {
     xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
     FastAccelStepper* stepper = motor_get_stepper();
     if (stepper != nullptr) {
-      uint32_t hz = (uint32_t)rpmToStepHzCalibrated(jogRPM.load(std::memory_order_relaxed));
-      stepper->setSpeedInHz(hz);
-      stepper->applySpeedAcceleration();
+      motor_apply_speed_for_rpm_locked(jogRPM.load(std::memory_order_relaxed));
     }
     xSemaphoreGive(g_stepperMutex);
   }

@@ -34,10 +34,12 @@ static void load_preset_cb(lv_event_t* e) {
     speed_set_direction((Direction)p.direction);
     speed_slider_set(p.rpm);
 
-    if (p.mode == STATE_RUNNING) {
-      control_start_continuous();
-    } else if (p.mode == STATE_PULSE) {
+    if (p.mode == STATE_PULSE) {
+      // Main "PULSE" side button uses its own on/off ms — match the program so UI and next tap agree.
+      screen_main_set_program_pulse_times(p.pulse_on_ms, p.pulse_off_ms);
       control_start_pulse(p.pulse_on_ms, p.pulse_off_ms, p.pulse_cycles);
+    } else if (p.mode == STATE_RUNNING) {
+      control_start_continuous();
     } else if (p.mode == STATE_STEP) {
       control_start_step(p.step_angle);
     } else {
@@ -98,6 +100,23 @@ static void new_program_cb(lv_event_t* e) {
 // ───────────────────────────────────────────────────────────────────────────────
 // Format program detail string for the card subtitle
 static void format_details(char* buf, size_t len, const Preset& p) {
+  uint8_t mask = p.mode_mask ? p.mode_mask : preset_mode_to_mask(p.mode);
+  mask = (uint8_t)(mask & PRESET_MASK_ALL);
+
+  if (preset_mask_popcount(mask) > 1) {
+    char tags[8];
+    int tp = 0;
+    if (mask & PRESET_MASK_CONT) tags[tp++] = 'C';
+    if (mask & PRESET_MASK_PULSE) tags[tp++] = 'P';
+    if (mask & PRESET_MASK_STEP) tags[tp++] = 'S';
+    tags[tp] = '\0';
+    const char* runC = "C";
+    if (p.mode == STATE_PULSE) runC = "P";
+    else if (p.mode == STATE_STEP) runC = "S";
+    snprintf(buf, len, "[%s] run:%s | %.1f RPM", tags, runC, p.rpm);
+    return;
+  }
+
   const char* mName = "";
   switch (p.mode) {
     case STATE_RUNNING: mName = "CONT"; break;
@@ -107,14 +126,18 @@ static void format_details(char* buf, size_t len, const Preset& p) {
   }
 
   if (p.mode == STATE_PULSE) {
-    snprintf(buf, len, "%s . %.1fRPM . %.1f/%.1fs . %us",
+    snprintf(buf, len, "%s | %.1f RPM | %.1f/%.1fs",
              mName, p.rpm,
-             p.pulse_on_ms / 1000.0f, p.pulse_off_ms / 1000.0f,
-             (unsigned)((p.pulse_on_ms + p.pulse_off_ms) / 1000));
+             p.pulse_on_ms / 1000.0f, p.pulse_off_ms / 1000.0f);
   } else if (p.mode == STATE_STEP) {
-    snprintf(buf, len, "%s . %.1fRPM . %.0fdeg", mName, p.rpm, p.step_angle);
+    if (p.step_repeats > 1) {
+      snprintf(buf, len, "%s | %.1f RPM | %.0f deg x%u", mName, p.rpm, p.step_angle,
+               (unsigned)p.step_repeats);
+    } else {
+      snprintf(buf, len, "%s | %.1f RPM | %.0f deg", mName, p.rpm, p.step_angle);
+    }
   } else {
-    snprintf(buf, len, "%s . %.1fRPM", mName, p.rpm);
+    snprintf(buf, len, "%s | %.1f RPM", mName, p.rpm);
   }
 }
 
@@ -189,20 +212,24 @@ void screen_programs_create() {
   lv_obj_remove_flag(line, LV_OBJ_FLAG_SCROLLABLE);
 
   // ── Program cards list (scrollable) ──
+  // Leave a strip below for the hint so it does not paint over the last cards.
   programList = lv_obj_create(screen);
-  lv_obj_set_size(programList, SCREEN_W, 370);
+  lv_obj_set_size(programList, SCREEN_W, 348);
   lv_obj_set_pos(programList, 0, 46);
   lv_obj_set_style_bg_color(programList, COL_BG, 0);
   lv_obj_set_style_radius(programList, 0, 0);
   lv_obj_set_style_border_width(programList, 0, 0);
   lv_obj_set_style_pad_all(programList, 0, 0);
+  // Vertical scrollbar can steal width and clip the right edge of wide cards.
+  lv_obj_set_scrollbar_mode(programList, LV_SCROLLBAR_MODE_OFF);
+  lv_obj_set_scroll_dir(programList, LV_DIR_VER);
 
-  // ── "scroll for more" hint ──
+  // ── "scroll for more" hint (between list and BACK; was y=396 inside list area) ──
   lv_obj_t* scrollHint = lv_label_create(screen);
   lv_label_set_text(scrollHint, "scroll for more");
   lv_obj_set_style_text_font(scrollHint, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(scrollHint, COL_TEXT_VDIM, 0);
-  lv_obj_align(scrollHint, LV_ALIGN_TOP_MID, 0, 396);
+  lv_obj_align(scrollHint, LV_ALIGN_TOP_MID, 0, 400);
 
   // ── BACK button ──
   lv_obj_t* backBtn = lv_button_create(screen);
@@ -267,6 +294,9 @@ void screen_programs_update() {
   const int cardH = 86;
   const int cardGap = 10;
   const int cardX = (SCREEN_W - cardW) / 2;
+  // Text column ends before PLAY/EDIT/DEL (first button at cardW - 246).
+  const int cardTextLeft = 60;
+  const int cardTextMaxW = (cardW - 246 - 8) - cardTextLeft;
   int yPos = 0;
 
   for (size_t i = 0; i < presetCount; i++) {
@@ -309,7 +339,9 @@ void screen_programs_update() {
     lv_label_set_text(nameLabel, p.name);
     lv_obj_set_style_text_font(nameLabel, FONT_LARGE, 0);
     lv_obj_set_style_text_color(nameLabel, COL_TEXT_BRIGHT, 0);
-    lv_obj_set_pos(nameLabel, 60, 8);
+    lv_obj_set_pos(nameLabel, cardTextLeft, 8);
+    lv_label_set_long_mode(nameLabel, LV_LABEL_LONG_MODE_DOTS);
+    lv_obj_set_width(nameLabel, cardTextMaxW);
 
     // ── Details label ──
     char detailBuf[80];
@@ -318,7 +350,9 @@ void screen_programs_update() {
     lv_label_set_text(detailLabel, detailBuf);
     lv_obj_set_style_text_font(detailLabel, FONT_NORMAL, 0);
     lv_obj_set_style_text_color(detailLabel, COL_TEXT_DIM, 0);
-    lv_obj_set_pos(detailLabel, 60, 32);
+    lv_obj_set_pos(detailLabel, cardTextLeft, 32);
+    lv_label_set_long_mode(detailLabel, LV_LABEL_LONG_MODE_DOTS);
+    lv_obj_set_width(detailLabel, cardTextMaxW);
 
     // ── Action buttons — 76x58 each ──
     // PLAY button
@@ -334,8 +368,8 @@ void screen_programs_update() {
     lv_obj_add_event_cb(playBtn, load_preset_cb, LV_EVENT_CLICKED, (void*)(size_t)p.id);
 
     lv_obj_t* playLabel = lv_label_create(playBtn);
-    lv_label_set_text(playLabel, ">>");
-    lv_obj_set_style_text_font(playLabel, FONT_LARGE, 0);
+    lv_label_set_text(playLabel, "RUN");
+    lv_obj_set_style_text_font(playLabel, FONT_BTN, 0);
     lv_obj_set_style_text_color(playLabel, COL_ACCENT, 0);
     lv_obj_center(playLabel);
 
@@ -378,30 +412,34 @@ void screen_programs_update() {
     yPos += cardH + cardGap;
   }
 
-  int emptyStart = (int)snapshot.size();
-  int emptyEnd = emptyStart + 4;
-  if (emptyEnd > MAX_PRESETS) emptyEnd = MAX_PRESETS;
+  // Placeholder rows for unused slots (only when there is at least one program —
+  // otherwise the centered empty state below is enough; showing both looked broken.)
+  if (!isEmpty) {
+    int emptyStart = (int)snapshot.size();
+    int emptyEnd = emptyStart + 4;
+    if (emptyEnd > MAX_PRESETS) emptyEnd = MAX_PRESETS;
 
-  for (int i = emptyStart; i < emptyEnd; i++) {
-    lv_obj_t* emptyCard = lv_obj_create(programList);
-    lv_obj_set_size(emptyCard, cardW, 44);
-    lv_obj_set_pos(emptyCard, cardX, yPos);
-    lv_obj_set_style_bg_color(emptyCard, lv_color_hex(0x1A1A1A), 0);
-    lv_obj_set_style_radius(emptyCard, RADIUS_BTN, 0);
-    lv_obj_set_style_border_width(emptyCard, 0, 0);
-    lv_obj_set_style_pad_all(emptyCard, 0, 0);
-    lv_obj_remove_flag(emptyCard, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_remove_flag(emptyCard, LV_OBJ_FLAG_CLICKABLE);
+    for (int i = emptyStart; i < emptyEnd; i++) {
+      lv_obj_t* emptyCard = lv_obj_create(programList);
+      lv_obj_set_size(emptyCard, cardW, 44);
+      lv_obj_set_pos(emptyCard, cardX, yPos);
+      lv_obj_set_style_bg_color(emptyCard, lv_color_hex(0x1A1A1A), 0);
+      lv_obj_set_style_radius(emptyCard, RADIUS_BTN, 0);
+      lv_obj_set_style_border_width(emptyCard, 0, 0);
+      lv_obj_set_style_pad_all(emptyCard, 0, 0);
+      lv_obj_remove_flag(emptyCard, LV_OBJ_FLAG_SCROLLABLE);
+      lv_obj_remove_flag(emptyCard, LV_OBJ_FLAG_CLICKABLE);
 
-    lv_obj_t* slotLabel = lv_label_create(emptyCard);
-    char slotBuf[16];
-    snprintf(slotBuf, sizeof(slotBuf), "P%02d -- empty", i + 1);
-    lv_label_set_text(slotLabel, slotBuf);
-    lv_obj_set_style_text_font(slotLabel, FONT_BTN, 0);
-    lv_obj_set_style_text_color(slotLabel, COL_TEXT_VDIM, 0);
-    lv_obj_set_pos(slotLabel, 12, 13);
+      lv_obj_t* slotLabel = lv_label_create(emptyCard);
+      char slotBuf[16];
+      snprintf(slotBuf, sizeof(slotBuf), "P%02d -- empty", i + 1);
+      lv_label_set_text(slotLabel, slotBuf);
+      lv_obj_set_style_text_font(slotLabel, FONT_BTN, 0);
+      lv_obj_set_style_text_color(slotLabel, COL_TEXT_VDIM, 0);
+      lv_obj_set_pos(slotLabel, 12, 13);
 
-    yPos += 44 + 5;
+      yPos += 44 + 5;
+    }
   }
 
   if (isEmpty) {

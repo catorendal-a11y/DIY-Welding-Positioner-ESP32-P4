@@ -15,11 +15,13 @@
 #include "driver/i2c_master.h"
 #include "esp_err.h"
 #endif
-#include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 static_assert(std::atomic<float>::is_always_lock_free,
               "std::atomic<float> must be lock-free for inter-core RPM sharing");
+
+// Same total as docs/images/motor.worm.svg: "Total Ratio 1:108" = 108 motor revs per 1 output rev.
+static_assert((int)(60.0f * 72.0f / 40.0f + 0.5f) == 108, "GEAR_RATIO must match motor.worm.svg (1:108 = 60*72/40)");
 
 #if ENABLE_ADS1115_PEDAL
 #define ADS_REG_PTR_CONVERT 0x00
@@ -86,7 +88,8 @@ static std::atomic<float> lastPotAdc{2047.5f};
 static std::atomic<bool> pedalEnabled{false};
 static std::atomic<bool> pedalApplyPending{false};
 static float pedalFiltered = 2047.5f;
-static std::atomic<float> cachedTargetRpm{0.0f};
+static std::atomic<float> cachedTargetRpm{MIN_RPM};
+static std::atomic<bool> sliderPriorityOverride{false};
 static uint8_t lastDirSwitchState = 1;
 #define POT_WAKE_THRESHOLD 30
 
@@ -95,18 +98,44 @@ static bool ads1115Connected = false;
 #define ADS1115_TO_ADC_SCALE (4095.0f / 26667.0f)
 #endif
 
-float rpmToStepHz(float rpm_workpiece) {
-  return rpm_workpiece * GEAR_RATIO * (D_EMNE / D_RULLE) * microstep_get_steps_per_rev() / 60.0f;
+// UI-set OD in millimeters; 0 = use D_EMNE (meters) from config
+static std::atomic<float> g_workpiece_od_mm{0.0f};
+
+static float effective_emne_d_m(void) {
+  float mm = g_workpiece_od_mm.load(std::memory_order_relaxed);
+  if (mm < 1.0f) return D_EMNE;
+  return mm / 1000.0f;
 }
 
+void speed_set_workpiece_diameter_mm(float mm_od) {
+  if (mm_od < 1.0f || mm_od > 20000.0f) {
+    g_workpiece_od_mm.store(0.0f, std::memory_order_relaxed);
+  } else {
+    g_workpiece_od_mm.store(mm_od, std::memory_order_relaxed);
+  }
+}
+
+float speed_get_workpiece_diameter_mm(void) {
+  return g_workpiece_od_mm.load(std::memory_order_relaxed);
+}
+
+// Workpiece <-> motor (no slip at roller contact):
+//   v = pi * d_emne * f_wp = pi * D_RULLE * f_out  =>  f_out = f_wp * (d_emne / D_RULLE).
+//   f_motor = GEAR_RATIO * f_out  (1:108 total; see motor.worm.svg + config.h GEAR_RATIO).
+// Forward Hz:  rpmToStepHz. Inverse display: speed_get_actual_rpm (same GEAR_RATIO and d/D_RULLE).
+float rpmToStepHz(float rpm_workpiece) {
+  const float d_m = effective_emne_d_m();
+  return rpm_workpiece * GEAR_RATIO * (d_m / D_RULLE) * microstep_get_steps_per_rev() / 60.0f;
+}
+
+// Command-side calibration (same factor intent as calibration_apply_steps on angleToSteps).
 float rpmToStepHzCalibrated(float rpm_command) {
   return rpmToStepHz(rpm_command * calibration_get_factor());
 }
 
 long angleToSteps(float degrees) {
-  // Same kinematics as rpmToStepHz: workpiece angle -> motor rotation via GEAR_RATIO
-  // and roller/emne diameter (surface speed matching).
-  float motor_deg = degrees * GEAR_RATIO * (D_EMNE / D_RULLE);
+  const float d_m = effective_emne_d_m();
+  float motor_deg = degrees * GEAR_RATIO * (d_m / D_RULLE);
   long steps = (long)(motor_deg / 360.0f * microstep_get_steps_per_rev());
   return calibration_apply_steps(steps);
 }
@@ -215,10 +244,17 @@ void speed_update_adc() {
 
 void speed_slider_set(float rpm) {
   float cap = rpmMaxUi.load(std::memory_order_relaxed);
-  sliderRPM.store(constrain(rpm, MIN_RPM, cap), std::memory_order_release);
+  float r = constrain(rpm, MIN_RPM, cap);
+  sliderRPM.store(r, std::memory_order_release);
   lastSliderMs.store(millis(), std::memory_order_release);
   buttonsActive.store(true, std::memory_order_release);
   lastPotAdc.store(adcFiltered, std::memory_order_release);
+  // Immediate: controlTask may call step_execute before next speed_apply tick.
+  cachedTargetRpm.store(r, std::memory_order_release);
+}
+
+void speed_set_slider_priority(bool on) {
+  sliderPriorityOverride.store(on, std::memory_order_release);
 }
 
 float speed_get_target_rpm() {
@@ -226,10 +262,13 @@ float speed_get_target_rpm() {
 }
 
 float speed_get_actual_rpm() {
-  uint32_t hz = motor_get_current_hz();
-  if (hz == 0) return 0.0f;
-  float rpm_motor = (float)hz * 60.0f / microstep_get_steps_per_rev();
-  float rpm_workpiece = rpm_motor / GEAR_RATIO * (D_RULLE / D_EMNE);
+  float hz = motor_get_step_frequency_hz();
+  if (hz < 1e-9f) return 0.0f;
+  uint32_t spr = microstep_get_steps_per_rev();
+  if (spr == 0u) return 0.0f;
+  float rpm_motor = hz * 60.0f / (float)spr;
+  const float d_m = effective_emne_d_m();
+  float rpm_workpiece = rpm_motor / GEAR_RATIO * (D_RULLE / d_m);
   return calibration_apply_angle(rpm_workpiece);
 }
 
@@ -255,7 +294,9 @@ void speed_apply() {
   bool active = buttonsActive.load(std::memory_order_acquire);
   float srpm = sliderRPM.load(std::memory_order_relaxed);
 
-  if (active) {
+  if (sliderPriorityOverride.load(std::memory_order_acquire)) {
+    cachedTargetRpm.store(srpm, std::memory_order_relaxed);
+  } else if (active) {
     float lastAdc = lastPotAdc.load(std::memory_order_relaxed);
     float adcDelta = fabsf(activeAdc - lastAdc);
     float rpmDelta = fabsf(pot_rpm - srpm);

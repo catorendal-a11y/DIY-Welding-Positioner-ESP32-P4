@@ -403,7 +403,8 @@ void screen_main_update() {
 
   bool stateChanged = (state != prevState);
   bool dirChanged = (dir != prevDir);
-  bool rpmChanged = (rpm != prevRpm);
+  // Epsilon so small actual-RPM changes still refresh the gauge needle during motion
+  bool rpmChanged = (fabsf(rpm - prevRpm) > 0.003f);
   bool pedalChanged = (speed_get_pedal_enabled() != prevPedalEnabled);
 
   if (!mainDirty && !stateChanged && !dirChanged && !rpmChanged && !pedalChanged) return;
@@ -491,4 +492,14 @@ void screen_main_update() {
     lv_obj_add_state(rpmDownBtn, LV_STATE_DISABLED);
     lv_obj_add_state(rpmUpBtn, LV_STATE_DISABLED);
   }
+}
+
+void screen_main_set_program_pulse_times(uint32_t on_ms, uint32_t off_ms) {
+  if (on_ms < 100) on_ms = 100;
+  if (on_ms > 10000) on_ms = 10000;
+  if (off_ms < 100) off_ms = 100;
+  if (off_ms > 10000) off_ms = 10000;
+  mainPulseOnMs = on_ms;
+  mainPulseOffMs = off_ms;
+  screen_main_set_dirty();
 }

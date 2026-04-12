@@ -136,7 +136,7 @@ static void save_cb(lv_event_t* e) {
 // DIRECTION (y=266): CW/CCW toggle (200x42 each)
 // SOFT START: ON/OFF toggle (140x42 each)
 // Separator at y=340
-// Info: "ACCEL MED . STEPS/S 3556 . GEAR 1:108 . MICRO 8x" (decorative; gear from GEAR_RATIO)
+// Info: decorative line; gear ratio from GEAR_RATIO; accel/steps are illustrative.
 // CANCEL + SAVE buttons
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_edit_cont_create() {
@@ -416,7 +416,7 @@ void screen_edit_cont_create() {
     // ── Info line (decorative; gear matches config GEAR_RATIO) ──
     lv_obj_t* infoLabel = lv_label_create(screen);
     char infoBuf[72];
-    snprintf(infoBuf, sizeof(infoBuf), "ACCEL MED . STEPS/S 3556 . GEAR 1:%.0f . MICRO 8x", (double)GEAR_RATIO);
+    snprintf(infoBuf, sizeof(infoBuf), "ACCEL . STEPS/S 3556 . GEAR 1:%.0f . MICRO 8x", (double)GEAR_RATIO);
     lv_label_set_text(infoLabel, infoBuf);
     lv_obj_set_style_text_font(infoLabel, FONT_TINY, 0);
     lv_obj_set_style_text_color(infoLabel, COL_TEXT_VDIM, 0);

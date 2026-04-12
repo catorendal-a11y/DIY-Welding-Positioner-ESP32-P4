@@ -137,6 +137,13 @@ bool storage_load_presets() {
     return storage_parse_presets_buffer(buf.data(), buf.size());
 }
 
+void preset_clamp_mode_to_mask(Preset* p) {
+  if (p->mode_mask == 0) p->mode_mask = preset_mode_to_mask(p->mode);
+  if ((preset_mode_to_mask(p->mode) & p->mode_mask) == 0) {
+    p->mode = preset_first_in_mask(p->mode_mask);
+  }
+}
+
 static bool storage_parse_presets_buffer(const uint8_t* data, size_t len) {
     JsonDocument doc;
     const DeserializationError error = deserializeJson(doc, data, len);
@@ -157,6 +164,11 @@ static bool storage_parse_presets_buffer(const uint8_t* data, size_t len) {
         strlcpy(p.name, obj["name"] | "Unnamed", sizeof(p.name));
         sanitize_ascii(p.name, sizeof(p.name));
         p.mode = (SystemState)(obj["mode"] | (int)STATE_RUNNING);
+        p.mode_mask = (uint8_t)(obj["mode_mask"] | 0) & PRESET_MASK_ALL;
+        if (p.mode_mask == 0) {
+          p.mode_mask = preset_mode_to_mask(p.mode);
+        }
+        preset_clamp_mode_to_mask(&p);
         p.rpm = obj["rpm"] | 1.0f;
         p.pulse_on_ms = obj["pulse_on"] | 500;
         p.pulse_off_ms = obj["pulse_off"] | 500;
@@ -208,6 +220,7 @@ static bool storage_save_presets_internal() {
         obj["id"] = p.id;
         obj["name"] = p.name;
         obj["mode"] = (int)p.mode;
+        obj["mode_mask"] = p.mode_mask;
         obj["rpm"] = p.rpm;
         obj["pulse_on"] = p.pulse_on_ms;
         obj["pulse_off"] = p.pulse_off_ms;

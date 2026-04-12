@@ -22,7 +22,6 @@ volatile bool g_wakePending = false;
 #include "storage/storage.h"
 #include <esp_timer.h>
 #include "esp_task_wdt.h"
-#include "esp_cache.h"
 #include <cstdint>
 #include "onchip_temp.h"
 
@@ -109,6 +108,10 @@ void lvglTask(void* pvParameters) {
     uint32_t handlerMs = millis() - handlerStart;
     if (handlerMs > 50) {
       LOG_W("LVGL handler took %lums", (unsigned long)handlerMs);
+    }
+
+    if (screens_get_current() == SCREEN_PROGRAM_EDIT) {
+      screen_program_edit_poll_keyboard();
     }
 
     // Update current screen (200ms interval for smooth UI)

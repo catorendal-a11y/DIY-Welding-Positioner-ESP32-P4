@@ -200,10 +200,6 @@ void screen_boot_create() {
     LOG_I("Screen boot: full-screen terminal layout created");
 }
 
-void screen_boot_update() {
-    // Empty update - for periodic refresh if needed
-}
-
 void screen_boot_update(int percent, const char* status) {
     screen_boot_set_progress(percent, status);
 }

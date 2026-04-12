@@ -15,6 +15,10 @@ float rpmToStepHzCalibrated(float rpm_command);
 // Angle in degrees (on workpiece) → motor steps
 long angleToSteps(float degrees);
 
+// STEP / job: effective workpiece OD in mm for kinematics (0 = use D_EMNE from config.h)
+void speed_set_workpiece_diameter_mm(float mm_od);
+float speed_get_workpiece_diameter_mm(void);
+
 // ───────────────────────────────────────────────────────────────────────────────
 // SPEED CONTROL
 // ───────────────────────────────────────────────────────────────────────────────
@@ -24,6 +28,8 @@ void speed_update_adc();                // Read and filter potentiometer (call e
 void speed_sync_rpm_limits_from_settings();
 float speed_get_rpm_max();              // Current UI/pot ceiling (atomic, MIN_RPM..MAX_RPM)
 void speed_slider_set(float rpm);       // Set speed from GUI slider
+// When true (Step screen), cached target RPM follows UI slider only (no pot takeover).
+void speed_set_slider_priority(bool on);
 float speed_get_target_rpm();           // Get current target RPM (pot or slider)
 float speed_get_actual_rpm();           // Get actual measured RPM from motor
 bool speed_using_slider();              // Returns true if slider was used recently

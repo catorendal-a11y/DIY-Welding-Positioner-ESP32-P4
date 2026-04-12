@@ -13,6 +13,12 @@
 #define PRESETS_FILE "/presets.json"
 #define SETTINGS_FILE "/settings.json"
 
+// Which mode blocks belong to one program (motor still runs one mode at a time — see `mode`).
+#define PRESET_MASK_CONT  (1u << 0)
+#define PRESET_MASK_PULSE (1u << 1)
+#define PRESET_MASK_STEP  (1u << 2)
+#define PRESET_MASK_ALL   (PRESET_MASK_CONT | PRESET_MASK_PULSE | PRESET_MASK_STEP)
+
 struct SystemSettings {
     int acceleration;
     int microstep;         // divisor: 8/16/32 -> 1600/3200/6400 PULSE/REV on NEMA 23
@@ -33,7 +39,8 @@ struct SystemSettings {
 struct Preset {
     uint8_t id;
     char name[32];
-    SystemState mode; // Indicates target mode (STATE_RUNNING, STATE_PULSE, etc)
+    SystemState mode; // Which mode RUN uses from this program (motor runs one at a time)
+    uint8_t mode_mask; // Bitset: CONT / PULSE / STEP blocks included (default all for new programs)
     float rpm;
     
     // Pulse settings
@@ -54,6 +61,31 @@ struct Preset {
     uint8_t timer_auto_stop;   // 1=auto stop at end
     uint8_t cont_soft_start;   // 1=soft start enabled
 };
+
+#ifdef __cplusplus
+inline uint8_t preset_mode_to_mask(SystemState m) {
+  if (m == STATE_RUNNING) return PRESET_MASK_CONT;
+  if (m == STATE_PULSE) return PRESET_MASK_PULSE;
+  if (m == STATE_STEP) return PRESET_MASK_STEP;
+  return PRESET_MASK_CONT;
+}
+
+inline SystemState preset_first_in_mask(uint8_t mask) {
+  mask = (uint8_t)(mask & PRESET_MASK_ALL);
+  if (mask & PRESET_MASK_CONT) return STATE_RUNNING;
+  if (mask & PRESET_MASK_PULSE) return STATE_PULSE;
+  if (mask & PRESET_MASK_STEP) return STATE_STEP;
+  return STATE_RUNNING;
+}
+
+inline int preset_mask_popcount(uint8_t mask) {
+  int n = 0;
+  for (mask = (uint8_t)(mask & PRESET_MASK_ALL); mask; mask &= (uint8_t)(mask - 1)) n++;
+  return n;
+}
+
+void preset_clamp_mode_to_mask(Preset* p);
+#endif
 
 // Global active preset list loaded from flash
 extern std::vector<Preset> g_presets;

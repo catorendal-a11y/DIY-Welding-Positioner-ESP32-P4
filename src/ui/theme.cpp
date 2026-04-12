@@ -37,7 +37,9 @@ void theme_init() {
         lv_display_get_default(), g_accent, g_accent_dim, true, &lv_font_montserrat_14
     );
     if (th) {
-        lv_theme_set_apply_cb(th, nullptr);
+        // Required so lv_theme_get_from_obj() returns this theme; otherwise LVGL strips
+        // styles on apply and widgets like lv_keyboard (buttonmatrix keys) render empty.
+        lv_display_set_theme(lv_display_get_default(), th);
     }
 }
 

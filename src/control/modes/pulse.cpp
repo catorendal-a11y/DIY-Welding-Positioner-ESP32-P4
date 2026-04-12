@@ -5,7 +5,6 @@
 #include "../../motor/motor.h"
 #include "../../motor/speed.h"
 #include "../../config.h"
-#include <FastAccelStepper.h>
 
 // ───────────────────────────────────────────────────────────────────────────────
 // PULSE MODE STATE
@@ -35,9 +34,7 @@ void pulse_start(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   FastAccelStepper* stepper = motor_get_stepper();
   if (stepper != nullptr) {
-    uint32_t hz = (uint32_t)rpmToStepHzCalibrated(speed_get_target_rpm());
-    stepper->setSpeedInHz(hz);
-    stepper->applySpeedAcceleration();
+    motor_apply_speed_for_rpm_locked(speed_get_target_rpm());
   }
   xSemaphoreGive(g_stepperMutex);
 
@@ -71,9 +68,7 @@ void pulse_update() {
       xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
       FastAccelStepper* s = motor_get_stepper();
       if (s != nullptr) {
-        uint32_t hz = (uint32_t)rpmToStepHzCalibrated(speed_get_target_rpm());
-        s->setSpeedInHz(hz);
-        s->applySpeedAcceleration();
+        motor_apply_speed_for_rpm_locked(speed_get_target_rpm());
       }
       xSemaphoreGive(g_stepperMutex);
       if (speed_get_direction() == DIR_CW) motor_run_cw();

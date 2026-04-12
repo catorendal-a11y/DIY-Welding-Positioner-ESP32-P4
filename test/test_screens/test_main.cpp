@@ -211,6 +211,31 @@ void test_step_angle_invalid_over_max() {
   TEST_ASSERT_FALSE(step_angle_valid(3601.0f));
 }
 
+void test_step_diameter_mm_suffix_detected() {
+  TEST_ASSERT_TRUE(step_input_looks_like_diameter_mm("300mm"));
+  TEST_ASSERT_TRUE(step_input_looks_like_diameter_mm("  300 MM "));
+  TEST_ASSERT_FALSE(step_input_looks_like_diameter_mm("300"));
+  TEST_ASSERT_FALSE(step_input_looks_like_diameter_mm("90 deg"));
+}
+
+void test_step_diameter_utf8_letter_detected() {
+  TEST_ASSERT_TRUE(step_input_looks_like_diameter_mm("\xc3\xb8 300"));
+  TEST_ASSERT_TRUE(step_input_looks_like_diameter_mm("D \xc3\x98 200"));
+}
+
+void test_step_parse_first_float() {
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 300.0f, step_parse_first_float("300mm"));
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 90.5f, step_parse_first_float("90,5"));
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 12.0f, step_parse_first_float("abc 12"));
+}
+
+void test_step_angle_from_diameter_300mm() {
+  // 1 mm arc on 300 mm circumference: 360 / (pi * 300)
+  float deg = step_angle_degrees_from_diameter_mm(300.0f, 1.0f);
+  TEST_ASSERT_FLOAT_WITHIN(0.02f, 360.0f / (3.14159265f * 300.0f) * 1.0f, deg);
+  TEST_ASSERT_TRUE(step_angle_valid(deg));
+}
+
 void test_step_total_angle() {
   TEST_ASSERT_FLOAT_WITHIN(0.01f, 900.0f, step_compute_total_angle(90.0f, 10));
 }
@@ -695,6 +720,10 @@ int main(int argc, char** argv) {
   RUN_TEST(test_step_angle_invalid_zero);
   RUN_TEST(test_step_angle_invalid_negative);
   RUN_TEST(test_step_angle_invalid_over_max);
+  RUN_TEST(test_step_diameter_mm_suffix_detected);
+  RUN_TEST(test_step_diameter_utf8_letter_detected);
+  RUN_TEST(test_step_parse_first_float);
+  RUN_TEST(test_step_angle_from_diameter_300mm);
   RUN_TEST(test_step_total_angle);
   RUN_TEST(test_step_total_angle_single);
   RUN_TEST(test_step_total_steps);

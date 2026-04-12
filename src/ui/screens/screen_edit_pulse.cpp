@@ -239,12 +239,17 @@ void screen_edit_pulse_create() {
   lv_obj_set_style_text_color(escLbl, COL_TEXT_DIM, 0);
   lv_obj_center(escLbl);
 
-  // ── Layout constants ──
-  const int colLeftX = 20;
-  const int colRightX = 420;
+  // ── Layout constants (must fit 800px wide: old right col + bar + 2×btn ended at x=816) ──
+  const int edge = 16;
+  const int gapMid = 16;
+  const int colW = (SCREEN_W - 2 * edge - gapMid) / 2;  // 376
+  const int colLeftX = edge;
+  const int colRightX = edge + colW + gapMid;           // 408
   const int btnW = BTN_W_PM;   // 44
   const int btnH = BTN_H_PM;   // 30
-  const int barW = 280;
+  const int btnGap = 8;
+  const int btnRowW = btnW + btnGap + btnW;
+  const int barW = colW - 20 - btnRowW;               // 260 → right + ends at 784
   const int barH = 3;
 
   // ════════════════════════════════════════════════════════════════════════════════
@@ -279,7 +284,7 @@ void screen_edit_pulse_create() {
   // -/+ buttons
   create_pm_btn(screen, colLeftX + barW + 20, onY + 24, btnW, btnH,
                 "-", on_time_adj_cb, (void*)(intptr_t)-100);
-  create_pm_btn(screen, colLeftX + barW + 20 + btnW + 8, onY + 24, btnW, btnH,
+  create_pm_btn(screen, colLeftX + barW + 20 + btnW + btnGap, onY + 24, btnW, btnH,
                 "+", on_time_adj_cb, (void*)(intptr_t)100);
 
   // ════════════════════════════════════════════════════════════════════════════════
@@ -312,7 +317,7 @@ void screen_edit_pulse_create() {
   // -/+ buttons
   create_pm_btn(screen, colRightX + barW + 20, onY + 24, btnW, btnH,
                 "-", off_time_adj_cb, (void*)(intptr_t)-100);
-  create_pm_btn(screen, colRightX + barW + 20 + btnW + 8, onY + 24, btnW, btnH,
+  create_pm_btn(screen, colRightX + barW + 20 + btnW + btnGap, onY + 24, btnW, btnH,
                 "+", off_time_adj_cb, (void*)(intptr_t)100);
 
   // ════════════════════════════════════════════════════════════════════════════════
@@ -352,7 +357,7 @@ void screen_edit_pulse_create() {
   // -/+ buttons
   create_pm_btn(screen, colLeftX + barW + 20, rpmY + 24, btnW, btnH,
                 "-", rpm_adj_cb, (void*)(intptr_t)-1);
-  create_pm_btn(screen, colLeftX + barW + 20 + btnW + 8, rpmY + 24, btnW, btnH,
+  create_pm_btn(screen, colLeftX + barW + 20 + btnW + btnGap, rpmY + 24, btnW, btnH,
                 "+", rpm_adj_cb, (void*)(intptr_t)1);
 
   // Range hint
@@ -362,7 +367,7 @@ void screen_edit_pulse_create() {
   lv_label_set_text(rpmHint, hintBuf);
   lv_obj_set_style_text_font(rpmHint, FONT_SMALL, 0);
   lv_obj_set_style_text_color(rpmHint, COL_TEXT_VDIM, 0);
-  lv_obj_set_pos(rpmHint, colLeftX + barW + 20 + (btnW + 8) * 2 + 4, rpmY + 28);
+  lv_obj_set_pos(rpmHint, colLeftX + barW + 20 + btnRowW + 4, rpmY + 28);
 
   // ════════════════════════════════════════════════════════════════════════════════
   // CYCLES — right column (y=180)
@@ -382,7 +387,7 @@ void screen_edit_pulse_create() {
   // -/+ buttons
   create_pm_btn(screen, colRightX + barW + 20, rpmY + 24, btnW, btnH,
                 "-", cycles_adj_cb, (void*)(intptr_t)-1);
-  create_pm_btn(screen, colRightX + barW + 20 + btnW + 8, rpmY + 24, btnW, btnH,
+  create_pm_btn(screen, colRightX + barW + 20 + btnW + btnGap, rpmY + 24, btnW, btnH,
                 "+", cycles_adj_cb, (void*)(intptr_t)1);
 
   // ════════════════════════════════════════════════════════════════════════════════

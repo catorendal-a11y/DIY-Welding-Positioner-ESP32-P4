@@ -5,6 +5,7 @@
 #include "screens.h"
 #include "theme.h"
 #include "../config.h"
+#include "../motor/speed.h"
 #include "freertos/task.h"
 
 // lvglHandle defined in main.cpp — used for DEBUG stack watermark logging
@@ -34,7 +35,8 @@ static int pendingEditSlot = -1;
 
 static bool screen_needs_rebuild(ScreenId id) {
   return id == SCREEN_PROGRAM_EDIT || id == SCREEN_EDIT_CONT
-      || id == SCREEN_EDIT_PULSE  || id == SCREEN_EDIT_STEP;
+      || id == SCREEN_EDIT_PULSE  || id == SCREEN_EDIT_STEP
+      || id == SCREEN_STEP;
 }
 
 static void create_screen(ScreenId id) {
@@ -143,6 +145,14 @@ void screens_reinit() {
 void screens_show(ScreenId id) {
   if (id < 0 || id >= SCREEN_COUNT) return;
 
+  ScreenId prev = currentScreen;
+  if (prev == SCREEN_STEP && id != SCREEN_STEP) {
+    speed_set_slider_priority(false);
+  }
+  if (id == SCREEN_STEP) {
+    speed_set_slider_priority(true);  // before create_screen: avoid pot clobber during build
+  }
+
   if (screen_needs_rebuild(id)) {
     screenCreated[id] = false;
   }
@@ -223,6 +233,9 @@ void screens_update_current() {
     case SCREEN_PROGRAMS:
       screen_programs_update();
       break;
+    case SCREEN_PROGRAM_EDIT:
+      screen_program_edit_update_ui();
+      break;
     case SCREEN_EDIT_PULSE:
       screen_edit_pulse_update();
       break;
@@ -249,6 +262,12 @@ void screens_update_current() {
       break;
     case SCREEN_CONFIRM:
       screen_confirm_update();
+      break;
+    case SCREEN_NONE:
+    case SCREEN_MENU:
+    case SCREEN_SETTINGS:
+    case SCREEN_BOOT:
+    case SCREEN_COUNT:
       break;
   }
 }

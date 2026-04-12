@@ -65,7 +65,7 @@
 // GEAR & ROLLER SYSTEM
 // Stage 1: NMRV030 worm gearbox, 60:1 motor to worm-wheel shaft.
 // Stage 2: spur m=1.5, 40T (on worm shaft) drives 72T output => x1.8 (see docs/images/motor.worm.svg).
-// Total motor:output = 60 * (72/40) = 108.
+// Total 1:108 per docs/images/motor.worm.svg (NMRV 60:1 * spur 72/40) = 108 motor rev / 1 out rev.
 #define GEAR_RATIO      (60.0f * 72.0f / 40.0f)   // = 108
 #define D_EMNE          0.300f    // Workpiece diameter: 300mm
 #define D_RULLE         0.080f    // Roller diameter: 80mm

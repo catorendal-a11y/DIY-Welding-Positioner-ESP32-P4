@@ -111,6 +111,8 @@ void screen_edit_cont_update();
 // SCREEN UPDATE FUNCTIONS
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_main_update();
+// After loading a pulse program preset, keep main-screen PULSE quick times in sync.
+void screen_main_set_program_pulse_times(uint32_t on_ms, uint32_t off_ms);
 void screen_pulse_update();
 void screen_step_update();
 void screen_timer_update();
@@ -148,3 +150,4 @@ void screens_set_back_button(lv_obj_t* btn, ScreenId dest);  // Configure back b
 void screens_set_edit_slot(int slot);  // Set slot for SCREEN_PROGRAM_EDIT creation
 Preset* screen_program_edit_get_preset();  // Get current preset being edited
 void screen_program_edit_update_ui();  // Update UI with current preset values
+void screen_program_edit_poll_keyboard(); // Deferred keyboard close (call each LVGL tick while on edit screen)

@@ -21,6 +21,7 @@ static Preset editPreset;
 // ───────────────────────────────────────────────────────────────────────────────
 static lv_obj_t* nameInput = nullptr;
 static lv_obj_t* rpmLabel = nullptr;
+static lv_obj_t* rpmBarObj = nullptr;
 static lv_obj_t* modeSettingsBtn = nullptr;
 static lv_obj_t* keyboard = nullptr;
 
@@ -62,20 +63,25 @@ static void textarea_event_cb(lv_event_t* e) {
   lv_obj_t* ta = (lv_obj_t*)lv_event_get_target(e);
   if (code == LV_EVENT_FOCUSED) {
     if (!keyboard) {
-      keyboard = lv_keyboard_create(lv_screen_active());
+      // Top layer: above program edit content so keys are visible and tappable.
+      keyboard = lv_keyboard_create(lv_layer_top());
+      lv_keyboard_set_mode(keyboard, LV_KEYBOARD_MODE_TEXT_LOWER);
       lv_keyboard_set_textarea(keyboard, ta);
-      lv_obj_add_event_cb(keyboard, keyboard_event_cb, LV_EVENT_ALL, nullptr);
+      lv_obj_add_event_cb(keyboard, keyboard_event_cb, LV_EVENT_READY, nullptr);
+      lv_obj_add_event_cb(keyboard, keyboard_event_cb, LV_EVENT_CANCEL, nullptr);
 
-      // Style keyboard to match brutalist theme
-      lv_obj_set_style_bg_color(keyboard, COL_BG, 0);
+      // Border only on MAIN; key tiles use theme LV_PART_ITEMS (needs theme_init display theme).
       lv_obj_set_style_border_width(keyboard, 2, 0);
       lv_obj_set_style_border_color(keyboard, COL_ACCENT, 0);
       lv_obj_set_style_pad_all(keyboard, 4, 0);
+      lv_obj_set_size(keyboard, SCREEN_W, 220);
+      lv_obj_align(keyboard, LV_ALIGN_BOTTOM_MID, 0, 0);
+      lv_obj_move_foreground(keyboard);
     }
   }
 }
 
-// Restyle all mode buttons to reflect current selection
+// Mode row: each mode can be in the program (mask). Exactly one is RUN (motor uses one at a time).
 static void restyle_mode_buttons() {
   const struct {
     const char* label;
@@ -88,15 +94,33 @@ static void restyle_mode_buttons() {
 
   for (int i = 0; i < 3; i++) {
     if (!modeBtns[i]) continue;
-    bool active = (editPreset.mode == modes[i].mode);
+    uint8_t bit = preset_mode_to_mask(modes[i].mode);
+    bool inProg = (editPreset.mode_mask & bit) != 0;
+    bool isRun = (editPreset.mode == modes[i].mode);
 
-    lv_obj_set_style_bg_color(modeBtns[i], active ? COL_BG_ACTIVE : COL_BTN_BG, 0);
-    lv_obj_set_style_border_width(modeBtns[i], active ? 2 : 1, 0);
-    lv_obj_set_style_border_color(modeBtns[i], active ? COL_ACCENT : COL_BORDER, 0);
+    if (isRun && inProg) {
+      lv_obj_set_style_bg_color(modeBtns[i], COL_BG_ACTIVE, 0);
+      lv_obj_set_style_border_width(modeBtns[i], 2, 0);
+      lv_obj_set_style_border_color(modeBtns[i], COL_ACCENT, 0);
+    } else if (inProg) {
+      lv_obj_set_style_bg_color(modeBtns[i], COL_BTN_BG, 0);
+      lv_obj_set_style_border_width(modeBtns[i], 2, 0);
+      lv_obj_set_style_border_color(modeBtns[i], COL_ACCENT, 0);
+    } else {
+      lv_obj_set_style_bg_color(modeBtns[i], COL_BTN_BG, 0);
+      lv_obj_set_style_border_width(modeBtns[i], 1, 0);
+      lv_obj_set_style_border_color(modeBtns[i], COL_BORDER, 0);
+    }
 
     lv_obj_t* lbl = lv_obj_get_child(modeBtns[i], 0);
     if (lbl) {
-      lv_obj_set_style_text_color(lbl, active ? COL_ACCENT : COL_TEXT, 0);
+      if (!inProg) {
+        lv_obj_set_style_text_color(lbl, COL_TEXT_VDIM, 0);
+      } else if (isRun) {
+        lv_obj_set_style_text_color(lbl, COL_ACCENT, 0);
+      } else {
+        lv_obj_set_style_text_color(lbl, COL_TEXT, 0);
+      }
     }
   }
 }
@@ -105,46 +129,87 @@ static void restyle_mode_buttons() {
 static void update_mode_settings_text() {
   if (!modeSettingsBtn) return;
 
-  const char* modeName = "";
-  char details[64] = "";
+  const char* runName = "CONT";
+  switch (editPreset.mode) {
+    case STATE_RUNNING: runName = "CONT"; break;
+    case STATE_PULSE:   runName = "PULSE"; break;
+    case STATE_STEP:    runName = "STEP"; break;
+    default:            runName = "CONT"; break;
+  }
 
+  char detail[80] = "";
   switch (editPreset.mode) {
     case STATE_RUNNING:
-      modeName = "CONTINUOUS";
-      snprintf(details, sizeof(details), "No additional settings");
+      snprintf(detail, sizeof(detail), "direction & soft start");
       break;
     case STATE_PULSE:
-      modeName = "PULSE";
-      snprintf(details, sizeof(details), "ON: %.1fs . OFF: %.1fs",
+      snprintf(detail, sizeof(detail), "ON %.1fs / OFF %.1fs",
                editPreset.pulse_on_ms / 1000.0f, editPreset.pulse_off_ms / 1000.0f);
       break;
     case STATE_STEP:
-      modeName = "STEP";
-      snprintf(details, sizeof(details), "ANGLE: %.0fdeg", editPreset.step_angle);
+      snprintf(detail, sizeof(detail), "%.0f deg / step", editPreset.step_angle);
       break;
     default:
-      modeName = "CONTINUOUS";
-      snprintf(details, sizeof(details), "No additional settings");
+      snprintf(detail, sizeof(detail), "CONT - direction & soft start");
       break;
+  }
+
+  char tags[8];
+  int tp = 0;
+  if (editPreset.mode_mask & PRESET_MASK_CONT) tags[tp++] = 'C';
+  if (editPreset.mode_mask & PRESET_MASK_PULSE) tags[tp++] = 'P';
+  if (editPreset.mode_mask & PRESET_MASK_STEP) tags[tp++] = 'S';
+  tags[tp] = '\0';
+
+  char buf[128];
+  if (preset_mask_popcount(editPreset.mode_mask) > 1) {
+    snprintf(buf, sizeof(buf), "[%s] RUN:%s - %s", tags, runName, detail);
+  } else {
+    switch (editPreset.mode) {
+      case STATE_RUNNING:
+        snprintf(buf, sizeof(buf), "CONT - %s", detail);
+        break;
+      case STATE_PULSE:
+        snprintf(buf, sizeof(buf), "PULSE - %s", detail);
+        break;
+      case STATE_STEP:
+        snprintf(buf, sizeof(buf), "STEP - %s", detail);
+        break;
+      default:
+        snprintf(buf, sizeof(buf), "%s", detail);
+        break;
+    }
   }
 
   // Main text label is child 0
   lv_obj_t* btnLabel = lv_obj_get_child(modeSettingsBtn, 0);
   if (btnLabel) {
-    char buf[128];
-    snprintf(buf, sizeof(buf), "%s SETTINGS  >  %s", modeName, details);
+    lv_label_set_long_mode(btnLabel, LV_LABEL_LONG_MODE_DOTS);
+    lv_obj_set_width(btnLabel, 736);
     lv_label_set_text(btnLabel, buf);
   }
 }
 
-static void mode_select_cb(lv_event_t* e) {
-  SystemState mode = (SystemState)(size_t)lv_event_get_user_data(e);
-  editPreset.mode = mode;
+static void mode_toggle_cb(lv_event_t* e) {
+  SystemState tapped = (SystemState)(size_t)lv_event_get_user_data(e);
+  uint8_t bit = preset_mode_to_mask(tapped);
 
-  // Restyle all mode toggle buttons
+  if (editPreset.mode_mask & bit) {
+    if (editPreset.mode == tapped) {
+      if (preset_mask_popcount(editPreset.mode_mask) > 1) {
+        editPreset.mode_mask = (uint8_t)(editPreset.mode_mask & ~bit);
+        editPreset.mode = preset_first_in_mask(editPreset.mode_mask);
+      }
+    } else {
+      editPreset.mode = tapped;
+    }
+  } else {
+    editPreset.mode_mask = (uint8_t)(editPreset.mode_mask | bit);
+    editPreset.mode = tapped;
+  }
+
+  preset_clamp_mode_to_mask(&editPreset);
   restyle_mode_buttons();
-
-  // Update mode settings info
   update_mode_settings_text();
 }
 
@@ -160,6 +225,9 @@ static void rpm_minus_cb(lv_event_t* e) {
   if (rpmLabel) {
     lv_label_set_text_fmt(rpmLabel, "%.1f", editPreset.rpm);
   }
+  if (rpmBarObj) {
+    lv_bar_set_value(rpmBarObj, (int32_t)(editPreset.rpm * 1000.0f + 0.5f), LV_ANIM_OFF);
+  }
 }
 
 static void mode_settings_cb(lv_event_t* e) {
@@ -167,6 +235,8 @@ static void mode_settings_cb(lv_event_t* e) {
   if (nameText && nameText[0]) {
     strlcpy(editPreset.name, nameText, sizeof(editPreset.name));
   }
+  // Opening a sub-editor implies this mode block is part of the program.
+  editPreset.mode_mask = (uint8_t)(editPreset.mode_mask | preset_mode_to_mask(editPreset.mode));
   switch (editPreset.mode) {
     case STATE_RUNNING:
       screens_show(SCREEN_EDIT_CONT);
@@ -197,6 +267,7 @@ static void save_preset_cb(lv_event_t* e) {
   }
 
   strlcpy(editPreset.name, nameBuf, sizeof(editPreset.name));
+  preset_clamp_mode_to_mask(&editPreset);
 
   do_cleanup_kb();
 
@@ -234,6 +305,7 @@ static void save_preset_cb(lv_event_t* e) {
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_program_edit_create(int slot) {
   lv_obj_t* screen = screenRoots[SCREEN_PROGRAM_EDIT];
+  rpmBarObj = nullptr;
   lv_obj_clean(screen);
 
   for (int j = 0; j < 4; j++) {
@@ -249,22 +321,34 @@ void screen_program_edit_create(int slot) {
   xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
   if (slot >= 0 && slot < (int)g_presets.size()) {
     editPreset = g_presets[slot];
+    preset_clamp_mode_to_mask(&editPreset);
   } else {
-    // New preset - initialize with current values
+    // New preset — start from current machine state (direction, mode, RPM) so it feels consistent.
     editPreset.id = 0;
     snprintf(editPreset.name, sizeof(editPreset.name), "New Program");
-    editPreset.mode = STATE_RUNNING;
+    {
+      SystemState cs = control_get_state();
+      if (cs == STATE_PULSE) {
+        editPreset.mode = STATE_PULSE;
+      } else if (cs == STATE_STEP) {
+        editPreset.mode = STATE_STEP;
+      } else {
+        editPreset.mode = STATE_RUNNING;
+      }
+    }
     editPreset.rpm = speed_get_target_rpm();
     editPreset.pulse_on_ms = 500;
     editPreset.pulse_off_ms = 500;
     editPreset.step_angle = 90.0f;
     editPreset.timer_ms = 30000;
-    editPreset.direction = 0;        // CW
+    editPreset.direction = (uint8_t)speed_get_direction();
     editPreset.pulse_cycles = 0;     // infinite
     editPreset.step_repeats = 1;
     editPreset.step_dwell_sec = 0.0f;
     editPreset.timer_auto_stop = 1;  // auto stop
     editPreset.cont_soft_start = 0;
+    editPreset.mode_mask = PRESET_MASK_ALL;
+    preset_clamp_mode_to_mask(&editPreset);
   }
   xSemaphoreGive(g_presets_mutex);
 
@@ -326,12 +410,14 @@ void screen_program_edit_create(int slot) {
 
   // ── MODE label (SVG: y=118, "MODE" in #4A4A4A) ──
   lv_obj_t* modeLabel = lv_label_create(screen);
-  lv_label_set_text(modeLabel, "MODE");
+  lv_label_set_text(modeLabel, "MODE - tap to add/remove | thick border = RUN");
   lv_obj_set_style_text_font(modeLabel, FONT_TINY, 0);
   lv_obj_set_style_text_color(modeLabel, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(modeLabel, 20, 118);
+  lv_obj_set_pos(modeLabel, 20, 112);
+  lv_obj_set_width(modeLabel, 760);
+  lv_label_set_long_mode(modeLabel, LV_LABEL_LONG_MODE_WRAP);
 
-  // ── MODE selector (y=136): CONT | PULSE | STEP (3 modes; do not loop 4x -- modes[] has 3 entries)
+  // ── MODE selector (y=136): CONT | PULSE | STEP (multi-mask + single RUN)
   const struct ModeBtn {
     const char* label;
     SystemState mode;
@@ -342,7 +428,7 @@ void screen_program_edit_create(int slot) {
   };
   const int modeCount = (int)(sizeof(modes) / sizeof(modes[0]));
 
-  const int modeY = 136;
+  const int modeY = 142;
   const int modeBtnH = 38;
   const int modeGap = 6;
   const int modeStartX = 20;
@@ -356,7 +442,7 @@ void screen_program_edit_create(int slot) {
     lv_obj_set_style_radius(btn, RADIUS_BTN, 0);
     lv_obj_set_style_shadow_width(btn, 0, 0);
     lv_obj_set_style_pad_all(btn, 0, 0);
-    lv_obj_add_event_cb(btn, mode_select_cb, LV_EVENT_CLICKED, (void*)(size_t)modes[i].mode);
+    lv_obj_add_event_cb(btn, mode_toggle_cb, LV_EVENT_CLICKED, (void*)(size_t)modes[i].mode);
 
     modeBtns[i] = btn;
 
@@ -374,7 +460,7 @@ void screen_program_edit_create(int slot) {
   lv_label_set_text(rpmSectionLabel, "RPM");
   lv_obj_set_style_text_font(rpmSectionLabel, FONT_TINY, 0);
   lv_obj_set_style_text_color(rpmSectionLabel, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(rpmSectionLabel, 20, 186);
+  lv_obj_set_pos(rpmSectionLabel, 20, 192);
 
   // ── RPM row (SVG: y=204, large value + progress bar + -/+ buttons) ──
   // RPM value display (SVG: large "2.0" in #FF9500 bold)
@@ -382,44 +468,49 @@ void screen_program_edit_create(int slot) {
   lv_label_set_text_fmt(rpmLabel, "%.1f", editPreset.rpm);
   lv_obj_set_style_text_font(rpmLabel, FONT_HUGE, 0);
   lv_obj_set_style_text_color(rpmLabel, COL_ACCENT, 0);
-  lv_obj_set_pos(rpmLabel, 20, 204);
+  lv_obj_set_pos(rpmLabel, 20, 210);
 
   // RPM progress bar (SVG: 20,252,760,3, track #111, fill #FF9500)
-  lv_obj_t* rpmBar = lv_bar_create(screen);
-  lv_obj_set_size(rpmBar, 560, 3);
-  lv_obj_set_pos(rpmBar, 20, 252);
-  lv_obj_set_style_bg_color(rpmBar, COL_GAUGE_BG, 0);
-  lv_obj_set_style_border_width(rpmBar, 0, 0);
-  lv_obj_set_style_radius(rpmBar, 1, 0);
+  rpmBarObj = lv_bar_create(screen);
+  lv_obj_set_size(rpmBarObj, 560, 3);
+  lv_obj_set_pos(rpmBarObj, 20, 258);
+  lv_obj_set_style_bg_color(rpmBarObj, COL_GAUGE_BG, 0);
+  lv_obj_set_style_border_width(rpmBarObj, 0, 0);
+  lv_obj_set_style_radius(rpmBarObj, 1, 0);
   {
     float mx = speed_get_rpm_max();
-    lv_bar_set_range(rpmBar, (int32_t)(MIN_RPM * 1000.0f + 0.5f), (int32_t)(mx * 1000.0f + 0.5f));
+    lv_bar_set_range(rpmBarObj, (int32_t)(MIN_RPM * 1000.0f + 0.5f), (int32_t)(mx * 1000.0f + 0.5f));
   }
-  lv_bar_set_value(rpmBar, (int32_t)(editPreset.rpm * 1000.0f + 0.5f), LV_ANIM_OFF);
+  lv_bar_set_value(rpmBarObj, (int32_t)(editPreset.rpm * 1000.0f + 0.5f), LV_ANIM_OFF);
 
   // Scale marks on progress bar (derived from MIN_RPM / speed_get_rpm_max())
   char t0[12], t1[12], t2[12], t3[12];
-  snprintf(t0, sizeof(t0), "%.3f", (double)MIN_RPM);
+  snprintf(t0, sizeof(t0), "%.2f", (double)MIN_RPM);
   {
     float mx = speed_get_rpm_max();
-    snprintf(t1, sizeof(t1), "%.3f", (double)(MIN_RPM + (mx - MIN_RPM) * 0.33f));
-    snprintf(t2, sizeof(t2), "%.3f", (double)(MIN_RPM + (mx - MIN_RPM) * 0.66f));
-    snprintf(t3, sizeof(t3), "%.3f", (double)mx);
+    snprintf(t1, sizeof(t1), "%.2f", (double)(MIN_RPM + (mx - MIN_RPM) * 0.33f));
+    snprintf(t2, sizeof(t2), "%.2f", (double)(MIN_RPM + (mx - MIN_RPM) * 0.66f));
+    snprintf(t3, sizeof(t3), "%.2f", (double)mx);
   }
   const char* rpmTicks[] = {t0, t1, t2, t3};
-  const int tickX[] = {20, 200, 400, 560};
+  // Narrow columns so tick text does not run under the +/- buttons (x >= 620).
+  const int tickW = 84;
+  const int tickX[] = {20, 188, 356, 524};
   for (int i = 0; i < 4; i++) {
     lv_obj_t* tick = lv_label_create(screen);
     lv_label_set_text(tick, rpmTicks[i]);
     lv_obj_set_style_text_font(tick, FONT_TINY, 0);
     lv_obj_set_style_text_color(tick, COL_TEXT_VDIM, 0);
-    lv_obj_set_pos(tick, tickX[i], 256);
+    lv_obj_set_pos(tick, tickX[i], 262);
+    lv_label_set_long_mode(tick, LV_LABEL_LONG_MODE_CLIP);
+    lv_obj_set_size(tick, tickW, 16);
+    lv_obj_set_style_text_align(tick, (i == 3) ? LV_TEXT_ALIGN_RIGHT : LV_TEXT_ALIGN_LEFT, 0);
   }
 
   // RPM -/+ buttons (SVG: right side of RPM section)
   lv_obj_t* rpmMinusBtn = lv_button_create(screen);
   lv_obj_set_size(rpmMinusBtn, 80, 42);
-  lv_obj_set_pos(rpmMinusBtn, 620, 204);
+  lv_obj_set_pos(rpmMinusBtn, 620, 210);
   lv_obj_set_style_bg_color(rpmMinusBtn, COL_BTN_BG, 0);
   lv_obj_set_style_radius(rpmMinusBtn, RADIUS_BTN, 0);
   lv_obj_set_style_border_width(rpmMinusBtn, 1, 0);
@@ -436,7 +527,7 @@ void screen_program_edit_create(int slot) {
 
   lv_obj_t* rpmPlusBtn = lv_button_create(screen);
   lv_obj_set_size(rpmPlusBtn, 80, 42);
-  lv_obj_set_pos(rpmPlusBtn, 704, 204);
+  lv_obj_set_pos(rpmPlusBtn, 704, 210);
   lv_obj_set_style_bg_color(rpmPlusBtn, COL_BTN_BG, 0);
   lv_obj_set_style_radius(rpmPlusBtn, RADIUS_BTN, 0);
   lv_obj_set_style_border_width(rpmPlusBtn, 1, 0);
@@ -454,7 +545,7 @@ void screen_program_edit_create(int slot) {
   // ── Separator at y=270 ──
   lv_obj_t* line2 = lv_obj_create(screen);
   lv_obj_set_size(line2, SCREEN_W, 1);
-  lv_obj_set_pos(line2, 0, 270);
+  lv_obj_set_pos(line2, 0, 276);
   lv_obj_set_style_bg_color(line2, COL_SEPARATOR, 0);
   lv_obj_set_style_pad_all(line2, 0, 0);
   lv_obj_set_style_border_width(line2, 0, 0);
@@ -464,7 +555,7 @@ void screen_program_edit_create(int slot) {
   // ── Mode-specific settings link button (SVG: y=280, 760x52) ──
   modeSettingsBtn = lv_button_create(screen);
   lv_obj_set_size(modeSettingsBtn, 760, 52);
-  lv_obj_set_pos(modeSettingsBtn, 20, 280);
+  lv_obj_set_pos(modeSettingsBtn, 20, 286);
   lv_obj_set_style_bg_color(modeSettingsBtn, COL_BTN_BG, 0);
   lv_obj_set_style_radius(modeSettingsBtn, RADIUS_BTN, 0);
   lv_obj_set_style_border_width(modeSettingsBtn, 1, 0);
@@ -476,7 +567,9 @@ void screen_program_edit_create(int slot) {
   lv_obj_t* settingsLabel = lv_label_create(modeSettingsBtn);
   lv_obj_set_style_text_font(settingsLabel, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(settingsLabel, COL_TEXT, 0);
-  lv_obj_set_pos(settingsLabel, 16, 16);
+  lv_obj_set_pos(settingsLabel, 12, 8);
+  lv_label_set_long_mode(settingsLabel, LV_LABEL_LONG_MODE_DOTS);
+  lv_obj_set_size(settingsLabel, 736, 36);
 
   // Set initial text
   update_mode_settings_text();
@@ -484,7 +577,7 @@ void screen_program_edit_create(int slot) {
   // ── Separator at y=342 ──
   lv_obj_t* line3 = lv_obj_create(screen);
   lv_obj_set_size(line3, SCREEN_W, 1);
-  lv_obj_set_pos(line3, 0, 342);
+  lv_obj_set_pos(line3, 0, 348);
   lv_obj_set_style_bg_color(line3, COL_SEPARATOR, 0);
   lv_obj_set_style_pad_all(line3, 0, 0);
   lv_obj_set_style_border_width(line3, 0, 0);
@@ -533,10 +626,19 @@ void screen_program_edit_create(int slot) {
 // ───────────────────────────────────────────────────────────────────────────────
 // UPDATE UI with current preset values
 // ───────────────────────────────────────────────────────────────────────────────
+void screen_program_edit_poll_keyboard() {
+  if (kbClosePending) {
+    do_cleanup_kb();
+  }
+}
+
 void screen_program_edit_update_ui() {
     // Update RPM label
     if (rpmLabel) {
         lv_label_set_text_fmt(rpmLabel, "%.1f", editPreset.rpm);
+    }
+    if (rpmBarObj) {
+        lv_bar_set_value(rpmBarObj, (int32_t)(editPreset.rpm * 1000.0f + 0.5f), LV_ANIM_OFF);
     }
 
     // Update mode settings text
@@ -556,7 +658,9 @@ Preset* screen_program_edit_get_preset() {
 void screen_program_edit_invalidate_widgets() {
   nameInput = nullptr;
   rpmLabel = nullptr;
+  rpmBarObj = nullptr;
   modeSettingsBtn = nullptr;
   keyboard = nullptr;
+  kbClosePending = false;
   for (int i = 0; i < 4; i++) modeBtns[i] = nullptr;
 }

@@ -171,12 +171,32 @@ bool motor_is_running() {
   return running;
 }
 
-uint32_t motor_get_current_hz() {
+float motor_get_step_frequency_hz() {
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
-  if (stepper == nullptr) { xSemaphoreGive(g_stepperMutex); return 0; }
+  if (stepper == nullptr) {
+    xSemaphoreGive(g_stepperMutex);
+    return 0.0f;
+  }
   int32_t mhZ = stepper->getCurrentSpeedInMilliHz();
   xSemaphoreGive(g_stepperMutex);
-  return (mhZ >= 0) ? (uint32_t)mhZ / 1000 : (uint32_t)(-mhZ) / 1000;
+  return fabsf((float)mhZ) / 1000.0f;
+}
+
+uint32_t motor_get_current_hz() {
+  float hz = motor_get_step_frequency_hz();
+  if (hz < 0.001f) return 0u;
+  return (uint32_t)(hz + 0.5f);
+}
+
+void motor_apply_speed_for_rpm_locked(float rpm_workpiece_command) {
+  if (stepper == nullptr) return;
+  float hz = rpmToStepHzCalibrated(rpm_workpiece_command);
+  uint32_t mhz = (uint32_t)(hz * 1000.0f);
+  if (mhz < (uint32_t)START_SPEED * 1000u) {
+    mhz = (uint32_t)START_SPEED * 1000u;
+  }
+  stepper->setSpeedInMilliHz(mhz);
+  stepper->applySpeedAcceleration();
 }
 
 void motor_apply_settings() {

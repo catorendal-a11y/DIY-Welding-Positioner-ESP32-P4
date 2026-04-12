@@ -210,7 +210,7 @@ void screen_motor_config_create() {
   lv_obj_set_style_text_color(microTitleLbl, COL_TEXT_DIM, 0);
   lv_obj_set_pos(microTitleLbl, 0, 0);
   lv_obj_set_width(microTitleLbl, 118);
-  lv_label_set_long_mode(microTitleLbl, LV_LABEL_LONG_CLIP);
+  lv_label_set_long_mode(microTitleLbl, LV_LABEL_LONG_MODE_CLIP);
   lv_obj_align(microTitleLbl, LV_ALIGN_LEFT_MID, 0, 0);
 
   MicrostepSetting currentMicro = microstep_get();
@@ -368,7 +368,7 @@ void screen_motor_config_create() {
   lv_obj_set_style_text_color(rpmRangeVal, COL_TEXT, 0);
   lv_obj_set_pos(rpmRangeVal, 268, 8);
   lv_obj_set_width(rpmRangeVal, CONTENT_W - 276);
-  lv_label_set_long_mode(rpmRangeVal, LV_LABEL_LONG_CLIP);
+  lv_label_set_long_mode(rpmRangeVal, LV_LABEL_LONG_MODE_CLIP);
 
   if (maxRpmSlider) motor_config_max_rpm_sync_ui(lv_slider_get_value(maxRpmSlider));
 

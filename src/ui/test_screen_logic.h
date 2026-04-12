@@ -3,8 +3,10 @@
 
 #pragma once
 #include <cmath>
+#include <cctype>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -88,6 +90,84 @@ inline int countdown_clamp_seconds(int sec) {
 
 inline bool step_angle_valid(float degrees) {
   return degrees > 0.0f && degrees <= 3600.0f;
+}
+
+// CUSTOM input: "300mm", "dia 300 mm", "OD300" -> diameter (mm); plain "90" / "90,5" -> degrees
+inline bool step_string_has_mm_ci(const char* s) {
+  if (!s) return false;
+  for (; *s; ++s) {
+    if (!s[1]) break;
+    if ((s[0] == 'm' || s[0] == 'M') && (s[1] == 'm' || s[1] == 'M')) return true;
+  }
+  return false;
+}
+
+inline bool step_string_has_utf8_diameter_letter(const char* s) {
+  if (!s) return false;
+  for (; *s; ++s) {
+    if ((unsigned char)s[0] == 0xC3 && s[1]) {
+      unsigned char b = (unsigned char)s[1];
+      if (b == 0xB8 || b == 0x98) return true;  // ø U+00F8, Ø U+00D8
+    }
+  }
+  return false;
+}
+
+inline bool step_input_looks_like_diameter_mm(const char* s) {
+  return step_string_has_mm_ci(s) || step_string_has_utf8_diameter_letter(s);
+}
+
+inline const char* step_skip_to_number(const char* s) {
+  if (!s) return nullptr;
+  while (*s) {
+    unsigned char c = (unsigned char)*s;
+    if (isdigit(c)) return s;
+    if ((c == '+' || c == '-') && isdigit((unsigned char)s[1])) return s;
+    if ((c == '.' || c == ',') && isdigit((unsigned char)s[1])) return s;
+    ++s;
+  }
+  return nullptr;
+}
+
+inline float step_parse_first_float(const char* s) {
+  const char* p = step_skip_to_number(s);
+  if (!p) return 0.0f;
+  char tmp[48];
+  size_t j = 0;
+  if (*p == '+' || *p == '-') {
+    if (j < sizeof(tmp) - 1) tmp[j++] = *p++;
+  }
+  bool has_dot = false;
+  while (*p && j < sizeof(tmp) - 1) {
+    unsigned char c = (unsigned char)*p;
+    if (isdigit(c)) {
+      tmp[j++] = (char)c;
+      ++p;
+      continue;
+    }
+    if ((c == '.' || c == ',') && !has_dot) {
+      tmp[j++] = '.';
+      has_dot = true;
+      ++p;
+      continue;
+    }
+    break;
+  }
+  if (j == 0) return 0.0f;
+  tmp[j] = '\0';
+  return strtof(tmp, nullptr);
+}
+
+// Arc length along workpiece circumference per STEP (default 1 mm)
+inline float step_angle_degrees_from_diameter_mm(float D_mm, float arc_mm_per_step) {
+  if (D_mm < 1.0f) D_mm = 1.0f;
+  if (arc_mm_per_step <= 0.0f) arc_mm_per_step = 1.0f;
+  const float kPi = 3.14159265f;
+  const float circum = kPi * D_mm;
+  float deg = (arc_mm_per_step / circum) * 360.0f;
+  if (deg < 0.01f) deg = 0.01f;
+  if (deg > 3600.0f) deg = 3600.0f;
+  return deg;
 }
 
 inline float step_compute_total_angle(float angle, int repeats) {

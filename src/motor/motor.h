@@ -28,7 +28,10 @@ void motor_disable();     // Disable motor (ENA HIGH) after stopped
 
 // Status queries
 bool motor_is_running();
-uint32_t motor_get_current_hz();  // Current step frequency
+uint32_t motor_get_current_hz();       // Step frequency rounded to whole Hz (legacy / ESTOP display)
+float motor_get_step_frequency_hz();  // Step frequency in Hz (sub-Hz preserved for RPM gauge)
+// Caller must hold g_stepperMutex. Uses MilliHz + floor so low workpiece RPM is never truncated to 0 Hz.
+void motor_apply_speed_for_rpm_locked(float rpm_workpiece_command);
 FastAccelStepper* motor_get_stepper();  // Get stepper instance (caller must hold g_stepperMutex)
 void motor_apply_settings();  // Apply acceleration from g_settings
 

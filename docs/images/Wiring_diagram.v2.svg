@@ -162,60 +162,76 @@
   <text x="560" y="290" font-family="sans-serif" font-size="15" fill="#26C6DA" font-weight="bold">DIR SW →</text>
 
   <!-- ═══════════════════════════════════════
-       Driver
+       Driver (compact DM542T-style; terminal X unchanged)
        ═══════════════════════════════════════ -->
   <g transform="translate(540, 84)">
-    <rect width="400" height="280" rx="10" fill="#140F06" stroke="#6B3A2A" stroke-width="3"/>
-    <text x="200" y="80" font-family="sans-serif" font-size="22" fill="#FF9100" text-anchor="middle" font-weight="bold">Driver</text>
-    <text x="200" y="108" font-family="sans-serif" font-size="17" fill="#BB8855" text-anchor="middle">Stepper Motor Driver</text>
-    <text x="200" y="150" font-family="sans-serif" font-size="14" fill="#AA7744" text-anchor="middle">1/8 microstep · 3.0A peak</text>
-    <g transform="translate(128, 170)">
-      <rect x="0" y="0" width="12" height="20" rx="2" fill="#0A0500" stroke="#555" stroke-width="1"/>
-      <rect x="2" y="2" width="8" height="8" rx="1" fill="#332211"/>
-      <rect x="20" y="0" width="12" height="20" rx="2" fill="#0A0500" stroke="#555" stroke-width="1"/>
-      <rect x="22" y="2" width="8" height="8" rx="1" fill="#FF9100"/>
-      <rect x="40" y="0" width="12" height="20" rx="2" fill="#0A0500" stroke="#555" stroke-width="1"/>
-      <rect x="42" y="2" width="8" height="8" rx="1" fill="#332211"/>
-      <rect x="60" y="0" width="12" height="20" rx="2" fill="#0A0500" stroke="#555" stroke-width="1"/>
-      <rect x="62" y="2" width="8" height="8" rx="1" fill="#332211"/>
-      <rect x="80" y="0" width="12" height="20" rx="2" fill="#0A0500" stroke="#555" stroke-width="1"/>
-      <rect x="82" y="2" width="8" height="8" rx="1" fill="#FF9100"/>
-      <rect x="100" y="0" width="12" height="20" rx="2" fill="#0A0500" stroke="#555" stroke-width="1"/>
-      <rect x="102" y="2" width="8" height="8" rx="1" fill="#332211"/>
-      <text x="6" y="30" font-family="monospace" font-size="8" fill="#996633" text-anchor="middle">1</text>
-      <text x="26" y="30" font-family="monospace" font-size="8" fill="#996633" text-anchor="middle">2</text>
-      <text x="46" y="30" font-family="monospace" font-size="8" fill="#996633" text-anchor="middle">3</text>
-      <text x="66" y="30" font-family="monospace" font-size="8" fill="#996633" text-anchor="middle">4</text>
-      <text x="86" y="30" font-family="monospace" font-size="8" fill="#996633" text-anchor="middle">5</text>
-      <text x="106" y="30" font-family="monospace" font-size="8" fill="#996633" text-anchor="middle">6</text>
-      <text x="6" y="-3" font-family="monospace" font-size="7" fill="#886644" text-anchor="middle">OFF</text>
-      <text x="26" y="-3" font-family="monospace" font-size="7" fill="#FF9100" text-anchor="middle">ON</text>
-      <text x="46" y="-3" font-family="monospace" font-size="7" fill="#886644" text-anchor="middle">OFF</text>
-      <text x="66" y="-3" font-family="monospace" font-size="7" fill="#886644" text-anchor="middle">OFF</text>
-      <text x="86" y="-3" font-family="monospace" font-size="7" fill="#FF9100" text-anchor="middle">ON</text>
-      <text x="106" y="-3" font-family="monospace" font-size="7" fill="#886644" text-anchor="middle">OFF</text>
+    <!-- mounting rail -->
+    <rect x="-14" y="268" width="428" height="12" rx="1" fill="#9aa3a8" stroke="#6b7378" stroke-width="1"/>
+    <rect x="-14" y="268" width="28" height="12" fill="#b8c0c4" stroke="#7a8288" stroke-width="0.5"/>
+    <rect x="386" y="268" width="28" height="12" fill="#b8c0c4" stroke="#7a8288" stroke-width="0.5"/>
+    <!-- housing -->
+    <rect width="400" height="268" rx="2" fill="#0c0c0c" stroke="#4a4a4a" stroke-width="1.5"/>
+    <rect x="2" y="2" width="396" height="14" fill="#080808" stroke="none"/>
+    <text x="200" y="44" font-family="Arial,sans-serif" font-size="14" fill="#aaa" text-anchor="middle" font-weight="bold">Stepper driver</text>
+    <text x="200" y="66" font-family="Arial,sans-serif" font-size="12" fill="#ccc" text-anchor="middle" font-weight="bold">DM542T</text>
+
+    <!-- 8 DIP switches SW1-SW8 (18x28, pitch 30, row width 228px, centered in 400) -->
+    <g transform="translate(86,78)">
+      <g font-family="monospace" font-size="10" fill="#887766">
+        <text x="9" y="44" text-anchor="middle">SW1</text>
+        <text x="39" y="44" text-anchor="middle">SW2</text>
+        <text x="69" y="44" text-anchor="middle">SW3</text>
+        <text x="99" y="44" text-anchor="middle">SW4</text>
+        <text x="129" y="44" text-anchor="middle">SW5</text>
+        <text x="159" y="44" text-anchor="middle">SW6</text>
+        <text x="189" y="44" text-anchor="middle">SW7</text>
+        <text x="219" y="44" text-anchor="middle">SW8</text>
+      </g>
+      <g transform="translate(0,6)">
+        <rect x="0" y="0" width="18" height="28" rx="1" fill="#0a0a0a" stroke="#666" stroke-width="1.2"/>
+        <rect x="3" y="3" width="12" height="10" rx="1" fill="#2a2210"/>
+        <rect x="30" y="0" width="18" height="28" rx="1" fill="#0a0a0a" stroke="#666" stroke-width="1.2"/>
+        <rect x="33" y="15" width="12" height="10" rx="1" fill="#cc7700"/>
+        <rect x="60" y="0" width="18" height="28" rx="1" fill="#0a0a0a" stroke="#666" stroke-width="1.2"/>
+        <rect x="63" y="3" width="12" height="10" rx="1" fill="#2a2210"/>
+        <rect x="90" y="0" width="18" height="28" rx="1" fill="#0a0a0a" stroke="#666" stroke-width="1.2"/>
+        <rect x="93" y="15" width="12" height="10" rx="1" fill="#cc7700"/>
+        <rect x="120" y="0" width="18" height="28" rx="1" fill="#0a0a0a" stroke="#666" stroke-width="1.2"/>
+        <rect x="123" y="3" width="12" height="10" rx="1" fill="#2a2210"/>
+        <rect x="150" y="0" width="18" height="28" rx="1" fill="#0a0a0a" stroke="#666" stroke-width="1.2"/>
+        <rect x="153" y="15" width="12" height="10" rx="1" fill="#cc7700"/>
+        <rect x="180" y="0" width="18" height="28" rx="1" fill="#0a0a0a" stroke="#666" stroke-width="1.2"/>
+        <rect x="183" y="3" width="12" height="10" rx="1" fill="#2a2210"/>
+        <rect x="210" y="0" width="18" height="28" rx="1" fill="#0a0a0a" stroke="#666" stroke-width="1.2"/>
+        <rect x="213" y="15" width="12" height="10" rx="1" fill="#cc7700"/>
+      </g>
     </g>
 
-    <text x="97"  y="230" font-family="sans-serif" font-size="11" fill="#AA7744" text-anchor="middle" letter-spacing="1">POWER + MOTOR</text>
-    <text x="304" y="230" font-family="sans-serif" font-size="11" fill="#AA7744" text-anchor="middle" letter-spacing="1">SIGNAL</text>
+    <!-- PWR / ALM LEDs (centered inside card) -->
+    <g transform="translate(148, 158)">
+      <text x="0" y="1" font-family="Arial,sans-serif" font-size="10" fill="#aaa">PWR</text>
+      <rect x="32" y="-11" width="14" height="9" rx="1" fill="#1b5e20" stroke="#2e7d32"/>
+      <text x="52" y="1" font-family="Arial,sans-serif" font-size="10" fill="#aaa">ALM</text>
+      <rect x="84" y="-11" width="14" height="9" rx="1" fill="#1a1a1a" stroke="#444"/>
+    </g>
 
-    <!-- LEFT screw terminals -->
-    <rect x="8" y="248" width="186" height="34" rx="4" fill="#0A0500" stroke="#555" stroke-width="1"/>
-    <circle cx="28"  cy="265" r="9" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="28"  cy="265" r="2" fill="#888"/>
-    <circle cx="60"  cy="265" r="9" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="60"  cy="265" r="2" fill="#888"/>
-    <circle cx="92"  cy="265" r="9" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="92"  cy="265" r="2" fill="#888"/>
-    <circle cx="124" cy="265" r="9" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="124" cy="265" r="2" fill="#888"/>
-    <circle cx="156" cy="265" r="9" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="156" cy="265" r="2" fill="#888"/>
-    <circle cx="188" cy="265" r="9" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="188" cy="265" r="2" fill="#888"/>
+    <!-- LEFT screw terminals — cy=265 matches wire landings at y=349 -->
+    <rect x="8" y="244" width="186" height="38" rx="4" fill="#0A0500" stroke="#555" stroke-width="1.2"/>
+    <circle cx="28"  cy="265" r="10" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="28"  cy="265" r="2.5" fill="#888"/>
+    <circle cx="60"  cy="265" r="10" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="60"  cy="265" r="2.5" fill="#888"/>
+    <circle cx="92"  cy="265" r="10" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="92"  cy="265" r="2.5" fill="#888"/>
+    <circle cx="124" cy="265" r="10" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="124" cy="265" r="2.5" fill="#888"/>
+    <circle cx="156" cy="265" r="10" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="156" cy="265" r="2.5" fill="#888"/>
+    <circle cx="188" cy="265" r="10" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="188" cy="265" r="2.5" fill="#888"/>
 
     <!-- RIGHT screw terminals -->
-    <rect x="206" y="248" width="186" height="34" rx="4" fill="#0A0500" stroke="#555" stroke-width="1"/>
-    <circle cx="224" cy="265" r="9" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="224" cy="265" r="2" fill="#888"/>
-    <circle cx="256" cy="265" r="9" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="256" cy="265" r="2" fill="#888"/>
-    <circle cx="288" cy="265" r="9" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="288" cy="265" r="2" fill="#888"/>
-    <circle cx="320" cy="265" r="9" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="320" cy="265" r="2" fill="#888"/>
-    <circle cx="352" cy="265" r="9" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="352" cy="265" r="2" fill="#888"/>
-    <circle cx="384" cy="265" r="9" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="384" cy="265" r="2" fill="#888"/>
+    <rect x="206" y="244" width="186" height="38" rx="4" fill="#0A0500" stroke="#555" stroke-width="1.2"/>
+    <circle cx="224" cy="265" r="10" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="224" cy="265" r="2.5" fill="#888"/>
+    <circle cx="256" cy="265" r="10" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="256" cy="265" r="2.5" fill="#888"/>
+    <circle cx="288" cy="265" r="10" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="288" cy="265" r="2.5" fill="#888"/>
+    <circle cx="320" cy="265" r="10" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="320" cy="265" r="2.5" fill="#888"/>
+    <circle cx="352" cy="265" r="10" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="352" cy="265" r="2.5" fill="#888"/>
+    <circle cx="384" cy="265" r="10" fill="#0D0800" stroke="#777" stroke-width="1.5"/><circle cx="384" cy="265" r="2.5" fill="#888"/>
   </g>
 
   <!-- Driver pin labels -->
@@ -240,9 +256,9 @@
   <line x1="860" y1="364" x2="860" y2="374" stroke="#555" stroke-width="1"/>
   <text x="860" y="386" font-family="monospace" font-size="10" fill="#666" text-anchor="middle">DIR−</text>
   <line x1="892" y1="364" x2="892" y2="374" stroke="#00E5FF" stroke-width="1.5"/>
-  <text x="892" y="386" font-family="monospace" font-size="10" fill="#00E5FF" text-anchor="middle" font-weight="bold">EN+</text>
+  <text x="892" y="386" font-family="monospace" font-size="10" fill="#00E5FF" text-anchor="middle" font-weight="bold">ENA+</text>
   <line x1="924" y1="364" x2="924" y2="374" stroke="#555" stroke-width="1"/>
-  <text x="924" y="386" font-family="monospace" font-size="10" fill="#666" text-anchor="middle">EN−</text>
+  <text x="924" y="386" font-family="monospace" font-size="10" fill="#666" text-anchor="middle">ENA-</text>
 
   <!-- ═══════════════════════════════════════
        NEMA 23
@@ -567,7 +583,7 @@
     <text x="210" y="24" font-family="sans-serif" font-size="16" fill="#55AA77" text-anchor="middle" font-weight="bold" letter-spacing="1">PIN REFERENCE</text>
     <text x="18" y="50"  font-family="monospace" font-size="14" fill="#CCEE66">GPIO50</text><text x="106" y="50"  font-family="monospace" font-size="14" fill="#CCC">→  Driver  PUL+  (STEP)</text>
     <text x="18" y="72"  font-family="monospace" font-size="14" fill="#CCEE66">GPIO51</text><text x="106" y="72"  font-family="monospace" font-size="14" fill="#CCC">→  Driver  DIR+</text>
-    <text x="18" y="94"  font-family="monospace" font-size="14" fill="#CCEE66">GPIO52</text><text x="106" y="94"  font-family="monospace" font-size="14" fill="#CCC">→  Driver  EN+  (ENA)</text>
+    <text x="18" y="94"  font-family="monospace" font-size="14" fill="#CCEE66">GPIO52</text><text x="106" y="94"  font-family="monospace" font-size="14" fill="#CCC">→  Driver  ENA+</text>
     <text x="18" y="116" font-family="monospace" font-size="14" fill="#DD99FF">GPIO49</text><text x="106" y="116" font-family="monospace" font-size="14" fill="#CCC">→  Potentiometer (ADC)</text>
     <text x="18" y="138" font-family="monospace" font-size="14" fill="#FF6666">GPIO34</text><text x="106" y="138" font-family="monospace" font-size="14" fill="#CCC">→  E-STOP  NC contact</text>
     <text x="18" y="160" font-family="monospace" font-size="14" fill="#DD99FF">GPIO33</text><text x="106" y="160" font-family="monospace" font-size="14" fill="#CCC">→  Foot Pedal SW (active LOW)</text>

@@ -13,7 +13,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.0.4] - 2026-04-12
 
 ### Added
-- **`githooks/commit-msg`** + **`.gitattributes`** — optional hook strips `Made-with:` footer lines from commit messages; run `git config core.hooksPath githooks` once per clone (see `CONTRIBUTING.md`).
 - **Theme layout for main gauge** — `MAIN_GAUGE_*`, `MAIN_RPM_TAG_Y`, `MAIN_RPM_VALUE_GAP` / `MAIN_RPM_VALUE_LIFT` / `MAIN_RPM_VALUE_ZOOM` in `theme.h` (no magic numbers in `screen_main.cpp` for gauge geometry).
 - **Jog RPM row constants** — `JOG_RPM_*` in `theme.h` for title/value/bar and right-aligned +/- buttons with explicit gap.
 
@@ -34,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`rpm_buttons_enabled`** — removed from `SystemSettings`, NVS JSON save/load, and native storage roundtrip test; legacy key in an old NVS blob is ignored on deserialize.
 
 ### Documentation
-- **README**, **wiki** (Home, Roadmap, Architecture, Getting-Started, Troubleshooting), **docs/INSTRUCTABLES.md**, **CONTRIBUTING.md**, **AGENTS.md**, and **CLAUDE.md** updated so operator and contributor text matches v2.0.4 behaviour (main = pot RPM; jog = +/- for jog speed; hooks, mutexes, theme constants).
+- **README**, **wiki** (Home, Roadmap, Architecture, Getting-Started, Troubleshooting), **docs/INSTRUCTABLES.md**, **CONTRIBUTING.md**, **AGENTS.md**, and **CLAUDE.md** updated so operator and contributor text matches v2.0.4 behaviour (main = pot RPM; jog = +/- for jog speed; mutexes, theme constants).
 
 > **Note:** Older sections of this file (e.g. **[0.4.0]** “touchscreen +/- while motor is running”) describe behaviour **before** v2.0.4; the main screen no longer provides those buttons.
 

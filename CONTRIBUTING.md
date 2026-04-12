@@ -36,16 +36,6 @@ PYTHONUTF8=1 PYTHONIOENCODING=utf-8 "C:\Users\Rendalsniken\.platformio\penv\Scri
 6. **Push** your branch to your fork
 7. **Submit a Pull Request** to the original repository
 
-### Git hooks (optional)
-
-This repository includes **`githooks/commit-msg`**, which removes trailing `Made-with:` footer lines from commit messages (so they never enter `git log`). After cloning, enable it once:
-
-```bash
-git config core.hooksPath githooks
-```
-
-`.gitattributes` forces LF line endings for that script so it stays usable on Linux/macOS checkouts.
-
 ## Architecture Overview
 
 ```

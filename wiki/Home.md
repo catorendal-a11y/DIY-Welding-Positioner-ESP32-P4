@@ -4,7 +4,7 @@
 
 ## Current Status: v2.0.4 — Firmware + docs aligned with `config.h`
 
-Release **v2.0.4** updates the main RPM UI (pot-only gauge), jog RPM row, SMP-related mutex/atomics, and developer git hooks. See `CHANGELOG.md` for the full list.
+Release **v2.0.4** updates the main RPM UI (pot-only gauge), jog RPM row, and SMP-related mutex/atomics. See `CHANGELOG.md` for the full list.
 
 All core features tested and confirmed working on real hardware:
 

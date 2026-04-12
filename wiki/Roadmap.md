@@ -6,7 +6,6 @@
 - [x] Main screen pot-only RPM gauge (no +/-), larger gauge, centered RPM display
 - [x] Jog screen RPM row cleanup (no stray range label; non-overlapping +/-)
 - [x] Control state memory ordering; `programsDirty` atomic; `g_settings_mutex` hardening; `rpm_buttons_enabled` removed
-- [x] `githooks/commit-msg` strips `Made-with:` footers when `core.hooksPath=githooks`
 
 ## v2.0.3 — Operator UX + docs
 

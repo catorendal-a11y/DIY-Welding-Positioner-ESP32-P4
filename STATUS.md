@@ -1,7 +1,7 @@
 # Project Status
 
 **Last Updated:** 2026-04-12
-**Firmware:** v2.0.3
+**Firmware:** v2.0.4
 **Build:** SUCCESS (Release & Debug, 0 errors 0 warnings) — re-verify locally after toolchain updates
 
 ---
@@ -15,7 +15,7 @@
 - [x] **FastAccelStepper motor control** (hardware RMT pulses, v0.33.x)
 - [x] **FreeRTOS dual-core architecture** (Core 0: Motor/Safety, Core 1: UI)
 - [x] **5 welding modes:** Continuous, Jog, Pulse, Step, Timer
-- [x] **Live RPM adjustment** (potentiometer + touchscreen buttons during rotation)
+- [x] **Live RPM adjustment** (potentiometer; touch +/- on Jog and in program/settings flows; main RPM from pot)
 - [x] **Thread-safe cross-core speed updates** (atomic + request flag pattern, FreeRTOS mutex for stepper)
 - [x] **`applySpeedAcceleration()`** for immediate speed changes during running
 - [x] **Linear acceleration phase** (resonance-zone traversal)
@@ -54,7 +54,7 @@
 - [x] **Gear ratio 1:108** total (60 x 72/40, NMRV030 + spur)
 
 ### Documentation
-- [x] **README** (v2.0.3, feature list, wiring diagram, BOM; synced with `config.h`)
+- [x] **README** (v2.0.4, feature list, wiring diagram, BOM; synced with `config.h`)
 - [x] **Wiki** (Home, Getting Started, Hardware Setup, Troubleshooting, Roadmap, Architecture)
 - [x] **docs/** (Hardware Setup, Safety System, EMI Mitigation, Implementation, Instructables)
 - [x] **Wiring diagram v2** (SVG, GPIO29 on correct side, clean cable routing)

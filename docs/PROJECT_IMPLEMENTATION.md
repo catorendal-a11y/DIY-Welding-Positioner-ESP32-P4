@@ -3,7 +3,7 @@
 **Board**: GUITION JC4880P443C ESP32-P4 4.3" Touch Display (with ESP32-C6 co-processor)
 **Display**: ST7701S 480x800 MIPI-DSI (rotated to 800x480 landscape)
 **Touch**: GT911 capacitive touch controller
-**Firmware**: v2.0.3 (`FW_VERSION` in `src/config.h`)
+**Firmware**: v2.0.4 (`FW_VERSION` in `src/config.h`)
 
 ---
 

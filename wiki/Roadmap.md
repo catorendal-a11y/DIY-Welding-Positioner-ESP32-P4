@@ -1,6 +1,14 @@
 # Roadmap
 
-## v2.0.3 — Current Release (operator UX + docs)
+## v2.0.4 — Current Release (main UI, jog, SMP)
+
+### v2.0.4 (2026-04-12)
+- [x] Main screen pot-only RPM gauge (no +/-), larger gauge, centered RPM display
+- [x] Jog screen RPM row cleanup (no stray range label; non-overlapping +/-)
+- [x] Control state memory ordering; `programsDirty` atomic; `g_settings_mutex` hardening; `rpm_buttons_enabled` removed
+- [x] `githooks/commit-msg` strips `Made-with: Cursor` when `core.hooksPath=githooks`
+
+## v2.0.3 — Operator UX + docs
 
 ### v2.0.3 (2026-04-12)
 - [x] E-STOP wakes dimmed display (`g_wakePending`, `dim_reset_activity()` on overlay)

@@ -4,7 +4,7 @@
 
 ### Precision Multi-Mode Welding Rotator for TIG, MIG, and Pipe Welding
 
-**ESP32-P4 &nbsp;&middot;&nbsp; Firmware v2.0.3**
+**ESP32-P4 &nbsp;&middot;&nbsp; Firmware v2.0.4**
 
 <sub>GUITION JC4880P443C 4.3" touch display board.</sub>
 
@@ -390,7 +390,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - [x] FreeRTOS mutex stepper access + atomic cross-core variables
 - [x] Countdown before start (configurable 1-10s delay with visual countdown)
 - [x] LVGL async object deletion + widget invalidation pattern
-- [x] E-STOP wakes dimmed display (backlight / dim pipeline, v2.0.3)
+- [x] E-STOP wakes dimmed display (backlight / dim pipeline, v2.0.3+)
 
 **Planned:**
 

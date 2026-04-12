@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.4] - 2026-04-12
+
+### Added
+- **`githooks/commit-msg`** — strips `Made-with: Cursor` from commit messages when `core.hooksPath` is set to `githooks` (see `.gitattributes` for LF on the hook script).
+
+### Changed
+- **Main screen** — potentiometer-only RPM: removed on-screen +/- buttons and `rpm_buttons_enabled` setting; larger semicircular gauge (`MAIN_GAUGE_*` in `theme.h`); RPM value centered above the unit label with optional zoom (`MAIN_RPM_VALUE_ZOOM`).
+- **Jog screen** — removed top-right min/max RPM hint; fixed overlapping +/- buttons; RPM row layout moved to `JOG_RPM_*` theme constants.
+- **Concurrency** — `control_transition_to` / `controlTask` use consistent `std::memory_order` for `currentState`; `programsDirty` is `std::atomic<bool>`; broader `g_settings_mutex` coverage across motor, storage, and UI hot paths.
+
+### Removed
+- **`rpm_buttons_enabled`** — field removed from `SystemSettings` and from NVS settings JSON (legacy key in stored blobs is ignored).
+
 ## [2.0.3] - 2026-04-12
 
 ### Added

@@ -2,11 +2,11 @@
 
 **ESP32-P4 / C6 GUITION JC4880P443C** | Open-source firmware for TIG/MIG welding rotators
 
-## Current Status: v2.0.3 — Firmware + docs aligned with `config.h`
+## Current Status: v2.0.4 — Firmware + docs aligned with `config.h`
 
 All core features tested and confirmed working on real hardware:
 
-- Motor rotation with live RPM adjustment (pot + buttons + foot pedal)
+- Motor rotation with live RPM adjustment (potentiometer + foot pedal; main screen has no RPM +/-)
 - All 5 welding modes (Continuous, Jog, Pulse, Step, Timer)
 - Hardware E-STOP with <0.5ms response + UI reset
 - 16 program preset save/load (NVS JSON blobs; legacy LittleFS migration on first boot if needed)

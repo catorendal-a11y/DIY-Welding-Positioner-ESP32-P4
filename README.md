@@ -110,6 +110,8 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 | **Motor Config** | Microstepping (1/4 – 1/32), acceleration, calibration, direction invert |
 | **Display Settings** | Brightness slider, dim timeout, theme color selection |
 | **System Info** | Live CPU core load, free heap, PSRAM usage, uptime |
+| **WiFi** | Network scan, credentials, hidden SSIDs (ESP-Hosted via ESP32-C6; calls off UI thread) |
+| **Bluetooth** | BLE remote (NimBLE NUS on C6): arm/start/stop/direction, passkey pairing |
 | **Hardware Safety** | NC E-STOP interrupt (<0.5 ms), software watchdog, CAS state transitions; dimmed backlight wakes on ESTOP |
 | **Thread Safety** | Mutex-protected stepper access, atomic cross-core variables, pending-flag patterns |
 
@@ -117,10 +119,11 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 
 ## UI Screens
 
-The interface uses **19** LVGL root screens (`ScreenId` in `screens.h`: main, modes, settings, editors, etc.) plus a full-screen **E-STOP overlay**, each purpose-built for industrial use with glove-safe touch targets.
+The interface is built from many full-screen flows and editors—each purpose-built for industrial use with glove-safe touch targets (see `docs/images/ui_screens.svg` for the full visual map). In firmware, root views are registered as **`ScreenId` values** in `src/ui/screens.h`: there are **19** distinct roots from `SCREEN_MAIN` through `SCREEN_ABOUT` (including boot, confirm, preset editors, settings hub, modes, programs, calibration, motor config, display, about, etc.), plus a separate full-screen **E-STOP overlay** module that is not a `ScreenId` but can appear over any active screen. Older documentation sometimes referred to a larger “screen count” when counting every mockup panel separately; the numbers above match the current C++ registry.
 
 | Screen | Description |
 |:---|:---|
+| **Boot** | Startup splash / transition to main |
 | **Main** | RPM gauge, start/stop, mode quick-access |
 | **Menu** | Advanced mode selection and settings |
 | **Continuous** | Constant rotation at set RPM |
@@ -130,12 +133,16 @@ The interface uses **19** LVGL root screens (`ScreenId` in `screens.h`: main, mo
 | **Countdown** | Visual 3-2-1 before rotation starts |
 | **Programs** | Preset list with save, load, delete |
 | **Program Edit** | Full preset editor with on-screen keyboard |
+| **Edit Pulse** | Quick preset edit for pulse parameters |
+| **Edit Step** | Quick preset edit for step parameters |
+| **Edit Continuous** | Quick preset edit for continuous / RPM preset fields |
 | **Settings** | Hub for Display, System Info, Calibration, Motor Config, About |
 | **Display** | Brightness slider, dim timeout |
 | **System Info** | Core load, heap, PSRAM, uptime |
 | **Calibration** | Motor calibration factor adjustment |
 | **Motor Config** | Microstepping, acceleration, direction switch, pedal enable |
 | **About** | Firmware version, hardware info |
+| **Confirm** | Shared confirmation dialog (destructive actions, etc.) |
 | **E-STOP Overlay** | Full-screen red overlay on any active screen |
 
 ---
@@ -203,6 +210,9 @@ controlTask  (pri 3, 4 KB)
 | **GPIO 35** | (no ADC) | Digital only |
 | **GPIO 33** | PEDAL SW (Input) | Foot pedal switch, active LOW |
 | GPIO 7 / 8 | Touch I2C | GT911 + ADS1115 (shared bus) |
+| GPIO 14–19, 54 | ESP-Hosted SDIO | WiFi/BLE to ESP32-C6 — do not use as GPIO |
+| GPIO 28 / 32 | C6 UART (board) | Reserved when WiFi/BLE active — not general-purpose I/O |
+
 ---
 
 ---
@@ -237,6 +247,7 @@ controlTask  (pri 3, 4 KB)
 |:---|:---|
 | **Output RPM Range** | **0.001 – 3.0 RPM** workpiece (`MIN_RPM` / `MAX_RPM` in `config.h`); Motor Config can set a lower **max RPM** ceiling in NVS |
 | **Gear Ratio** | **1 : 108** total &ensp; (NMRV030 60:1 x spur 72/40) |
+| **Roller / workpiece (defaults)** | `D_RULLE` 80 mm roller, `D_EMNE` 300 mm reference workpiece OD — used in `rpmToStepHz()` / `angleToSteps()` (see `config.h`, `speed.cpp`) |
 | **Microstepping** | 1/4, 1/8, 1/16, 1/32 (configurable) |
 | **Motor Torque** | 3.0 Nm (NEMA 23) |
 | **Control Resolution** | 0.01 RPM |
@@ -266,6 +277,8 @@ Open `src/config.h` to adjust hardware parameters:
 #define MIN_RPM         0.001f  // Minimum workpiece RPM (pot / clamp floor)
 #define MAX_RPM         3.0f    // Absolute ceiling for Max RPM setting and firmware clamp
 #define GEAR_RATIO      (60.0f * 72.0f / 40.0f)  // 108 = total 1:108
+#define D_EMNE          0.300f  // Reference workpiece diameter (m) — kinematics
+#define D_RULLE         0.080f  // Roller diameter (m) — kinematics
 // Acceleration and microstep are stored in NVS (Motor Config); defaults 7500 steps/s^2, 1/16
 #define START_SPEED     100     // Hz ramp start
 ```
@@ -307,6 +320,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - [ ] All 5 welding modes tested
 - [ ] Program preset save/load verified
 - [ ] Foot pedal starts/stops motor (if connected)
+- [ ] Let display dim, then trigger E-STOP — backlight returns and overlay is readable
 
 ---
 
@@ -317,6 +331,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 | Hazard | Precaution |
 |:---|:---|
 | **E-STOP** | NC contact hardware interrupt cuts motor enable in <0.5 ms |
+| **Dim + fault** | If the panel has dimmed on timeout, E-STOP still wakes the backlight so the red overlay is visible (`g_wakePending` / `dim_reset_activity()`) |
 | **Power Sequencing** | Never power motor without driver connected to coils |
 | **Motor Coils** | Never connect/disconnect coils while driver is powered |
 | **Voltage** | Verify 24V supply before connecting |
@@ -376,6 +391,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - [x] FreeRTOS mutex stepper access + atomic cross-core variables
 - [x] Countdown before start (configurable 1-10s delay with visual countdown)
 - [x] LVGL async object deletion + widget invalidation pattern
+- [x] E-STOP wakes dimmed display (backlight / dim pipeline, v2.0.3)
 
 **Planned:**
 

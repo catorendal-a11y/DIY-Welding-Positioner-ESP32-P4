@@ -93,15 +93,14 @@
 - UI callbacks never call `speed_apply()` directly
 
 ### RPM gauge doesn't show below 0.1
-- v2.0.2 uses 2-decimal precision and `MAX_RPM * 100` gauge range
-- MIN_RPM is 0.02
+- Gauge scaling follows `MIN_RPM` / max RPM from settings; firmware `MIN_RPM` is **0.001** (`config.h`)
+- If the gauge looks “stuck”, confirm Motor Config **max RPM** and preset RPM are within range
 
 ## Safety
 
 ### E-STOP not working
-- Verify NC button wiring: GPIO 34 -> button -> GND
-- Button should hold GPIO LOW; pressing breaks circuit -> pulls HIGH -> ISR fires
-- No external pull-up needed (internal INPUT_PULLUP enabled)
+- Verify wiring matches firmware: **safe = GPIO 34 HIGH**, **fault = GPIO 34 LOW**; ISR is **FALLING** (see `safety.cpp`, `docs/HARDWARE_SETUP.md`)
+- Firmware calls `pinMode(PIN_ESTOP, INPUT_PULLUP)` — add **external** pull-up / RC if leads are long or noisy (see `EMI_MITIGATION.md`, `config.h` notes on GPIO34)
 
 ### Motor moves on boot
 - Firmware sets ENA HIGH (disabled) before any motor init

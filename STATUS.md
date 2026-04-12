@@ -1,8 +1,8 @@
 # Project Status
 
-**Last Updated:** 2026-04-05
-**Firmware:** v2.0.2
-**Build:** SUCCESS (Release & Debug, 0 errors 0 warnings)
+**Last Updated:** 2026-04-12
+**Firmware:** v2.0.3
+**Build:** SUCCESS (Release & Debug, 0 errors 0 warnings) — re-verify locally after toolchain updates
 
 ---
 
@@ -11,7 +11,7 @@
 ### Core Motor Control
 - [x] **ESP32-P4 MIPI-DSI display** (ST7701S 480x800, RGB565, landscape rotation)
 - [x] **GT911 capacitive touch** (I2C, coordinate mapping)
-- [x] **LVGL 9.6 UI framework** (800x480 landscape, 23 screens)
+- [x] **LVGL 9.5.x UI framework** (800x480 landscape, 19 `ScreenId` roots + E-STOP overlay)
 - [x] **FastAccelStepper motor control** (hardware RMT pulses, v0.33.x)
 - [x] **FreeRTOS dual-core architecture** (Core 0: Motor/Safety, Core 1: UI)
 - [x] **5 welding modes:** Continuous, Jog, Pulse, Step, Timer
@@ -24,7 +24,7 @@
 - [x] **ADC potentiometer** (IIR filtering, 0-3315 ADC range, 200-count override threshold)
 
 ### Safety
-- [x] **Hardware E-STOP** (GPIO34, NC contact, <0.5ms response)
+- [x] **Hardware E-STOP** (GPIO34, active LOW fault, <0.5ms ISR; wakes dimmed display)
 - [x] **Task Watchdog Timer** (motor & safety tasks)
 - [x] **Boot-safe ENA pin** (motor disabled on startup)
 - [x] **CAS state transitions** (race-free between safetyTask and controlTask)
@@ -44,7 +44,7 @@
 - [x] **ESP-Hosted SDIO transport** (WiFi + BLE share bus to C6)
 
 ### UI/UX
-- [x] **23 screens** with lazy creation pattern
+- [x] **19 root screens** with lazy creation pattern + ESTOP overlay
 - [x] **8 accent color themes** (switchable from Display Settings)
 - [x] **Settings hub** (WiFi, Bluetooth, Display, System Info, Calibration, Motor Config, About)
 - [x] **Display Settings** (brightness slider, dim timeout)
@@ -55,8 +55,8 @@
 - [x] **Consistent footer navigation** and back buttons
 
 ### Storage
-- [x] **Program preset storage** (ArduinoJson + LittleFS, 16 slots)
-- [x] **Settings persistence** (motor config, WiFi credentials, display settings)
+- [x] **Program preset storage** (ArduinoJson blobs in **NVS** `wrot`/`prs`, 16 slots; one-time LittleFS migration)
+- [x] **Settings persistence** (motor config, WiFi credentials, display settings in NVS `wrot`/`cfg`)
 - [x] **Mutex-protected presets** (`g_presets_mutex`)
 - [x] **Debounced flash writes** (500ms presets, 1000ms settings)
 
@@ -66,20 +66,21 @@
 - [x] **Gear ratio 1:108** total (60 x 72/40, NMRV030 + spur)
 
 ### Documentation
-- [x] **README** (v2.0.0, complete feature list, wiring diagram, BOM)
+- [x] **README** (v2.0.3, feature list, wiring diagram, BOM; synced with `config.h`)
 - [x] **Wiki** (Home, Getting Started, Hardware Setup, Troubleshooting, Roadmap, Architecture)
 - [x] **docs/** (Hardware Setup, Safety System, EMI Mitigation, Implementation, Instructables)
 - [x] **Wiring diagram v2** (SVG, GPIO29 on correct side, clean cable routing)
 
 ---
 
-### Stability & Robustness (v2.0.2)
+### Stability & Robustness (v2.0.2+)
 - [x] **FreeRTOS mutex for stepper** (replaced portMUX_TYPE spinlock — fixed IWDT crash on cross-core contention)
 - [x] **LVGL async object deletion** (lv_obj_delete_async for keyboard/numpad cleanup from event callbacks)
 - [x] **Screen widget invalidation** (invalidate_widgets pattern for WiFi, BT, Step, Programs, ProgramEdit screens)
 - [x] **Deferred keyboard cleanup** (*ClosePending flags, actual cleanup in update cycle)
 - [x] **Screen reinit safety** (screens_reinit calls invalidate_widgets for all screens with static pointers)
 - [x] **Confirm dialog validation** (returnScreen range check prevents invalid screen navigation)
+- [x] **E-STOP display wake** (v2.0.3 — `g_wakePending` + `dim_reset_activity()` so dimmed MIPI panel shows fault UI)
 
 ## In Progress
 
@@ -124,5 +125,5 @@
 | GPIO 35 | (no ADC) | Digital only |
 | GPIO 33 | PEDAL SW | Foot pedal switch, active LOW |
 | GPIO 7/8 | Touch I2C | GT911 + ADS1115 (shared bus) |
-| GPIO 28/32 | Available | Digital GPIO (no ADC) |
+| GPIO 28/32 | Reserved | C6 UART / SDIO when WiFi or BLE is active — do not repurpose |
 | GPIO 14-19, 54 | C6 SDIO | ESP-Hosted transport -- do not use |

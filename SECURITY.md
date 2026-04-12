@@ -14,10 +14,10 @@ This project controls a motorized welding positioner. Safety is critical.
 
 ### E-STOP System
 - Hardware NC contact on GPIO34 triggers interrupt in <0.5ms
-- ISR immediately cuts ENA pin (HIGH = motor disabled)
+- ISR immediately cuts ENA pin (HIGH = motor disabled) and sets `g_wakePending` so a dimmed backlight recovers on the next UI dim pass
 - Software state machine enforces ESTOP as highest-priority state
 - All state transitions validated via compare-and-swap (CAS) pattern
-- UI overlay blocks all interaction during ESTOP
+- UI overlay blocks all interaction during ESTOP; overlay show also calls `dim_reset_activity()` for full brightness
 
 ### Motor Safety
 - ENA pin defaults HIGH (motor disabled) on boot

@@ -1,6 +1,12 @@
 # Roadmap
 
-## v2.0.2 — Current Release (Stability & IWDT Crash Fix)
+## v2.0.3 — Current Release (operator UX + docs)
+
+### v2.0.3 (2026-04-12)
+- [x] E-STOP wakes dimmed display (`g_wakePending`, `dim_reset_activity()` on overlay)
+- [x] Documentation pass — README / wiki / `docs` aligned with `config.h` and NVS storage
+
+## v2.0.2 — Stability & IWDT Crash Fix
 
 ### v2.0.2 Fixes (2026-04-05)
 - [x] FreeRTOS mutex for stepper (replaced spinlock — fixed IWDT crash)
@@ -16,7 +22,7 @@
 - [x] Display/Motor Config UI polish
 
 ### v2.0.0 Features (2026-04-03)
-- [x] 23 UI screens (settings, system info, calibration, motor config, etc.)
+- [x] 19 LVGL root screens + E-STOP overlay (settings, system info, calibration, motor config, etc.)
 - [x] Direction switch (GPIO29, toggle via settings)
 - [x] Foot pedal support (analog speed + digital start)
 - [x] Thread-safe stepper access (FreeRTOS mutex + atomic variables)

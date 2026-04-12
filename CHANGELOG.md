@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.3] - 2026-04-12
+
+### Added
+- **E-STOP wakes backlight** when the MIPI panel was dimmed (`g_wakePending` in `estopISR` / boot path; `dim_reset_activity()` when the ESTOP overlay is shown).
+
 ### Changed
+- **Documentation** — README, wiki, and `docs/*.md` aligned with `src/config.h` and current firmware (workpiece RPM limits, `ScreenId` count + ESTOP overlay, E-STOP GPIO sense, NVS-first storage wording, default acceleration from `storage.cpp`, MIPI lane bitrate note in project implementation doc).
 - **Documentation & UI copy** — gear notation standardized to **1:108** (motor revolutions per output revolution), matching `GEAR_RATIO` (108) and `docs/images/motor.worm.svg`.
 
 ## [2.0.2] - 2026-04-05 (Stability & IWDT Crash Fix)

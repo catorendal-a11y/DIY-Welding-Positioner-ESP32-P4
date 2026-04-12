@@ -129,7 +129,7 @@ Two-layer ESTOP architecture:
 | `lvgl_hal.cpp` | LVGL display driver, flush callback, dim control |
 | `screens.cpp` | Screen registry, lazy creation, show/hide management |
 | `theme.h` | Color palette, font definitions, constants |
-| `screens/` | 23 screen files (main, settings, modes, countdown, etc.) |
+| `screens/` | `screen_*.cpp` — 19 `ScreenId` roots + ESTOP overlay module |
 
 ## Display Pipeline
 

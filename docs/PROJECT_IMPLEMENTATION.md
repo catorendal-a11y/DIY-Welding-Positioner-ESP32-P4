@@ -3,7 +3,7 @@
 **Board**: GUITION JC4880P443C ESP32-P4 4.3" Touch Display (with ESP32-C6 co-processor)
 **Display**: ST7701S 480x800 MIPI-DSI (rotated to 800x480 landscape)
 **Touch**: GT911 capacitive touch controller
-**Firmware**: v2.0.2
+**Firmware**: v2.0.3 (`FW_VERSION` in `src/config.h`)
 
 ---
 
@@ -24,7 +24,7 @@
 ## 1. MIPI-DSI Display Setup
 
 ### Hardware Configuration
-- **Bus**: 2-lane MIPI-DSI at 500 Mbps
+- **Bus**: 2-lane MIPI-DSI — `config.h` sets **1 Gbps per lane** nominal (`MIPI_DSI_LANE_BITRATE`); actual PHY negotiation follows ESP-IDF / board config
 - **DPI Clock**: 34 MHz for 60Hz refresh
 - **Pixel Format**: RGB565 (16-bit)
 - **Framebuffers**: 2 (double-buffered)
@@ -55,7 +55,7 @@
 | motorTask | 0 | 4 | 5 KB | Speed apply, ADC poll, pedal, motor config |
 | controlTask | 0 | 3 | 4 KB | State machine, mode logic |
 | lvglTask | 1 | 2 | 64 KB | LVGL rendering, screen updates, dim, ESTOP overlay |
-| storageTask | 1 | 1 | 12 KB | LittleFS flush, WiFi process, BLE update, health monitoring |
+| storageTask | 1 | 1 | 12 KB | NVS flush (settings/presets), WiFi process, BLE update, health monitoring |
 
 - motorTask, controlTask, safetyTask: subscribed to WDT
 - lvglTask, storageTask: NOT subscribed (blocking I/O can exceed WDT timeout)
@@ -76,7 +76,7 @@
 ## 4. Safety System
 
 - **E-STOP**: GPIO 34, NC contact, INPUT_PULLUP, hardware ISR
-- **ISR**: GPIO register write (ENA HIGH) + `g_estopPending` flag (NO function calls — flash may be disabled)
+- **ISR**: GPIO register write (ENA HIGH) + `g_estopPending` + `g_wakePending` (NO function calls — flash may be disabled)
 - **Debounce**: 5ms in safetyTask before STATE_ESTOP transition
 - **CAS transitions**: `control_transition_to()` uses `compare_exchange_strong` for race-free state changes
 - **UI reset**: `g_uiResetPending` flag from UI, processed in controlTask on Core 0
@@ -124,7 +124,7 @@
 
 ## 8. UI Screen System
 
-- **23 screens** with lazy creation (only boot, main, confirm created at init)
+- **19 `ScreenId` root screens** with lazy creation (only boot, main, confirm created at init) plus separate **E-STOP overlay** (`screen_estop_overlay.cpp`)
 - **Screen management**: `screens_show()` dispatches create/update, tracks `screenCreated[]` array
 - **Reinit**: `screens_reinit()` destroys all screens + ESTOP overlay, restores boot/main/confirm
 - **Keyboard**: Deferred cleanup pattern — set flag in callback, cleanup in next update cycle

@@ -2,7 +2,7 @@
 
 **ESP32-P4 / C6 GUITION JC4880P443C** | Open-source firmware for TIG/MIG welding rotators
 
-## Current Status: v2.0.2 — Stability Fixes + IWDT Crash Fix
+## Current Status: v2.0.3 — Firmware + docs aligned with `config.h`
 
 All core features tested and confirmed working on real hardware:
 
@@ -10,7 +10,7 @@ All core features tested and confirmed working on real hardware:
 - All 5 welding modes (Continuous, Jog, Pulse, Step, Timer)
 - Hardware E-STOP with <0.5ms response + UI reset
 - 16 program preset save/load (NVS JSON blobs; legacy LittleFS migration on first boot if needed)
-- 23 UI screens including settings, system info, calibration
+- 19 LVGL root screens (`ScreenId`) plus E-STOP overlay; settings, system info, calibration
 - Direction switch (GPIO29), foot pedal support
 - 8 accent color themes, brightness control, dim timeout
 
@@ -26,7 +26,7 @@ All core features tested and confirmed working on real hardware:
 
 ## Project Overview
 
-Open-source welding positioner controller for rotary welding tables, pipe welding rotators, and automated fabrication systems. Controls a NEMA 23 stepper motor through a **1:108** drivetrain (NMRV030 + spur) with precise RPM control (default UI range 0.02–3.0 RPM workpiece).
+Open-source welding positioner controller for rotary welding tables, pipe welding rotators, and automated fabrication systems. Controls a NEMA 23 stepper motor through a **1:108** drivetrain (NMRV030 + spur) with precise RPM control (**0.001–3.0 RPM** workpiece absolute limits in `config.h`; Motor Config stores a lower **max RPM** ceiling in NVS if desired).
 
 ### Key Specs
 
@@ -39,7 +39,7 @@ Open-source welding positioner controller for rotary welding tables, pipe weldin
 | Motor Driver | FastAccelStepper 0.33.x (RMT hardware pulses) |
 | Gear Ratio | **1:108** total (60 x 72/40, NMRV030 + spur) |
 | Microstepping | 1/4, 1/8, 1/16, 1/32 (selectable) |
-| RPM Range | 0.02 - 1.0 RPM (default cap), up to 5.0 (DM542T + config) |
+| RPM Range | 0.001 – 3.0 RPM (`MIN_RPM`/`MAX_RPM`); UI max ≤ cap via Motor Config (NVS). Roadmap: higher limits with DM542T |
 | Storage | NVS (`Preferences`) + ArduinoJson blobs `cfg` / `prs` (16 presets, settings); one-time LittleFS import |
 
 ## Repository Structure

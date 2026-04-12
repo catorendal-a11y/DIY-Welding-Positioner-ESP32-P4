@@ -1,65 +1,68 @@
 # ESTOP Timing Verification
 
 ## Hardware: GUITION JC4880P443C (ESP32-P4 + ESP32-C6)
-## Firmware: v2.0.0
+## Firmware: v2.0.3 (see `FW_VERSION` in `src/config.h`)
 ## Test Date: [FILL IN AFTER HARDWARE TEST]
 
 ---
 
 ## Hardware Configuration
 
-- **E-STOP Pin**: GPIO 34 (INPUT_PULLUP, NC contact)
-- **ENA Pin**: GPIO 52 (Output, active LOW)
-- **Internal Pull-up**: Enabled (no external resistor needed)
+- **E-STOP pin**: GPIO 34 (`INPUT_PULLUP`, active **LOW** when faulted — must match wiring in `docs/HARDWARE_SETUP.md`).
+- **ENA pin**: GPIO 52 (output; **HIGH** = driver disabled for this firmware’s opto wiring).
+- **Pull-up**: Firmware enables `INPUT_PULLUP` on GPIO 34. For long/noisy leads, prefer an **external** pull-up and optional RC per [EMI_MITIGATION.md](EMI_MITIGATION.md) (see also `PIN_ESTOP` notes in `src/config.h`).
+
+**Example topology (one valid arrangement — confirm against your NC routing):**
 
 ```
-  3.3V (internal pull-up)──[GPIO 34]──[NC ESTOP contact]──[GND]
+  3.3V (pull-up)──[GPIO 34]── … NC ESTOP chain … ──[GND / open on fault]
 ```
 
-**Optional RC Filter** (for EMI-prone environments):
+**Optional RC filter** (EMI-prone environments):
+
 ```
   [GPIO 34]──[100 nF ceramic]──[GND]
 ```
+
 RC time constant: ~1 ms. Blocks TIG HF glitches and contact bounce.
 
 ---
 
-## Test Setup
+## Test setup
 
-- **Oscilloscope:** Channel 1 = GPIO 34 (ESTOP signal), Channel 2 = GPIO 52 (ENA)
-- **ESTOP Configuration:** Active LOW, NC contact, internal pull-up
-- **Target:** GPIO 34 rising (ESTOP press) -> GPIO 52 rising (motor disabled) < 1.0 ms
+- **Oscilloscope:** Channel 1 = GPIO 34 (ESTOP sense), Channel 2 = GPIO 52 (ENA).
+- **Sense:** Fault = GPIO 34 driven **LOW** (FALLING edge arms ISR after idle HIGH).
+- **Target:** GPIO 34 **falling** (fault) → GPIO 52 **rising** (motor disabled / ENA de-asserted) **< 1.0 ms**.
 
 ---
 
-## Implementation
+## Implementation (reference)
 
-### Layer 1: ISR Response (< 0.5 ms)
+### Layer 1: ISR (< ~0.5 ms)
+
 ```cpp
 void IRAM_ATTR estopISR() {
-    digitalWrite(PIN_ENA, HIGH);   // Direct GPIO write
-    stepper->forceStop();
-    g_estopPending = true;
+  GPIO.out1_w1ts.val = (1UL << (PIN_ENA - 32));  // ENA HIGH → disabled
+  g_estopPending = true;
+  g_wakePending = true;  // wake backlight if dimmed (Core 1 dim_update / overlay)
 }
 ```
 
-### Layer 2: State Transition (< 5 ms)
-```cpp
-// safetyTask (priority 5) checks g_estopPending every 1ms
-// After 5ms debounce, transitions to STATE_ESTOP via CAS
-```
+(No `digitalWrite`, no stepper calls in ISR — matches `src/safety/safety.cpp`.)
 
-### Layer 3: UI Overlay (< 200 ms)
-```cpp
-// lvglTask detects STATE_ESTOP, shows full-screen red overlay
-// Reset via g_uiResetPending flag processed in controlTask
-```
+### Layer 2: State transition (< ~5 ms)
+
+`safetyTask` debounces `g_estopPending`, then `control_transition_to(STATE_ESTOP)` via CAS.
+
+### Layer 3: UI overlay
+
+`lvglTask` shows the full-screen ESTOP overlay; `estop_overlay_show()` calls `dim_reset_activity()` so the operator sees the fault UI even after dim timeout.
 
 ---
 
-## Test Measurements
+## Test measurements
 
-| Test # | GPIO 34->52 (us) | Result | Notes |
+| Test # | GPIO 34→52 (µs) | Result | Notes |
 |--------|-----------------|--------|-------|
 | 1 | ___ | ___ | |
 | 2 | ___ | ___ | |
@@ -72,18 +75,19 @@ void IRAM_ATTR estopISR() {
 | 9 | ___ | ___ | |
 | 10 | ___ | ___ | |
 
-### Worst-Case Latency
-- **Measured:** ___ us
-- **Requirement:** < 1000 us (1 ms)
+### Worst-case latency
+
+- **Measured:** ___ µs
+- **Requirement:** < 1000 µs (1 ms)
 - **Result:** [PASS / FAIL]
 
 ---
 
-## NC Cable-Cut Test
+## Bench checklist
 
-- [ ] ESTOP cable cut -> Motor disabled
-- [ ] STATE_ESTOP reached within 5 ms
-- [ ] No false triggers during normal operation
+- [ ] ESTOP activated → motor disabled / ENA safe state
+- [ ] `STATE_ESTOP` reached within ~5 ms after debounce
+- [ ] No false triggers during normal operation (with EMI mitigations if needed)
 
 ---
 

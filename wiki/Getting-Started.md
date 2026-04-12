@@ -80,11 +80,11 @@ Expected boot output:
 All parameters are in `src/config.h`:
 
 ```cpp
-#define MIN_RPM         0.02f     // Minimum workpiece RPM
-#define MAX_RPM         1.0f      // Maximum workpiece RPM (temporary)
-#define GEAR_RATIO      (60.0f * 72.0f / 40.0f)   // = 108, total **1:108**
-#define ACCELERATION    10000     // Steps/s^2
-#define START_SPEED     100       // Hz minimum for motor start
+#define MIN_RPM         0.001f    // Minimum workpiece RPM (see src/config.h)
+#define MAX_RPM         3.0f      // Absolute ceiling for max RPM / firmware clamp
+#define GEAR_RATIO      (60.0f * 72.0f / 40.0f)   // = 108, total 1:108
+#define START_SPEED     100       // Hz — accel ramp start (config.h)
+// Default acceleration steps/s² is 7500 from factory SystemSettings (storage.cpp), editable in Motor Config (NVS)
 ```
 
 Settings can also be changed from the touchscreen via **Settings > Motor Config** and are persisted to **NVS** (namespace `wrot`, key `cfg`; see repository README *Persistence (NVS)*).
@@ -103,7 +103,7 @@ Settings can also be changed from the touchscreen via **Settings > Motor Config*
 | GPIO 33 | PEDAL SW (Input) | Foot pedal switch (optional) |
 | I2C (GPIO 7/8) | ADS1115 | Pedal pot ADC (optional, addr 0x48) |
 
-**Available pins:** GPIO 28, GPIO 30, GPIO 31, GPIO 32 (digital only, no ADC).
+**Reserved:** GPIO 28 / 32 are routed to the ESP32-C6 (WiFi/BLE SDIO) — do not use as GPIO when wireless is active. See `docs/HARDWARE_SETUP.md` §Reserved pins.
 
 All driver minus pins (PUL-, DIR-, ENA-) connect to ESP32 GND.
 

@@ -23,7 +23,7 @@ Commercial welding rotators cost $500-5000. This controller gives you profession
 
 ### Features
 - 5 welding modes: Continuous, Pulse, Step, Jog, Timer
-- 0.01-3.0 RPM range (default UI cap) with live pot and button adjustment
+- **0.001–3.0 RPM** workpiece limits (`MIN_RPM`/`MAX_RPM` in `config.h`) with live pot and button adjustment
 - 4.3" capacitive touchscreen (800x480, LVGL 9.x UI)
 - 8 selectable accent color themes
 - BLE remote control (phone app via NUS)
@@ -33,7 +33,7 @@ Commercial welding rotators cost $500-5000. This controller gives you profession
 - E-STOP safety with <0.5ms ISR response
 - 16 program presets saved to flash storage
 - Dual-core FreeRTOS (real-time motor + UI)
-- 23 UI screens including settings, system info, calibration
+- 19 LVGL root screens + E-STOP overlay (settings, system info, calibration, etc.)
 
 ### Demo Video
 
@@ -162,8 +162,9 @@ Total motor-to-output reduction is **1:108** (`GEAR_RATIO` = 60 x 72/40). Firmwa
 
 With **1/16 microstepping** (3200 steps/rev, default in Motor Config / `config.h` comment), step frequency = motor RPM x 3200 / 60:
 
-| Workpiece RPM | Motor RPM | Step frequency |
+| Workpiece RPM | Motor RPM | Step frequency (1/16, 3200 spr) |
 |---|---|---|
+| 0.001 | 0.405 | ~22 Hz |
 | 0.02 | 8.1 | 432 Hz |
 | 0.1 | 40.5 | 2,160 Hz |
 | 1.0 | 405 | 21,600 Hz |
@@ -223,8 +224,8 @@ Connect via phone BLE apps (e.g., nRF Connect):
 ### E-STOP Safety
 
 The E-STOP system has two layers:
-1. **ISR (<0.5ms)** — hardware disable via interrupt, motor stops immediately
-2. **Task (5ms)** — state transition to ESTOP, UI shows red overlay
+1. **ISR (<0.5ms)** — hardware disable via interrupt, motor stops immediately; `g_wakePending` set so a dimmed display wakes
+2. **Task (~5ms debounce)** — state transition to ESTOP, UI shows red overlay (`dim_reset_activity()` when overlay shows)
 
 ---
 
@@ -256,8 +257,8 @@ Save up to 16 presets with mode-specific parameters (RPM, pulse times, step angl
 
 | Parameter | Value | Notes |
 |---|---|---|
-| MIN_RPM | 0.01 | Minimum workpiece speed (`config.h`) |
-| MAX_RPM | 3.0 | Default UI cap (`config.h`) |
+| MIN_RPM | 0.001 | Minimum workpiece speed (`config.h`) |
+| MAX_RPM | 3.0 | Absolute ceiling / UI cap (`config.h`; Motor Config max ≤ this) |
 | GEAR_RATIO | (60 x 72 / 40) = 108 | Total **1:108** motor:output |
 | ACCELERATION | NVS / Motor Config | Default 7500 steps/s^2 in fresh settings |
 | START_SPEED | 100 Hz | Accel ramp start (`config.h`) |
@@ -289,7 +290,7 @@ Attach these files to the Instructable:
 - If the motor stalls at low RPM, increase microstepping to 1/16 or 1/32
 - If the pot is noisy, check ADC wiring and grounding
 - If the screen flickers, check PSRAM seating and MIPI-DSI cable
-- If E-STOP doesn't work, verify NC contact wiring (GPIO 34 should read LOW when released)
+- If E-STOP doesn't work, verify NC contact wiring against firmware sense: **safe / released = HIGH**, **fault / pressed = LOW** on GPIO 34 (see `safety.cpp` / `docs/HARDWARE_SETUP.md`).
 - If WiFi/BLE crashes, check that GPIO 28/32 are not used for other purposes
 - If direction switch doesn't work, enable it in Settings > Motor Config > Direction Switch
 

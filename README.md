@@ -110,14 +110,14 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 | **Motor Config** | Microstepping (1/4 – 1/32), acceleration, calibration, direction invert |
 | **Display Settings** | Brightness slider, dim timeout, theme color selection |
 | **System Info** | Live CPU core load, free heap, PSRAM usage, uptime |
-| **Hardware Safety** | NC E-STOP interrupt (<0.5 ms), software watchdog, CAS state transitions |
+| **Hardware Safety** | NC E-STOP interrupt (<0.5 ms), software watchdog, CAS state transitions; dimmed backlight wakes on ESTOP |
 | **Thread Safety** | Mutex-protected stepper access, atomic cross-core variables, pending-flag patterns |
 
 ---
 
 ## UI Screens
 
-The interface consists of **23 screens**, each purpose-built for industrial use with glove-safe touch targets.
+The interface uses **19** LVGL root screens (`ScreenId` in `screens.h`: main, modes, settings, editors, etc.) plus a full-screen **E-STOP overlay**, each purpose-built for industrial use with glove-safe touch targets.
 
 | Screen | Description |
 |:---|:---|
@@ -235,7 +235,7 @@ controlTask  (pri 3, 4 KB)
 
 | Parameter | Value |
 |:---|:---|
-| **Output RPM Range** | 0.01 – 3.0 RPM (default UI cap in `config.h`), higher possible with driver/microstep limits |
+| **Output RPM Range** | **0.001 – 3.0 RPM** workpiece (`MIN_RPM` / `MAX_RPM` in `config.h`); Motor Config can set a lower **max RPM** ceiling in NVS |
 | **Gear Ratio** | **1 : 108** total &ensp; (NMRV030 60:1 x spur 72/40) |
 | **Microstepping** | 1/4, 1/8, 1/16, 1/32 (configurable) |
 | **Motor Torque** | 3.0 Nm (NEMA 23) |
@@ -263,8 +263,8 @@ controlTask  (pri 3, 4 KB)
 Open `src/config.h` to adjust hardware parameters:
 
 ```cpp
-#define MIN_RPM         0.02f   // Minimum workpiece RPM
-#define MAX_RPM         3.0f    // Maximum workpiece RPM (UI cap)
+#define MIN_RPM         0.001f  // Minimum workpiece RPM (pot / clamp floor)
+#define MAX_RPM         3.0f    // Absolute ceiling for Max RPM setting and firmware clamp
 #define GEAR_RATIO      (60.0f * 72.0f / 40.0f)  // 108 = total 1:108
 // Acceleration and microstep are stored in NVS (Motor Config); defaults 7500 steps/s^2, 1/16
 #define START_SPEED     100     // Hz ramp start
@@ -409,7 +409,7 @@ src/
     lvgl_hal.cpp              Flush callback, dim, touch polling
     theme.cpp/h               Color themes, font definitions
     screens.cpp/h             Screen management, lazy creation
-    screens/                  23 screen files
+    screens/                  screen_*.cpp (19 ScreenId roots + ESTOP overlay module)
 docs/images/                Wiring diagrams, UI mockups
 ```
 

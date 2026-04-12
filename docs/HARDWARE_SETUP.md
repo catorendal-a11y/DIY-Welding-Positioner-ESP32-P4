@@ -91,7 +91,7 @@ Pick the row that equals **200 × (Motor Config microstep value)**. Wrong table 
 - DM542T typically specifies **≥ 2.5 µs** minimum step pulse width.
 - This project uses **FastAccelStepper** with **ESP32-P4 RMT** (`gin66/FastAccelStepper@^0.33.14`). There is **no** supported `platformio.ini` flag named `FAS_MIN_PULSE_WIDTH_TICKS` in that library version; timing is defined inside the library (`MIN_CMD_TICKS` / RMT symbol encoding). If you see missed steps, first match **DIP microstep** to the UI and **Motor Config driver** to **DM542T**, then check wiring and **VM** motor supply — do not assume ~100 ns pulses at the opto without measuring.
 
-**RPM sweep note:** UI/firmware **`MAX_RPM`** for the workpiece is capped in `config.h` (default **1.0 RPM**). Testing “0.1 to 3.0 RPM” requires raising that limit in firmware if you need above 1.0 RPM.
+**RPM sweep note:** Absolute workpiece limits are **`MIN_RPM` … `MAX_RPM`** in `src/config.h` (currently **0.001 … 3.0 RPM**). The **Max RPM** value in **Motor Config** (stored in NVS) sets the pot/slider ceiling up to that cap.
 
 ## 4. Wiring Connections
 
@@ -124,10 +124,9 @@ Firmware: **LOW** on the ENA GPIO line = **motor enabled**, **HIGH** = disabled 
   - Pin 1 (CCW) -> GND
   - Pin 2 (Wiper) -> `GPIO 49`
   - Pin 3 (CW) -> 3.3V
-- **E-STOP (Normally Closed Button):**
-  - Pin 1 -> `GPIO 34`
-  - Pin 2 -> GND
-  - Uses internal INPUT_PULLUP. NC contact holds pin LOW. Press breaks circuit, pin goes HIGH, ISR fires.
+- **E-STOP (NC / active LOW on press, matches firmware):**
+  - Wire so that **released (safe) = logic HIGH** and **pressed = logic LOW** on `GPIO 34` (firmware uses `INPUT_PULLUP` and a **FALLING** interrupt).
+  - `src/config.h` notes that some ESP32-P4 strapping guidance applies to GPIO34 — keep leads short; add external pull-up / RC filter per [EMI_MITIGATION.md](EMI_MITIGATION.md) if the line is noisy.
 - **Direction Switch (CW/CCW Toggle):**
   - Pin 1 -> `GPIO 29`
   - Pin 2 -> GND

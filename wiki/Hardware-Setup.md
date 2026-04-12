@@ -47,14 +47,9 @@ Most PUL/DIR boards use optically isolated inputs. Wire in **Common Ground** con
 
 Measured ADC range: 0-3315 (with 11dB attenuation on ESP32-P4).
 
-### E-STOP Button (NC)
+### E-STOP (GPIO 34)
 
-| Button Pin | Connect To |
-|------------|------------|
-| Pin 1 | GPIO 34 |
-| Pin 2 | GND |
-
-Uses internal INPUT_PULLUP. NC contact holds GPIO 34 LOW. When pressed (or wire cut), pin goes HIGH, ISR fires instantly.
+Wire so **released (safe) = HIGH** and **pressed / fault = LOW** on GPIO 34 (matches `safety.cpp`: `INPUT_PULLUP`, **FALLING** ISR). See repository `docs/HARDWARE_SETUP.md` for a full discussion and EMI options.
 
 ### Direction Switch (CW/CCW)
 
@@ -65,12 +60,12 @@ Uses internal INPUT_PULLUP. NC contact holds GPIO 34 LOW. When pressed (or wire 
 
 Uses internal INPUT_PULLUP. Enable via Settings > Motor Config > Direction Switch.
 
-### Foot Pedal (Optional)
+### Foot Pedal (optional)
 
 | Pedal Pin | Connect To |
 |-----------|------------|
-| Pot wiper | GPIO 35 |
-| Start switch | GPIO 33 |
+| Pot wiper | **ADS1115** AIN0 on touch I2C (SDA 7 / SCL 8) when `ENABLE_ADS1115_PEDAL` is enabled — not GPIO 35 |
+| Start switch | GPIO 33 (`INPUT_PULLUP`, LOW = pressed) |
 
 ### Stepper motor to driver
 

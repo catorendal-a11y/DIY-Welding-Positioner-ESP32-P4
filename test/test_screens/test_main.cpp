@@ -383,46 +383,7 @@ void test_core_load_div_zero() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 5: RSSI → signal bars
-// ═══════════════════════════════════════════════════════════════════════════════
-
-void test_rssi_strong() {
-  TEST_ASSERT_EQUAL(4, rssi_to_bars(-30));
-  TEST_ASSERT_EQUAL(4, rssi_to_bars(-49));
-}
-
-void test_rssi_good() {
-  TEST_ASSERT_EQUAL(3, rssi_to_bars(-50));
-  TEST_ASSERT_EQUAL(3, rssi_to_bars(-69));
-}
-
-void test_rssi_fair() {
-  TEST_ASSERT_EQUAL(2, rssi_to_bars(-70));
-  TEST_ASSERT_EQUAL(2, rssi_to_bars(-84));
-}
-
-void test_rssi_weak() {
-  TEST_ASSERT_EQUAL(1, rssi_to_bars(-85));
-  TEST_ASSERT_EQUAL(1, rssi_to_bars(-100));
-}
-
-void test_rssi_boundary_50() {
-  TEST_ASSERT_EQUAL(3, rssi_to_bars(-50));
-  TEST_ASSERT_EQUAL(4, rssi_to_bars(-49));
-}
-
-void test_rssi_boundary_70() {
-  TEST_ASSERT_EQUAL(2, rssi_to_bars(-70));
-  TEST_ASSERT_EQUAL(3, rssi_to_bars(-69));
-}
-
-void test_rssi_boundary_85() {
-  TEST_ASSERT_EQUAL(1, rssi_to_bars(-85));
-  TEST_ASSERT_EQUAL(2, rssi_to_bars(-84));
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 6: CALIBRATION SCREEN
+// SECTION 5: CALIBRATION SCREEN
 // ═══════════════════════════════════════════════════════════════════════════════
 
 void test_cal_steps_per_deg_unity() {
@@ -478,7 +439,7 @@ void test_cal_bar_pct_over() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 7: DISPLAY BRIGHTNESS
+// SECTION 6: DISPLAY BRIGHTNESS
 // ═══════════════════════════════════════════════════════════════════════════════
 
 void test_brightness_raw_to_pct_full() {
@@ -514,7 +475,7 @@ void test_brightness_roundtrip() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 8: BOOT PROGRESS
+// SECTION 7: BOOT PROGRESS
 // ═══════════════════════════════════════════════════════════════════════════════
 
 void test_boot_clamp_normal() {
@@ -547,7 +508,7 @@ void test_boot_increment_underflow() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 9: MAIN SCREEN
+// SECTION 8: MAIN SCREEN
 // ═══════════════════════════════════════════════════════════════════════════════
 
 void test_state_color_idle() {
@@ -621,7 +582,7 @@ void test_is_running_state() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 10: PROGRAMS SCREEN — format_preset_details
+// SECTION 9: PROGRAMS SCREEN — format_preset_details
 // ═══════════════════════════════════════════════════════════════════════════════
 
 void test_format_details_continuous() {
@@ -755,16 +716,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_core_load_half);
   RUN_TEST(test_core_load_div_zero);
 
-  // Section 5: RSSI → signal bars (7 tests)
-  RUN_TEST(test_rssi_strong);
-  RUN_TEST(test_rssi_good);
-  RUN_TEST(test_rssi_fair);
-  RUN_TEST(test_rssi_weak);
-  RUN_TEST(test_rssi_boundary_50);
-  RUN_TEST(test_rssi_boundary_70);
-  RUN_TEST(test_rssi_boundary_85);
-
-  // Section 6: Calibration (11 tests)
+  // Section 5: Calibration (11 tests)
   RUN_TEST(test_cal_steps_per_deg_unity);
   RUN_TEST(test_cal_steps_per_deg_with_factor);
   RUN_TEST(test_cal_error_degrees_unity);
@@ -777,7 +729,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_cal_bar_pct_full_error);
   RUN_TEST(test_cal_bar_pct_over);
 
-  // Section 7: Display brightness (7 tests)
+  // Section 6: Display brightness (7 tests)
   RUN_TEST(test_brightness_raw_to_pct_full);
   RUN_TEST(test_brightness_raw_to_pct_half);
   RUN_TEST(test_brightness_raw_to_pct_low_floors_to_20);
@@ -786,7 +738,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_brightness_pct_to_raw_0);
   RUN_TEST(test_brightness_roundtrip);
 
-  // Section 8: Boot progress (7 tests)
+  // Section 7: Boot progress (7 tests)
   RUN_TEST(test_boot_clamp_normal);
   RUN_TEST(test_boot_clamp_below);
   RUN_TEST(test_boot_clamp_above);
@@ -795,7 +747,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_boot_increment_overflow);
   RUN_TEST(test_boot_increment_underflow);
 
-  // Section 9: Main screen (14 tests)
+  // Section 8: Main screen (14 tests)
   RUN_TEST(test_state_color_idle);
   RUN_TEST(test_state_color_running);
   RUN_TEST(test_state_color_estop);
@@ -812,7 +764,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_rpm_adjust_clamp_max);
   RUN_TEST(test_is_running_state);
 
-  // Section 10: Programs format (6 tests)
+  // Section 9: Programs format (6 tests)
   RUN_TEST(test_format_details_continuous);
   RUN_TEST(test_format_details_pulse_finite);
   RUN_TEST(test_format_details_pulse_infinite);
@@ -820,7 +772,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_format_details_unknown);
   RUN_TEST(test_format_details_truncation);
 
-  // Section 11: Edge cases (1 test)
+  // Section 10: Edge cases (1 test)
   RUN_TEST(test_pulse_bar_rpm_below_min);
 
   return UNITY_END();

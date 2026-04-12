@@ -235,17 +235,6 @@ inline int core_load_percent(uint32_t delta_idle, uint32_t delta_total) {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// Signal bars helper (tests only; mirrors any future screen helper)
-// ───────────────────────────────────────────────────────────────────────────────
-
-inline int rssi_to_bars(int rssi) {
-  if (rssi > -50) return 4;
-  if (rssi > -70) return 3;
-  if (rssi > -85) return 2;
-  return 1;
-}
-
-// ───────────────────────────────────────────────────────────────────────────────
 // CALIBRATION SCREEN — steps per degree, error, tolerance
 // Mirrors screen_calibration.cpp update logic
 // ───────────────────────────────────────────────────────────────────────────────

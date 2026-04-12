@@ -392,12 +392,6 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - [x] LVGL async object deletion + widget invalidation pattern
 - [x] E-STOP wakes dimmed display (backlight / dim pipeline, v2.0.3+)
 
-**Planned:**
-
-- [ ] Increase MAX_RPM to 5.0 with DM542T
-- [ ] Enclosure design (3D printable)
-- [ ] Assembly guide
-
 ---
 
 ## Project Structure

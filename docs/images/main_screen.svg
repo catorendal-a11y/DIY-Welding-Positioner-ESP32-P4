@@ -1,36 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480">
-  <!-- Wireframe SCREEN_MAIN: theme.h MAIN_GAUGE_*, screen_main.cpp v2.0.4+ -->
-  <defs>
-    <filter id="arcGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="3" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-    <filter id="textGlow" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="4" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-    <filter id="dotGlow" x="-100%" y="-100%" width="300%" height="300%">
-      <feGaussianBlur stdDeviation="4" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-    <linearGradient id="indicatorGrad" gradientUnits="userSpaceOnUse" x1="274" y1="331" x2="400" y2="27">
-      <stop offset="0%" stop-color="#CC7700"/>
-      <stop offset="100%" stop-color="#FFB84D"/>
-    </linearGradient>
-    <radialGradient id="gaugeDepth" cx="50%" cy="50%" r="50%">
-      <stop offset="70%" stop-color="#080808" stop-opacity="0"/>
-      <stop offset="100%" stop-color="#050505" stop-opacity="0.6"/>
-    </radialGradient>
-  </defs>
+  <!-- SCREEN_MAIN wireframe: theme.h MAIN_* + screen_main.cpp (two lv_arc only; no gauge ticks/scale labels) -->
+  <!-- RPM: FONT_HUGE = montserrat_40 + lv transform_zoom MAIN_RPM_VALUE_ZOOM (332 ~= 1.296875x) -->
+  <!-- RPM unit: FONT_XL @ MAIN_RPM_TAG_Y = MAIN_GAUGE_CY+24; COL_ACCENT default #FF9500 -->
 
   <!-- ==================== BACKGROUND ==================== -->
   <rect width="800" height="480" fill="#050505"/>
@@ -39,8 +10,7 @@
   <rect x="0" y="0" width="800" height="30" fill="#090909"/>
   <line x1="0" y1="30" x2="800" y2="30" stroke="#2E2E2E" stroke-width="0.5"/>
   <text x="16" y="21" fill="#FF9500" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="bold" letter-spacing="1.5">TIG-ROTATOR</text>
-  <rect x="148" y="8" width="4" height="4" rx="2" fill="#00C853" opacity="0.8"/>
-  <text x="160" y="21" fill="#00C853" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold">IDLE</text>
+  <text x="160" y="21" fill="#00C853" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="14" font-weight="normal">IDLE</text>
 
   <!-- ==================== SEPARATORS ==================== -->
   <line x1="186" y1="36" x2="186" y2="410" stroke="#1A1A1A" stroke-width="0.5"/>
@@ -48,115 +18,69 @@
   <line x1="0" y1="414" x2="800" y2="414" stroke="#1A1A1A" stroke-width="0.5"/>
 
   <!-- ==================== LEFT SIDEBAR BUTTONS ==================== -->
-  <!-- JOG (gray, inactive) -->
   <rect x="8" y="36" width="170" height="72" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
   <text x="93" y="78" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">JOG</text>
 
-  <!-- CW (accent active = CW direction) -->
   <rect x="8" y="118" width="170" height="72" rx="2" fill="#1A1600" stroke="#FF9500" stroke-width="2"/>
   <text x="93" y="160" fill="#FF9500" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">CW</text>
 
-  <!-- PULSE (gray, inactive) -->
   <rect x="8" y="200" width="170" height="72" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
   <text x="93" y="242" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">PULSE</text>
 
   <!-- ==================== RIGHT SIDEBAR BUTTONS ==================== -->
-  <!-- STEP -->
   <rect x="622" y="36" width="170" height="72" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
   <text x="707" y="78" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">STEP</text>
 
-  <!-- 3-2-1 COUNTDOWN -->
   <rect x="622" y="118" width="170" height="72" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
   <text x="707" y="160" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">3-2-1</text>
 
-  <!-- MENU -->
   <rect x="622" y="200" width="170" height="72" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
   <text x="707" y="242" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">MENU</text>
 
-  <!-- PEDAL -->
   <rect x="622" y="280" width="170" height="72" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
   <text x="707" y="322" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">PEDAL</text>
 
-  <!-- ==================== CENTER GAUGE (matches theme.h MAIN_GAUGE_* v2.0.4) ==================== -->
-  <!-- Center (400,205), R=178 indicator; track arc R=184, stroke 14; no main-screen RPM +/- (pot only) -->
+  <!-- ==================== CENTER GAUGE (MAIN_GAUGE_CX/CY/R, track W14, ind W10) ==================== -->
   <g id="gauge">
-    <!-- Subtle depth circle -->
-    <circle cx="400" cy="205" r="198" fill="url(#gaugeDepth)"/>
-
-    <!-- Background arc: 270 deg from 135 deg to 405 deg, R=184 -->
+    <!-- Track only: lv_arc bg 135..405, COL_GAUGE_BG #111111, width 14 (outer R ~184) -->
     <path d="M 269.9 335.1 A 184 184 0 1 1 530.1 335.1"
           fill="none" stroke="#111111" stroke-width="14" stroke-linecap="round"/>
 
-    <!-- ===== MAJOR TICK MARKS (every 25%) ===== -->
-    <line x1="274" y1="335" x2="266" y2="335" stroke="#4A4A4A" stroke-width="2" stroke-linecap="round"/>
-    <line x1="231" y1="137" x2="223" y2="133" stroke="#4A4A4A" stroke-width="2" stroke-linecap="round"/>
-    <line x1="400" y1="17" x2="400" y2="8" stroke="#4A4A4A" stroke-width="2" stroke-linecap="round"/>
-    <line x1="569" y1="137" x2="577" y2="133" stroke="#4A4A4A" stroke-width="2" stroke-linecap="round"/>
-    <line x1="526" y1="335" x2="534" y2="335" stroke="#4A4A4A" stroke-width="2" stroke-linecap="round"/>
+    <!-- Indicator: COL_ACCENT flat #FF9500, width 10; value 0.50 of 3.0 max ~ 45 deg sweep from 135 deg -->
+    <path d="M 274.1 330.9 A 178 178 0 0 1 222 205"
+          fill="none" stroke="#FF9500" stroke-width="10" stroke-linecap="round"/>
 
-    <!-- ===== MINOR TICK MARKS (every 10%) ===== -->
-    <line x1="259" y1="294" x2="251" y2="297" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
-    <line x1="238" y1="246" x2="230" y2="245" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
-    <line x1="235" y1="197" x2="227" y2="193" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
-    <line x1="256" y1="151" x2="248" y2="145" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
-    <line x1="544" y1="151" x2="552" y2="145" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
-    <line x1="565" y1="197" x2="573" y2="193" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
-    <line x1="562" y1="246" x2="570" y2="245" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
-    <line x1="541" y1="294" x2="549" y2="297" stroke="#222222" stroke-width="1" stroke-linecap="round"/>
+    <!-- RPM digits: montserrat_40 + zoom 332/256 (pivot center, matches lv_obj_set_style_transform_zoom) -->
+    <g transform="translate(400,185) scale(1.296875)">
+      <text x="0" y="0" fill="#FF9500" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="40" font-weight="700" text-anchor="middle" dominant-baseline="central">0.50</text>
+    </g>
 
-    <!-- Indicator arc ~50% sweep (135 deg to 270 deg), R=178, stroke 10 -->
-    <path d="M 274.1 330.9 A 178 178 0 0 1 400 27"
-          fill="none" stroke="url(#indicatorGrad)" stroke-width="10" stroke-linecap="round" filter="url(#arcGlow)"/>
-
-    <circle cx="400" cy="27" r="5" fill="#FFB84D" filter="url(#dotGlow)"/>
-
-    <circle cx="400" cy="205" r="3" fill="#333333"/>
-    <circle cx="400" cy="205" r="1.5" fill="#4A4A4A"/>
-
-    <!-- RPM value (FONT_HUGE / 40pt; device also uses transform zoom) -->
-    <text x="400" y="175" fill="#FF9500" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="40" font-weight="bold" text-anchor="middle" filter="url(#textGlow)">0.50</text>
-
-    <!-- RPM unit (FONT_XL) -->
-    <text x="400" y="252" fill="#666666" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="24" font-weight="500" text-anchor="middle" letter-spacing="2">RPM</text>
-
-    <!-- Scale labels (0 .. MAX_RPM 3.0 per config.h) -->
-    <text x="262" y="352" fill="#333333" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="10" text-anchor="middle">0</text>
-    <text x="218" y="128" fill="#333333" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="10" text-anchor="middle">0.75</text>
-    <text x="400" y="12" fill="#333333" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="10" text-anchor="middle">1.5</text>
-    <text x="582" y="128" fill="#333333" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="10" text-anchor="middle">2.25</text>
-    <text x="538" y="352" fill="#333333" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="10" text-anchor="middle">3.0</text>
-
-    <!-- Pot-only hint (no Unicode) -->
-    <text x="400" y="368" fill="#444444" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="11" font-weight="500" text-anchor="middle">Speed: potentiometer</text>
+    <!-- RPM unit: FONT_XL (24), TOP_MID y=MAIN_RPM_TAG_Y (229) -->
+    <text x="400" y="247" fill="#666666" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="24" font-weight="normal" text-anchor="middle" letter-spacing="2">RPM</text>
   </g>
 
-  <!-- ==================== PULSE CONTROLS (under PULSE button) ==================== -->
-  <!-- Layout: [-]  value  [+] ON  — buttons left, ON/OFF label right towards center -->
+  <!-- ==================== PULSE CONTROLS (screen_main.cpp y=290 / 340, FONT_XL values, FONT_NORMAL ON/OFF) ==================== -->
   <g id="pulse-controls">
-    <!-- Row 1: ON  y=290 -->
     <rect x="10" y="290" width="44" height="44" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
     <text x="32" y="318" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="22" font-weight="400" text-anchor="middle">-</text>
-    <text x="89" y="318" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="24" font-weight="500" text-anchor="middle">0.5s</text>
+    <text x="89" y="318" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="24" font-weight="normal" text-anchor="middle">0.5s</text>
     <rect x="124" y="290" width="44" height="44" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
     <text x="146" y="318" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="22" font-weight="400" text-anchor="middle">+</text>
-    <text x="182" y="318" fill="#4A4A4A" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="14" font-weight="500" letter-spacing="0.5">ON</text>
+    <text x="182" y="312" fill="#666666" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="14" font-weight="normal" letter-spacing="0.5">ON</text>
 
-    <!-- Row 2: OFF y=340 -->
     <rect x="10" y="340" width="44" height="44" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
     <text x="32" y="368" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="22" font-weight="400" text-anchor="middle">-</text>
-    <text x="89" y="368" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="24" font-weight="500" text-anchor="middle">0.5s</text>
+    <text x="89" y="368" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="24" font-weight="normal" text-anchor="middle">0.5s</text>
     <rect x="124" y="340" width="44" height="44" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
     <text x="146" y="368" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="22" font-weight="400" text-anchor="middle">+</text>
-    <text x="182" y="368" fill="#4A4A4A" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="14" font-weight="500" letter-spacing="0.5">OFF</text>
+    <text x="182" y="362" fill="#666666" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="14" font-weight="normal" letter-spacing="0.5">OFF</text>
   </g>
 
-  <!-- ==================== BOTTOM BAR ==================== -->
+  <!-- ==================== BOTTOM BAR (FONT_SUBTITLE 16) ==================== -->
   <g id="bottom-bar">
-    <!-- START button (gray in IDLE state) -->
     <rect x="4" y="420" width="392" height="56" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
     <text x="200" y="454" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="700" text-anchor="middle" letter-spacing="1">&gt; START</text>
 
-    <!-- STOP button (danger style) -->
     <rect x="404" y="420" width="392" height="56" rx="2" fill="#1A0A0A" stroke="#FF1744" stroke-width="2"/>
     <text x="600" y="454" fill="#FF1744" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="700" text-anchor="middle" letter-spacing="1">X STOP</text>
   </g>

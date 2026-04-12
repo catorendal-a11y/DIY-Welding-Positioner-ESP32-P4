@@ -56,11 +56,16 @@ speed_slider_set(rpm)  ──>
 ```
 
 ### CAS State Transition
+`control_transition_to()` uses `std::atomic<SystemState>` with **`memory_order_acquire`** on the initial load, **`memory_order_acq_rel`** on successful `compare_exchange_strong`, **`memory_order_acquire`** on the failure path, and **`memory_order_release`** when publishing `previousState` — so `control_get_state()` (acquire load) sees consistent ordering on both cores.
+
+Pseudocode shape (ordering omitted):
 ```
 bool control_transition_to(SystemState newState) {
-  SystemState expected = currentState.load();
+  SystemState expected = currentState.load(/* acquire */);
   if (!control_is_valid_transition(expected, newState)) return false;
-  return currentState.compare_exchange_strong(expected, newState);
+  if (!currentState.compare_exchange_strong(expected, newState /* acq_rel / acquire */)) return false;
+  previousState.store(expected /* release */);
+  return true;
 }
 ```
 
@@ -128,8 +133,10 @@ Two-layer ESTOP architecture:
 | `display.cpp` | MIPI-DSI ST7701S init, GT911 touch, LEDC backlight |
 | `lvgl_hal.cpp` | LVGL display driver, flush callback, dim control |
 | `screens.cpp` | Screen registry, lazy creation, show/hide management |
-| `theme.h` | Color palette, font definitions, constants |
+| `theme.h` | Color palette, font definitions, layout constants (**`MAIN_GAUGE_*`**, **`MAIN_RPM_*`**, **`JOG_RPM_*`**, settings `SET_*`, etc.) |
 | `screens/` | `screen_*.cpp` — 19 `ScreenId` roots + ESTOP overlay module |
+
+**v2.0.4 layout notes:** Main screen semicircular RPM gauge and stacked RPM labels are driven from `theme.h` constants; jog RPM row and right-aligned +/- use **`JOG_RPM_*`**. Main screen has **no** RPM +/- buttons (pot-only on that screen).
 
 ## Display Pipeline
 

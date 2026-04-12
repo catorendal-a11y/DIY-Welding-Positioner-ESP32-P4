@@ -66,7 +66,7 @@ Expected boot output:
 - [ ] Touch responds to taps
 - [ ] Press START — motor rotates at set RPM
 - [ ] Turn potentiometer — RPM changes during rotation
-- [ ] Press +/- buttons — RPM changes during rotation
+- [ ] Turn pot on main screen — workpiece RPM changes during rotation (main has no +/-; use **Jog** screen +/- for jog speed if needed)
 - [ ] Toggle direction switch — motor reverses
 - [ ] Press STOP — motor decelerates and stops
 - [ ] Press E-STOP — motor halts instantly, red overlay appears

@@ -10,15 +10,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.0.4] - 2026-04-12
 
 ### Added
-- **`githooks/commit-msg`** — strips `Made-with: Cursor` from commit messages when `core.hooksPath` is set to `githooks` (see `.gitattributes` for LF on the hook script).
+- **`githooks/commit-msg`** + **`.gitattributes`** — optional hook strips `Made-with: Cursor` from commit messages; run `git config core.hooksPath githooks` once per clone (see `CONTRIBUTING.md`).
+- **Theme layout for main gauge** — `MAIN_GAUGE_*`, `MAIN_RPM_TAG_Y`, `MAIN_RPM_VALUE_GAP` / `MAIN_RPM_VALUE_LIFT` / `MAIN_RPM_VALUE_ZOOM` in `theme.h` (no magic numbers in `screen_main.cpp` for gauge geometry).
+- **Jog RPM row constants** — `JOG_RPM_*` in `theme.h` for title/value/bar and right-aligned +/- buttons with explicit gap.
 
 ### Changed
-- **Main screen** — potentiometer-only RPM: removed on-screen +/- buttons and `rpm_buttons_enabled` setting; larger semicircular gauge (`MAIN_GAUGE_*` in `theme.h`); RPM value centered above the unit label with optional zoom (`MAIN_RPM_VALUE_ZOOM`).
-- **Jog screen** — removed top-right min/max RPM hint; fixed overlapping +/- buttons; RPM row layout moved to `JOG_RPM_*` theme constants.
-- **Concurrency** — `control_transition_to` / `controlTask` use consistent `std::memory_order` for `currentState`; `programsDirty` is `std::atomic<bool>`; broader `g_settings_mutex` coverage across motor, storage, and UI hot paths.
+- **Main screen (`screen_main.cpp`)** — RPM is **pot-only** on this screen: removed `-` / `+` buttons and all `speed_slider_set` from those controls; removed `rpm_buttons_enabled` toggling. Semicircular gauge is larger; `MAIN_GAUGE_CY` adjusted so the arc stays on-screen; RPM numeric label uses `LV_ALIGN_TOP_MID` stacking above **RPM** unit label; value uses `FONT_HUGE` (40 pt max) plus LVGL `transform_zoom` + pivot for a slightly larger readout without loading `montserrat_48`.
+- **Jog screen (`screen_jog.cpp`)** — removed the small top-right label that showed `MIN_RPM`–`MAX_RPM` (looked like stray numbers). **+** / **-** are re-laid out (`JOG_RPM_BTN_PLUS_X` / `JOG_RPM_BTN_MINUS_X`) so they no longer overlap; progress bar width tweaked to leave margin before the buttons.
+- **Programs list (`screen_programs.cpp`)** — `programsDirty` is `std::atomic<bool>`; `screen_programs_invalidate_widgets()` sets dirty so card list rebuilds after `screens_reinit()`.
+- **`control.cpp`** — `currentState` / `previousState` transitions use `memory_order_acquire`, `acq_rel` on CAS, `release` on stores; `controlTask` reads state with `acquire`; transition log line uses the pre-CAS `expected` state (not the atomic object).
+- **`SystemSettings` reads** — motor, storage apply/save, calibration, speed direction, theme, display init, LVGL HAL, boot/sysinfo paths take **`g_settings_mutex`** where `g_settings` is touched from UI or across cores (see motor snapshot pattern in `motor.cpp`).
+- **Shared UI (`screens.h` / `screens.cpp`)** — reusable header/action-bar helpers and safer child access patterns (e.g. pulse action bar) used across multiple screens.
+- **Timer screen** — countdown delay changes do not write settings to NVS until **BACK** (avoids wear and matches operator expectation).
+
+### Fixed
+- **Gauge clipping** — first enlarged gauge used a center Y that placed the arc partly above `y=0`; fixed via theme `MAIN_GAUGE_CY`.
+- **Jog RPM row** — overlapping +/- touch targets.
 
 ### Removed
-- **`rpm_buttons_enabled`** — field removed from `SystemSettings` and from NVS settings JSON (legacy key in stored blobs is ignored).
+- **`rpm_buttons_enabled`** — removed from `SystemSettings`, NVS JSON save/load, and native storage roundtrip test; legacy key in an old NVS blob is ignored on deserialize.
+
+### Documentation
+- **README**, **wiki** (Home, Roadmap, Architecture, Getting-Started, Troubleshooting), **docs/INSTRUCTABLES.md**, **CONTRIBUTING.md**, **AGENTS.md**, and **CLAUDE.md** updated so operator and contributor text matches v2.0.4 behaviour (main = pot RPM; jog = +/- for jog speed; hooks, mutexes, theme constants).
+
+> **Note:** Older sections of this file (e.g. **[0.4.0]** “touchscreen +/- while motor is running”) describe behaviour **before** v2.0.4; the main screen no longer provides those buttons.
 
 ## [2.0.3] - 2026-04-12
 

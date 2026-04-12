@@ -183,9 +183,8 @@ IMAGE: Photo of boot screen
 
 IMAGE: docs/images/main_screen.svg
 
-- **Gauge** — shows current RPM (default range per `MIN_RPM`/`MAX_RPM` in `config.h`)
+- **Gauge** — shows current RPM (default range per `MIN_RPM`/`MAX_RPM` in `config.h`); speed on this screen is from the **potentiometer** (no +/- here as of v2.0.4)
 - **CW/CCW button** — toggle rotation direction
-- **RPM +/- buttons** — adjust speed
 - **START/STOP** — continuous rotation mode
 - **Mode buttons** — quick access to Jog, Pulse, Step, Timer
 
@@ -195,11 +194,12 @@ IMAGE: docs/images/main_screen.svg
 
 ### Speed Control
 
-Two methods for adjusting speed:
+Ways to adjust speed:
 
-1. **Potentiometer** — turn the knob for analog speed control (full range per `config.h`)
-2. **+/- buttons** — digital adjustment
+1. **Potentiometer** — primary control on the **main** screen (full range per `config.h` and Motor Config max RPM)
+2. **Jog screen +/-** — small digital steps for **jog RPM** while setting up that mode (v2.0.4+)
 3. **Foot pedal** — analog speed via ADS1115 I2C ADC (if connected)
+4. **Programs / edit flows** — stored RPM per preset; load a program to apply
 
 ### 5 Welding Modes
 

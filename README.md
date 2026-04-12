@@ -104,7 +104,7 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 | Category | Details |
 |:---|:---|
 | **Welding Modes** | 5 modes — Continuous, Jog, Pulse, Step, and Countdown (configurable 1-10s delay) |
-| **Speed Control** | Live RPM adjustment via potentiometer and touchscreen buttons |
+| **Speed Control** | Live RPM via **potentiometer** on the main screen; touch **+/-** on **Jog** (and presets/settings where applicable) |
 | **Foot Pedal** | Analog speed input (via ADS1115 I2C ADC) + digital start switch |
 | **Direction Switch** | Physical CW/CCW toggle (GPIO 29) |
 | **Touch UI** | LVGL 9.x glove-safe interface, high-contrast dark theme, 8 accent colors |
@@ -124,7 +124,7 @@ The interface is built from many full-screen flows and editors—each purpose-bu
 | Screen | Description |
 |:---|:---|
 | **Boot** | Startup splash / transition to main |
-| **Main** | RPM gauge, start/stop, mode quick-access |
+| **Main** | Large RPM gauge (pot-driven), start/stop, mode quick-access (no main-screen RPM +/-) |
 | **Menu** | Advanced mode selection and settings |
 | **Continuous** | Constant rotation at set RPM |
 | **Jog** | Touch-and-hold rotation for manual positioning |
@@ -380,7 +380,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 
 - [x] 5 welding modes (Continuous, Jog, Pulse, Step, Timer)
 - [x] Program preset storage (NVS JSON blobs, 16 slots; legacy LittleFS migration on boot)
-- [x] Live RPM adjustment (pot + buttons)
+- [x] Live RPM adjustment (pot on main; touch +/- on Jog and in program flows)
 - [x] Foot pedal support
 - [x] Direction switch
 - [x] 8 accent color themes

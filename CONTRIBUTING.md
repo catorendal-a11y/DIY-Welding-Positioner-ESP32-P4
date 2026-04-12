@@ -36,6 +36,16 @@ PYTHONUTF8=1 PYTHONIOENCODING=utf-8 "C:\Users\Rendalsniken\.platformio\penv\Scri
 6. **Push** your branch to your fork
 7. **Submit a Pull Request** to the original repository
 
+### Git hooks (optional)
+
+This repository includes **`githooks/commit-msg`**, which removes a trailing `Made-with: Cursor` line from commit messages (so it never enters `git log`). After cloning, enable it once:
+
+```bash
+git config core.hooksPath githooks
+```
+
+`.gitattributes` forces LF line endings for that script so it stays usable on Linux/macOS checkouts.
+
 ## Architecture Overview
 
 ```
@@ -66,9 +76,9 @@ controlTask (pri 3, 4KB)
 ### Threading Rules
 - All `lv_*` calls must come from Core 1 (`lvglTask`) only
 - `speed_apply()` must ONLY be called from Core 0 (`motorTask`)
-- UI callbacks must set `volatile` flags — never call motor functions directly
-- Shared state between cores: use `std::atomic` or `volatile` flags
-- Mutex-protected data (e.g., `g_presets`, `g_stepperMutex`): always `xSemaphoreGive` before ANY return path
+- UI callbacks must set `std::atomic` or `volatile` flags — never call motor functions directly
+- Shared state between cores: use `std::atomic` with explicit memory ordering where required; `volatile` alone is insufficient on RISC-V SMP
+- Mutex-protected data (`g_presets_mutex`, `g_settings_mutex`, `g_stepperMutex`, `g_nvs_mutex`): always `xSemaphoreGive` before ANY return path
 - **`g_stepperMutex` is a FreeRTOS mutex** (`SemaphoreHandle_t`) — NOT a spinlock. Uses `xSemaphoreTake`/`xSemaphoreGive`
 - **Never use `lv_obj_delete()` inside event callbacks** for the triggering object — use `lv_obj_delete_async()`
 - Screens with static widget pointers must implement `screen_*_invalidate_widgets()` called from `screens_reinit()`
@@ -113,6 +123,6 @@ controlTask (pri 3, 4KB)
 ## Documentation
 
 Before modifying code, read:
-- `AGENTS.md` (local only, not in repo) — full project context and discovered constraints
+- `AGENTS.md` — agent/coding conventions and project constraints
 - `docs/` — hardware setup, safety system, EMI mitigation, implementation notes
 - `wiki/` — getting started, troubleshooting, architecture

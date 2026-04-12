@@ -25,6 +25,10 @@
 ### Speed not changing during rotation
 - Ensure firmware is v2.0.2 or newer (includes `applySpeedAcceleration()` fix)
 - Check that potentiometer ADC reads change in debug log
+- **v2.0.4+:** On the **main** screen, RPM is adjusted with the **potentiometer only** — there are no **+/-** touch buttons there. Use **Jog** (or load a program) for touch-based RPM tweaks where the UI provides them.
+
+### Main screen: missing +/- buttons (v2.0.4+)
+- **By design:** touchscreen **+/-** for workpiece RPM were removed from `SCREEN_MAIN` to simplify pot-only operation. Jog RPM still has **+/-** on `SCREEN_JOG`.
 
 ### Direction switch not working
 - Enable it in Settings > Motor Config > Direction Switch

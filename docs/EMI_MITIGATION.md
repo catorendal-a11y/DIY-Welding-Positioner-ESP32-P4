@@ -33,7 +33,4 @@ If EMI causes false E-STOP triggers on `GPIO 34`, adding a hardware RC (Resistor
 For maximum reliability, add **TVS Diodes** (e.g., SMF3.3) on the E-STOP and Potentiometer wiper lines. These shunt high-voltage transients to ground before they can reach the ESP32-P4's internal junction.
 
 ## 7. C6 Co-Processor Considerations
-The ESP32-P4 communicates with the ESP32-C6 co-processor over SDIO for WiFi and BLE. This shared bus is sensitive to EMI:
-- Keep SDIO traces (GPIO 14-19) short and away from motor power cables.
-- EMI-induced SDIO errors can cause WiFi disconnections or BLE data corruption.
-- If WiFi/BLE becomes unstable during welding, add additional ferrite chokes near the ESP32-P4 board.
+The GUITION board routes a high-speed bus between ESP32-P4 and the on-board ESP32-C6. Keep those PCB traces and any related cabling away from TIG HF noise sources; follow the vendor layout for any custom shielding.

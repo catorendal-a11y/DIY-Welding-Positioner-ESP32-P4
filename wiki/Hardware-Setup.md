@@ -80,7 +80,7 @@ Uses internal INPUT_PULLUP. Enable via Settings > Motor Config > Direction Switc
 
 ### Reserved Pins
 
-GPIO 28 (C6_U0TXD) and GPIO 32 (C6_U0RXD) are PCB-routed to the ESP32-C6 co-processor for WiFi/BLE via SDIO. Do NOT use these for other purposes.
+GPIO 28 (C6_U0TXD) and GPIO 32 (C6_U0RXD) are PCB-routed to the ESP32-C6 co-processor. Do **not** repurpose without the vendor schematic.
 
 ## Power Sequencing
 

@@ -38,7 +38,7 @@ The system transitions through a rigorous state machine (defined in `control.h`)
 - **Motor Task:** Subscribed to WDT. Ensures pulses are generated.
 - **Control Task:** Subscribed to WDT. Ensures state machine is responsive.
 - **Safety Task:** Subscribed to WDT. Ensures E-STOP logic is alive.
-- **Storage Task:** NOT subscribed (does blocking I/O — flash writes, WiFi/BLE SDIO — that can exceed WDT timeout).
+- **Storage Task:** NOT subscribed (does blocking I/O — flash writes and related work — that can exceed WDT timeout).
 - **LVGL Task:** NOT subscribed (graphics rendering must not be interrupted).
 
 If any WDT-subscribed task freezes, the system triggers a hardware reset, disabling the motor via ENA pull-up.

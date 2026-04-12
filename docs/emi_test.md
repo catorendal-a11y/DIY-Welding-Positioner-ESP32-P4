@@ -24,7 +24,7 @@
 | 2 | No GUI freeze during welding | Touch responsive | [ ] |
 | 3 | STEP jitter < 1 us during welding | Oscilloscope verified | [ ] |
 | 4 | ADC variation < +/-0.05 RPM | Stable speed | [ ] |
-| 5 | WiFi/BLE remains connected | No disconnection | [ ] |
+| 5 | No spurious I2C / touch lockups | GT911 stays responsive | [ ] |
 
 ---
 
@@ -46,13 +46,13 @@
 | HF Arc Start | +/- ___ | |
 | During Weld | +/- ___ | |
 
-### SDIO Stability (WiFi/BLE)
+### P4 ↔ C6 bus (board-dependent)
 
-| Condition | WiFi Status | BLE Status | Result |
-|-----------|-------------|------------|--------|
-| Idle (no weld) | Connected | Connected | |
-| HF Arc Start | ___ | ___ | |
-| During Weld | ___ | ___ | |
+| Condition | Bus / co-processor stable | Result |
+|-----------|---------------------------|--------|
+| Idle (no weld) | ___ | |
+| HF Arc Start | ___ | |
+| During Weld | ___ | |
 
 ---
 

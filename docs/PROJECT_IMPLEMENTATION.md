@@ -12,12 +12,10 @@
 2. [RTOS Task Architecture](#2-rtos-task-architecture)
 3. [Motor Control & Live Speed Adjustment](#3-motor-control--live-speed-adjustment)
 4. [Safety System](#4-safety-system)
-5. [BLE Remote Control](#5-ble-remote-control)
-6. [WiFi Connectivity](#6-wifi-connectivity)
-7. [Storage & Presets](#7-storage--presets)
-8. [UI Screen System](#8-ui-screen-system)
-9. [Thread Safety Patterns](#9-thread-safety-patterns)
-10. [Known Issues & Workarounds](#10-known-issues--workarounds)
+5. [Storage & Presets](#5-storage--presets)
+6. [UI Screen System](#6-ui-screen-system)
+7. [Thread Safety Patterns](#7-thread-safety-patterns)
+8. [Known Issues & Workarounds](#8-known-issues--workarounds)
 
 ---
 
@@ -55,7 +53,7 @@
 | motorTask | 0 | 4 | 5 KB | Speed apply, ADC poll, pedal, motor config |
 | controlTask | 0 | 3 | 4 KB | State machine, mode logic |
 | lvglTask | 1 | 2 | 64 KB | LVGL rendering, screen updates, dim, ESTOP overlay |
-| storageTask | 1 | 1 | 12 KB | NVS flush (settings/presets), WiFi process, BLE update, health monitoring |
+| storageTask | 1 | 1 | 12 KB | NVS flush (settings/presets), periodic housekeeping |
 
 - motorTask, controlTask, safetyTask: subscribed to WDT
 - lvglTask, storageTask: NOT subscribed (blocking I/O can exceed WDT timeout)
@@ -84,31 +82,7 @@
 
 ---
 
-## 5. BLE Remote Control
-
-- **Stack**: NimBLE via Arduino BLE (baked into arduino-esp32 3.3.x)
-- **Transport**: ESP-Hosted SDIO to ESP32-C6 co-processor (shared with WiFi)
-- **Service**: Custom UUID `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`
-- **NUS**: TX (6E400002, NOTIFY), RX (6E400003, WRITE)
-- **Commands**: 0x00=Arm, F=Start, S/X=Stop, R=CW, L=CCW, B=Reverse+Start
-- **Security**: MITM bonding, passkey 123456
-- **Rate limit**: Notify at 500ms max to avoid SDIO saturation
-- **Pending flags**: BLE write callbacks set flags, processed in `ble_update()` on storageTask
-
----
-
-## 6. WiFi Connectivity
-
-- **Stack**: ESP-Hosted via C6 co-processor (same SDIO as BLE)
-- **Init order**: `WiFi.begin()` MUST be called before `BLEDevice::init()`
-- **Thread safety**: ALL WiFi calls via `wifi_process_pending()` in storageTask — never from UI thread
-- **Scan**: Async `WiFi.scanNetworks(true)`, results cached
-- **Polling**: WiFi.status() every 2s (reduced from 100ms to avoid SDIO blocking)
-- **Settings**: When WiFi is enabled in a build, credential persistence follows that build’s storage layer; mainline settings/presets use **NVS** (`wrot` / `cfg`), not `/settings.json`
-
----
-
-## 7. Storage & Presets
+## 5. Storage & Presets
 
 - **Backend**: **NVS** using Arduino `Preferences`, namespace `wrot`
 - **Keys**: `cfg` — JSON object for `SystemSettings` (acceleration, microstep, calibration, brightness, themes, countdown, etc.); `prs` — JSON array for up to **16** presets
@@ -122,7 +96,7 @@
 
 ---
 
-## 8. UI Screen System
+## 6. UI Screen System
 
 - **19 `ScreenId` root screens** with lazy creation (only boot, main, confirm created at init) plus separate **E-STOP overlay** (`screen_estop_overlay.cpp`)
 - **Screen management**: `screens_show()` dispatches create/update, tracks `screenCreated[]` array
@@ -133,7 +107,7 @@
 
 ---
 
-## 9. Thread Safety Patterns
+## 7. Thread Safety Patterns
 
 ### Pending-Flag Pattern (UI -> Core 0)
 ```cpp
@@ -169,48 +143,45 @@ stepper->applySpeedAcceleration();
 xSemaphoreGive(g_stepperMutex);
 ```
 
-### Deferred Keyboard Cleanup
+### Deferred keyboard cleanup
 ```cpp
-// Event callback — sets flag only
-static void wifi_kb_cb(lv_event_t* e) {
-  if (lv_event_get_code(e) == LV_EVENT_READY) {
-    wifiConnectOnClose = true;
+// Event callback — sets flag only (never delete LVGL objects synchronously here)
+static void on_kb_ready_cb(lv_event_t* e) {
+  if (lv_event_get_code(e) == LV_EVENT_READY)
     kbClosePending = true;
-  }
 }
 
-// Update function — performs actual cleanup
-void screen_wifi_update() {
+// screen_*_update() — performs actual cleanup
+void screen_example_update() {
   if (kbClosePending) {
-    if (wifiConnectOnClose) connect_wifi();
     cleanup_kb();  // uses lv_obj_delete_async()
+    kbClosePending = false;
   }
 }
 ```
 
-### Widget Invalidation on Screen Reinit
+### Widget invalidation on screen reinit
 ```cpp
-void screen_wifi_invalidate_widgets() {
-  scrollPanel = nullptr; kb = nullptr; passTa = nullptr;
-  // ... null all static widget pointers ...
+void screen_example_invalidate_widgets() {
+  scrollPanel = nullptr;
+  kb = nullptr;
   kbClosePending = false;
-  wifiConnectOnClose = false;
 }
 // Called from screens_reinit() to prevent dangling pointers
 ```
 
 ---
 
-## 10. Known Issues & Workarounds
+## 8. Known Issues & Workarounds
 
 | Issue | Workaround |
 |-------|-----------|
 | `lv_display_set_rotation()` crashes ESP32-P4 | Manual rotation in flush callback |
 | `ledc_set_duty_and_update()` crashes backlight | Use separate `ledc_set_duty()` + `ledc_update_duty()` |
 | `LittleFS.rename()` crashes ESP32-P4 | Use direct FILE_WRITE (not atomic) |
-| GPIO 28/32 claimed by C6 co-processor | Do not use for GPIO — reserved for WiFi/BLE SDIO transport |
-| BLE notify floods SDIO | Rate-limit to 500ms |
-| WiFi API not thread-safe | All calls via `wifi_process_pending()` on storageTask |
+| GPIO 28/32 claimed by C6 co-processor | Do not use for application GPIO without GUITION schematic |
+| High traffic on P4↔C6 bus | Keep unrelated work off that path; follow vendor layout |
+| Companion MCU APIs not thread-safe with UI | Keep any future bus traffic off the LVGL thread |
 | `lv_obj_set_flex_gap` doesn't exist in LVGL 9 | Use `lv_obj_set_style_pad_row/col` |
 | montserrat_48+ crashes ESP32-P4 | Max font is montserrat_40 |
 | `LV_SYMBOL_MINUS`/`PLUS` not in montserrat_16 | Use ASCII `"-"`/`"+"` |

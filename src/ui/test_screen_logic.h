@@ -235,8 +235,7 @@ inline int core_load_percent(uint32_t delta_idle, uint32_t delta_total) {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// WIFI SCREEN — RSSI to signal bars
-// Mirrors rssi_to_bars() in screen_wifi.cpp
+// Signal bars helper (tests only; mirrors any future screen helper)
 // ───────────────────────────────────────────────────────────────────────────────
 
 inline int rssi_to_bars(int rssi) {

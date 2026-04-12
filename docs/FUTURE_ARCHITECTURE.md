@@ -11,22 +11,13 @@ This document outlines planned features and their current status.
 
 ---
 
-## 2. WiFi & BLE Remote Control
+## 2. Alternate operator / remote interfaces
 
-> **STATUS: IMPLEMENTED (v2.0.0)**
-> WiFi and BLE are available via the on-board ESP32-C6 co-processor using ESP-Hosted SDIO transport.
+> **STATUS: NOT IN SCOPE**
+> Operator control is touch UI, potentiometer, direction switch, and optional foot pedal. A second MCU may exist on the dev board for factory use; this repository does not ship remote operator panels or companion apps.
 
-### What's Implemented
-- **BLE**: Nordic UART Service (NUS) with arm/start/stop/direction/RPM commands
-- **WiFi**: STA mode with network scanning, credential storage, on-screen keyboard
-- **Thread safety**: All WiFi/BLE calls routed through storageTask
-- **C6 OTA**: Firmware update for C6 co-processor via HTTPS
-
-### What's Planned
-- Countdown before start (3-2-1 on screen, gives welder time to position)
-- Web-based remote control panel (HTML/JS hosted on C6)
-- Bidirectional state sync (phone mirrors display)
-- WiFi SoftAP mode (standalone network without router)
+### Already in product
+- Countdown before start (3-2-1 on screen) — implemented in current firmware
 
 ---
 

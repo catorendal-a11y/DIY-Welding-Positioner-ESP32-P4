@@ -1,4 +1,4 @@
-// BLE - Disabled (WiFi and BLE removed)
+// Companion link stubs — no-op (product uses touch UI + pedal only)
 #include "ble.h"
 
 void ble_init() {}

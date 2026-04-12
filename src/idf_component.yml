@@ -1,3 +1,2 @@
 dependencies:
   idf: ">=5.3"
-  espressif/esp_hosted: ">=0.0.6"

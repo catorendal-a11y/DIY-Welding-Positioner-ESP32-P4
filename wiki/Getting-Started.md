@@ -103,7 +103,7 @@ Settings can also be changed from the touchscreen via **Settings > Motor Config*
 | GPIO 33 | PEDAL SW (Input) | Foot pedal switch (optional) |
 | I2C (GPIO 7/8) | ADS1115 | Pedal pot ADC (optional, addr 0x48) |
 
-**Reserved:** GPIO 28 / 32 are routed to the ESP32-C6 (WiFi/BLE SDIO) — do not use as GPIO when wireless is active. See `docs/HARDWARE_SETUP.md` §Reserved pins.
+**Reserved:** GPIO 28 / 32 are routed to the ESP32-C6 on the PCB — do not use as application GPIO without the GUITION schematic. See `docs/HARDWARE_SETUP.md` §Reserved pins.
 
 All driver minus pins (PUL-, DIR-, ENA-) connect to ESP32 GND.
 

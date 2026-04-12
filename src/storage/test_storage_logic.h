@@ -84,15 +84,14 @@ inline uint32_t preset_constrain_timer_ms(uint32_t val) {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// WIFI BACKOFF — exponential reconnect interval
-// Mirrors wifi_process_pending() in storage.cpp
+// Exponential reconnect / retry interval (generic helper for tests)
 // ───────────────────────────────────────────────────────────────────────────────
 
-inline uint32_t wifi_backoff_interval(uint32_t current) {
+inline uint32_t reconnect_backoff_interval(uint32_t current) {
   if (current < 300000) return current * 2;
   return 300000;
 }
 
-inline uint32_t wifi_backoff_reset() {
+inline uint32_t reconnect_backoff_reset() {
   return 30000;
 }

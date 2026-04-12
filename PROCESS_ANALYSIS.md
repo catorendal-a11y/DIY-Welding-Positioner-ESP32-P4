@@ -32,22 +32,22 @@
 │  │ 10ms loop                    │    │ 100ms loop               │           │
 │  │                              │    │                          │           │
 │  │ 1. screens_process_pending() │    │ 1. storage_flush()       │           │
-│  │    → theme_reinit (rare)     │    │    → LittleFS write      │           │
-│  │    → screens_show()          │    │    → .tmp + rename       │           │
-│  │                              │    │ 2. wifi_process_pending()│           │
-│  │ 2. lvgl_lock()               │    │    → WiFi.status()       │           │
-│  │    lv_timer_handler()         │    │    → scan/connect        │           │
-│  │    lvgl_unlock()             │    │ 3. ble_update()          │           │
-│  │                              │    │    → BLE notifications   │           │
-│  │ 3. dim_update()              │    │    → pending commands    │           │
-│  │                              │    │ 4. Health monitoring     │           │
-│  │ 4. screens_update_current()  │    │    → stack/heap check    │           │
-│  │    [every 200ms, mutex]       │    │                          │           │
-│  │                              │    │ NO WDT — blocking I/O   │           │
-│  │ 5. ESTOP overlay show/hide   │    └──────────────────────────┘           │
+│  │    → theme_reinit (rare)     │    │    → NVS / flash write   │           │
+│  │    → screens_show()          │    │                          │           │
+│  │                              │    │ 2. Health monitoring     │           │
+│  │ 2. lvgl_lock()               │    │    → stack/heap check    │           │
+│  │    lv_timer_handler()         │    │                          │           │
+│  │    lvgl_unlock()             │    │ NO WDT — blocking I/O   │           │
+│  │                              │    └──────────────────────────┘           │
+│  │ 3. dim_update()              │                                         │
+│  │                              │                                         │
+│  │ 4. screens_update_current()  │                                         │
+│  │    [every 200ms, mutex]       │                                         │
+│  │                              │                                         │
+│  │ 5. ESTOP overlay show/hide   │                                         │
 │  │    [mutex]                   │                                         │
-│  │                              │    Shared SDIO bus: WiFi + BLE            │
-│  │ 6. ESTOP overlay update      │    (C6 co-processor)                     │
+│  │                              │                                         │
+│  │ 6. ESTOP overlay update      │                                         │
 │  │    [mutex]                   │                                         │
 │  └──────────────────────────────┘                                         │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -263,23 +263,7 @@ Currently, only `screen_programs.cpp` and `screen_program_edit.cpp` take `g_pres
 
 **FIX**: Copy presets to local buffer, release mutex, then write from buffer.
 
-### PROBLEM 7: `wifi_process_pending()` Calls WiFi API Every 2s (LOW)
-
-**Severity**: LOW — ESP-Hosted WiFi is on shared SDIO bus
-**Status**: ACCEPTABLE
-
-`WiFi.status()` (storage.cpp:331) goes through the SDIO bus to the C6 co-processor. This is a quick poll but still uses the shared bus. If `ble_update()` sends BLE data at the same time, there could be bus contention.
-
-Current mitigation: WiFi poll interval is 2s (not 100ms). This reduces contention.
-
-### PROBLEM 8: `ble_update()` Runs in storageTask (LOW)
-
-**Severity**: LOW — BLE and WiFi share SDIO bus
-**Status**: ACCEPTABLE
-
-BLE notifications (`bleServer->notify()`) go through the SDIO bus to the C6 co-processor. If WiFi is being polled at the same time, there could be bus contention. Both run in the same task (storageTask), so they're sequential — no actual concurrency issue.
-
-### PROBLEM 9: `screens_reinit()` Deletes All Screens (MEDIUM)
+### PROBLEM 7: `screens_reinit()` Deletes All Screens (MEDIUM)
 
 **Severity**: MEDIUM — causes brief blue flash
 **Status**: MITIGATED (deferred via screens_process_pending)
@@ -290,7 +274,7 @@ Mitigation: Runs in `screens_process_pending()` BEFORE `lv_timer_handler()`, so 
 
 **FIX**: Could send a black frame before reinit, but this is cosmetic.
 
-### PROBLEM 10: `lvgl_tick_cb` Uses `ESP_TIMER_TASK` (LOW)
+### PROBLEM 8: `lvgl_tick_cb` Uses `ESP_TIMER_TASK` (LOW)
 
 **Severity**: LOW — 1ms timer
 **Status**: ACCEPTABLE
@@ -298,20 +282,6 @@ Mitigation: Runs in `screens_process_pending()` BEFORE `lv_timer_handler()`, so 
 The LVGL tick timer uses `ESP_TIMER_TASK` dispatch (not `ESP_TIMER_ISR`). This means `lv_tick_inc(1)` runs in the timer task context, not as an actual ISR. This is correct for ESP-IDF 5.x on ESP32-P4 where `ESP_TIMER_ISR` is not available.
 
 The callback is marked `IRAM_ATTR` which is correct — it ensures the function is in IRAM even though it runs in task context.
-
-### PROBLEM 11: `setup()` Calls WiFi Functions Before Tasks Created (LOW)
-
-**Severity**: LOW — only runs once at boot
-**Status**: ACCEPTABLE
-
-`setup()` calls `WiFi.begin()` and `ble_init()` before any FreeRTOS tasks are created. This is safe because no concurrent access is possible at this point.
-
-### PROBLEM 12: `extern bool wifiEnabled` in main.cpp (BUG)
-
-**Severity**: LOW — unused variable
-**Status**: NOT FIXED
-
-Line 25: `extern bool wifiEnabled;` — this variable was removed from storage.cpp and replaced with `g_settings.wifi_enabled`. This extern reference will cause a linker error or reference a different symbol. It appears to be unused (no code references `wifiEnabled` in main.cpp).
 
 ---
 
@@ -322,7 +292,7 @@ Line 25: `extern bool wifiEnabled;` — this variable was removed from storage.c
 | `g_lvgl_mutex` (recursive) | lvglTask | lv_timer_handler, screens_update_current, estop overlay | Event callbacks run inside this mutex (called from lv_timer_handler) |
 | `g_stepperMutex` (FreeRTOS mutex) | motorTask | All motor functions, speed_apply, jog, pulse, step_mode | xSemaphoreTake/Give — scheduler-based, interrupts stay enabled |
 | `g_presets_mutex` | storageTask | storage_save/load_presets_internal | Held during flash write (PROBLEM 6) |
-| (none) | storageTask | WiFi API, BLE API | Sequential in same task — no mutex needed |
+| (none) | storageTask | NVS / housekeeping | Sequential in same task — no mutex needed |
 
 ---
 
@@ -386,7 +356,7 @@ for (;;) {
 }
 ```
 
-### 3. Remove `extern bool wifiEnabled` from main.cpp
+### 3. Remove stale `extern` declarations from `main.cpp` if they no longer link to storage
 
 Line 25 is a dead reference to a removed variable.
 

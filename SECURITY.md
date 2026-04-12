@@ -25,12 +25,6 @@ This project controls a motorized welding positioner. Safety is critical.
 - Task Watchdog Timer (TWDT) on motor and safety tasks
 - Stepper access protected by FreeRTOS mutex
 
-### BLE Security
-- BLE uses passkey pairing (default: `123456`)
-- ARM command required within 5 seconds before START
-- BLE write callbacks use pending flags — no direct motor control from BLE thread
-- Notify rate limited to 500ms to prevent SDIO bus saturation
-
 ## Reporting a Vulnerability
 
 If you discover a safety-critical bug or security vulnerability:
@@ -41,9 +35,9 @@ If you discover a safety-critical bug or security vulnerability:
 
 ### What to Report
 - E-STOP bypass or failure to stop motor
-- BLE command injection allowing motor start without ARM
+- Unauthorized or unintended motor start or motion
 - State machine corruption allowing unsafe transitions
-- WiFi/BLE vulnerabilities exposing motor control
+- Any flaw that could expose motor control to untrusted input
 
 ### Response Timeline
 - Safety-critical: response within 24 hours, fix within 1 week
@@ -51,8 +45,5 @@ If you discover a safety-critical bug or security vulnerability:
 
 ## Embedded Security Considerations
 
-- **No OTA for P4 firmware** — only C6 co-processor receives OTA updates
-- **WiFi credentials (if enabled in a given build)** — stored on flash without hardware encryption unless a release notes otherwise; mainline WiFi UI may be disabled
-- **BLE passkey is hardcoded** — change in `src/ble/ble.cpp` before deployment in sensitive environments
-- **No TLS/HTTPS** — WiFi remote does not use encrypted transport
+- **No OTA for P4 application firmware** in the baseline release flow documented here
 - **NVS has no application-layer encryption** — settings (`cfg`) and presets (`prs`) are **plaintext JSON blobs** in namespace `wrot` (same practical risk as unencrypted files on flash)

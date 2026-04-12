@@ -15,7 +15,7 @@
 
 ## INTRODUCTION
 
-Build your own welding positioner controller with a 4.3" touchscreen, ESP32-P4 microcontroller, and off-the-shelf stepper motor hardware. This open-source project provides precise rotation control for TIG, MIG, and pipe welding — with 5 welding modes, real-time RPM adjustment, BLE remote, WiFi connectivity, and E-STOP safety.
+Build your own welding positioner controller with a 4.3" touchscreen, ESP32-P4 microcontroller, and off-the-shelf stepper motor hardware. This open-source project provides precise rotation control for TIG, MIG, and pipe welding — with 5 welding modes, real-time RPM adjustment, and E-STOP safety.
 
 ### Why Build This?
 
@@ -26,8 +26,6 @@ Commercial welding rotators cost $500-5000. This controller gives you profession
 - **0.001–3.0 RPM** workpiece limits (`MIN_RPM`/`MAX_RPM` in `config.h`) with live pot and button adjustment
 - 4.3" capacitive touchscreen (800x480, LVGL 9.x UI)
 - 8 selectable accent color themes
-- BLE remote control (phone app via NUS)
-- WiFi connectivity (connect to networks, OTA updates)
 - Foot pedal support (analog speed + digital start)
 - Direction switch (physical CW/CCW toggle)
 - E-STOP safety with <0.5ms ISR response
@@ -142,7 +140,7 @@ IMAGE: docs/images/Wiring_diagram.v2.svg
 
 ### Important Notes
 
-- **Do NOT use GPIO 28 or GPIO 32** — they are PCB-routed to the ESP32-C6 co-processor for WiFi/BLE
+- **GPIO 28 / 32 (and other C6 bus pins on the PCB)** — may be routed to the ESP32-C6; **wireless is disabled in firmware** — check the GUITION schematic before repurposing
 - **ENA is active LOW** — HIGH means motor disabled (fail-safe)
 - **E-STOP uses NC contact** — breaks connection when pressed
 - **All grounds must be connected** — ESP32 GND, PSU GND, motor driver GND
@@ -215,12 +213,6 @@ IMAGE: docs/images/ui_screens.svg
 | **Jog** | Run while button is held |
 | **Timer** | Run for set duration, then stop |
 
-### BLE Remote Control
-
-Connect via phone BLE apps (e.g., nRF Connect):
-- Passkey: `123456`
-- Commands: F=Start, S/X=Stop, R=CW, L=CCW, B=Reverse+Start
-
 ### E-STOP Safety
 
 The E-STOP system has two layers:
@@ -237,10 +229,8 @@ Navigate to **Settings** from the menu screen.
 
 | Setting | Options |
 |---|---|
-| WiFi | ON/OFF, scan, connect, hidden networks |
-| Bluetooth | ON/OFF, scan, connect |
 | Display | Brightness slider (20-100%), dim timeout |
-| System Info | Core load, heap, PSRAM, WiFi status, uptime |
+| System Info | Core load, heap, PSRAM, uptime |
 | Calibration | Motor calibration factor |
 | Motor Config | Microstepping, acceleration, direction switch, pedal enable |
 | About | Firmware version, hardware info |
@@ -291,7 +281,7 @@ Attach these files to the Instructable:
 - If the pot is noisy, check ADC wiring and grounding
 - If the screen flickers, check PSRAM seating and MIPI-DSI cable
 - If E-STOP doesn't work, verify NC contact wiring against firmware sense: **safe / released = HIGH**, **fault / pressed = LOW** on GPIO 34 (see `safety.cpp` / `docs/HARDWARE_SETUP.md`).
-- If WiFi/BLE crashes, check that GPIO 28/32 are not used for other purposes
+- If you add custom wiring, avoid pins that the GUITION PCB reserves for the ESP32-C6 unless the schematic confirms they are free
 - If direction switch doesn't work, enable it in Settings > Motor Config > Direction Switch
 
 ---
@@ -303,6 +293,4 @@ Attach these files to the Instructable:
 - **FastAccelStepper** by hinxx
 - **PlatformIO** build system
 - **ArduinoJson** by Benoit Blanchon
-- **NimBLE** for BLE
-
 License: MIT — https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4

@@ -383,7 +383,7 @@ void test_core_load_div_zero() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 5: WIFI RSSI
+// SECTION 5: RSSI → signal bars
 // ═══════════════════════════════════════════════════════════════════════════════
 
 void test_rssi_strong() {
@@ -755,7 +755,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_core_load_half);
   RUN_TEST(test_core_load_div_zero);
 
-  // Section 5: WiFi RSSI (7 tests)
+  // Section 5: RSSI → signal bars (7 tests)
   RUN_TEST(test_rssi_strong);
   RUN_TEST(test_rssi_good);
   RUN_TEST(test_rssi_fair);

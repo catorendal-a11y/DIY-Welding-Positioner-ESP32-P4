@@ -23,14 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Program Edit crashes on "New Program"** — out-of-bounds array access in mode button loop (`i < 4` instead of `i < modeCount`)
 - **Program Edit crashes on SAVE** — dangling static widget pointers after `screens_reinit()`, stale screen data on re-entry
 - **Confirm screen crashes on CONFIRM** — invalid `returnScreen` ID, added range validation
-- **WiFi keyboard self-deletion crash** — `cleanup_kb()` called synchronously from `wifi_kb_cb()`, deleting the keyboard while LVGL processed its event. Deferred via `kbClosePending` flag
+- **Settings keyboard self-deletion crash** — `cleanup_kb()` called synchronously from a keyboard ready-callback, deleting the keyboard while LVGL processed its event. Deferred via `kbClosePending` flag
 - **BT/Step keyboard crashes** — synchronous `lv_obj_delete()` in event callbacks replaced with `lv_obj_delete_async()`
-- **Dangling pointers after `screens_reinit()`** — added `screen_*_invalidate_widgets()` functions for WiFi, BT, Step, Programs, and ProgramEdit screens
+- **Dangling pointers after `screens_reinit()`** — added `screen_*_invalidate_widgets()` for Step, Programs, ProgramEdit, and other screens with static widgets
 
 ### Added
 - **Widget invalidation pattern** — each screen with static pointers has `screen_*_invalidate_widgets()` called from `screens_reinit()`
 - **`screen_needs_rebuild()`** — forces full screen recreation for edit screens on re-entry
-- **Deferred keyboard cleanup** — `*ClosePending` flags in WiFi/BT/Step screens, cleanup runs in `screen_*_update()` cycle
+- **Deferred keyboard cleanup** — `*ClosePending` flags in settings-related screens, cleanup runs in `screen_*_update()` cycle
 
 ## [2.0.1] - 2026-04-03
 
@@ -46,29 +46,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Countdown back button** — removed unnecessary pending pattern that could cause blue flash on screen switch
 
-## [2.0.0] - 2026-04-03 (BLE, WiFi, Full UI Redesign)
+## [2.0.0] - 2026-04-03 (Full UI redesign)
 
 ### Added
-- **BLE remote control** via Nordic UART Service (NUS) on ESP32-C6 co-processor
-  - Arm/start/stop/direction/reverse commands from phone BLE apps
-  - Security with passkey 123456, ARM command required before START
-  - State + RPM notifications rate-limited to 500ms (prevents SDIO saturation)
-- **WiFi connectivity** with network scanning, credential storage, hidden network support
-  - On-screen keyboard for SSID/password entry
-  - WiFi status in System Info screen
-  - OTA firmware updates for C6 co-processor
 - **Foot pedal support** — analog speed control (ADS1115 I2C ADC) + digital start switch (GPIO33)
 - **Direction switch** — physical CW/CCW toggle on GPIO29
-- **Settings hub screen** with 7 sub-screens: WiFi, Bluetooth, Display, System Info, Calibration, Motor Config, About
+- **Settings hub screen** — Display, System Info, Calibration, Motor Config, About
 - **Display Settings** — brightness slider, dim timeout configuration
-- **System Info screen** — live CPU core load, free heap, PSRAM usage, WiFi status, uptime
+- **System Info screen** — live CPU core load, free heap, PSRAM usage, uptime
 - **Motor Config screen** — microstepping, acceleration, direction switch toggle, pedal enable
 - **About screen** — firmware version, hardware info
 - **8 accent color themes** — switchable from Display Settings
 - **Program Edit screen** — full preset editor with on-screen keyboard
-- **23 total screens** with lazy creation pattern (only boot/main/confirm created at init)
-- **ESP-Hosted SDIO transport** — C6 co-processor firmware updated from v2.3.2 to v2.11.6
-- **`sdkconfig.defaults`** — complete esp-hosted, BLE (NimBLE), WiFi remote configuration
+- **Large screen set** with lazy creation pattern (only boot/main/confirm created at init)
+- **Board bring-up** — GUITION ESP32-P4 + companion MCU pin routing documented in hardware guides
+- **`sdkconfig.defaults`** — display, touch, motor, and storage-oriented defaults for the P4 build
 
 ### Changed
 - **UI redesign** — consistent footer navigation, settings grid layout, accent theme system
@@ -87,9 +79,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **GPIO 28/32** — documented as reserved for C6 co-processor UART (cannot be used as GPIO)
 
 ### Fixed
-- **BLE data corruption on P4** — `ble_update()` was flooding SDIO with notify() every loop, causing garbled write callbacks. Rate-limited to 500ms.
-- **BLE write callbacks** — must use volatile pending flags, not direct control function calls
-- **WiFi init order** — `WiFi.begin()` must be called before `BLEDevice::init()` (shared SDIO transport)
+- **Companion-bus traffic** — periodic notifications to the on-board secondary MCU were too aggressive; rate-limited to 500ms to avoid garbled callbacks
+- **Off-UI command path** — volatile pending flags required; no direct motor calls from I/O callbacks
+- **Subsystem startup ordering** — corrected initialization order for P4 + companion MCU interface bring-up
 - **Keyboard crash** — creating textarea/keyboard inside scroll panel caused crash. Must create on screen root AND hide scroll panel.
 - **`lv_obj_set_flex_gap`** — does not exist in LVGL 9, removed
 - **`lv_obj_set_flex_align`** — requires 3 args in LVGL 9 (main, cross, track_align)

@@ -4,7 +4,9 @@
 
 ### Precision Multi-Mode Welding Rotator for TIG, MIG, and Pipe Welding
 
-**ESP32-P4 / ESP32-C6 &nbsp;&middot;&nbsp; Firmware v2.0.3**
+**ESP32-P4 &nbsp;&middot;&nbsp; Firmware v2.0.3**
+
+<sub>GUITION JC4880P443C 4.3" touch display board.</sub>
 
 <br>
 
@@ -110,8 +112,6 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 | **Motor Config** | Microstepping (1/4 – 1/32), acceleration, calibration, direction invert |
 | **Display Settings** | Brightness slider, dim timeout, theme color selection |
 | **System Info** | Live CPU core load, free heap, PSRAM usage, uptime |
-| **WiFi** | Network scan, credentials, hidden SSIDs (ESP-Hosted via ESP32-C6; calls off UI thread) |
-| **Bluetooth** | BLE remote (NimBLE NUS on C6): arm/start/stop/direction, passkey pairing |
 | **Hardware Safety** | NC E-STOP interrupt (<0.5 ms), software watchdog, CAS state transitions; dimmed backlight wakes on ESTOP |
 | **Thread Safety** | Mutex-protected stepper access, atomic cross-core variables, pending-flag patterns |
 
@@ -210,8 +210,7 @@ controlTask  (pri 3, 4 KB)
 | **GPIO 35** | (no ADC) | Digital only |
 | **GPIO 33** | PEDAL SW (Input) | Foot pedal switch, active LOW |
 | GPIO 7 / 8 | Touch I2C | GT911 + ADS1115 (shared bus) |
-| GPIO 14–19, 54 | ESP-Hosted SDIO | WiFi/BLE to ESP32-C6 — do not use as GPIO |
-| GPIO 28 / 32 | C6 UART (board) | Reserved when WiFi/BLE active — not general-purpose I/O |
+| GPIO 14–19, 28, 32, 54 | Board / C6 routing | On GUITION JC4880P443C some pins route to the on-board ESP32-C6; **application firmware uses only the ESP32-P4 side for control**. Do not repurpose without the vendor schematic. |
 
 ---
 
@@ -371,7 +370,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 
 - Single-axis control only
 - Basic PUL/DIR drivers have no anti-resonance DSP — DM542T recommended for higher RPM
-- GPIO 28/32 unavailable for GPIO use (C6 co-processor)
+- GPIO 14–19, 28, 32, 54 may be tied to the on-board ESP32-C6 per PCB — confirm the board pinout before using as GPIO for custom circuits
 
 ---
 

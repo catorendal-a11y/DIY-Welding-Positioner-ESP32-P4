@@ -136,7 +136,7 @@ Firmware: **LOW** on the ENA GPIO line = **motor enabled**, **HIGH** = disabled 
   - Start switch → `GPIO 33` (INPUT_PULLUP, LOW = pressed)
 
 ### D. Reserved Pins (Do Not Use)
-- **GPIO 28** (C6_U0TXD) and **GPIO 32** (C6_U0RXD) are PCB-routed to the ESP32-C6 co-processor for WiFi/BLE via esp-hosted SDIO transport. They cannot be used as general-purpose I/O when WiFi or BLE is active.
+- **GPIO 28** (C6_U0TXD) and **GPIO 32** (C6_U0RXD) are PCB-routed to the ESP32-C6 co-processor. Treat as reserved unless the GUITION schematic confirms safe repurposing for your build.
 
 ## 5. Safety & Thermal Management
 - **Heat Sinking:** Stepper drivers get hot during long welding runs. Mount the driver to the metal enclosure for thermal dissipation or add a 40mm fan.

@@ -1,4 +1,4 @@
-// Bluetooth Settings Screen - Disabled (WiFi and BLE removed)
+// Placeholder screen module — not used in current UI
 #include "../screens.h"
 
 void screen_bt_create() {}

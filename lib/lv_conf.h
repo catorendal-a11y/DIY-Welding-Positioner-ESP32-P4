@@ -85,7 +85,7 @@
 // LVGL 9 SPECIFIC FEATURES
 // ───────────────────────────────────────────────────────────────────────────────
 #define LV_USE_OBJ_PROPERTIES    0
-#define LV_USE_FLEX              1     // Used for dynamic list containers only (wifi/BLE scan results)
+#define LV_USE_FLEX              1     // Used for dynamic list containers
 #define LV_USE_GRID              0
 
 #endif /* LV_CONF_H */

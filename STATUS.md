@@ -31,24 +31,12 @@
 - [x] **E-STOP UI overlay** (full-screen red, blocks all interaction)
 - [x] **UI reset from ESTOP** (via Core 0 pending flag pattern)
 
-### Connectivity
-- [x] **BLE remote control** (NimBLE NUS via ESP32-C6 co-processor)
-  - [x] Arm/start/stop/direction/reverse commands
-  - [x] Passkey security (123456)
-  - [x] Rate-limited notifications (500ms)
-  - [x] Pending-flag pattern (no direct motor calls from BLE thread)
-- [x] **WiFi connectivity** (network scanning, credential storage, hidden networks)
-  - [x] On-screen keyboard for SSID/password
-  - [x] WiFi status in System Info
-  - [x] C6 co-processor OTA updates (v2.3.2 to v2.11.6)
-- [x] **ESP-Hosted SDIO transport** (WiFi + BLE share bus to C6)
-
 ### UI/UX
 - [x] **19 root screens** with lazy creation pattern + ESTOP overlay
 - [x] **8 accent color themes** (switchable from Display Settings)
-- [x] **Settings hub** (WiFi, Bluetooth, Display, System Info, Calibration, Motor Config, About)
+- [x] **Settings hub** (Display, System Info, Calibration, Motor Config, About)
 - [x] **Display Settings** (brightness slider, dim timeout)
-- [x] **System Info** (CPU core load, heap, PSRAM, WiFi status, uptime)
+- [x] **System Info** (CPU core load, heap, PSRAM, uptime)
 - [x] **Motor Config** (microstepping, acceleration, direction switch, pedal enable)
 - [x] **About screen** (firmware version, hardware info)
 - [x] **Program Edit** (full preset editor with on-screen keyboard)
@@ -56,7 +44,7 @@
 
 ### Storage
 - [x] **Program preset storage** (ArduinoJson blobs in **NVS** `wrot`/`prs`, 16 slots; one-time LittleFS migration)
-- [x] **Settings persistence** (motor config, WiFi credentials, display settings in NVS `wrot`/`cfg`)
+- [x] **Settings persistence** (motor config, display settings, and related fields in NVS `wrot`/`cfg`)
 - [x] **Mutex-protected presets** (`g_presets_mutex`)
 - [x] **Debounced flash writes** (500ms presets, 1000ms settings)
 
@@ -76,7 +64,7 @@
 ### Stability & Robustness (v2.0.2+)
 - [x] **FreeRTOS mutex for stepper** (replaced portMUX_TYPE spinlock — fixed IWDT crash on cross-core contention)
 - [x] **LVGL async object deletion** (lv_obj_delete_async for keyboard/numpad cleanup from event callbacks)
-- [x] **Screen widget invalidation** (invalidate_widgets pattern for WiFi, BT, Step, Programs, ProgramEdit screens)
+- [x] **Screen widget invalidation** (invalidate_widgets pattern for Step, Programs, ProgramEdit, and other screens with static widgets)
 - [x] **Deferred keyboard cleanup** (*ClosePending flags, actual cleanup in update cycle)
 - [x] **Screen reinit safety** (screens_reinit calls invalidate_widgets for all screens with static pointers)
 - [x] **Confirm dialog validation** (returnScreen range check prevents invalid screen navigation)
@@ -91,9 +79,6 @@
 
 - [ ] **Enclosure design** (3D printable)
 - [ ] **Assembly guide**
-- [ ] **WiFi SoftAP mode** (standalone network without router)
-- [ ] **Web-based remote control** (hosted on C6 co-processor)
-
 ---
 
 ## Build Info
@@ -107,8 +92,6 @@
 | **FastAccelStepper** | 0.33.x |
 | **LVGL** | 9.5.0 (RGB565) |
 | **ArduinoJson** | 7.4.3 |
-| **BLE** | NimBLE via ESP-Hosted (C6 co-processor) |
-| **WiFi** | ESP-Hosted SDIO transport |
 
 ---
 
@@ -125,5 +108,5 @@
 | GPIO 35 | (no ADC) | Digital only |
 | GPIO 33 | PEDAL SW | Foot pedal switch, active LOW |
 | GPIO 7/8 | Touch I2C | GT911 + ADS1115 (shared bus) |
-| GPIO 28/32 | Reserved | C6 UART / SDIO when WiFi or BLE is active — do not repurpose |
-| GPIO 14-19, 54 | C6 SDIO | ESP-Hosted transport -- do not use |
+| GPIO 28/32 | Reserved | Routed to on-board ESP32-C6 per GUITION — do not repurpose without schematic |
+| GPIO 14-19, 54 | Board bus | Routed toward ESP32-C6 per GUITION — do not use as application GPIO without schematic |

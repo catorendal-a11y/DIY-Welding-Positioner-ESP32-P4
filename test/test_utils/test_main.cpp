@@ -219,45 +219,45 @@ void test_preset_timer_ms_above() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 4: WIFI BACKOFF
+// SECTION 4: RECONNECT BACKOFF
 // ═══════════════════════════════════════════════════════════════════════════════
 
-void test_wifi_backoff_initial() {
-  TEST_ASSERT_EQUAL(60000, wifi_backoff_interval(30000));
+void test_reconnect_backoff_initial() {
+  TEST_ASSERT_EQUAL(60000, reconnect_backoff_interval(30000));
 }
 
-void test_wifi_backoff_double() {
-  TEST_ASSERT_EQUAL(120000, wifi_backoff_interval(60000));
+void test_reconnect_backoff_double() {
+  TEST_ASSERT_EQUAL(120000, reconnect_backoff_interval(60000));
 }
 
-void test_wifi_backoff_cap() {
-  TEST_ASSERT_EQUAL(300000, wifi_backoff_interval(300000));
+void test_reconnect_backoff_cap() {
+  TEST_ASSERT_EQUAL(300000, reconnect_backoff_interval(300000));
 }
 
-void test_wifi_backoff_near_cap() {
+void test_reconnect_backoff_near_cap() {
   // 200000 < 300000, so it doubles to 400000 (cap applies on NEXT iteration)
-  TEST_ASSERT_EQUAL(400000, wifi_backoff_interval(200000));
+  TEST_ASSERT_EQUAL(400000, reconnect_backoff_interval(200000));
 }
 
-void test_wifi_backoff_reset() {
-  TEST_ASSERT_EQUAL(30000, wifi_backoff_reset());
+void test_reconnect_backoff_reset() {
+  TEST_ASSERT_EQUAL(30000, reconnect_backoff_reset());
 }
 
-void test_wifi_backoff_sequence() {
+void test_reconnect_backoff_sequence() {
   uint32_t interval = 30000;
-  interval = wifi_backoff_interval(interval);
+  interval = reconnect_backoff_interval(interval);
   TEST_ASSERT_EQUAL(60000, interval);
-  interval = wifi_backoff_interval(interval);
+  interval = reconnect_backoff_interval(interval);
   TEST_ASSERT_EQUAL(120000, interval);
-  interval = wifi_backoff_interval(interval);
+  interval = reconnect_backoff_interval(interval);
   TEST_ASSERT_EQUAL(240000, interval);
   // 240000 < 300000, so doubles to 480000
-  interval = wifi_backoff_interval(interval);
+  interval = reconnect_backoff_interval(interval);
   TEST_ASSERT_EQUAL(480000, interval);
   // 480000 >= 300000, caps at 300000
-  interval = wifi_backoff_interval(interval);
+  interval = reconnect_backoff_interval(interval);
   TEST_ASSERT_EQUAL(300000, interval);
-  interval = wifi_backoff_interval(interval);
+  interval = reconnect_backoff_interval(interval);
   TEST_ASSERT_EQUAL(300000, interval);
 }
 
@@ -388,13 +388,13 @@ int main(int argc, char** argv) {
   RUN_TEST(test_preset_timer_ms_below);
   RUN_TEST(test_preset_timer_ms_above);
 
-  // Section 4: WiFi backoff (6 tests)
-  RUN_TEST(test_wifi_backoff_initial);
-  RUN_TEST(test_wifi_backoff_double);
-  RUN_TEST(test_wifi_backoff_cap);
-  RUN_TEST(test_wifi_backoff_near_cap);
-  RUN_TEST(test_wifi_backoff_reset);
-  RUN_TEST(test_wifi_backoff_sequence);
+  // Section 4: Reconnect backoff (6 tests)
+  RUN_TEST(test_reconnect_backoff_initial);
+  RUN_TEST(test_reconnect_backoff_double);
+  RUN_TEST(test_reconnect_backoff_cap);
+  RUN_TEST(test_reconnect_backoff_near_cap);
+  RUN_TEST(test_reconnect_backoff_reset);
+  RUN_TEST(test_reconnect_backoff_sequence);
 
   // Section 5: Touch coordinate transform (7 tests)
   RUN_TEST(test_touch_x_origin);

@@ -1,0 +1,3 @@
+* text=auto
+.gitattributes text eol=lf
+githooks/commit-msg text eol=lf

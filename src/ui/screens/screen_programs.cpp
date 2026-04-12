@@ -8,6 +8,7 @@
 #include "../../storage/storage.h"
 #include "../../motor/speed.h"
 #include "../../control/control.h"
+#include <atomic>
 #include <cstdio>
 #include <vector>
 
@@ -18,7 +19,7 @@ static lv_obj_t* programList = nullptr;
 static lv_obj_t* newBtn = nullptr;
 static lv_obj_t* countLabel = nullptr;
 static int deleteSlot = -1;
-static volatile bool programsDirty = true;
+static std::atomic<bool> programsDirty{true};
 static size_t lastPresetCount = 0;
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -72,7 +73,7 @@ static void do_delete_preset() {
     xSemaphoreGive(g_presets_mutex);
   }
   deleteSlot = -1;
-  programsDirty = true;
+  programsDirty.store(true, std::memory_order_relaxed);
 }
 
 static void delete_preset_cb(lv_event_t* e) {
@@ -153,6 +154,7 @@ void screen_programs_invalidate_widgets() {
   programList = nullptr;
   countLabel = nullptr;
   newBtn = nullptr;
+  programsDirty.store(true, std::memory_order_relaxed);
 }
 
 void screen_programs_create() {
@@ -201,15 +203,7 @@ void screen_programs_create() {
   lv_obj_set_style_text_color(newLabel, COL_ACCENT, 0);
   lv_obj_center(newLabel);
 
-  // ── Separator line ──
-  lv_obj_t* line = lv_obj_create(screen);
-  lv_obj_set_size(line, SCREEN_W, 1);
-  lv_obj_set_pos(line, 0, 38);
-  lv_obj_set_style_bg_color(line, COL_BORDER, 0);
-  lv_obj_set_style_pad_all(line, 0, 0);
-  lv_obj_set_style_border_width(line, 0, 0);
-  lv_obj_set_style_radius(line, 0, 0);
-  lv_obj_remove_flag(line, LV_OBJ_FLAG_SCROLLABLE);
+  ui_create_separator(screen, 38);
 
   // ── Program cards list (scrollable) ──
   // Leave a strip below for the hint so it does not paint over the last cards.
@@ -231,23 +225,7 @@ void screen_programs_create() {
   lv_obj_set_style_text_color(scrollHint, COL_TEXT_VDIM, 0);
   lv_obj_align(scrollHint, LV_ALIGN_TOP_MID, 0, 400);
 
-  // ── BACK button ──
-  lv_obj_t* backBtn = lv_button_create(screen);
-  lv_obj_set_size(backBtn, 240, 52);
-  lv_obj_set_pos(backBtn, 10, 424);
-  lv_obj_set_style_bg_color(backBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(backBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(backBtn, 1, 0);
-  lv_obj_set_style_border_color(backBtn, COL_BORDER, 0);
-  lv_obj_set_style_shadow_width(backBtn, 0, 0);
-  lv_obj_set_style_pad_all(backBtn, 0, 0);
-  lv_obj_add_event_cb(backBtn, back_event_cb, LV_EVENT_CLICKED, nullptr);
-
-  lv_obj_t* backLabel = lv_label_create(backBtn);
-  lv_label_set_text(backLabel, "<  BACK");
-  lv_obj_set_style_text_font(backLabel, FONT_LARGE, 0);
-  lv_obj_set_style_text_color(backLabel, COL_TEXT, 0);
-  lv_obj_center(backLabel);
+  ui_create_btn(screen, 10, 424, 240, 52, "<  BACK", FONT_LARGE, UI_BTN_NORMAL, back_event_cb, nullptr);
 
   LOG_I("Screen programs: v2.0 layout created");
 }
@@ -263,11 +241,11 @@ void screen_programs_update() {
   {
     xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
     presetCount = g_presets.size();
-    if (!programsDirty && presetCount == lastPresetCount) {
+    if (!programsDirty.load(std::memory_order_relaxed) && presetCount == lastPresetCount) {
       xSemaphoreGive(g_presets_mutex);
       return;
     }
-    programsDirty = false;
+    programsDirty.store(false, std::memory_order_relaxed);
     lastPresetCount = presetCount;
     snapshot = g_presets;
     xSemaphoreGive(g_presets_mutex);
@@ -452,5 +430,5 @@ void screen_programs_update() {
 }
 
 void screen_programs_mark_dirty() {
-  programsDirty = true;
+  programsDirty.store(true, std::memory_order_relaxed);
 }

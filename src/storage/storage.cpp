@@ -2,6 +2,7 @@
 #include "storage.h"
 #include <Preferences.h>
 #include <LittleFS.h>
+#include <atomic>
 #include <cstring>
 #include <vector>
 
@@ -14,14 +15,14 @@ std::vector<Preset> g_presets;
 SemaphoreHandle_t g_presets_mutex;
 SemaphoreHandle_t g_settings_mutex;
 SemaphoreHandle_t g_nvs_mutex;
-SystemSettings g_settings = { 7500, 16, MAX_RPM, 1.0f, true, 150, 60, true, false, 0, 3, STEPPER_DRIVER_DM542T, 1 };
+SystemSettings g_settings = { 7500, 16, MAX_RPM, 1.0f, 150, 60, true, false, 0, 3, STEPPER_DRIVER_DM542T, 1 };
 std::atomic<bool> g_dir_switch_cache{true};
 std::atomic<bool> g_flashWriting{false};
-volatile bool g_screenRedraw = false;
+std::atomic<bool> g_screenRedraw{false};
 
-static volatile bool savePending = false;
+static std::atomic<bool> savePending{false};
 static uint32_t lastSaveMs = 0;
-static bool presetsSavePending = false;
+static std::atomic<bool> presetsSavePending{false};
 static uint32_t lastPresetsSaveMs = 0;
 
 static Preferences g_prefs;
@@ -257,7 +258,7 @@ static bool storage_save_presets_internal() {
 }
 
 bool storage_save_presets() {
-    presetsSavePending = true;
+    presetsSavePending.store(true, std::memory_order_release);
     return true;
 }
 
@@ -302,7 +303,6 @@ static bool storage_apply_settings_doc(JsonObjectConst doc) {
       g_settings.max_rpm = mx;
     }
     g_settings.calibration_factor = constrain(doc["calibration_factor"] | 1.0f, 0.5f, 1.5f);
-    g_settings.rpm_buttons_enabled = doc["rpm_buttons_enabled"] | true;
     g_settings.brightness = constrain(doc["brightness"] | 150, (uint8_t)10, (uint8_t)255);
     g_settings.dim_timeout = doc["dim_timeout"] | 60;
     g_settings.dir_switch_enabled = doc["dir_switch_enabled"] | true;
@@ -312,9 +312,10 @@ static bool storage_apply_settings_doc(JsonObjectConst doc) {
     // Missing JSON key: default to standard PUL/DIR timing for older NVS blobs (OTA / legacy).
     g_settings.stepper_driver = constrain(doc["stepper_driver"] | (int)STEPPER_DRIVER_STANDARD, 0, 1);
     g_settings.settings_version = doc["settings_version"] | 0;
+    const bool dirSw = g_settings.dir_switch_enabled;
     xSemaphoreGive(g_settings_mutex);
 
-    g_dir_switch_cache.store(g_settings.dir_switch_enabled, std::memory_order_release);
+    g_dir_switch_cache.store(dirSw, std::memory_order_release);
     return true;
 }
 
@@ -329,7 +330,6 @@ static bool storage_save_settings_internal() {
     doc["microstep"] = snap.microstep;
     doc["max_rpm"] = snap.max_rpm;
     doc["calibration_factor"] = snap.calibration_factor;
-    doc["rpm_buttons_enabled"] = snap.rpm_buttons_enabled;
     doc["brightness"] = snap.brightness;
     doc["dim_timeout"] = snap.dim_timeout;
     doc["dir_switch_enabled"] = snap.dir_switch_enabled;
@@ -361,30 +361,33 @@ static bool storage_save_settings_internal() {
 }
 
 void storage_save_settings() {
-    savePending = true;
+    savePending.store(true, std::memory_order_release);
 }
 
 void storage_flush() {
-    if (presetsSavePending && (millis() - lastPresetsSaveMs > 500)) {
-        presetsSavePending = false;
-        lastPresetsSaveMs = millis();
-        LOG_I("FLUSH: presets save starting");
-        g_flashWriting.store(true, std::memory_order_release);
-        storage_save_presets_internal();
-        g_flashWriting.store(false, std::memory_order_release);
-        g_screenRedraw = true;
-        LOG_I("FLUSH: presets save done");
+    if (presetsSavePending.load(std::memory_order_acquire) &&
+        (millis() - lastPresetsSaveMs > 500)) {
+        if (presetsSavePending.exchange(false, std::memory_order_acq_rel)) {
+            lastPresetsSaveMs = millis();
+            LOG_I("FLUSH: presets save starting");
+            g_flashWriting.store(true, std::memory_order_release);
+            storage_save_presets_internal();
+            g_flashWriting.store(false, std::memory_order_release);
+            g_screenRedraw.store(true, std::memory_order_release);
+            LOG_I("FLUSH: presets save done");
+        }
     }
 
-    if (savePending && (millis() - lastSaveMs > 1000)) {
-        savePending = false;
-        lastSaveMs = millis();
-        LOG_I("FLUSH: settings save starting");
-        g_flashWriting.store(true, std::memory_order_release);
-        storage_save_settings_internal();
-        g_flashWriting.store(false, std::memory_order_release);
-        g_screenRedraw = true;
-        LOG_I("FLUSH: settings save done");
+    if (savePending.load(std::memory_order_acquire) && (millis() - lastSaveMs > 1000)) {
+        if (savePending.exchange(false, std::memory_order_acq_rel)) {
+            lastSaveMs = millis();
+            LOG_I("FLUSH: settings save starting");
+            g_flashWriting.store(true, std::memory_order_release);
+            storage_save_settings_internal();
+            g_flashWriting.store(false, std::memory_order_release);
+            g_screenRedraw.store(true, std::memory_order_release);
+            LOG_I("FLUSH: settings save done");
+        }
     }
 }
 
@@ -438,8 +441,12 @@ void storage_get_usage(size_t* used, size_t* total) {
 void storage_format() {
     xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
     g_presets.clear();
-    g_settings = SystemSettings{ 5000, 8, MAX_RPM, 1.0f, true, 150, 60, false, false, 0, 3, STEPPER_DRIVER_STANDARD, 1 };
     xSemaphoreGive(g_presets_mutex);
+
+    xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+    g_settings = SystemSettings{ 5000, 8, MAX_RPM, 1.0f, 150, 60, false, false, 0, 3, STEPPER_DRIVER_STANDARD, 1 };
+    const bool dirSw = g_settings.dir_switch_enabled;
+    xSemaphoreGive(g_settings_mutex);
 
     xSemaphoreTake(g_nvs_mutex, portMAX_DELAY);
     if (g_prefs_open) {
@@ -447,6 +454,6 @@ void storage_format() {
     }
     xSemaphoreGive(g_nvs_mutex);
 
-    g_dir_switch_cache.store(g_settings.dir_switch_enabled, std::memory_order_release);
+    g_dir_switch_cache.store(dirSw, std::memory_order_release);
     LOG_I("Storage formatted - NVS cleared");
 }

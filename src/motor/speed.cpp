@@ -16,6 +16,7 @@
 #include "esp_err.h"
 #endif
 #include "freertos/task.h"
+#include "freertos/semphr.h"
 
 static_assert(std::atomic<float>::is_always_lock_free,
               "std::atomic<float> must be lock-free for inter-core RPM sharing");
@@ -336,7 +337,11 @@ Direction speed_get_direction() {
   } else {
     dir = (Direction)currentDir.load(std::memory_order_acquire);
   }
-  if (g_settings.invert_direction) {
+  bool invert = false;
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  invert = g_settings.invert_direction;
+  xSemaphoreGive(g_settings_mutex);
+  if (invert) {
     dir = (dir == DIR_CW) ? DIR_CCW : DIR_CW;
   }
   return dir;

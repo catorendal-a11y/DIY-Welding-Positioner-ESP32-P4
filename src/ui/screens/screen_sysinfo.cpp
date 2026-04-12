@@ -121,7 +121,7 @@ void screen_sysinfo_create() {
   const int CW = SCREEN_W - 2 * PX;
   bootMs = millis();
 
-  ui_create_header(screen, "SYSTEM INFO", SET_HEADER_H, FONT_SUBTITLE, 6);
+  ui_create_settings_header(screen, "SYSTEM INFO");
 
   int y = 34;
   int rowH = 28;
@@ -205,8 +205,8 @@ void screen_sysinfo_create() {
   int footerH = SET_FOOTER_H;
   int btnW = SET_BTN_MIN_W;
   int gap = 8;
-  ui_create_btn(screen, PX, footerY, btnW, footerH, "BACK", SET_BTN_FONT, false, false, back_cb, nullptr);
-  ui_create_btn(screen, PX + btnW + gap, footerY, btnW, footerH, "REBOOT", SET_BTN_FONT, false, false, reboot_cb, nullptr);
+  ui_create_btn(screen, PX, footerY, btnW, footerH, "BACK", SET_BTN_FONT, UI_BTN_NORMAL, back_cb, nullptr);
+  ui_create_btn(screen, PX + btnW + gap, footerY, btnW, footerH, "REBOOT", SET_BTN_FONT, UI_BTN_NORMAL, reboot_cb, nullptr);
 
   LOG_I("Screen sysinfo: system info screen created");
 }

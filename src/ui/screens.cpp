@@ -27,8 +27,8 @@ void lvgl_unlock() {
 // STATE
 // ───────────────────────────────────────────────────────────────────────────────
 static ScreenId currentScreen = SCREEN_NONE;
-static volatile ScreenId pendingScreen = SCREEN_NONE;
-static volatile bool themeReinitPending = false;
+static ScreenId pendingScreen = SCREEN_NONE;
+static bool themeReinitPending = false;
 lv_obj_t* screenRoots[SCREEN_COUNT] = { nullptr };  // Extern for screen files
 static bool screenCreated[SCREEN_COUNT] = {};
 static int pendingEditSlot = -1;
@@ -275,10 +275,9 @@ void screens_update_current() {
 // ───────────────────────────────────────────────────────────────────────────────
 // SHARED UI WIDGETS (lvglTask only)
 // ───────────────────────────────────────────────────────────────────────────────
-lv_obj_t* ui_create_header(lv_obj_t* parent, const char* title,
-                           lv_coord_t header_h, const lv_font_t* title_font, lv_coord_t title_y) {
+lv_obj_t* ui_create_header(lv_obj_t* parent, const char* title) {
   lv_obj_t* header = lv_obj_create(parent);
-  lv_obj_set_size(header, SCREEN_W, header_h);
+  lv_obj_set_size(header, SCREEN_W, HEADER_H);
   lv_obj_set_pos(header, 0, 0);
   lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
   lv_obj_set_style_pad_all(header, 0, 0);
@@ -287,17 +286,41 @@ lv_obj_t* ui_create_header(lv_obj_t* parent, const char* title,
   lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_t* title_lbl = lv_label_create(header);
   lv_label_set_text(title_lbl, title);
-  lv_obj_set_style_text_font(title_lbl, title_font, 0);
+  lv_obj_set_style_text_font(title_lbl, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(title_lbl, COL_ACCENT, 0);
-  lv_obj_set_pos(title_lbl, PAD_X, title_y);
+  lv_obj_set_width(title_lbl, SCREEN_W);
+  lv_label_set_long_mode(title_lbl, LV_LABEL_LONG_MODE_CLIP);
+  lv_obj_set_style_text_align(title_lbl, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_align(title_lbl, LV_ALIGN_TOP_MID, 0, 7);
+  return header;
+}
+
+lv_obj_t* ui_create_settings_header(lv_obj_t* parent, const char* title) {
+  lv_obj_t* header = lv_obj_create(parent);
+  lv_obj_set_size(header, SCREEN_W, SET_HEADER_H);
+  lv_obj_set_pos(header, 0, 0);
+  lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
+  lv_obj_set_style_pad_all(header, 0, 0);
+  lv_obj_set_style_border_width(header, 0, 0);
+  lv_obj_set_style_radius(header, 0, 0);
+  lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_t* title_lbl = lv_label_create(header);
+  lv_label_set_text(title_lbl, title);
+  lv_obj_set_style_text_font(title_lbl, SET_HEADER_FONT, 0);
+  lv_obj_set_style_text_color(title_lbl, COL_ACCENT, 0);
+  lv_obj_set_pos(title_lbl, PAD_X, 6);
   return header;
 }
 
 lv_obj_t* ui_create_separator(lv_obj_t* parent, lv_coord_t y) {
+  return ui_create_separator_line(parent, 0, y, SCREEN_W, COL_BORDER);
+}
+
+lv_obj_t* ui_create_separator_line(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_color_t color) {
   lv_obj_t* line = lv_obj_create(parent);
-  lv_obj_set_size(line, SCREEN_W, 1);
-  lv_obj_set_pos(line, 0, y);
-  lv_obj_set_style_bg_color(line, COL_BORDER, 0);
+  lv_obj_set_size(line, w, 1);
+  lv_obj_set_pos(line, x, y);
+  lv_obj_set_style_bg_color(line, color, 0);
   lv_obj_set_style_pad_all(line, 0, 0);
   lv_obj_set_style_border_width(line, 0, 0);
   lv_obj_set_style_radius(line, 0, 0);
@@ -306,11 +329,13 @@ lv_obj_t* ui_create_separator(lv_obj_t* parent, lv_coord_t y) {
 }
 
 lv_obj_t* ui_create_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h,
-                        const char* text, const lv_font_t* label_font, bool accent, bool danger,
+                        const char* text, const lv_font_t* label_font, UiBtnStyle style,
                         lv_event_cb_t cb, void* user_data) {
   lv_obj_t* btn = lv_button_create(parent);
   lv_obj_set_size(btn, w, h);
   lv_obj_set_pos(btn, x, y);
+  const bool accent = (style == UI_BTN_ACCENT);
+  const bool danger = (style == UI_BTN_DANGER);
   lv_color_t bg = danger ? COL_BTN_DANGER : (accent ? COL_BG_ACTIVE : COL_BTN_BG);
   lv_color_t bor = danger ? COL_BORDER_DNG : (accent ? COL_ACCENT : COL_BORDER);
   lv_coord_t bw = (accent || danger) ? 2 : 1;
@@ -357,9 +382,26 @@ lv_obj_t* ui_create_pm_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, const c
 void ui_create_action_bar(lv_obj_t* parent, lv_coord_t pad_x, lv_coord_t footer_y, lv_coord_t footer_h,
                           lv_coord_t gap, lv_coord_t left_w, lv_coord_t right_w,
                           const char* left_text, lv_event_cb_t left_cb,
-                          const char* right_text, bool right_accent, lv_event_cb_t right_cb) {
-  ui_create_btn(parent, pad_x, footer_y, left_w, footer_h, left_text, FONT_SUBTITLE, false, false, left_cb, nullptr);
-  ui_create_btn(parent, pad_x + left_w + gap, footer_y, right_w, footer_h, right_text, FONT_SUBTITLE, right_accent, false, right_cb, nullptr);
+                          const char* right_text, UiBtnStyle right_style, lv_event_cb_t right_cb) {
+  ui_create_btn(parent, pad_x, footer_y, left_w, footer_h, left_text, FONT_SUBTITLE, UI_BTN_NORMAL, left_cb, nullptr);
+  ui_create_btn(parent, pad_x + left_w + gap, footer_y, right_w, footer_h, right_text, FONT_SUBTITLE, right_style, right_cb, nullptr);
+}
+
+void ui_create_action_bar_three(lv_obj_t* parent, lv_coord_t pad_x, lv_coord_t y, lv_coord_t h, lv_coord_t gap,
+                                lv_coord_t btn_w,
+                                const char* left_text, lv_event_cb_t left_cb, UiBtnStyle left_style,
+                                const char* mid_text, lv_event_cb_t mid_cb, UiBtnStyle mid_style,
+                                const char* right_text, lv_event_cb_t right_cb, UiBtnStyle right_style,
+                                lv_obj_t** out_left_btn, lv_obj_t** out_mid_btn, lv_obj_t** out_right_btn) {
+  lv_coord_t x0 = pad_x;
+  lv_coord_t x1 = pad_x + btn_w + gap;
+  lv_coord_t x2 = pad_x + (btn_w + gap) * 2;
+  lv_obj_t* b0 = ui_create_btn(parent, x0, y, btn_w, h, left_text, FONT_SUBTITLE, left_style, left_cb, nullptr);
+  lv_obj_t* b1 = ui_create_btn(parent, x1, y, btn_w, h, mid_text, FONT_SUBTITLE, mid_style, mid_cb, nullptr);
+  lv_obj_t* b2 = ui_create_btn(parent, x2, y, btn_w, h, right_text, FONT_SUBTITLE, right_style, right_cb, nullptr);
+  if (out_left_btn) *out_left_btn = b0;
+  if (out_mid_btn) *out_mid_btn = b1;
+  if (out_right_btn) *out_right_btn = b2;
 }
 
 // ───────────────────────────────────────────────────────────────────────────────

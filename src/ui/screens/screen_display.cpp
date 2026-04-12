@@ -5,6 +5,8 @@
 #include "../display.h"
 #include "../../config.h"
 #include "../../storage/storage.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 
 static lv_obj_t* brightnessSlider = nullptr;
 static lv_obj_t* brightnessValueLabel = nullptr;
@@ -30,7 +32,11 @@ void screen_display_mark_dirty() {
 static void update_slider_from_settings() {
   if (!brightnessSlider || !brightnessValueLabel) return;
   ignoreSliderCb = true;
-  int brightPct = (int)((uint32_t)g_settings.brightness * 100 / 255);
+  uint8_t br = 150;
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  br = g_settings.brightness;
+  xSemaphoreGive(g_settings_mutex);
+  int brightPct = (int)((uint32_t)br * 100 / 255);
   if (brightPct < 20) brightPct = 20;
   lv_slider_set_value(brightnessSlider, brightPct, LV_ANIM_OFF);
   char buf[16];
@@ -50,8 +56,11 @@ static void brightness_slider_cb(lv_event_t* e) {
   char buf[16];
   snprintf(buf, sizeof(buf), "%d%%", val);
   lv_label_set_text(brightnessValueLabel, buf);
-  g_settings.brightness = (uint8_t)(val * 255 / 100);
-  display_set_brightness(g_settings.brightness);
+  uint8_t b = (uint8_t)(val * 255 / 100);
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  g_settings.brightness = b;
+  xSemaphoreGive(g_settings_mutex);
+  display_set_brightness(b);
 }
 
 static void dim_cycle_cb(lv_event_t* e) {
@@ -66,16 +75,21 @@ static volatile bool themeRefreshPending = false;
 
 static void theme_cycle_cb(lv_event_t* e) {
   uint8_t count = theme_get_count();
-  g_settings.accent_color = (g_settings.accent_color + 1) % count;
-  theme_set_color(g_settings.accent_color);
+  uint8_t next = 0;
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  next = (uint8_t)((g_settings.accent_color + 1) % count);
+  xSemaphoreGive(g_settings_mutex);
+  theme_set_color(next);
   if (themeBtnLabel) {
-    lv_label_set_text(themeBtnLabel, theme_get_name(g_settings.accent_color));
+    lv_label_set_text(themeBtnLabel, theme_get_name(next));
   }
   themeRefreshPending = true;
 }
 
 static void save_cb(lv_event_t* e) {
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   g_settings.dim_timeout = dimTimeouts[currentDimIdx];
+  xSemaphoreGive(g_settings_mutex);
   storage_save_settings();
 }
 
@@ -110,14 +124,20 @@ void screen_display_create() {
   const int PX = 16;
   const int CONTENT_W = SCREEN_W - 2 * PX;
 
-  for (int i = 0; i < dimCount; i++) {
-    if (dimTimeouts[i] == g_settings.dim_timeout) {
-      currentDimIdx = i;
-      break;
+  {
+    uint8_t dimSec = 60;
+    xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+    dimSec = g_settings.dim_timeout;
+    xSemaphoreGive(g_settings_mutex);
+    for (int i = 0; i < dimCount; i++) {
+      if (dimTimeouts[i] == dimSec) {
+        currentDimIdx = i;
+        break;
+      }
     }
   }
 
-  ui_create_header(screen, "DISPLAY SETTINGS", SET_HEADER_H, SET_HEADER_FONT, 6);
+  ui_create_settings_header(screen, "DISPLAY SETTINGS");
 
   int y = 40;
 
@@ -127,7 +147,14 @@ void screen_display_create() {
   lv_obj_set_style_text_color(brightTitleLbl, COL_TEXT_DIM, 0);
   lv_obj_set_pos(brightTitleLbl, PX + 8, y + 14);
 
-  int brightPct = (int)((uint32_t)g_settings.brightness * 100 / 255);
+  int brightPct = 60;
+  {
+    uint8_t br = 150;
+    xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+    br = g_settings.brightness;
+    xSemaphoreGive(g_settings_mutex);
+    brightPct = (int)((uint32_t)br * 100 / 255);
+  }
   brightnessValueLabel = lv_label_create(screen);
   char brightBuf[16];
   snprintf(brightBuf, sizeof(brightBuf), "%d%%", brightPct);
@@ -178,7 +205,7 @@ void screen_display_create() {
   lv_obj_align(dimTitleLbl, LV_ALIGN_LEFT_MID, 12, 0);
 
   dimBtn = ui_create_btn(dimRow, CONTENT_W - 130, 8, SET_CYCLE_W, SET_CYCLE_H,
-                         dimStrings[currentDimIdx], FONT_BTN, false, false, dim_cycle_cb, nullptr);
+                         dimStrings[currentDimIdx], FONT_BTN, UI_BTN_NORMAL, dim_cycle_cb, nullptr);
   dimBtnLabel = lv_obj_get_child(dimBtn, 0);
 
   y += SET_ROW_H + 10;
@@ -199,8 +226,12 @@ void screen_display_create() {
   lv_obj_set_style_text_color(themeTitleLbl, COL_TEXT_DIM, 0);
   lv_obj_align(themeTitleLbl, LV_ALIGN_LEFT_MID, 12, 0);
 
+  uint8_t accentIdxForBtn = 0;
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  accentIdxForBtn = g_settings.accent_color;
+  xSemaphoreGive(g_settings_mutex);
   themeBtn = ui_create_btn(themeRow, CONTENT_W - 130, 8, SET_CYCLE_W, SET_CYCLE_H,
-                           theme_get_name(g_settings.accent_color), FONT_BTN, false, false, theme_cycle_cb, nullptr);
+                           theme_get_name(accentIdxForBtn), FONT_BTN, UI_BTN_NORMAL, theme_cycle_cb, nullptr);
   themeBtnLabel = lv_obj_get_child(themeBtn, 0);
 
   y += SET_ROW_H + 10;
@@ -227,7 +258,7 @@ void screen_display_create() {
   int gap = 8;
 
   ui_create_action_bar(screen, PX, footerY, footerH, gap, btnW, btnW + 60,
-                        "BACK", back_cb, "SAVE", true, save_cb);
+                        "BACK", back_cb, "SAVE", UI_BTN_ACCENT, save_cb);
 
   LOG_I("Screen display: created");
 }

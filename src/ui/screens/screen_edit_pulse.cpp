@@ -422,45 +422,10 @@ void screen_edit_pulse_create() {
 
   update_computed_info();
 
-  // ════════════════════════════════════════════════════════════════════════════════
-  // CANCEL button (120, 400, 260x52) — bg:#141414 border:#444444
-  // ════════════════════════════════════════════════════════════════════════════════
-  lv_obj_t* cancelBtn = lv_button_create(screen);
-  lv_obj_set_size(cancelBtn, 260, BTN_H_ACTION);
-  lv_obj_set_pos(cancelBtn, 120, 400);
-  lv_obj_set_style_bg_color(cancelBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(cancelBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(cancelBtn, 2, 0);
-  lv_obj_set_style_border_color(cancelBtn, COL_BORDER_SM, 0);
-  lv_obj_set_style_shadow_width(cancelBtn, 0, 0);
-  lv_obj_set_style_pad_all(cancelBtn, 0, 0);
-  lv_obj_add_event_cb(cancelBtn, cancel_event_cb, LV_EVENT_CLICKED, nullptr);
-
-  lv_obj_t* cancelLabel = lv_label_create(cancelBtn);
-  lv_label_set_text(cancelLabel, "CANCEL");
-  lv_obj_set_style_text_font(cancelLabel, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(cancelLabel, COL_TEXT, 0);
-  lv_obj_center(cancelLabel);
-
-  // ════════════════════════════════════════════════════════════════════════════════
-  // SAVE button (420, 400, 260x52) — bg:#1A1600 border:#FF9500
-  // ════════════════════════════════════════════════════════════════════════════════
-  lv_obj_t* saveBtn = lv_button_create(screen);
-  lv_obj_set_size(saveBtn, 260, BTN_H_ACTION);
-  lv_obj_set_pos(saveBtn, 420, 400);
-  lv_obj_set_style_bg_color(saveBtn, COL_BG_ACTIVE, 0);
-  lv_obj_set_style_radius(saveBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(saveBtn, 2, 0);
-  lv_obj_set_style_border_color(saveBtn, COL_ACCENT, 0);
-  lv_obj_set_style_shadow_width(saveBtn, 0, 0);
-  lv_obj_set_style_pad_all(saveBtn, 0, 0);
-  lv_obj_add_event_cb(saveBtn, save_event_cb, LV_EVENT_CLICKED, nullptr);
-
-  lv_obj_t* saveLabel = lv_label_create(saveBtn);
-  lv_label_set_text(saveLabel, "SAVE");
-  lv_obj_set_style_text_font(saveLabel, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(saveLabel, COL_ACCENT, 0);
-  lv_obj_center(saveLabel);
+  ui_create_btn(screen, 120, 400, 260, BTN_H_ACTION, "CANCEL", FONT_SUBTITLE, UI_BTN_NORMAL,
+                cancel_event_cb, nullptr);
+  ui_create_btn(screen, 420, 400, 260, BTN_H_ACTION, "SAVE", FONT_SUBTITLE, UI_BTN_ACCENT,
+                save_event_cb, nullptr);
 
   LOG_I("Screen edit pulse: v2.0 two-column layout created");
 }

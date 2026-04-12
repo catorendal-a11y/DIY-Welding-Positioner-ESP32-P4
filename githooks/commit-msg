@@ -1,0 +1,6 @@
+#!/bin/sh
+# Strip IDE footer before the commit is recorded (portable; Git Bash / MSYS).
+msg_file="$1"
+[ -n "$msg_file" ] && [ -f "$msg_file" ] || exit 0
+tmp="${msg_file}.strip.$$"
+grep -v '^Made-with: Cursor$' "$msg_file" > "$tmp" && mv "$tmp" "$msg_file"

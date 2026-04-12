@@ -403,15 +403,7 @@ void screen_edit_cont_create() {
     restyle_direction();
     restyle_soft_start();
 
-    // ── Separator at y=248 ──
-    lv_obj_t* line3 = lv_obj_create(screen);
-    lv_obj_set_size(line3, SCREEN_W, 1);
-    lv_obj_set_pos(line3, 0, 248);
-    lv_obj_set_style_bg_color(line3, COL_SEPARATOR, 0);
-    lv_obj_set_style_pad_all(line3, 0, 0);
-    lv_obj_set_style_border_width(line3, 0, 0);
-    lv_obj_set_style_radius(line3, 0, 0);
-    lv_obj_remove_flag(line3, LV_OBJ_FLAG_SCROLLABLE);
+    ui_create_separator_line(screen, 0, 248, SCREEN_W, COL_SEPARATOR);
 
     // ── Info line (decorative; gear matches config GEAR_RATIO) ──
     lv_obj_t* infoLabel = lv_label_create(screen);
@@ -422,41 +414,8 @@ void screen_edit_cont_create() {
     lv_obj_set_style_text_color(infoLabel, COL_TEXT_VDIM, 0);
     lv_obj_set_pos(infoLabel, 20, 256);
 
-    // ── CANCEL button (SVG: left side, .b style) ──
-    lv_obj_t* cancelBtn = lv_button_create(screen);
-    lv_obj_set_size(cancelBtn, 260, 52);
-    lv_obj_set_pos(cancelBtn, 120, 400);
-    lv_obj_set_style_bg_color(cancelBtn, COL_BTN_BG, 0);
-    lv_obj_set_style_radius(cancelBtn, RADIUS_BTN, 0);
-    lv_obj_set_style_border_width(cancelBtn, 1, 0);
-    lv_obj_set_style_border_color(cancelBtn, lv_color_hex(0x444444), 0);
-    lv_obj_set_style_shadow_width(cancelBtn, 0, 0);
-    lv_obj_set_style_pad_all(cancelBtn, 0, 0);
-    lv_obj_add_event_cb(cancelBtn, cancel_cb, LV_EVENT_CLICKED, nullptr);
-
-    lv_obj_t* cancelLabel = lv_label_create(cancelBtn);
-    lv_label_set_text(cancelLabel, "CANCEL");
-    lv_obj_set_style_text_font(cancelLabel, FONT_NORMAL, 0);
-    lv_obj_set_style_text_color(cancelLabel, COL_TEXT, 0);
-    lv_obj_center(cancelLabel);
-
-    // ── SAVE button (SVG: right side, .ba style) ──
-    lv_obj_t* saveBtn = lv_button_create(screen);
-    lv_obj_set_size(saveBtn, 260, 52);
-    lv_obj_set_pos(saveBtn, 420, 400);
-    lv_obj_set_style_bg_color(saveBtn, COL_BG_ACTIVE, 0);
-    lv_obj_set_style_radius(saveBtn, RADIUS_BTN, 0);
-    lv_obj_set_style_border_width(saveBtn, 2, 0);
-    lv_obj_set_style_border_color(saveBtn, COL_ACCENT, 0);
-    lv_obj_set_style_shadow_width(saveBtn, 0, 0);
-    lv_obj_set_style_pad_all(saveBtn, 0, 0);
-    lv_obj_add_event_cb(saveBtn, save_cb, LV_EVENT_CLICKED, nullptr);
-
-    lv_obj_t* saveLabel = lv_label_create(saveBtn);
-    lv_label_set_text(saveLabel, "SAVE");
-    lv_obj_set_style_text_font(saveLabel, FONT_NORMAL, 0);
-    lv_obj_set_style_text_color(saveLabel, COL_ACCENT, 0);
-    lv_obj_center(saveLabel);
+    ui_create_btn(screen, 120, 400, 260, 52, "CANCEL", FONT_NORMAL, UI_BTN_NORMAL, cancel_cb, nullptr);
+    ui_create_btn(screen, 420, 400, 260, 52, "SAVE", FONT_NORMAL, UI_BTN_ACCENT, save_cb, nullptr);
 
     LOG_I("Screen edit cont: v2.0 layout created");
 }

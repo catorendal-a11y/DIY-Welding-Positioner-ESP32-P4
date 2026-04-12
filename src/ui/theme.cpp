@@ -2,6 +2,8 @@
 #include "theme.h"
 #include "screens.h"
 #include "../storage/storage.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 
 lv_color_t g_accent;
 lv_color_t g_accent_dim;
@@ -27,7 +29,9 @@ static const ThemeEntry theme_palette[] = {
 #define THEME_COUNT (sizeof(theme_palette) / sizeof(theme_palette[0]))
 
 void theme_init() {
+    xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
     uint8_t idx = g_settings.accent_color;
+    xSemaphoreGive(g_settings_mutex);
     if (idx >= THEME_COUNT) idx = 0;
     g_accent = lv_color_hex(theme_palette[idx].accent);
     g_accent_dim = lv_color_hex(theme_palette[idx].dim);
@@ -45,7 +49,9 @@ void theme_init() {
 
 void theme_set_color(uint8_t idx) {
     if (idx >= THEME_COUNT) idx = 0;
+    xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
     g_settings.accent_color = idx;
+    xSemaphoreGive(g_settings_mutex);
     g_accent = lv_color_hex(theme_palette[idx].accent);
     g_accent_dim = lv_color_hex(theme_palette[idx].dim);
     g_accent_border = lv_color_hex(theme_palette[idx].accent);

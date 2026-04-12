@@ -76,7 +76,7 @@ void screen_calibration_create() {
 
   const int PX = 16;
 
-  ui_create_header(screen, "CALIBRATION", SET_HEADER_H, FONT_SUBTITLE, 6);
+  ui_create_settings_header(screen, "CALIBRATION");
 
   int y = 36;
 
@@ -243,53 +243,10 @@ void screen_calibration_create() {
   int btnW = 160;
   int gap = 8;
 
-  lv_obj_t* backFooter = lv_button_create(screen);
-  lv_obj_set_size(backFooter, btnW, footerH);
-  lv_obj_set_pos(backFooter, PX, footerY);
-  lv_obj_set_style_bg_color(backFooter, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(backFooter, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(backFooter, 1, 0);
-  lv_obj_set_style_border_color(backFooter, COL_BORDER, 0);
-  lv_obj_set_style_shadow_width(backFooter, 0, 0);
-  lv_obj_set_style_pad_all(backFooter, 0, 0);
-  lv_obj_add_event_cb(backFooter, back_cb, LV_EVENT_CLICKED, nullptr);
-  lv_obj_t* bLbl = lv_label_create(backFooter);
-  lv_label_set_text(bLbl, "BACK");
-  lv_obj_set_style_text_font(bLbl, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(bLbl, COL_TEXT, 0);
-  lv_obj_center(bLbl);
-
-  lv_obj_t* restartBtn = lv_button_create(screen);
-  lv_obj_set_size(restartBtn, btnW, footerH);
-  lv_obj_set_pos(restartBtn, PX + btnW + gap, footerY);
-  lv_obj_set_style_bg_color(restartBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(restartBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(restartBtn, 1, 0);
-  lv_obj_set_style_border_color(restartBtn, COL_BORDER, 0);
-  lv_obj_set_style_shadow_width(restartBtn, 0, 0);
-  lv_obj_set_style_pad_all(restartBtn, 0, 0);
-  lv_obj_add_event_cb(restartBtn, restart_cb, LV_EVENT_CLICKED, nullptr);
-  lv_obj_t* rLbl = lv_label_create(restartBtn);
-  lv_label_set_text(rLbl, "RESTART");
-  lv_obj_set_style_text_font(rLbl, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(rLbl, COL_TEXT, 0);
-  lv_obj_center(rLbl);
-
-  lv_obj_t* saveBtn = lv_button_create(screen);
-  lv_obj_set_size(saveBtn, btnW + 60, footerH);
-  lv_obj_set_pos(saveBtn, PX + 2 * (btnW + gap), footerY);
-  lv_obj_set_style_bg_color(saveBtn, COL_BG_ACTIVE, 0);
-  lv_obj_set_style_radius(saveBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(saveBtn, 2, 0);
-  lv_obj_set_style_border_color(saveBtn, COL_ACCENT, 0);
-  lv_obj_set_style_shadow_width(saveBtn, 0, 0);
-  lv_obj_set_style_pad_all(saveBtn, 0, 0);
-  lv_obj_add_event_cb(saveBtn, save_cb, LV_EVENT_CLICKED, nullptr);
-  lv_obj_t* sLbl = lv_label_create(saveBtn);
-  lv_label_set_text(sLbl, "SAVE CALIBRATION");
-  lv_obj_set_style_text_font(sLbl, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(sLbl, COL_ACCENT, 0);
-  lv_obj_center(sLbl);
+  ui_create_btn(screen, PX, footerY, btnW, footerH, "BACK", FONT_SUBTITLE, UI_BTN_NORMAL, back_cb, nullptr);
+  ui_create_btn(screen, PX + btnW + gap, footerY, btnW, footerH, "RESTART", FONT_SUBTITLE, UI_BTN_NORMAL, restart_cb, nullptr);
+  ui_create_btn(screen, PX + 2 * (btnW + gap), footerY, btnW + 60, footerH, "SAVE CALIBRATION", FONT_SUBTITLE,
+                UI_BTN_ACCENT, save_cb, nullptr);
 
   calStep = STEP_ZERO;
   screen_calibration_update();

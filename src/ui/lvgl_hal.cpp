@@ -10,6 +10,8 @@
 #include "display.h"
 #include "../storage/storage.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include <esp_timer.h>
 #include <esp_heap_caps.h>
 #include "esp_lcd_panel_ops.h"
@@ -23,16 +25,23 @@ void dim_reset_activity() {
   lastActivityMs = millis();
   if (isDimmed) {
     isDimmed = false;
-    display_set_brightness(g_settings.brightness);
+    uint8_t b = 150;
+    xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+    b = g_settings.brightness;
+    xSemaphoreGive(g_settings_mutex);
+    display_set_brightness(b);
   }
 }
 
 void dim_update() {
-  if (g_settings.dim_timeout == 0) return;
+  uint8_t dimSec = 0;
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  dimSec = g_settings.dim_timeout;
+  xSemaphoreGive(g_settings_mutex);
+  if (dimSec == 0) return;
 
   // Producers use release (ISR, speed_update_adc, safety_init); acquire here sees their publication.
-  if (g_wakePending.load(std::memory_order_acquire)) {
-    g_wakePending.store(false, std::memory_order_release);
+  if (g_wakePending.exchange(false, std::memory_order_acq_rel)) {
     dim_reset_activity();
     return;
   }
@@ -44,7 +53,7 @@ void dim_update() {
     return;
   }
 
-  if (millis() - lastActivityMs > (uint32_t)g_settings.dim_timeout * 1000) {
+  if (millis() - lastActivityMs > (uint32_t)dimSec * 1000) {
     isDimmed = true;
     display_set_brightness(dimBrightness);
   }

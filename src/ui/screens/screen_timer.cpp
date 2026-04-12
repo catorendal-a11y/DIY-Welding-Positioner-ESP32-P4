@@ -10,6 +10,8 @@
 #include "../../storage/storage.h"
 #include "../../config.h"
 #include "../../safety/safety.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STATE
@@ -55,7 +57,6 @@ static void sec_adj_cb(lv_event_t* e) {
   countdownSec += delta;
   if (countdownSec < 1) countdownSec = 1;
   if (countdownSec > 10) countdownSec = 10;
-  g_settings.countdown_seconds = (uint8_t)countdownSec;
   if (secLabel) lv_label_set_text_fmt(secLabel, "%d sec", countdownSec);
 }
 
@@ -96,14 +97,17 @@ void screen_timer_create() {
   lv_obj_t* screen = screenRoots[SCREEN_TIMER];
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   countdownSec = g_settings.countdown_seconds;
+  xSemaphoreGive(g_settings_mutex);
   if (countdownSec < 1) countdownSec = 3;
   if (countdownSec > 10) countdownSec = 10;
   countingDown = false;
   startPending = false;
+  backPending = false;
   lastDisplayedSec = -1;
 
-  ui_create_header(screen, "COUNTDOWN", HEADER_H, FONT_NORMAL, 8);
+  ui_create_header(screen, "COUNTDOWN");
 
   // ── Arc ring (240x240, centered) ──
   const int ringSize = 240;
@@ -160,8 +164,8 @@ void screen_timer_create() {
   lv_obj_set_style_text_color(secLabel, COL_TEXT_BRIGHT, 0);
   lv_obj_set_pos(secLabel, 120, rowY + 10);
 
-  ui_create_btn(screen, 220, rowY, 64, 52, "-", FONT_XL, false, false, sec_adj_cb, (void*)(intptr_t)(-1));
-  ui_create_btn(screen, 284, rowY, 64, 52, "+", FONT_XL, false, false, sec_adj_cb, (void*)(intptr_t)(1));
+  ui_create_btn(screen, 220, rowY, 64, 52, "-", FONT_XL, UI_BTN_NORMAL, sec_adj_cb, (void*)(intptr_t)(-1));
+  ui_create_btn(screen, 284, rowY, 64, 52, "+", FONT_XL, UI_BTN_NORMAL, sec_adj_cb, (void*)(intptr_t)(1));
 
   // ── RPM row (right side) ──
   lv_obj_t* rpmTitle = lv_label_create(screen);
@@ -176,8 +180,8 @@ void screen_timer_create() {
   lv_obj_set_style_text_color(rpmLabel, COL_TEXT_BRIGHT, 0);
   lv_obj_set_pos(rpmLabel, 510, rowY + 10);
 
-  ui_create_btn(screen, 580, rowY, 64, 52, "-", FONT_XL, false, false, rpm_adj_cb, (void*)(intptr_t)(-1));
-  ui_create_btn(screen, 644, rowY, 64, 52, "+", FONT_XL, false, false, rpm_adj_cb, (void*)(intptr_t)(1));
+  ui_create_btn(screen, 580, rowY, 64, 52, "-", FONT_XL, UI_BTN_NORMAL, rpm_adj_cb, (void*)(intptr_t)(-1));
+  ui_create_btn(screen, 644, rowY, 64, 52, "+", FONT_XL, UI_BTN_NORMAL, rpm_adj_cb, (void*)(intptr_t)(1));
 
   // ── Bottom bar: BACK + START + STOP ──
   const int barY = 428;
@@ -186,47 +190,11 @@ void screen_timer_create() {
   const int barGap = 8;
   const int barX = 8;
 
-  lv_obj_t* backBtn = lv_button_create(screen);
-  lv_obj_set_size(backBtn, barBtnW, barH);
-  lv_obj_set_pos(backBtn, barX, barY);
-  lv_obj_set_style_bg_color(backBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(backBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(backBtn, 1, 0);
-  lv_obj_set_style_border_color(backBtn, COL_BORDER, 0);
-  lv_obj_add_event_cb(backBtn, back_event_cb, LV_EVENT_CLICKED, nullptr);
-  lv_obj_t* backLabel = lv_label_create(backBtn);
-  lv_label_set_text(backLabel, "<  BACK");
-  lv_obj_set_style_text_font(backLabel, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(backLabel, COL_TEXT, 0);
-  lv_obj_center(backLabel);
-
-  lv_obj_t* startBtn = lv_button_create(screen);
-  lv_obj_set_size(startBtn, barBtnW, barH);
-  lv_obj_set_pos(startBtn, barX + barBtnW + barGap, barY);
-  lv_obj_set_style_bg_color(startBtn, COL_BG_ACTIVE, 0);
-  lv_obj_set_style_radius(startBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(startBtn, 2, 0);
-  lv_obj_set_style_border_color(startBtn, COL_ACCENT, 0);
-  lv_obj_add_event_cb(startBtn, start_event_cb, LV_EVENT_CLICKED, nullptr);
-  lv_obj_t* startLabel = lv_label_create(startBtn);
-  lv_label_set_text(startLabel, "> START");
-  lv_obj_set_style_text_font(startLabel, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(startLabel, COL_ACCENT, 0);
-  lv_obj_center(startLabel);
-
-  lv_obj_t* stopBtn = lv_button_create(screen);
-  lv_obj_set_size(stopBtn, barBtnW, barH);
-  lv_obj_set_pos(stopBtn, barX + (barBtnW + barGap) * 2, barY);
-  lv_obj_set_style_bg_color(stopBtn, COL_BG_DANGER, 0);
-  lv_obj_set_style_radius(stopBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(stopBtn, 2, 0);
-  lv_obj_set_style_border_color(stopBtn, COL_RED, 0);
-  lv_obj_add_event_cb(stopBtn, stop_event_cb, LV_EVENT_CLICKED, nullptr);
-  lv_obj_t* stopLabel = lv_label_create(stopBtn);
-  lv_label_set_text(stopLabel, "[] STOP");
-  lv_obj_set_style_text_font(stopLabel, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(stopLabel, COL_RED, 0);
-  lv_obj_center(stopLabel);
+  ui_create_action_bar_three(screen, barX, barY, barH, barGap, barBtnW,
+                             "<  BACK", back_event_cb, UI_BTN_NORMAL,
+                             "> START", start_event_cb, UI_BTN_ACCENT,
+                             "[] STOP", stop_event_cb, UI_BTN_DANGER,
+                             nullptr, nullptr, nullptr);
 
   LOG_I("Screen countdown: created with progress ring");
 }
@@ -252,7 +220,9 @@ void screen_timer_update() {
     backPending = false;
     countingDown = false;
     startPending = false;
+    xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
     g_settings.countdown_seconds = (uint8_t)countdownSec;
+    xSemaphoreGive(g_settings_mutex);
     storage_save_settings();
     screens_request_show(SCREEN_MAIN);
     return;

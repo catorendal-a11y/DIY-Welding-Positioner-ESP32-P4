@@ -35,19 +35,6 @@ static lv_obj_t* make_info_row(lv_obj_t* parent, int x, int y, int w, int h,
   return row;
 }
 
-static lv_obj_t* make_sep(lv_obj_t* parent, int x, int y, int w) {
-  lv_obj_t* sep = lv_obj_create(parent);
-  lv_obj_set_size(sep, w, 1);
-  lv_obj_set_pos(sep, x, y);
-  lv_obj_set_style_bg_color(sep, COL_SEPARATOR, 0);
-  lv_obj_set_style_border_width(sep, 0, 0);
-  lv_obj_set_style_radius(sep, 0, 0);
-  lv_obj_set_style_pad_all(sep, 0, 0);
-  lv_obj_remove_flag(sep, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_remove_flag(sep, LV_OBJ_FLAG_CLICKABLE);
-  return sep;
-}
-
 void screen_about_create() {
   lv_obj_t* screen = screenRoots[SCREEN_ABOUT];
   lv_obj_clean(screen);
@@ -56,7 +43,7 @@ void screen_about_create() {
   const int PX = 16;
   const int CW = SCREEN_W - 2 * PX;
 
-  ui_create_header(screen, "ABOUT", SET_HEADER_H, FONT_SUBTITLE, 6);
+  ui_create_settings_header(screen, "ABOUT");
 
   int y = 44;
 
@@ -76,7 +63,7 @@ void screen_about_create() {
 
   y += 36;
 
-  make_sep(screen, PX, y, CW);
+  ui_create_separator_line(screen, PX, y, CW, COL_SEPARATOR);
   y += 12;
 
   make_info_row(screen, PX, y, CW, 32, "BOARD", "GUITION JC4880P433 ESP32-P4");
@@ -91,7 +78,7 @@ void screen_about_create() {
   make_info_row(screen, PX, y, CW, 32, "CO-PROCESSOR", "ESP32-C6");
   y += 36;
 
-  make_sep(screen, PX, y, CW);
+  ui_create_separator_line(screen, PX, y, CW, COL_SEPARATOR);
   y += 12;
 
   make_info_row(screen, PX, y, CW, 32, "FRAMEWORK", "LVGL 9.x + FastAccelStepper");
@@ -104,7 +91,7 @@ void screen_about_create() {
   int footerH = SET_FOOTER_H;
   int btnW = 160;
 
-  ui_create_btn(screen, PX, footerY, btnW, footerH, "BACK", FONT_SUBTITLE, false, false, back_cb, nullptr);
+  ui_create_btn(screen, PX, footerY, btnW, footerH, "BACK", FONT_SUBTITLE, UI_BTN_NORMAL, back_cb, nullptr);
 
   LOG_I("Screen about: created");
 }

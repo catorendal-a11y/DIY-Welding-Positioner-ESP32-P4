@@ -16,6 +16,8 @@
 #include "driver/ledc.h"
 #include "esp_log.h"
 #include "lvgl.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include <cstring>
 
 // Forward declarations for LDO
@@ -385,7 +387,11 @@ void display_init() {
   // ─────────────────────────────────────────────────────────────────────────
   LOG_I("  [6/6] Backlight ON...");
   delay(100);
-  display_set_brightness(g_settings.brightness);
+  uint8_t bright = 150;
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  bright = g_settings.brightness;
+  xSemaphoreGive(g_settings_mutex);
+  display_set_brightness(bright);
 
   LOG_I("Display init complete: %dx%d", DISPLAY_H_RES, DISPLAY_V_RES);
 }

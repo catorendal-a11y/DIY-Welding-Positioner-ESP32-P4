@@ -579,37 +579,10 @@ void screen_edit_step_create() {
     const int totalBtnW = btnW * 2 + btnGap;
     const int btnStartX = (SCREEN_W - totalBtnW) / 2;
 
-    // CANCEL
-    lv_obj_t* cancelBtn = lv_button_create(content);
-    lv_obj_set_size(cancelBtn, btnW, btnH);
-    lv_obj_set_pos(cancelBtn, btnStartX, y);
-    lv_obj_set_style_bg_color(cancelBtn, COL_BTN_BG, 0);
-    lv_obj_set_style_radius(cancelBtn, RADIUS_BTN, 0);
-    lv_obj_set_style_border_width(cancelBtn, 1, 0);
-    lv_obj_set_style_border_color(cancelBtn, COL_BORDER, 0);
-    lv_obj_add_event_cb(cancelBtn, cancel_cb, LV_EVENT_CLICKED, nullptr);
-
-    lv_obj_t* cancelLbl = lv_label_create(cancelBtn);
-    lv_label_set_text(cancelLbl, "CANCEL");
-    lv_obj_set_style_text_font(cancelLbl, FONT_MED, 0);
-    lv_obj_set_style_text_color(cancelLbl, COL_TEXT, 0);
-    lv_obj_center(cancelLbl);
-
-    // SAVE
-    lv_obj_t* saveBtn = lv_button_create(content);
-    lv_obj_set_size(saveBtn, btnW, btnH);
-    lv_obj_set_pos(saveBtn, btnStartX + btnW + btnGap, y);
-    lv_obj_set_style_bg_color(saveBtn, COL_BTN_ACTIVE, 0);
-    lv_obj_set_style_radius(saveBtn, RADIUS_BTN, 0);
-    lv_obj_set_style_border_width(saveBtn, 2, 0);
-    lv_obj_set_style_border_color(saveBtn, COL_ACCENT, 0);
-    lv_obj_add_event_cb(saveBtn, save_cb, LV_EVENT_CLICKED, nullptr);
-
-    lv_obj_t* saveLbl = lv_label_create(saveBtn);
-    lv_label_set_text(saveLbl, "SAVE");
-    lv_obj_set_style_text_font(saveLbl, FONT_MED, 0);
-    lv_obj_set_style_text_color(saveLbl, COL_ACCENT, 0);
-    lv_obj_center(saveLbl);
+    ui_create_btn(content, btnStartX, y, btnW, btnH, "CANCEL", FONT_MED, UI_BTN_NORMAL, cancel_cb,
+                  nullptr);
+    ui_create_btn(content, btnStartX + btnW + btnGap, y, btnW, btnH, "SAVE", FONT_MED, UI_BTN_ACCENT,
+                  save_cb, nullptr);
   }
 
   LOG_I("Screen edit step: full edit layout created");

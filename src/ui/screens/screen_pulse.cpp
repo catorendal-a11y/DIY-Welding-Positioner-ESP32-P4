@@ -167,7 +167,7 @@ void screen_pulse_create() {
   lv_obj_t* screen = screenRoots[SCREEN_PULSE];
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
-  ui_create_header(screen, "PULSE MODE", HEADER_H, FONT_NORMAL, 8);
+  ui_create_header(screen, "PULSE MODE");
 
   // ── Parameter row layout constants ──
   const int secLabelX = 20;
@@ -389,68 +389,19 @@ void screen_pulse_create() {
   lv_obj_set_style_text_color(offTag, COL_TEXT_VDIM, 0);
   lv_obj_set_pos(offTag, 5, lowY - 2);
 
-  // ════════════════════════════════════════════════════════════════════════════════
-  // Bottom bar: BACK + START + STOP (y=428)
-  // ════════════════════════════════════════════════════════════════════════════════
   const int botY = 428;
   const int botH = 48;
   const int botBtnW = 256;
   const int botGap = 8;
   const int botX = 8;
 
-  // < BACK button
-  lv_obj_t* backBtn = lv_button_create(screen);
-  lv_obj_set_size(backBtn, botBtnW, botH);
-  lv_obj_set_pos(backBtn, botX, botY);
-  lv_obj_set_style_bg_color(backBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(backBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(backBtn, 1, 0);
-  lv_obj_set_style_border_color(backBtn, COL_BORDER, 0);
-  lv_obj_set_style_shadow_width(backBtn, 0, 0);
-  lv_obj_set_style_pad_all(backBtn, 0, 0);
-  lv_obj_add_event_cb(backBtn, back_event_cb, LV_EVENT_CLICKED, nullptr);
-
-  lv_obj_t* backLabel = lv_label_create(backBtn);
-  lv_label_set_text(backLabel, "<  BACK");
-  lv_obj_set_style_text_font(backLabel, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(backLabel, COL_TEXT, 0);
-  lv_obj_center(backLabel);
-
-  // > START button
-  startBtn = lv_button_create(screen);
-  lv_obj_set_size(startBtn, botBtnW, botH);
-  lv_obj_set_pos(startBtn, botX + botBtnW + botGap, botY);
-  lv_obj_set_style_bg_color(startBtn, COL_BG_ACTIVE, 0);
-  lv_obj_set_style_radius(startBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(startBtn, 2, 0);
-  lv_obj_set_style_border_color(startBtn, COL_ACCENT, 0);
-  lv_obj_set_style_shadow_width(startBtn, 0, 0);
-  lv_obj_set_style_pad_all(startBtn, 0, 0);
-  lv_obj_add_event_cb(startBtn, start_event_cb, LV_EVENT_CLICKED, nullptr);
-
-  lv_obj_t* startLabel = lv_label_create(startBtn);
-  lv_label_set_text(startLabel, "> START");
-  lv_obj_set_style_text_font(startLabel, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(startLabel, COL_ACCENT, 0);
-  lv_obj_center(startLabel);
-
-  // [] STOP button
-  stopBtn = lv_button_create(screen);
-  lv_obj_set_size(stopBtn, botBtnW, botH);
-  lv_obj_set_pos(stopBtn, botX + (botBtnW + botGap) * 2, botY);
-  lv_obj_set_style_bg_color(stopBtn, COL_BG_DANGER, 0);
-  lv_obj_set_style_radius(stopBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(stopBtn, 2, 0);
-  lv_obj_set_style_border_color(stopBtn, COL_RED, 0);
-  lv_obj_set_style_shadow_width(stopBtn, 0, 0);
-  lv_obj_set_style_pad_all(stopBtn, 0, 0);
-  lv_obj_add_event_cb(stopBtn, stop_event_cb, LV_EVENT_CLICKED, nullptr);
-
-  lv_obj_t* stopLabel = lv_label_create(stopBtn);
-  lv_label_set_text(stopLabel, "[] STOP");
-  lv_obj_set_style_text_font(stopLabel, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(stopLabel, COL_RED, 0);
-  lv_obj_center(stopLabel);
+  lv_obj_t* backBarBtn = nullptr;
+  ui_create_action_bar_three(screen, botX, botY, botH, botGap, botBtnW,
+                              "<  BACK", back_event_cb, UI_BTN_NORMAL,
+                              "> START", start_event_cb, UI_BTN_ACCENT,
+                              "[] STOP", stop_event_cb, UI_BTN_DANGER,
+                              &backBarBtn, &startBtn, &stopBtn);
+  (void)backBarBtn;
 
   LOG_I("Screen pulse: v2.0 layout created");
 }

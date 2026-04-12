@@ -50,7 +50,7 @@ void screen_menu_create() {
   lv_obj_clean(screen);
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
-  ui_create_header(screen, "MENU", HEADER_H, FONT_NORMAL, 7);
+  ui_create_header(screen, "MENU");
   ui_create_separator(screen, HEADER_H);
 
   // ── 2x2 Mode Grid (glove-friendly, min 48x48) ──
@@ -78,24 +78,9 @@ void screen_menu_create() {
   create_grid_btn(screen, gridStartX + gridBtnW + gridGapX, gridStartY + gridBtnH + gridGapY,
                   gridBtnW, gridBtnH, "TIMER", timer_event_cb, false);
 
-  // ── PROGRAMS button (full-width, accent style) ──
   const int progY = gridStartY + (gridBtnH + gridGapY) * 2 + 8;
-  lv_obj_t* programsBtn = lv_button_create(screen);
-  lv_obj_set_size(programsBtn, SCREEN_W - 2 * PAD_X, 52);
-  lv_obj_set_pos(programsBtn, PAD_X, progY);
-  lv_obj_set_style_bg_color(programsBtn, COL_BG_ACTIVE, 0);
-  lv_obj_set_style_radius(programsBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(programsBtn, 2, 0);
-  lv_obj_set_style_border_color(programsBtn, COL_ACCENT, 0);
-  lv_obj_set_style_shadow_width(programsBtn, 0, 0);
-  lv_obj_set_style_pad_all(programsBtn, 0, 0);
-  lv_obj_add_event_cb(programsBtn, programs_event_cb, LV_EVENT_CLICKED, nullptr);
-
-  lv_obj_t* programsLabel = lv_label_create(programsBtn);
-  lv_label_set_text(programsLabel, "PROGRAMS");
-  lv_obj_set_style_text_font(programsLabel, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(programsLabel, COL_ACCENT, 0);
-  lv_obj_center(programsLabel);
+  ui_create_btn(screen, PAD_X, progY, SCREEN_W - 2 * PAD_X, 52, "PROGRAMS", FONT_SUBTITLE, UI_BTN_ACCENT,
+                programs_event_cb, nullptr);
 
   const int sepY = progY + 60;
   ui_create_separator(screen, sepY);
@@ -104,10 +89,10 @@ void screen_menu_create() {
   const int bottomBtnW = (SCREEN_W - PAD_X * 2 - gridGapX) / 2;
   const int bottomBtnH = 56;
 
-  ui_create_btn(screen, PAD_X, bottomY, bottomBtnW, bottomBtnH, "<  BACK", FONT_SUBTITLE, false, false,
+  ui_create_btn(screen, PAD_X, bottomY, bottomBtnW, bottomBtnH, "<  BACK", FONT_SUBTITLE, UI_BTN_NORMAL,
                 back_event_cb, nullptr);
   ui_create_btn(screen, PAD_X + bottomBtnW + gridGapX, bottomY, bottomBtnW, bottomBtnH, "SETTINGS",
-                FONT_SUBTITLE, true, false, settings_event_cb, nullptr);
+                FONT_SUBTITLE, UI_BTN_ACCENT, settings_event_cb, nullptr);
 
   LOG_I("Screen menu: v2.0 layout created");
 }

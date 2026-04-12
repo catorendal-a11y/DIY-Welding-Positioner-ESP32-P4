@@ -7,6 +7,8 @@
 #include "../../config.h"
 #include "../../motor/speed.h"
 #include "../../storage/storage.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // WIDGETS
@@ -168,7 +170,10 @@ void screen_boot_create() {
         "Flash: 16MB SPI-NOR",
         "Display: MIPI-DSI 800x480"
     };
-    uint8_t ms = g_settings.microstep;
+    uint8_t ms = 16;
+    xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+    ms = g_settings.microstep;
+    xSemaphoreGive(g_settings_mutex);
     uint32_t stepsPerRev = 200 * ms;
     static char microBuf[40];
     static char rpmBuf[32];

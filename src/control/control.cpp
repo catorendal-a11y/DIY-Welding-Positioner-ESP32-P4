@@ -60,28 +60,31 @@ bool control_is_valid_transition(SystemState from, SystemState to) {
 // STATE MACHINE CORE
 // ───────────────────────────────────────────────────────────────────────────────
 void control_init() {
-  currentState.store(STATE_IDLE, std::memory_order_relaxed);
-  previousState.store(STATE_IDLE, std::memory_order_relaxed);
+  currentState.store(STATE_IDLE, std::memory_order_release);
+  previousState.store(STATE_IDLE, std::memory_order_release);
   LOG_I("Control init: state=IDLE");
 }
 
 void control_transition_to(SystemState newState) {
-  SystemState expected = currentState.load(std::memory_order_relaxed);
+  SystemState expected = currentState.load(std::memory_order_acquire);
   if (!control_is_valid_transition(expected, newState)) {
     LOG_W("Invalid transition: %s -> %s",
           control_state_name(expected),
           control_state_name(newState));
     return;
   }
-  if (!currentState.compare_exchange_strong(expected, newState)) {
-    LOG_W("Race in transition: %s -> %s (state changed to %s)", control_state_name(expected), control_state_name(newState), control_state_name(currentState.load(std::memory_order_relaxed)));
+  if (!currentState.compare_exchange_strong(expected, newState, std::memory_order_acq_rel,
+                                            std::memory_order_acquire)) {
+    LOG_W("Race in transition: %s -> %s (state changed to %s)", control_state_name(expected),
+          control_state_name(newState),
+          control_state_name(currentState.load(std::memory_order_acquire)));
     return;
   }
 
-  previousState.store(expected, std::memory_order_relaxed);
+  previousState.store(expected, std::memory_order_release);
 
   LOG_I("State: %s -> %s",
-        control_state_name(previousState),
+        control_state_name(expected),
         control_state_name(newState));
 
   switch (newState) {
@@ -101,11 +104,11 @@ void control_transition_to(SystemState newState) {
 }
 
 SystemState control_get_state() {
-  return currentState.load(std::memory_order_relaxed);
+  return currentState.load(std::memory_order_acquire);
 }
 
 const char* control_get_state_string() {
-  return control_state_name(currentState.load(std::memory_order_relaxed));
+  return control_state_name(currentState.load(std::memory_order_acquire));
 }
 
 const char* control_state_name(SystemState s) {
@@ -126,11 +129,11 @@ const char* control_state_name(SystemState s) {
 // ───────────────────────────────────────────────────────────────────────────────
 void control_start_continuous() {
   if (safety_is_estop_active()) return;
-  pendingModeRequest.store(1, std::memory_order_relaxed);
+  pendingModeRequest.store(1, std::memory_order_release);
 }
 
 void control_stop() {
-  pendingStop.store(true, std::memory_order_relaxed);
+  pendingStop.store(true, std::memory_order_release);
 }
 
 void control_start_pulse(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
@@ -138,27 +141,27 @@ void control_start_pulse(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
   pendingPulseOnMs.store(on_ms, std::memory_order_release);
   pendingPulseOffMs.store(off_ms, std::memory_order_release);
   pendingPulseCycles.store(cycles, std::memory_order_release);
-  pendingModeRequest.store(2, std::memory_order_relaxed);
+  pendingModeRequest.store(2, std::memory_order_release);
 }
 
 void control_start_step(float angle_deg) {
   if (safety_is_estop_active()) return;
   pendingStepAngle.store(angle_deg, std::memory_order_release);
-  pendingModeRequest.store(3, std::memory_order_relaxed);
+  pendingModeRequest.store(3, std::memory_order_release);
 }
 
 void control_start_jog_cw() {
   if (safety_is_estop_active()) return;
-  pendingModeRequest.store(4, std::memory_order_relaxed);
+  pendingModeRequest.store(4, std::memory_order_release);
 }
 
 void control_start_jog_ccw() {
   if (safety_is_estop_active()) return;
-  pendingModeRequest.store(5, std::memory_order_relaxed);
+  pendingModeRequest.store(5, std::memory_order_release);
 }
 
 void control_stop_jog() {
-  pendingStopJog.store(true, std::memory_order_relaxed);
+  pendingStopJog.store(true, std::memory_order_release);
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -200,25 +203,23 @@ static void stop_active_mode(SystemState cur) {
 }
 
 static void process_pending_requests() {
-  SystemState cur = currentState.load(std::memory_order_relaxed);
+  SystemState cur = currentState.load(std::memory_order_acquire);
 
-  if (pendingStopJog.load(std::memory_order_relaxed)) {
-    pendingStopJog.store(false, std::memory_order_relaxed);
+  if (pendingStopJog.exchange(false, std::memory_order_acq_rel)) {
     if (cur == STATE_JOG) {
       jog_stop();
     }
   }
 
-  if (pendingStop.load(std::memory_order_relaxed)) {
-    pendingStop.store(false, std::memory_order_relaxed);
-    pendingModeRequest.store(0, std::memory_order_relaxed);
+  if (pendingStop.exchange(false, std::memory_order_acq_rel)) {
+    pendingModeRequest.store(0, std::memory_order_release);
     if (cur != STATE_IDLE && cur != STATE_STOPPING && cur != STATE_ESTOP) {
       stop_active_mode(cur);
     }
     return;
   }
 
-  if (pendingModeRequest.load(std::memory_order_relaxed) == 0) return;
+  if (pendingModeRequest.load(std::memory_order_acquire) == 0) return;
 
   if (cur != STATE_IDLE) {
     if (cur != STATE_STOPPING && cur != STATE_ESTOP) {
@@ -227,8 +228,7 @@ static void process_pending_requests() {
     return;
   }
 
-  uint8_t req = pendingModeRequest.load(std::memory_order_relaxed);
-  pendingModeRequest.store(0, std::memory_order_relaxed);
+  uint8_t req = pendingModeRequest.exchange(0, std::memory_order_acq_rel);
 
   switch (req) {
     case 1:
@@ -264,20 +264,20 @@ void controlTask(void* pvParameters) {
 
     process_pending_requests();
 
-    if (currentState.load(std::memory_order_relaxed) == STATE_ESTOP) {
+    if (currentState.load(std::memory_order_acquire) == STATE_ESTOP) {
       if (safety_check_ui_reset()) {
         control_transition_to(STATE_IDLE);
       }
     }
 
-    if (currentState.load(std::memory_order_relaxed) == STATE_STOPPING) {
+    if (currentState.load(std::memory_order_acquire) == STATE_STOPPING) {
       if (!motor_is_running()) {
         motor_disable();
         control_transition_to(STATE_IDLE);
       }
     }
 
-    switch (currentState.load(std::memory_order_relaxed)) {
+    switch (currentState.load(std::memory_order_acquire)) {
       case STATE_RUNNING:
         continuous_update();
         break;

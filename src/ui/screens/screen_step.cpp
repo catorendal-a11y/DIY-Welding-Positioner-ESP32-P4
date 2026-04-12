@@ -27,14 +27,14 @@ static int activePreset = 1;  // 90 deg is default (index 1)
 static lv_obj_t* customNumpad = nullptr;
 static lv_obj_t* customTa = nullptr;
 static lv_obj_t* customHint = nullptr;
-static volatile bool numpadClosePending = false;
+static bool numpadClosePending = false;
 
 static lv_obj_t* stepActionBtn = nullptr;
 static lv_obj_t* diameterSummaryLabel = nullptr;
 static lv_obj_t* diaKb = nullptr;
 static lv_obj_t* diaTa = nullptr;
 static lv_obj_t* diaHint = nullptr;
-static volatile bool diaClosePending = false;
+static bool diaClosePending = false;
 
 // ───────────────────────────────────────────────────────────────────────────────
 // HELPERS

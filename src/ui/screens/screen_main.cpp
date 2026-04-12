@@ -1,8 +1,7 @@
 // TIG Rotator Controller - Main Screen
 // Gauge center with RPM, side buttons, bottom bar
-// Gauge semicircle center at (400, 200), R=130
+// Gauge semicircle (theme MAIN_GAUGE_*), pot controls RPM
 // RPM value in FONT_HUGE in center
-// RPM +/- under gauge
 // Side buttons: 3 left, 3 right, all gray by default, highlight accent when active
 // Bottom bar: START + STOP (56px tall)
 
@@ -11,7 +10,6 @@
 #include "../../config.h"
 #include "../../motor/speed.h"
 #include "../../control/control.h"
-#include "../../storage/storage.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // WIDGETS
@@ -23,14 +21,13 @@ static uint32_t mainPulseOffMs = 500;
 static lv_obj_t* mainScreenPtr = nullptr;
 static lv_obj_t* stateLabel = nullptr;
 static lv_obj_t* rpmLabel = nullptr;
+static lv_obj_t* rpmUnitLabel = nullptr;
 static lv_obj_t* rpmIndicatorArc = nullptr;
 static lv_obj_t* pulseOnLabel = nullptr;
 static lv_obj_t* pulseOffLabel = nullptr;
 
 static lv_obj_t* startBtn = nullptr;
 static lv_obj_t* stopBtn = nullptr;
-static lv_obj_t* rpmDownBtn = nullptr;
-static lv_obj_t* rpmUpBtn = nullptr;
 static lv_obj_t* jogBtn = nullptr;
 static lv_obj_t* cwBtn = nullptr;
 static lv_obj_t* pulseBtn = nullptr;
@@ -82,20 +79,6 @@ static void cw_event_cb(lv_event_t*) {
 }
 static void pulse_event_cb(lv_event_t*) {
   control_start_pulse(mainPulseOnMs, mainPulseOffMs);
-  screen_main_set_dirty();
-}
-static void speed_down_cb(lv_event_t*) {
-  float rpm = speed_get_target_rpm();
-  rpm -= 0.1f;
-  if (rpm < MIN_RPM) rpm = MIN_RPM;
-  speed_slider_set(rpm);
-  screen_main_set_dirty();
-}
-static void speed_up_cb(lv_event_t*) {
-  float rpm = speed_get_target_rpm();
-  rpm += 0.1f;
-  if (rpm > speed_get_rpm_max()) rpm = speed_get_rpm_max();
-  speed_slider_set(rpm);
   screen_main_set_dirty();
 }
 static void pulse_on_down_cb(lv_event_t*) {
@@ -164,7 +147,7 @@ static void set_btn_style(lv_obj_t* btn, lv_color_t bg, lv_color_t border,
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN CREATE
-// Layout: Header 30 | Side buttons | Gauge center | RPM+/- | Bottom bar
+// Layout: Header 30 | Side buttons | Gauge center | Bottom bar
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_main_create() {
   mainScreenPtr = screenRoots[SCREEN_MAIN];
@@ -192,10 +175,10 @@ void screen_main_create() {
   lv_obj_set_style_text_color(stateLabel, COL_GREEN, 0);
   lv_obj_set_pos(stateLabel, 160, 8);
 
-  // ── Gauge semicircle, center at (400, 200), R=130 ──
-  const int arcCX = 400;
-  const int arcCY = 170;
-  const int arcR = 150;
+  // ── Gauge semicircle (theme MAIN_GAUGE_*) ──
+  const int arcCX = MAIN_GAUGE_CX;
+  const int arcCY = MAIN_GAUGE_CY;
+  const int arcR = MAIN_GAUGE_R;
 
   // Track arc (background)
   lv_obj_t* gaugeTrack = lv_arc_create(mainScreenPtr);
@@ -209,9 +192,9 @@ void screen_main_create() {
   lv_obj_remove_style(gaugeTrack, NULL, LV_PART_INDICATOR);
   lv_obj_set_style_bg_opa(gaugeTrack, LV_OPA_TRANSP, 0);
   lv_obj_set_style_border_width(gaugeTrack, 0, 0);
-  lv_obj_set_style_pad_all(gaugeTrack, 10, 0);
+  lv_obj_set_style_pad_all(gaugeTrack, MAIN_GAUGE_TRACK_PAD, 0);
   lv_obj_set_style_arc_color(gaugeTrack, COL_GAUGE_BG, LV_PART_MAIN);
-  lv_obj_set_style_arc_width(gaugeTrack, 12, LV_PART_MAIN);
+  lv_obj_set_style_arc_width(gaugeTrack, MAIN_GAUGE_TRACK_W, LV_PART_MAIN);
   lv_obj_remove_flag(gaugeTrack, LV_OBJ_FLAG_CLICKABLE);
 
   // Active arc (value indicator)
@@ -228,21 +211,26 @@ void screen_main_create() {
   lv_obj_set_style_arc_color(rpmIndicatorArc, COL_BG, LV_PART_MAIN);
   lv_obj_set_style_arc_opa(rpmIndicatorArc, LV_OPA_TRANSP, LV_PART_MAIN);
   lv_obj_set_style_arc_color(rpmIndicatorArc, COL_ACCENT, LV_PART_INDICATOR);
-  lv_obj_set_style_arc_width(rpmIndicatorArc, 8, LV_PART_INDICATOR);
+  lv_obj_set_style_arc_width(rpmIndicatorArc, MAIN_GAUGE_IND_W, LV_PART_INDICATOR);
 
-  // RPM value centered in gauge
+  // "RPM" unit — horizontal center; value label stacked above (re-aligned in update)
+  rpmUnitLabel = lv_label_create(mainScreenPtr);
+  lv_label_set_text(rpmUnitLabel, "RPM");
+  lv_obj_set_style_text_font(rpmUnitLabel, FONT_XL, 0);
+  lv_obj_set_style_text_color(rpmUnitLabel, COL_TEXT_DIM, 0);
+  lv_obj_align(rpmUnitLabel, LV_ALIGN_TOP_MID, 0, MAIN_RPM_TAG_Y);
+
   rpmLabel = lv_label_create(mainScreenPtr);
-  lv_label_set_text(rpmLabel, "0.0");
+  lv_label_set_text(rpmLabel, "0.00");
   lv_obj_set_style_text_font(rpmLabel, FONT_HUGE, 0);
   lv_obj_set_style_text_color(rpmLabel, COL_ACCENT, 0);
-  lv_obj_set_pos(rpmLabel, arcCX - 60, arcCY - 40);
-
-  // "RPM" text under value
-  lv_obj_t* rpmTag = lv_label_create(mainScreenPtr);
-  lv_label_set_text(rpmTag, "RPM");
-  lv_obj_set_style_text_font(rpmTag, FONT_XL, 0);
-  lv_obj_set_style_text_color(rpmTag, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(rpmTag, arcCX - 20, arcCY + 20);
+  lv_obj_update_layout(rpmLabel);
+  lv_obj_set_style_transform_pivot_x(rpmLabel, lv_obj_get_width(rpmLabel) / 2, 0);
+  lv_obj_set_style_transform_pivot_y(rpmLabel, lv_obj_get_height(rpmLabel) / 2, 0);
+  lv_obj_set_style_transform_zoom(rpmLabel, MAIN_RPM_VALUE_ZOOM, 0);
+  lv_obj_align(rpmLabel, LV_ALIGN_TOP_MID, 0,
+               MAIN_RPM_TAG_Y - MAIN_RPM_VALUE_GAP - lv_obj_get_height(rpmLabel) -
+                   MAIN_RPM_VALUE_LIFT);
 
   // ── Left side buttons: JOG, CW, PULSE (170x72, gray by default) ──
   const int sideW = 170;
@@ -275,12 +263,6 @@ void screen_main_create() {
   pedalBtn = make_btn(mainScreenPtr, rightX, 36 + (sideH + sideGap) * 3, sideW, sideH, "PEDAL", false);
   lv_obj_add_event_cb(pedalBtn, pedal_toggle_cb, LV_EVENT_CLICKED, nullptr);
   pedalLabel = lv_obj_get_child(pedalBtn, 0);
-
-  // ── RPM +/- under gauge (y=290) ──
-  rpmDownBtn = make_btn(mainScreenPtr, 280, 310, 120, 56, "-", false);
-  rpmUpBtn = make_btn(mainScreenPtr, 410, 310, 120, 56, "+", false);
-  lv_obj_add_event_cb(rpmDownBtn, speed_down_cb, LV_EVENT_CLICKED, nullptr);
-  lv_obj_add_event_cb(rpmUpBtn, speed_up_cb, LV_EVENT_CLICKED, nullptr);
 
   // ── Pulse time controls under PULSE button (left column x=8, w=170) ──
   // Layout: [-]  value  [+] ON  — buttons left, label right towards center
@@ -331,35 +313,10 @@ void screen_main_create() {
   const int botBtnW = 392;
   const int botGap = 8;
 
-  startBtn = lv_button_create(mainScreenPtr);
-  lv_obj_set_size(startBtn, botBtnW, botH);
-  lv_obj_set_pos(startBtn, 4, botY);
-  set_btn_style(startBtn, COL_BTN_BG, COL_BORDER, 1, COL_TEXT);
-  lv_obj_set_style_radius(startBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_shadow_width(startBtn, 0, 0);
-  lv_obj_set_style_pad_all(startBtn, 0, 0);
-  lv_obj_add_event_cb(startBtn, start_event_cb, LV_EVENT_CLICKED, nullptr);
-  lv_obj_t* startLbl = lv_label_create(startBtn);
-  lv_label_set_text(startLbl, "> START");
-  lv_obj_set_style_text_font(startLbl, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(startLbl, COL_TEXT, 0);
-  lv_obj_center(startLbl);
-
-  stopBtn = lv_button_create(mainScreenPtr);
-  lv_obj_set_size(stopBtn, botBtnW, botH);
-  lv_obj_set_pos(stopBtn, 4 + botBtnW + botGap, botY);
-  lv_obj_set_style_bg_color(stopBtn, COL_BG_DANGER, 0);
-  lv_obj_set_style_radius(stopBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(stopBtn, 2, 0);
-  lv_obj_set_style_border_color(stopBtn, COL_RED, 0);
-  lv_obj_set_style_shadow_width(stopBtn, 0, 0);
-  lv_obj_set_style_pad_all(stopBtn, 0, 0);
-  lv_obj_add_event_cb(stopBtn, stop_event_cb, LV_EVENT_CLICKED, nullptr);
-  lv_obj_t* stopLbl = lv_label_create(stopBtn);
-  lv_label_set_text(stopLbl, "X STOP");
-  lv_obj_set_style_text_font(stopLbl, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(stopLbl, COL_RED, 0);
-  lv_obj_center(stopLbl);
+  startBtn = ui_create_btn(mainScreenPtr, 4, botY, botBtnW, botH, "> START", FONT_SUBTITLE,
+                           UI_BTN_NORMAL, start_event_cb, nullptr);
+  stopBtn = ui_create_btn(mainScreenPtr, 4 + botBtnW + botGap, botY, botBtnW, botH, "X STOP",
+                         FONT_SUBTITLE, UI_BTN_DANGER, stop_event_cb, nullptr);
 
   LOG_I("Screen main: centered gauge layout created");
 }
@@ -371,13 +328,12 @@ void screen_main_invalidate_widgets() {
   mainScreenPtr = nullptr;
   stateLabel = nullptr;
   rpmLabel = nullptr;
+  rpmUnitLabel = nullptr;
   rpmIndicatorArc = nullptr;
   pulseOnLabel = nullptr;
   pulseOffLabel = nullptr;
   startBtn = nullptr;
   stopBtn = nullptr;
-  rpmDownBtn = nullptr;
-  rpmUpBtn = nullptr;
   jogBtn = nullptr;
   cwBtn = nullptr;
   pulseBtn = nullptr;
@@ -430,8 +386,15 @@ void screen_main_update() {
     lv_obj_set_style_text_color(stateLabel, get_state_color(state), 0);
   }
 
-  // RPM in gauge
+  // RPM in gauge (re-center value above "RPM" when width changes)
   lv_label_set_text_fmt(rpmLabel, "%.2f", rpm);
+  lv_obj_update_layout(rpmLabel);
+  lv_obj_set_style_transform_pivot_x(rpmLabel, lv_obj_get_width(rpmLabel) / 2, 0);
+  lv_obj_set_style_transform_pivot_y(rpmLabel, lv_obj_get_height(rpmLabel) / 2, 0);
+  lv_obj_set_style_transform_zoom(rpmLabel, MAIN_RPM_VALUE_ZOOM, 0);
+  lv_obj_align(rpmLabel, LV_ALIGN_TOP_MID, 0,
+               MAIN_RPM_TAG_Y - MAIN_RPM_VALUE_GAP - lv_obj_get_height(rpmLabel) -
+                   MAIN_RPM_VALUE_LIFT);
   lv_arc_set_value(rpmIndicatorArc, val);
 
   // START button: gray when idle, accent when running
@@ -485,13 +448,6 @@ void screen_main_update() {
     lv_label_set_text(pulseOffLabel, buf);
   }
 
-  if (g_settings.rpm_buttons_enabled) {
-    lv_obj_remove_state(rpmDownBtn, LV_STATE_DISABLED);
-    lv_obj_remove_state(rpmUpBtn, LV_STATE_DISABLED);
-  } else {
-    lv_obj_add_state(rpmDownBtn, LV_STATE_DISABLED);
-    lv_obj_add_state(rpmUpBtn, LV_STATE_DISABLED);
-  }
 }
 
 void screen_main_set_program_pulse_times(uint32_t on_ms, uint32_t off_ms) {

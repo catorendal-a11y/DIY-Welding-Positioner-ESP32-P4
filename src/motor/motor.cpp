@@ -7,6 +7,8 @@
 #include "microstep.h"
 #include "../config.h"
 #include "../safety/safety.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include <FastAccelStepper.h>
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -24,17 +26,16 @@ SemaphoreHandle_t g_stepperMutex = nullptr;
 // DM542T datasheet: DIR setup >=5us before STEP; min pulse >=2.5us; input to 200kHz.
 // FastAccelStepper on ESP32 uses MIN_DIR_DELAY_US=200 when a non-zero dir delay is set.
 // Standard PUL/DIR: no extra DIR holdoff (delay 0).
-static uint16_t motor_dir_delay_us_from_settings() {
-  return (g_settings.stepper_driver == STEPPER_DRIVER_DM542T) ? 200u : 0u;
+static uint16_t motor_dir_delay_us_from_driver(uint8_t stepper_driver) {
+  return (stepper_driver == STEPPER_DRIVER_DM542T) ? 200u : 0u;
 }
 
 // Re-applying setDirectionPin while stepping corrupts timing / can stall the motor.
 static uint16_t s_applied_dir_delay_us = 0;
 static bool s_dir_timing_applied = false;
 
-static void motor_apply_stepper_dir_timing() {
+static void motor_apply_stepper_dir_timing(uint16_t want) {
   if (stepper == nullptr) return;
-  const uint16_t want = motor_dir_delay_us_from_settings();
   if (s_dir_timing_applied && want == s_applied_dir_delay_us) return;
 
   if (s_dir_timing_applied && want != s_applied_dir_delay_us && stepper->isRunning()) {
@@ -97,20 +98,27 @@ void motor_init() {
     ESP.restart();
   }
 
-  // Configure stepper (DIR delay depends on g_settings.stepper_driver)
-  motor_apply_stepper_dir_timing();
+  int accelSteps = 7500;
+  uint8_t driverKind = STEPPER_DRIVER_STANDARD;
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  accelSteps = g_settings.acceleration;
+  driverKind = g_settings.stepper_driver;
+  xSemaphoreGive(g_settings_mutex);
+
+  // Configure stepper (DIR delay depends on stepper_driver snapshot)
+  motor_apply_stepper_dir_timing(motor_dir_delay_us_from_driver(driverKind));
   // NOTE: Do NOT call setEnablePin() — ENA is controlled manually via digitalWrite()
   // Wiring: ENA+→5V, ENA-→GPIO52. LOW=enable, HIGH=disable (active LOW)
   // FastAccelStepper's setEnablePin conflicts with manual control.
 
   // Set acceleration and start speed
-  stepper->setAcceleration(g_settings.acceleration);
+  stepper->setAcceleration(accelSteps);
   stepper->setLinearAcceleration(200);
   stepper->setSpeedInHz(START_SPEED);
 
   LOG_I("FastAccelStepper init OK");
   LOG_I("  Steps/rev: %u", microstep_get_steps_per_rev());
-  LOG_I("  Accel: %d steps/s2", g_settings.acceleration);
+  LOG_I("  Accel: %d steps/s2", accelSteps);
   LOG_I("  Start speed: %d Hz", START_SPEED);
 }
 
@@ -200,16 +208,24 @@ void motor_apply_speed_for_rpm_locked(float rpm_workpiece_command) {
 }
 
 void motor_apply_settings() {
+  int accelSteps = 7500;
+  uint8_t driverKind = STEPPER_DRIVER_STANDARD;
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  accelSteps = g_settings.acceleration;
+  driverKind = g_settings.stepper_driver;
+  xSemaphoreGive(g_settings_mutex);
+  const uint16_t dirDelayUs = motor_dir_delay_us_from_driver(driverKind);
+
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   if (stepper != nullptr) {
-    stepper->setAcceleration(g_settings.acceleration);
-    motor_apply_stepper_dir_timing();
+    stepper->setAcceleration(accelSteps);
+    motor_apply_stepper_dir_timing(dirDelayUs);
   }
   xSemaphoreGive(g_stepperMutex);
   LOG_I("Motor: accel=%d driver=%s (DIR delay %u us)",
-        g_settings.acceleration,
-        g_settings.stepper_driver == STEPPER_DRIVER_DM542T ? "DM542T" : "Standard",
-        (unsigned)motor_dir_delay_us_from_settings());
+        accelSteps,
+        driverKind == STEPPER_DRIVER_DM542T ? "DM542T" : "Standard",
+        (unsigned)dirDelayUs);
 }
 
 FastAccelStepper* motor_get_stepper() {

@@ -8,6 +8,8 @@
 #include "../../motor/speed.h"
 #include "../../storage/storage.h"
 #include "../../control/control.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include <atomic>
 
 static const MicrostepSetting microOptions[3] = {MICROSTEP_8, MICROSTEP_16, MICROSTEP_32};
@@ -123,19 +125,23 @@ static void save_nav_timer_cb(lv_timer_t* timer) {
 }
 
 static void save_apply_cb(lv_event_t* e) {
-  g_settings.microstep = microOptions[selectedMicro];
   int accelVal = lv_slider_get_value(accelSlider);
   if (accelVal < kAccelMin) accelVal = kAccelMin;
   if (accelVal > kAccelMax) accelVal = kAccelMax;
-  g_settings.acceleration = (uint32_t)accelVal;
+  float maxRpmVal = (float)MAX_RPM;
   if (maxRpmSlider) {
     int mi = lv_slider_get_value(maxRpmSlider);
     if (mi < kMaxRpmMilliMin) mi = kMaxRpmMilliMin;
     if (mi > kMaxRpmMilliMax) mi = kMaxRpmMilliMax;
-    g_settings.max_rpm = mi / 1000.0f;
+    maxRpmVal = mi / 1000.0f;
   }
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  g_settings.microstep = microOptions[selectedMicro];
+  g_settings.acceleration = (uint32_t)accelVal;
+  g_settings.max_rpm = maxRpmVal;
   g_settings.dir_switch_enabled = dirSwitchEnabled;
   g_settings.invert_direction = invertDir;
+  xSemaphoreGive(g_settings_mutex);
   g_dir_switch_cache.store(dirSwitchEnabled, std::memory_order_release);
   storage_save_settings();
   motorConfigApplyPending.store(true, std::memory_order_release);
@@ -170,13 +176,17 @@ void screen_motor_config_create() {
   lv_obj_clean(screen);
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
-  dirSwitchEnabled = g_settings.dir_switch_enabled;
-  invertDir = g_settings.invert_direction;
+  {
+    xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+    dirSwitchEnabled = g_settings.dir_switch_enabled;
+    invertDir = g_settings.invert_direction;
+    xSemaphoreGive(g_settings_mutex);
+  }
 
   const int PX = 16;
   const int CONTENT_W = SCREEN_W - 2 * PX;
 
-  ui_create_header(screen, "MOTOR CONFIG", SET_HEADER_H, SET_HEADER_FONT, 6);
+  ui_create_settings_header(screen, "MOTOR CONFIG");
 
   constexpr int GAP_Y = 5;
   int y = SET_HEADER_H + GAP_Y;
@@ -304,7 +314,14 @@ void screen_motor_config_create() {
     lv_obj_set_size(maxRpmSlider, sliderW, sliderH);
     lv_obj_set_pos(maxRpmSlider, 8, 40);
     lv_slider_set_range(maxRpmSlider, kMaxRpmMilliMin, kMaxRpmMilliMax);
-    int mi = (int)(g_settings.max_rpm * 1000.0f + 0.5f);
+    int mi = 1000;
+    {
+      float mx = MAX_RPM;
+      xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+      mx = g_settings.max_rpm;
+      xSemaphoreGive(g_settings_mutex);
+      mi = (int)(mx * 1000.0f + 0.5f);
+    }
     if (mi < kMaxRpmMilliMin) mi = kMaxRpmMilliMin;
     if (mi > kMaxRpmMilliMax) mi = kMaxRpmMilliMax;
     lv_slider_set_value(maxRpmSlider, mi, LV_ANIM_OFF);
@@ -349,7 +366,13 @@ void screen_motor_config_create() {
 
   rpmRangeVal = lv_label_create(infoRow);
   char rpmBuf[28];
-  snprintf(rpmBuf, sizeof(rpmBuf), "%.3f - %.3f", (double)MIN_RPM, (double)g_settings.max_rpm);
+  {
+    float mx = MAX_RPM;
+    xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+    mx = g_settings.max_rpm;
+    xSemaphoreGive(g_settings_mutex);
+    snprintf(rpmBuf, sizeof(rpmBuf), "%.3f - %.3f", (double)MIN_RPM, (double)mx);
+  }
   lv_label_set_text(rpmRangeVal, rpmBuf);
   lv_obj_set_style_text_font(rpmRangeVal, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(rpmRangeVal, COL_TEXT, 0);
@@ -467,7 +490,7 @@ void screen_motor_config_create() {
   int gap = 8;
 
   ui_create_action_bar(screen, PX, footerY, footerH, gap, btnW, btnW + 80,
-                        "BACK", back_cb, "SAVE & APPLY", true, save_apply_cb);
+                        "BACK", back_cb, "SAVE & APPLY", UI_BTN_ACCENT, save_apply_cb);
 }
 
 void screen_motor_config_invalidate_widgets() {

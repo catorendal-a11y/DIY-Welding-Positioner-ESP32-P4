@@ -42,7 +42,7 @@ void screen_settings_create() {
   lv_obj_clean(screen);
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
-  ui_create_header(screen, "SETTINGS", SET_HEADER_H, SET_HEADER_FONT, 6);
+  ui_create_settings_header(screen, "SETTINGS");
 
   const int itemH = SET_ROW_H;
   const int gap = 5;
@@ -58,7 +58,7 @@ void screen_settings_create() {
   int footerH = SET_FOOTER_H;
   int btnW = 160;
 
-  ui_create_btn(screen, 12, footerY, btnW, footerH, "<  BACK", FONT_SUBTITLE, false, false, back_event_cb, nullptr);
+  ui_create_btn(screen, 12, footerY, btnW, footerH, "<  BACK", FONT_SUBTITLE, UI_BTN_NORMAL, back_event_cb, nullptr);
 
   lv_obj_t* versionLbl = lv_label_create(screen);
   lv_label_set_text(versionLbl, FW_VERSION);

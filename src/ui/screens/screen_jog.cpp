@@ -83,34 +83,25 @@ void screen_jog_create() {
   lv_obj_t* screen = screenRoots[SCREEN_JOG];
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
-  lv_obj_t* header = ui_create_header(screen, "JOG MODE", HEADER_H, FONT_NORMAL, 8);
+  lv_obj_t* header = ui_create_header(screen, "JOG MODE");
   lv_obj_remove_flag(header, LV_OBJ_FLAG_CLICKABLE);
 
-  // ── RPM row (y=56, matching pulse screen style) ──
-  const int rpmY = 56;
-  const int secLabelX = 20;
-  const int valX = 160;
-  const int barX = 240;
-  const int barW = 340;
-  const int barH = 3;
-  const int btnMinusX = 600;
-  const int btnPlusX = 652;
-
+  // ── RPM row (theme JOG_RPM_*) ──
   lv_obj_t* rpmTitle = lv_label_create(screen);
   lv_label_set_text(rpmTitle, "RPM");
   lv_obj_set_style_text_font(rpmTitle, FONT_SMALL, 0);
   lv_obj_set_style_text_color(rpmTitle, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(rpmTitle, secLabelX, rpmY);
+  lv_obj_set_pos(rpmTitle, JOG_RPM_TITLE_X, JOG_RPM_ROW_Y);
 
   rpmLabel = lv_label_create(screen);
   lv_label_set_text_fmt(rpmLabel, "%.1f", control_get_jog_speed());
   lv_obj_set_style_text_font(rpmLabel, FONT_LARGE, 0);
   lv_obj_set_style_text_color(rpmLabel, COL_ACCENT, 0);
-  lv_obj_set_pos(rpmLabel, valX, rpmY);
+  lv_obj_set_pos(rpmLabel, JOG_RPM_VAL_X, JOG_RPM_ROW_Y);
 
   rpmBar = lv_bar_create(screen);
-  lv_obj_set_size(rpmBar, barW, barH);
-  lv_obj_set_pos(rpmBar, barX, rpmY + 12);
+  lv_obj_set_size(rpmBar, JOG_RPM_BAR_W, JOG_RPM_BAR_H);
+  lv_obj_set_pos(rpmBar, JOG_RPM_BAR_X, JOG_RPM_ROW_Y + JOG_RPM_BAR_Y_OFF);
   lv_obj_set_style_bg_color(rpmBar, COL_GAUGE_BG, 0);
   lv_obj_set_style_bg_color(rpmBar, COL_ACCENT, LV_PART_INDICATOR);
   lv_bar_set_range(rpmBar, 0, 100);
@@ -124,31 +115,23 @@ void screen_jog_create() {
     lv_bar_set_value(rpmBar, rpmPct, LV_ANIM_OFF);
   }
 
-  ui_create_btn(screen, btnMinusX, rpmY - 3, 64, 52, "-", FONT_BTN, false, false,
-                 rpm_adj_cb, (void*)(intptr_t)-1);
-  ui_create_btn(screen, btnPlusX, rpmY - 3, 64, 52, "+", FONT_BTN, false, false,
-                 rpm_adj_cb, (void*)(intptr_t)1);
-
-  lv_obj_t* rpmHint = lv_label_create(screen);
-  char rpmHintBuf[24];
-  snprintf(rpmHintBuf, sizeof(rpmHintBuf), "%.3f-%.3f", (double)MIN_RPM, (double)speed_get_rpm_max());
-  lv_label_set_text(rpmHint, rpmHintBuf);
-  lv_obj_set_style_text_font(rpmHint, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(rpmHint, COL_TEXT_VDIM, 0);
-  lv_obj_set_pos(rpmHint, 710, rpmY);
+  ui_create_btn(screen, JOG_RPM_BTN_MINUS_X, JOG_RPM_BTN_Y, JOG_RPM_BTN_W, JOG_RPM_BTN_H, "-",
+                 FONT_BTN, UI_BTN_NORMAL, rpm_adj_cb, (void*)(intptr_t)-1);
+  ui_create_btn(screen, JOG_RPM_BTN_PLUS_X, JOG_RPM_BTN_Y, JOG_RPM_BTN_W, JOG_RPM_BTN_H, "+",
+                 FONT_BTN, UI_BTN_NORMAL, rpm_adj_cb, (void*)(intptr_t)1);
 
   // ── Direction label (y=120) ──
   lv_obj_t* dirHint = lv_label_create(screen);
   lv_label_set_text(dirHint, "DIRECTION");
   lv_obj_set_style_text_font(dirHint, FONT_SMALL, 0);
   lv_obj_set_style_text_color(dirHint, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(dirHint, secLabelX, 120);
+  lv_obj_set_pos(dirHint, JOG_RPM_TITLE_X, 120);
 
   lv_obj_t* dirVal = lv_label_create(screen);
   lv_label_set_text(dirVal, "Hold button to rotate");
   lv_obj_set_style_text_font(dirVal, FONT_SMALL, 0);
   lv_obj_set_style_text_color(dirVal, COL_TEXT_VDIM, 0);
-  lv_obj_set_pos(dirVal, valX, 120);
+  lv_obj_set_pos(dirVal, JOG_RPM_VAL_X, 120);
 
   // ── Two large CW / CCW hold buttons ──
   const int holdY = 160;

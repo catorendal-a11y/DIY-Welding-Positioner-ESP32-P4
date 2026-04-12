@@ -96,8 +96,7 @@ void lvglTask(void* pvParameters) {
       continue;
     }
 
-    if (g_screenRedraw) {
-      g_screenRedraw = false;
+    if (g_screenRedraw.exchange(false, std::memory_order_acq_rel)) {
       lvgl_lock();
       lv_obj_invalidate(lv_screen_active());
       lvgl_unlock();

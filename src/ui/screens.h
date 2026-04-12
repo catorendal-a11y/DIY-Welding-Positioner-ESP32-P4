@@ -144,20 +144,33 @@ void estop_overlay_update();   // Update overlay state
 bool estop_overlay_visible();  // Check if overlay is visible
 
 // ───────────────────────────────────────────────────────────────────────────────
-// HELPERS
+// HELPERS — shared widgets (lvglTask only)
 // ───────────────────────────────────────────────────────────────────────────────
-lv_obj_t* ui_create_header(lv_obj_t* parent, const char* title,
-                           lv_coord_t header_h, const lv_font_t* title_font, lv_coord_t title_y);
+typedef enum {
+  UI_BTN_NORMAL = 0,
+  UI_BTN_ACCENT,
+  UI_BTN_DANGER
+} UiBtnStyle;
+
+lv_obj_t* ui_create_header(lv_obj_t* parent, const char* title);
+lv_obj_t* ui_create_settings_header(lv_obj_t* parent, const char* title);
 lv_obj_t* ui_create_separator(lv_obj_t* parent, lv_coord_t y);
+lv_obj_t* ui_create_separator_line(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_color_t color);
 lv_obj_t* ui_create_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h,
-                        const char* text, const lv_font_t* label_font, bool accent, bool danger,
+                        const char* text, const lv_font_t* label_font, UiBtnStyle style,
                         lv_event_cb_t cb, void* user_data);
 lv_obj_t* ui_create_pm_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, const char* text,
                            const lv_font_t* label_font, lv_event_cb_t cb, void* user_data);
 void ui_create_action_bar(lv_obj_t* parent, lv_coord_t pad_x, lv_coord_t footer_y, lv_coord_t footer_h,
                           lv_coord_t gap, lv_coord_t left_w, lv_coord_t right_w,
                           const char* left_text, lv_event_cb_t left_cb,
-                          const char* right_text, bool right_accent, lv_event_cb_t right_cb);
+                          const char* right_text, UiBtnStyle right_style, lv_event_cb_t right_cb);
+void ui_create_action_bar_three(lv_obj_t* parent, lv_coord_t pad_x, lv_coord_t y, lv_coord_t h, lv_coord_t gap,
+                                lv_coord_t btn_w,
+                                const char* left_text, lv_event_cb_t left_cb, UiBtnStyle left_style,
+                                const char* mid_text, lv_event_cb_t mid_cb, UiBtnStyle mid_style,
+                                const char* right_text, lv_event_cb_t right_cb, UiBtnStyle right_style,
+                                lv_obj_t** out_left_btn, lv_obj_t** out_mid_btn, lv_obj_t** out_right_btn);
 
 void screens_set_back_button(lv_obj_t* btn, ScreenId dest);  // Configure back button
 void screens_set_edit_slot(int slot);  // Set slot for SCREEN_PROGRAM_EDIT creation

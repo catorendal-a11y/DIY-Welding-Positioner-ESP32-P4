@@ -128,7 +128,6 @@ void test_settings_save_load_roundtrip(void) {
   g_settings.invert_direction = true;
   g_settings.accent_color = 3;
   g_settings.dim_timeout = 120;
-  g_settings.rpm_buttons_enabled = false;
   g_settings.dir_switch_enabled = false;
   g_settings.stepper_driver = STEPPER_DRIVER_STANDARD;
   g_settings.max_rpm = 2.5f;
@@ -157,7 +156,6 @@ void test_settings_save_load_roundtrip(void) {
   TEST_ASSERT_TRUE(g_settings.invert_direction);
   TEST_ASSERT_EQUAL(3, g_settings.accent_color);
   TEST_ASSERT_EQUAL(120, g_settings.dim_timeout);
-  TEST_ASSERT_FALSE(g_settings.rpm_buttons_enabled);
   TEST_ASSERT_FALSE(g_settings.dir_switch_enabled);
   TEST_ASSERT_EQUAL(STEPPER_DRIVER_STANDARD, g_settings.stepper_driver);
   TEST_ASSERT_FLOAT_WITHIN(0.001f, 2.5f, g_settings.max_rpm);

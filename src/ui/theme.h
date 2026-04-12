@@ -123,23 +123,48 @@ uint8_t theme_get_count();
 #define PAD_X2          12     // Tight X padding (SVG: 12)
 
 // ───────────────────────────────────────────────────────────────────────────────
-// MAIN SCREEN CONSTANTS (from new_ui.svg SCREEN_MAIN)
+// MAIN SCREEN CONSTANTS (SCREEN_MAIN) — pot-only RPM: no +/- buttons, larger gauge
 // ───────────────────────────────────────────────────────────────────────────────
-// Gauge: semicircle from M220,370 to A190,190 with center ~400,270
-#define GAUGE_CX        400
-#define GAUGE_CY        270    // Approximate center of semicircle arc
-#define GAUGE_R         190    // Arc radius
+#define MAIN_GAUGE_CX         400
+// trackSize = 2*R+20; top = CY - trackSize/2 must stay on-screen (>= ~8 below header)
+#define MAIN_GAUGE_CY         205
+#define MAIN_GAUGE_R          178
+#define MAIN_GAUGE_TRACK_PAD  12
+#define MAIN_GAUGE_TRACK_W    14
+#define MAIN_GAUGE_IND_W      10
+// "RPM" unit row: TOP_MID on screen; value label re-aligned above with MAIN_RPM_VALUE_GAP
+#define MAIN_RPM_TAG_Y        (MAIN_GAUGE_CY + 24)
+#define MAIN_RPM_VALUE_GAP    6
+// Extra upward shift for RPM digits (font already FONT_HUGE / 40pt max on P4)
+#define MAIN_RPM_VALUE_LIFT   16
+// 256 = 100% (lv scale); slight zoom since montserrat_48 is unsafe on ESP32-P4
+#define MAIN_RPM_VALUE_ZOOM   332
 
-// RPM +/- buttons (SVG: x=330/404, y=388, 66x36)
-#define RPM_BTN_W       66
-#define RPM_BTN_H       36
-#define RPM_BTN_Y       388
-#define RPM_MINUS_X     330
-#define RPM_PLUS_X      404
+// Legacy aliases (other code / docs)
+#define GAUGE_CX        MAIN_GAUGE_CX
+#define GAUGE_CY        MAIN_GAUGE_CY
+#define GAUGE_R         MAIN_GAUGE_R
 
 // Bottom button row (SVG: y=436, buttons 152x36 or similar)
 #define BOTTOM_ROW_Y    436
 #define BOTTOM_ROW_H    36
+
+// ───────────────────────────────────────────────────────────────────────────────
+// JOG screen (SCREEN_JOG) — RPM row + / - (right-aligned, non-overlapping)
+// ───────────────────────────────────────────────────────────────────────────────
+#define JOG_RPM_ROW_Y         56
+#define JOG_RPM_TITLE_X       20
+#define JOG_RPM_VAL_X         160
+#define JOG_RPM_BAR_X         240
+#define JOG_RPM_BAR_W         392
+#define JOG_RPM_BAR_H         3
+#define JOG_RPM_BAR_Y_OFF     12
+#define JOG_RPM_BTN_W         64
+#define JOG_RPM_BTN_H         52
+#define JOG_RPM_BTN_Y         (JOG_RPM_ROW_Y - 3)
+#define JOG_RPM_BTN_GAP       14
+#define JOG_RPM_BTN_PLUS_X    (SCREEN_W - PAD_X - JOG_RPM_BTN_W)
+#define JOG_RPM_BTN_MINUS_X   (JOG_RPM_BTN_PLUS_X - JOG_RPM_BTN_GAP - JOG_RPM_BTN_W)
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SETTINGS SCREEN LAYOUT (shared across all settings sub-screens)

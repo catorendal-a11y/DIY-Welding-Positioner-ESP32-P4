@@ -24,7 +24,6 @@ struct SystemSettings {
     int microstep;         // divisor: 8/16/32 -> 1600/3200/6400 PULSE/REV on NEMA 23
     float max_rpm;         // UI/pot ceiling [MIN_RPM .. MAX_RPM], default MAX_RPM
     float calibration_factor;
-    bool rpm_buttons_enabled;
     uint8_t brightness;    // 0-255 backlight PWM
     uint8_t dim_timeout;   // Seconds before auto-dim (0=off, 30, 60, 120, 300)
     bool dir_switch_enabled; // CW/CCW hardware switch on GPIO28
@@ -101,7 +100,7 @@ extern std::atomic<bool> g_dir_switch_cache;
 // lvglTask skips rendering while this is true to prevent blue screen flashes
 // caused by CPU cache being disabled during flash operations.
 extern std::atomic<bool> g_flashWriting;
-extern volatile bool g_screenRedraw;
+extern std::atomic<bool> g_screenRedraw;
 
 // Core functions
 void storage_init();

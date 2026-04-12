@@ -36,6 +36,7 @@ void safety_cache_stepper() {
 void IRAM_ATTR estopISR() {
   GPIO.out1_w1ts.val = (1UL << (PIN_ENA - 32));
   g_estopPending = true;
+  g_wakePending = true;  // Wake backlight from dim (handled in dim_update on Core 1)
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -53,7 +54,8 @@ void safety_init() {
     LOG_W("ESTOP pressed at boot — system locked");
     estopLocked = true;
     g_estopPending = true;
-  g_estopTriggerMs = millis();
+    g_estopTriggerMs = millis();
+    g_wakePending = true;
   }
 
   // Initialize watchdog

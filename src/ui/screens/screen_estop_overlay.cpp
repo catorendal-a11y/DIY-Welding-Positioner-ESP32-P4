@@ -4,6 +4,7 @@
 
 #include "../screens.h"
 #include "../theme.h"
+#include "../lvgl_hal.h"
 #include "../../config.h"
 #include "../../control/control.h"
 #include "../../safety/safety.h"
@@ -225,6 +226,7 @@ void estop_overlay_create() {
 // OVERLAY SHOW/HIDE
 // ───────────────────────────────────────────────────────────────────────────────
 void estop_overlay_show() {
+  dim_reset_activity();  // Full brightness if panel was dimmed
   if (estopOverlay == nullptr) return;
 
   lv_obj_remove_flag(estopOverlay, LV_OBJ_FLAG_HIDDEN);

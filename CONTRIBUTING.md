@@ -38,7 +38,7 @@ PYTHONUTF8=1 PYTHONIOENCODING=utf-8 "C:\Users\Rendalsniken\.platformio\penv\Scri
 
 ### Git hooks (optional)
 
-This repository includes **`githooks/commit-msg`**, which removes a trailing `Made-with: Cursor` line from commit messages (so it never enters `git log`). After cloning, enable it once:
+This repository includes **`githooks/commit-msg`**, which removes trailing `Made-with:` footer lines from commit messages (so they never enter `git log`). After cloning, enable it once:
 
 ```bash
 git config core.hooksPath githooks

@@ -7,10 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **`docs/images/main_screen.svg`** — matches v2.0.4 UI: larger gauge (`MAIN_GAUGE_*`), no main-screen RPM +/-, FONT_HUGE-scale RPM + unit, scale 0–3.0 RPM, **X STOP**, pot hint.
+
 ## [2.0.4] - 2026-04-12
 
 ### Added
-- **`githooks/commit-msg`** + **`.gitattributes`** — optional hook strips `Made-with: Cursor` from commit messages; run `git config core.hooksPath githooks` once per clone (see `CONTRIBUTING.md`).
+- **`githooks/commit-msg`** + **`.gitattributes`** — optional hook strips `Made-with:` footer lines from commit messages; run `git config core.hooksPath githooks` once per clone (see `CONTRIBUTING.md`).
 - **Theme layout for main gauge** — `MAIN_GAUGE_*`, `MAIN_RPM_TAG_Y`, `MAIN_RPM_VALUE_GAP` / `MAIN_RPM_VALUE_LIFT` / `MAIN_RPM_VALUE_ZOOM` in `theme.h` (no magic numbers in `screen_main.cpp` for gauge geometry).
 - **Jog RPM row constants** — `JOG_RPM_*` in `theme.h` for title/value/bar and right-aligned +/- buttons with explicit gap.
 

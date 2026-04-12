@@ -6,7 +6,6 @@
         "platformio.platformio-ide"
     ],
     "unwantedRecommendations": [
-        "davidgomes.platformio-ide-cursor",
         "ms-vscode.cpptools-extension-pack"
     ]
 }

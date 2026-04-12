@@ -1,19 +1,28 @@
-# Patch PlatformIO IDE for Cursor: removes ms-vscode.cpptools from extensionDependencies
-# so the OFFICIAL extension can activate (Microsoft C/C++ is blocked in Cursor).
+# Patch PlatformIO IDE: remove ms-vscode.cpptools from extensionDependencies so the
+# extension can load when the Microsoft C/C++ dependency is unavailable in the host.
 #
-# This does NOT fix "DavidGomes PlatformIO for Cursor" (different package; use official PIO below).
+# Default extensions folder is VS Code under %USERPROFILE%\.vscode\extensions.
+# If your editor stores extensions elsewhere, pass -ExtensionsRoot "C:\path\to\extensions".
 #
 # How to run:
-#   powershell -ExecutionPolicy Bypass -File ".\scripts\fix_platformio_for_cursor.ps1"
-# Then: Cursor -> Developer: Reload Window
+#   powershell -ExecutionPolicy Bypass -File ".\scripts\fix_platformio_extensions.ps1"
+# Then reload the editor window (Command Palette: Developer: Reload Window).
 
 #Requires -Version 5.1
-param([switch]$WhatIf)
+param(
+  [switch]$WhatIf,
+  [string]$ExtensionsRoot = ""
+)
 
 $ErrorActionPreference = "Stop"
-$extensionsRoot = Join-Path $env:USERPROFILE ".cursor\extensions"
+if ([string]::IsNullOrWhiteSpace($ExtensionsRoot)) {
+  $extensionsRoot = Join-Path $env:USERPROFILE ".vscode\extensions"
+} else {
+  $extensionsRoot = $ExtensionsRoot
+}
+
 if (-not (Test-Path -LiteralPath $extensionsRoot)) {
-  Write-Error "Cursor extensions folder not found: $extensionsRoot"
+  Write-Error "Extensions folder not found: $extensionsRoot`nUse -ExtensionsRoot if extensions are installed elsewhere."
 }
 
 function Test-PackageJsonHasMsCppTools([string]$jsonPath) {
@@ -58,14 +67,14 @@ function Patch-VsixManifest([string]$manifestPath) {
 }
 
 $davidGomes = Get-ChildItem -LiteralPath $extensionsRoot -Directory -ErrorAction SilentlyContinue |
-  Where-Object { $_.Name -like "davidgomes.platformio-ide-cursor-*" }
+  Where-Object { $_.Name -like "davidgomes.platformio-ide-*" }
 if ($davidGomes) {
   Write-Host ""
   Write-Host "=== MERK ===" -ForegroundColor Yellow
-  Write-Host "Du har 'DavidGomes PlatformIO IDE for Cursor' ($($davidGomes[0].Name))."
-  Write-Host "Det er IKKE den offisielle utvidelsen. Versjon 0.0.1 henger ofte pa 'Initializing Core'."
+  Write-Host "Du har en uoffisiell PlatformIO-pakke ($($davidGomes[0].Name))."
+  Write-Host "Den er ikke den offisielle utvidelsen. Versjon 0.0.1 henger ofte pa 'Initializing Core'."
   Write-Host "Anbefaling:"
-  Write-Host "  1. Extensions -> avinstaller 'PlatformIO IDE for Cursor' (DavidGomes)"
+  Write-Host "  1. Avinstaller den uoffisielle PlatformIO-pakken (davidgomes)"
   Write-Host "  2. Installer 'PlatformIO IDE' fra PlatformIO (platformio.platformio-ide)"
   Write-Host "  3. Kjor dette skriptet igjen, deretter Reload Window"
   Write-Host ""
@@ -91,8 +100,8 @@ if ($dirsToPatch.Count -eq 0) {
 Fant ingen offisiell PlatformIO-mappe (platformio.platformio-ide-*) under:
   $extensionsRoot
 
-Installer 'PlatformIO IDE' fra PlatformIO (ID: platformio.platformio-ide), avinstaller DavidGomes-varianten,
-og kjor skriptet pa nytt.
+Installer 'PlatformIO IDE' (ID: platformio.platformio-ide), fjern uoffisielle varianter,
+og kjor skriptet pa nytt (evt. med -ExtensionsRoot).
 "@
 }
 
@@ -114,4 +123,4 @@ foreach ($pioDir in ($dirsToPatch | Select-Object -Unique)) {
 }
 
 Write-Host ""
-Write-Host "Ferdig. I Cursor: Developer: Reload Window" -ForegroundColor Green
+Write-Host "Ferdig. Last inn editoren pa nytt (Reload Window)." -ForegroundColor Green

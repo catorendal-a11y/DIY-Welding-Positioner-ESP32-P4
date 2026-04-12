@@ -146,6 +146,19 @@ bool estop_overlay_visible();  // Check if overlay is visible
 // ───────────────────────────────────────────────────────────────────────────────
 // HELPERS
 // ───────────────────────────────────────────────────────────────────────────────
+lv_obj_t* ui_create_header(lv_obj_t* parent, const char* title,
+                           lv_coord_t header_h, const lv_font_t* title_font, lv_coord_t title_y);
+lv_obj_t* ui_create_separator(lv_obj_t* parent, lv_coord_t y);
+lv_obj_t* ui_create_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h,
+                        const char* text, const lv_font_t* label_font, bool accent, bool danger,
+                        lv_event_cb_t cb, void* user_data);
+lv_obj_t* ui_create_pm_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, const char* text,
+                           const lv_font_t* label_font, lv_event_cb_t cb, void* user_data);
+void ui_create_action_bar(lv_obj_t* parent, lv_coord_t pad_x, lv_coord_t footer_y, lv_coord_t footer_h,
+                          lv_coord_t gap, lv_coord_t left_w, lv_coord_t right_w,
+                          const char* left_text, lv_event_cb_t left_cb,
+                          const char* right_text, bool right_accent, lv_event_cb_t right_cb);
+
 void screens_set_back_button(lv_obj_t* btn, ScreenId dest);  // Configure back button
 void screens_set_edit_slot(int slot);  // Set slot for SCREEN_PROGRAM_EDIT creation
 Preset* screen_program_edit_get_preset();  // Get current preset being edited

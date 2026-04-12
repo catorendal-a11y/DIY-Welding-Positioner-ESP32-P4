@@ -1,4 +1,5 @@
 #pragma once
+#include <atomic>
 // TIG Welding Rotator Controller - Hardware Configuration
 // Waveshare/Guition ESP32-P4 4.3" Touch Display Dev Board
 
@@ -121,7 +122,7 @@ inline void sanitize_ascii(char* buf, unsigned int len) {
 // ───────────────────────────────────────────────────────────────────────────────
 // CROSS-CORE FLAGS
 // ───────────────────────────────────────────────────────────────────────────────
-volatile extern bool g_wakePending;  // Set by Core 0 (pot/dir change), cleared by Core 1 (dim_update)
+extern std::atomic<bool> g_wakePending;  // Core 0 sets (pot/dir/ESTOP); Core 1 clears in dim_update
 
 // ───────────────────────────────────────────────────────────────────────────────
 // PROTECTED GPIO — NEVER USE (ESP32-P4 specific)

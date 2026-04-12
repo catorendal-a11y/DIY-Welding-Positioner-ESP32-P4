@@ -76,20 +76,7 @@ void screen_calibration_create() {
 
   const int PX = 16;
 
-  lv_obj_t* header = lv_obj_create(screen);
-  lv_obj_set_size(header, SCREEN_W, 28);
-  lv_obj_set_pos(header, 0, 0);
-  lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
-  lv_obj_set_style_pad_all(header, 0, 0);
-  lv_obj_set_style_border_width(header, 0, 0);
-  lv_obj_set_style_radius(header, 0, 0);
-  lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
-
-  lv_obj_t* title = lv_label_create(header);
-  lv_label_set_text(title, "CALIBRATION");
-  lv_obj_set_style_text_font(title, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(title, COL_ACCENT, 0);
-  lv_obj_set_pos(title, PX, 6);
+  ui_create_header(screen, "CALIBRATION", SET_HEADER_H, FONT_SUBTITLE, 6);
 
   int y = 36;
 

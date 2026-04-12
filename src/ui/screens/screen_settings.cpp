@@ -42,20 +42,7 @@ void screen_settings_create() {
   lv_obj_clean(screen);
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
-  lv_obj_t* header = lv_obj_create(screen);
-  lv_obj_set_size(header, SCREEN_W, SET_HEADER_H);
-  lv_obj_set_pos(header, 0, 0);
-  lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
-  lv_obj_set_style_pad_all(header, 0, 0);
-  lv_obj_set_style_border_width(header, 0, 0);
-  lv_obj_set_style_radius(header, 0, 0);
-  lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
-
-  lv_obj_t* title = lv_label_create(header);
-  lv_label_set_text(title, "SETTINGS");
-  lv_obj_set_style_text_font(title, SET_HEADER_FONT, 0);
-  lv_obj_set_style_text_color(title, COL_ACCENT, 0);
-  lv_obj_set_pos(title, PAD_X, 6);
+  ui_create_header(screen, "SETTINGS", SET_HEADER_H, SET_HEADER_FONT, 6);
 
   const int itemH = SET_ROW_H;
   const int gap = 5;
@@ -71,21 +58,7 @@ void screen_settings_create() {
   int footerH = SET_FOOTER_H;
   int btnW = 160;
 
-  lv_obj_t* backFooter = lv_button_create(screen);
-  lv_obj_set_size(backFooter, btnW, footerH);
-  lv_obj_set_pos(backFooter, 12, footerY);
-  lv_obj_set_style_bg_color(backFooter, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(backFooter, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(backFooter, 1, 0);
-  lv_obj_set_style_border_color(backFooter, COL_BORDER, 0);
-  lv_obj_set_style_shadow_width(backFooter, 0, 0);
-  lv_obj_set_style_pad_all(backFooter, 0, 0);
-  lv_obj_add_event_cb(backFooter, back_event_cb, LV_EVENT_CLICKED, nullptr);
-  lv_obj_t* bLbl = lv_label_create(backFooter);
-  lv_label_set_text(bLbl, "<  BACK");
-  lv_obj_set_style_text_font(bLbl, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(bLbl, COL_TEXT, 0);
-  lv_obj_center(bLbl);
+  ui_create_btn(screen, 12, footerY, btnW, footerH, "<  BACK", FONT_SUBTITLE, false, false, back_event_cb, nullptr);
 
   lv_obj_t* versionLbl = lv_label_create(screen);
   lv_label_set_text(versionLbl, FW_VERSION);

@@ -50,32 +50,8 @@ void screen_menu_create() {
   lv_obj_clean(screen);
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
-  // ── Header bar (0,0,800,32) ──
-  lv_obj_t* header = lv_obj_create(screen);
-  lv_obj_set_size(header, SCREEN_W, HEADER_H);
-  lv_obj_set_pos(header, 0, 0);
-  lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
-  lv_obj_set_style_pad_all(header, 0, 0);
-  lv_obj_set_style_border_width(header, 0, 0);
-  lv_obj_set_style_radius(header, 0, 0);
-  lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
-
-  // Title
-  lv_obj_t* title = lv_label_create(header);
-  lv_label_set_text(title, "MENU");
-  lv_obj_set_style_text_font(title, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(title, COL_ACCENT, 0);
-  lv_obj_set_pos(title, PAD_X, 7);
-
-  // ── Separator line at y=32 ──
-  lv_obj_t* line = lv_obj_create(screen);
-  lv_obj_set_size(line, SCREEN_W, 1);
-  lv_obj_set_pos(line, 0, HEADER_H);
-  lv_obj_set_style_bg_color(line, COL_BORDER, 0);
-  lv_obj_set_style_pad_all(line, 0, 0);
-  lv_obj_set_style_border_width(line, 0, 0);
-  lv_obj_set_style_radius(line, 0, 0);
-  lv_obj_remove_flag(line, LV_OBJ_FLAG_SCROLLABLE);
+  ui_create_header(screen, "MENU", HEADER_H, FONT_NORMAL, 7);
+  ui_create_separator(screen, HEADER_H);
 
   // ── 2x2 Mode Grid (glove-friendly, min 48x48) ──
   // Grid area: y=40 to y=280, buttons 380x110 each with 16px gap
@@ -121,57 +97,17 @@ void screen_menu_create() {
   lv_obj_set_style_text_color(programsLabel, COL_ACCENT, 0);
   lv_obj_center(programsLabel);
 
-  // ── Separator ──
   const int sepY = progY + 60;
-  lv_obj_t* sep = lv_obj_create(screen);
-  lv_obj_set_size(sep, SCREEN_W, 1);
-  lv_obj_set_pos(sep, 0, sepY);
-  lv_obj_set_style_bg_color(sep, COL_BORDER, 0);
-  lv_obj_set_style_pad_all(sep, 0, 0);
-  lv_obj_set_style_border_width(sep, 0, 0);
-  lv_obj_set_style_radius(sep, 0, 0);
-  lv_obj_remove_flag(sep, LV_OBJ_FLAG_SCROLLABLE);
+  ui_create_separator(screen, sepY);
 
-  // ── Bottom row: BACK + SETTINGS (glove-friendly 380x56) ──
   const int bottomY = sepY + 10;
   const int bottomBtnW = (SCREEN_W - PAD_X * 2 - gridGapX) / 2;
   const int bottomBtnH = 56;
 
-  // BACK button (left)
-  lv_obj_t* backBtn = lv_button_create(screen);
-  lv_obj_set_size(backBtn, bottomBtnW, bottomBtnH);
-  lv_obj_set_pos(backBtn, PAD_X, bottomY);
-  lv_obj_set_style_bg_color(backBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(backBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(backBtn, 1, 0);
-  lv_obj_set_style_border_color(backBtn, COL_BORDER, 0);
-  lv_obj_set_style_shadow_width(backBtn, 0, 0);
-  lv_obj_set_style_pad_all(backBtn, 0, 0);
-  lv_obj_add_event_cb(backBtn, back_event_cb, LV_EVENT_CLICKED, nullptr);
-
-  lv_obj_t* backLabel = lv_label_create(backBtn);
-  lv_label_set_text(backLabel, "<  BACK");
-  lv_obj_set_style_text_font(backLabel, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(backLabel, COL_TEXT, 0);
-  lv_obj_center(backLabel);
-
-  // SETTINGS button (right, active style)
-  lv_obj_t* settingsBtn = lv_button_create(screen);
-  lv_obj_set_size(settingsBtn, bottomBtnW, bottomBtnH);
-  lv_obj_set_pos(settingsBtn, PAD_X + bottomBtnW + gridGapX, bottomY);
-  lv_obj_set_style_bg_color(settingsBtn, COL_BG_ACTIVE, 0);
-  lv_obj_set_style_radius(settingsBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(settingsBtn, 2, 0);
-  lv_obj_set_style_border_color(settingsBtn, COL_ACCENT, 0);
-  lv_obj_set_style_shadow_width(settingsBtn, 0, 0);
-  lv_obj_set_style_pad_all(settingsBtn, 0, 0);
-  lv_obj_add_event_cb(settingsBtn, settings_event_cb, LV_EVENT_CLICKED, nullptr);
-
-  lv_obj_t* settingsLabel = lv_label_create(settingsBtn);
-  lv_label_set_text(settingsLabel, "SETTINGS");
-  lv_obj_set_style_text_font(settingsLabel, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(settingsLabel, COL_ACCENT, 0);
-  lv_obj_center(settingsLabel);
+  ui_create_btn(screen, PAD_X, bottomY, bottomBtnW, bottomBtnH, "<  BACK", FONT_SUBTITLE, false, false,
+                back_event_cb, nullptr);
+  ui_create_btn(screen, PAD_X + bottomBtnW + gridGapX, bottomY, bottomBtnW, bottomBtnH, "SETTINGS",
+                FONT_SUBTITLE, true, false, settings_event_cb, nullptr);
 
   LOG_I("Screen menu: v2.0 layout created");
 }

@@ -10,8 +10,6 @@
 #define NVS_KEY_SETTINGS "cfg"
 #define NVS_KEY_PRESETS "prs"
 
-extern SemaphoreHandle_t g_lvgl_mutex;
-
 std::vector<Preset> g_presets;
 SemaphoreHandle_t g_presets_mutex;
 SemaphoreHandle_t g_settings_mutex;
@@ -371,14 +369,10 @@ void storage_flush() {
         presetsSavePending = false;
         lastPresetsSaveMs = millis();
         LOG_I("FLUSH: presets save starting");
-        xSemaphoreTake(g_lvgl_mutex, portMAX_DELAY);
         g_flashWriting.store(true, std::memory_order_release);
-        xSemaphoreGive(g_lvgl_mutex);
         storage_save_presets_internal();
-        xSemaphoreTake(g_lvgl_mutex, portMAX_DELAY);
         g_flashWriting.store(false, std::memory_order_release);
         g_screenRedraw = true;
-        xSemaphoreGive(g_lvgl_mutex);
         LOG_I("FLUSH: presets save done");
     }
 
@@ -386,14 +380,10 @@ void storage_flush() {
         savePending = false;
         lastSaveMs = millis();
         LOG_I("FLUSH: settings save starting");
-        xSemaphoreTake(g_lvgl_mutex, portMAX_DELAY);
         g_flashWriting.store(true, std::memory_order_release);
-        xSemaphoreGive(g_lvgl_mutex);
         storage_save_settings_internal();
-        xSemaphoreTake(g_lvgl_mutex, portMAX_DELAY);
         g_flashWriting.store(false, std::memory_order_release);
         g_screenRedraw = true;
-        xSemaphoreGive(g_lvgl_mutex);
         LOG_I("FLUSH: settings save done");
     }
 }

@@ -90,30 +90,6 @@ static void stop_event_cb(lv_event_t* e) {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// Helper: create +/- button (64x52, glove-friendly)
-// ───────────────────────────────────────────────────────────────────────────────
-static lv_obj_t* create_pm_btn(lv_obj_t* parent, int16_t x, int16_t y,
-                                const char* text, lv_event_cb_t cb, void* user_data) {
-  lv_obj_t* btn = lv_button_create(parent);
-  lv_obj_set_size(btn, 64, 52);
-  lv_obj_set_pos(btn, x, y);
-  lv_obj_set_style_bg_color(btn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(btn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(btn, 1, 0);
-  lv_obj_set_style_border_color(btn, COL_BORDER_SM, 0);
-  lv_obj_set_style_shadow_width(btn, 0, 0);
-  lv_obj_set_style_pad_all(btn, 0, 0);
-  lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, user_data);
-
-  lv_obj_t* lbl = lv_label_create(btn);
-  lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, FONT_XL, 0);
-  lv_obj_set_style_text_color(lbl, COL_TEXT, 0);
-  lv_obj_center(lbl);
-  return btn;
-}
-
-// ───────────────────────────────────────────────────────────────────────────────
 // SCREEN CREATE
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_timer_create() {
@@ -127,21 +103,7 @@ void screen_timer_create() {
   startPending = false;
   lastDisplayedSec = -1;
 
-  // ── Header bar ──
-  lv_obj_t* header = lv_obj_create(screen);
-  lv_obj_set_size(header, SCREEN_W, HEADER_H);
-  lv_obj_set_pos(header, 0, 0);
-  lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
-  lv_obj_set_style_pad_all(header, 0, 0);
-  lv_obj_set_style_border_width(header, 0, 0);
-  lv_obj_set_style_radius(header, 0, 0);
-  lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
-
-  lv_obj_t* title = lv_label_create(header);
-  lv_label_set_text(title, "COUNTDOWN");
-  lv_obj_set_style_text_font(title, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(title, COL_ACCENT, 0);
-  lv_obj_set_pos(title, PAD_X, 8);
+  ui_create_header(screen, "COUNTDOWN", HEADER_H, FONT_NORMAL, 8);
 
   // ── Arc ring (240x240, centered) ──
   const int ringSize = 240;
@@ -198,8 +160,8 @@ void screen_timer_create() {
   lv_obj_set_style_text_color(secLabel, COL_TEXT_BRIGHT, 0);
   lv_obj_set_pos(secLabel, 120, rowY + 10);
 
-  create_pm_btn(screen, 220, rowY, "-", sec_adj_cb, (void*)(intptr_t)(-1));
-  create_pm_btn(screen, 284, rowY, "+", sec_adj_cb, (void*)(intptr_t)(1));
+  ui_create_btn(screen, 220, rowY, 64, 52, "-", FONT_XL, false, false, sec_adj_cb, (void*)(intptr_t)(-1));
+  ui_create_btn(screen, 284, rowY, 64, 52, "+", FONT_XL, false, false, sec_adj_cb, (void*)(intptr_t)(1));
 
   // ── RPM row (right side) ──
   lv_obj_t* rpmTitle = lv_label_create(screen);
@@ -214,8 +176,8 @@ void screen_timer_create() {
   lv_obj_set_style_text_color(rpmLabel, COL_TEXT_BRIGHT, 0);
   lv_obj_set_pos(rpmLabel, 510, rowY + 10);
 
-  create_pm_btn(screen, 580, rowY, "-", rpm_adj_cb, (void*)(intptr_t)(-1));
-  create_pm_btn(screen, 644, rowY, "+", rpm_adj_cb, (void*)(intptr_t)(1));
+  ui_create_btn(screen, 580, rowY, 64, 52, "-", FONT_XL, false, false, rpm_adj_cb, (void*)(intptr_t)(-1));
+  ui_create_btn(screen, 644, rowY, 64, 52, "+", FONT_XL, false, false, rpm_adj_cb, (void*)(intptr_t)(1));
 
   // ── Bottom bar: BACK + START + STOP ──
   const int barY = 428;

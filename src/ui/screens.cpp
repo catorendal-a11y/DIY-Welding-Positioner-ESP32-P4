@@ -273,6 +273,96 @@ void screens_update_current() {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
+// SHARED UI WIDGETS (lvglTask only)
+// ───────────────────────────────────────────────────────────────────────────────
+lv_obj_t* ui_create_header(lv_obj_t* parent, const char* title,
+                           lv_coord_t header_h, const lv_font_t* title_font, lv_coord_t title_y) {
+  lv_obj_t* header = lv_obj_create(parent);
+  lv_obj_set_size(header, SCREEN_W, header_h);
+  lv_obj_set_pos(header, 0, 0);
+  lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
+  lv_obj_set_style_pad_all(header, 0, 0);
+  lv_obj_set_style_border_width(header, 0, 0);
+  lv_obj_set_style_radius(header, 0, 0);
+  lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_t* title_lbl = lv_label_create(header);
+  lv_label_set_text(title_lbl, title);
+  lv_obj_set_style_text_font(title_lbl, title_font, 0);
+  lv_obj_set_style_text_color(title_lbl, COL_ACCENT, 0);
+  lv_obj_set_pos(title_lbl, PAD_X, title_y);
+  return header;
+}
+
+lv_obj_t* ui_create_separator(lv_obj_t* parent, lv_coord_t y) {
+  lv_obj_t* line = lv_obj_create(parent);
+  lv_obj_set_size(line, SCREEN_W, 1);
+  lv_obj_set_pos(line, 0, y);
+  lv_obj_set_style_bg_color(line, COL_BORDER, 0);
+  lv_obj_set_style_pad_all(line, 0, 0);
+  lv_obj_set_style_border_width(line, 0, 0);
+  lv_obj_set_style_radius(line, 0, 0);
+  lv_obj_remove_flag(line, LV_OBJ_FLAG_SCROLLABLE);
+  return line;
+}
+
+lv_obj_t* ui_create_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h,
+                        const char* text, const lv_font_t* label_font, bool accent, bool danger,
+                        lv_event_cb_t cb, void* user_data) {
+  lv_obj_t* btn = lv_button_create(parent);
+  lv_obj_set_size(btn, w, h);
+  lv_obj_set_pos(btn, x, y);
+  lv_color_t bg = danger ? COL_BTN_DANGER : (accent ? COL_BG_ACTIVE : COL_BTN_BG);
+  lv_color_t bor = danger ? COL_BORDER_DNG : (accent ? COL_ACCENT : COL_BORDER);
+  lv_coord_t bw = (accent || danger) ? 2 : 1;
+  lv_color_t tc = danger ? COL_RED : (accent ? COL_ACCENT : COL_TEXT);
+  lv_obj_set_style_bg_color(btn, bg, 0);
+  lv_obj_set_style_radius(btn, RADIUS_BTN, 0);
+  lv_obj_set_style_border_width(btn, bw, 0);
+  lv_obj_set_style_border_color(btn, bor, 0);
+  lv_obj_set_style_shadow_width(btn, 0, 0);
+  lv_obj_set_style_pad_all(btn, 0, 0);
+  if (cb) {
+    lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, user_data);
+  }
+  lv_obj_t* lbl = lv_label_create(btn);
+  lv_label_set_text(lbl, text);
+  lv_obj_set_style_text_font(lbl, label_font, 0);
+  lv_obj_set_style_text_color(lbl, tc, 0);
+  lv_obj_center(lbl);
+  return btn;
+}
+
+lv_obj_t* ui_create_pm_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, const char* text,
+                           const lv_font_t* label_font, lv_event_cb_t cb, void* user_data) {
+  lv_obj_t* btn = lv_button_create(parent);
+  lv_obj_set_size(btn, BTN_W_PM, BTN_H_PM);
+  lv_obj_set_pos(btn, x, y);
+  lv_obj_set_style_bg_color(btn, COL_BTN_BG, 0);
+  lv_obj_set_style_radius(btn, RADIUS_BTN, 0);
+  lv_obj_set_style_border_width(btn, 1, 0);
+  lv_obj_set_style_border_color(btn, COL_BORDER_SM, 0);
+  lv_obj_set_style_shadow_width(btn, 0, 0);
+  lv_obj_set_style_pad_all(btn, 0, 0);
+  if (cb) {
+    lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, user_data);
+  }
+  lv_obj_t* lbl = lv_label_create(btn);
+  lv_label_set_text(lbl, text);
+  lv_obj_set_style_text_font(lbl, label_font, 0);
+  lv_obj_set_style_text_color(lbl, COL_TEXT, 0);
+  lv_obj_center(lbl);
+  return btn;
+}
+
+void ui_create_action_bar(lv_obj_t* parent, lv_coord_t pad_x, lv_coord_t footer_y, lv_coord_t footer_h,
+                          lv_coord_t gap, lv_coord_t left_w, lv_coord_t right_w,
+                          const char* left_text, lv_event_cb_t left_cb,
+                          const char* right_text, bool right_accent, lv_event_cb_t right_cb) {
+  ui_create_btn(parent, pad_x, footer_y, left_w, footer_h, left_text, FONT_SUBTITLE, false, false, left_cb, nullptr);
+  ui_create_btn(parent, pad_x + left_w + gap, footer_y, right_w, footer_h, right_text, FONT_SUBTITLE, right_accent, false, right_cb, nullptr);
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
 // BACK BUTTON HELPER
 // ───────────────────────────────────────────────────────────────────────────────
 void screens_set_back_button(lv_obj_t* btn, ScreenId dest) {

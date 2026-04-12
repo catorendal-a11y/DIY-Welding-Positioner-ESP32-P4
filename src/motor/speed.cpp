@@ -217,7 +217,7 @@ void speed_update_adc() {
   float prev = adcFiltered;
   adcFiltered = IIR_ALPHA * raw + (1.0f - IIR_ALPHA) * adcFiltered;
   if (fabsf(adcFiltered - prev) > POT_WAKE_THRESHOLD) {
-    g_wakePending = true;
+    g_wakePending.store(true, std::memory_order_release);
   }
 
 #if ENABLE_ADS1115_PEDAL
@@ -237,7 +237,7 @@ void speed_update_adc() {
     uint8_t state = digitalRead(PIN_DIR_SWITCH);
     if (state != lastDirSwitchState) {
       lastDirSwitchState = state;
-      g_wakePending = true;
+      g_wakePending.store(true, std::memory_order_release);
     }
   }
 }

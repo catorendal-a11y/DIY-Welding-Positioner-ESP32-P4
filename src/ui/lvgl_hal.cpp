@@ -5,6 +5,7 @@
 
 #include "lvgl_hal.h"
 #include <Arduino.h>
+#include <atomic>
 #include "../config.h"
 #include "display.h"
 #include "../storage/storage.h"
@@ -29,8 +30,9 @@ void dim_reset_activity() {
 void dim_update() {
   if (g_settings.dim_timeout == 0) return;
 
-  if (g_wakePending) {
-    g_wakePending = false;
+  // Producers use release (ISR, speed_update_adc, safety_init); acquire here sees their publication.
+  if (g_wakePending.load(std::memory_order_acquire)) {
+    g_wakePending.store(false, std::memory_order_release);
     dim_reset_activity();
     return;
   }

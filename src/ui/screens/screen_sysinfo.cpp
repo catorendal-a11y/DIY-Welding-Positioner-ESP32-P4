@@ -44,46 +44,6 @@ static void reboot_cb(lv_event_t* e) {
     []() { esp_restart(); }, nullptr);
 }
 
-static lv_obj_t* make_footer_btn(lv_obj_t* parent, int x, int y, int w, int h,
-                                  const char* text, lv_event_cb_t cb) {
-  lv_obj_t* btn = lv_button_create(parent);
-  lv_obj_set_size(btn, w, h);
-  lv_obj_set_pos(btn, x, y);
-  lv_obj_set_style_bg_color(btn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(btn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(btn, 1, 0);
-  lv_obj_set_style_border_color(btn, COL_BORDER, 0);
-  lv_obj_set_style_shadow_width(btn, 0, 0);
-  lv_obj_set_style_pad_all(btn, 0, 0);
-  lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, nullptr);
-  lv_obj_t* lbl = lv_label_create(btn);
-  lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, SET_BTN_FONT, 0);
-  lv_obj_set_style_text_color(lbl, COL_TEXT, 0);
-  lv_obj_center(lbl);
-  return btn;
-}
-
-static lv_obj_t* make_accent_btn(lv_obj_t* parent, int x, int y, int w, int h,
-                                  const char* text, lv_event_cb_t cb) {
-  lv_obj_t* btn = lv_button_create(parent);
-  lv_obj_set_size(btn, w, h);
-  lv_obj_set_pos(btn, x, y);
-  lv_obj_set_style_bg_color(btn, COL_BG_ACTIVE, 0);
-  lv_obj_set_style_radius(btn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(btn, 2, 0);
-  lv_obj_set_style_border_color(btn, COL_ACCENT, 0);
-  lv_obj_set_style_shadow_width(btn, 0, 0);
-  lv_obj_set_style_pad_all(btn, 0, 0);
-  lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, nullptr);
-  lv_obj_t* lbl = lv_label_create(btn);
-  lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, SET_BTN_FONT, 0);
-  lv_obj_set_style_text_color(lbl, COL_ACCENT, 0);
-  lv_obj_center(lbl);
-  return btn;
-}
-
 static lv_obj_t* make_row(lv_obj_t* parent, int x, int y, int w, int h) {
   lv_obj_t* row = lv_obj_create(parent);
   lv_obj_set_size(row, w, h);
@@ -161,20 +121,7 @@ void screen_sysinfo_create() {
   const int CW = SCREEN_W - 2 * PX;
   bootMs = millis();
 
-  lv_obj_t* header = lv_obj_create(screen);
-  lv_obj_set_size(header, SCREEN_W, 28);
-  lv_obj_set_pos(header, 0, 0);
-  lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
-  lv_obj_set_style_pad_all(header, 0, 0);
-  lv_obj_set_style_border_width(header, 0, 0);
-  lv_obj_set_style_radius(header, 0, 0);
-  lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
-
-  lv_obj_t* title = lv_label_create(header);
-  lv_label_set_text(title, "SYSTEM INFO");
-  lv_obj_set_style_text_font(title, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(title, COL_ACCENT, 0);
-  lv_obj_set_pos(title, PX, 6);
+  ui_create_header(screen, "SYSTEM INFO", SET_HEADER_H, FONT_SUBTITLE, 6);
 
   int y = 34;
   int rowH = 28;
@@ -258,8 +205,8 @@ void screen_sysinfo_create() {
   int footerH = SET_FOOTER_H;
   int btnW = SET_BTN_MIN_W;
   int gap = 8;
-  make_footer_btn(screen, PX, footerY, btnW, footerH, "BACK", back_cb);
-  make_footer_btn(screen, PX + btnW + gap, footerY, btnW, footerH, "REBOOT", reboot_cb);
+  ui_create_btn(screen, PX, footerY, btnW, footerH, "BACK", SET_BTN_FONT, false, false, back_cb, nullptr);
+  ui_create_btn(screen, PX + btnW + gap, footerY, btnW, footerH, "REBOOT", SET_BTN_FONT, false, false, reboot_cb, nullptr);
 
   LOG_I("Screen sysinfo: system info screen created");
 }

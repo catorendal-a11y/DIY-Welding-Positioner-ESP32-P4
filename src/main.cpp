@@ -18,8 +18,10 @@
 
 #include "safety/safety.h"
 
-volatile bool g_wakePending = false;
+std::atomic<bool> g_wakePending{false};
 #include "storage/storage.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include <esp_timer.h>
 #include "esp_task_wdt.h"
 #include <cstdint>
@@ -75,7 +77,7 @@ void lvglTask(void* pvParameters) {
   lv_timer_handler();
   vTaskDelay(pdMS_TO_TICKS(100));
 
-  screen_boot_update(90, "CONNECTIVITY");
+  screen_boot_update(90, "SUBSYSTEMS");
   lv_timer_handler();
   vTaskDelay(pdMS_TO_TICKS(100));
 
@@ -298,9 +300,6 @@ void setup() {
   // Initialize safety system (ESTOP, watchdog)
   safety_init();
 
-  // Step/dir/ENA/ESTOP + DIR switch — before speed_init() (pot + digitalRead DIR_SW)
-  motor_gpio_init();
-
   // Load NVS settings BEFORE display/motor so saved brightness, acceleration, microstep, etc.
   // apply on first init (previously storage ran after motor_apply_settings and stepper kept defaults).
   storage_init();
@@ -310,25 +309,21 @@ void setup() {
 
   onchip_temp_init();
 
+  // motor_init() before speed_init() is required: motor_gpio_init() configures STEP/DIR/ESTOP/DIR_SW;
+  // speed_init() reads PIN_DIR_SWITCH and uses the pot pin. Do not reorder without revisiting both.
+  motor_init();
+
+  acceleration_init();
+  microstep_init();
+  calibration_init();
+  motor_apply_settings();
+  safety_cache_stepper();
+
   // Speed/pot + ADS1115 on display I2C bus (must run after display_init)
   speed_init();
 
   // Initialize LVGL
   lvgl_hal_init();
-
-  // Initialize motor control (GPIO + FastAccelStepper)
-  motor_init();
-
-  // Validate and initialize motor sub-modules
-  acceleration_init();
-  microstep_init();
-  calibration_init();
-
-  // Apply validated settings to stepper
-  motor_apply_settings();
-
-  // Cache stepper pointer for ESTOP ISR
-  safety_cache_stepper();
 
   // Initialize control state machine
   control_init();
@@ -353,5 +348,5 @@ void setup() {
 // MAIN LOOP
 // ───────────────────────────────────────────────────────────────────────────────
 void loop() {
-  delay(100);
+  vTaskDelay(portMAX_DELAY);
 }

@@ -102,26 +102,6 @@ static void style_slider(lv_obj_t* slider) {
   lv_obj_set_style_pad_all(slider, 0, 0);
 }
 
-static lv_obj_t* make_cycle_btn(lv_obj_t* parent, int x, int y, int w, int h,
-                                const char* text, lv_event_cb_t cb) {
-  lv_obj_t* btn = lv_button_create(parent);
-  lv_obj_set_size(btn, w, h);
-  lv_obj_set_pos(btn, x, y);
-  lv_obj_set_style_bg_color(btn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(btn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(btn, 1, 0);
-  lv_obj_set_style_border_color(btn, COL_BORDER, 0);
-  lv_obj_set_style_shadow_width(btn, 0, 0);
-  lv_obj_set_style_pad_all(btn, 0, 0);
-  lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, nullptr);
-  lv_obj_t* lbl = lv_label_create(btn);
-  lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, FONT_BTN, 0);
-  lv_obj_set_style_text_color(lbl, COL_TEXT, 0);
-  lv_obj_center(lbl);
-  return btn;
-}
-
 void screen_display_create() {
   lv_obj_t* screen = screenRoots[SCREEN_DISPLAY];
   lv_obj_clean(screen);
@@ -137,20 +117,7 @@ void screen_display_create() {
     }
   }
 
-  lv_obj_t* header = lv_obj_create(screen);
-  lv_obj_set_size(header, SCREEN_W, 28);
-  lv_obj_set_pos(header, 0, 0);
-  lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
-  lv_obj_set_style_pad_all(header, 0, 0);
-  lv_obj_set_style_border_width(header, 0, 0);
-  lv_obj_set_style_radius(header, 0, 0);
-  lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
-
-  lv_obj_t* title = lv_label_create(header);
-  lv_label_set_text(title, "DISPLAY SETTINGS");
-  lv_obj_set_style_text_font(title, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(title, COL_ACCENT, 0);
-  lv_obj_set_pos(title, PX, 6);
+  ui_create_header(screen, "DISPLAY SETTINGS", SET_HEADER_H, SET_HEADER_FONT, 6);
 
   int y = 40;
 
@@ -210,8 +177,8 @@ void screen_display_create() {
   lv_obj_set_style_text_color(dimTitleLbl, COL_TEXT_DIM, 0);
   lv_obj_align(dimTitleLbl, LV_ALIGN_LEFT_MID, 12, 0);
 
-  dimBtn = make_cycle_btn(dimRow, CONTENT_W - 130, 8, 110, 36,
-                           dimStrings[currentDimIdx], dim_cycle_cb);
+  dimBtn = ui_create_btn(dimRow, CONTENT_W - 130, 8, SET_CYCLE_W, SET_CYCLE_H,
+                         dimStrings[currentDimIdx], FONT_BTN, false, false, dim_cycle_cb, nullptr);
   dimBtnLabel = lv_obj_get_child(dimBtn, 0);
 
   y += SET_ROW_H + 10;
@@ -232,8 +199,8 @@ void screen_display_create() {
   lv_obj_set_style_text_color(themeTitleLbl, COL_TEXT_DIM, 0);
   lv_obj_align(themeTitleLbl, LV_ALIGN_LEFT_MID, 12, 0);
 
-  themeBtn = make_cycle_btn(themeRow, CONTENT_W - 130, 8, 110, 36,
-                              theme_get_name(g_settings.accent_color), theme_cycle_cb);
+  themeBtn = ui_create_btn(themeRow, CONTENT_W - 130, 8, SET_CYCLE_W, SET_CYCLE_H,
+                           theme_get_name(g_settings.accent_color), FONT_BTN, false, false, theme_cycle_cb, nullptr);
   themeBtnLabel = lv_obj_get_child(themeBtn, 0);
 
   y += SET_ROW_H + 10;
@@ -259,37 +226,8 @@ void screen_display_create() {
   int btnW = 160;
   int gap = 8;
 
-  lv_obj_t* backFooter = lv_button_create(screen);
-  lv_obj_set_size(backFooter, btnW, footerH);
-  lv_obj_set_pos(backFooter, PX, footerY);
-  lv_obj_set_style_bg_color(backFooter, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(backFooter, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(backFooter, 1, 0);
-  lv_obj_set_style_border_color(backFooter, COL_BORDER, 0);
-  lv_obj_set_style_shadow_width(backFooter, 0, 0);
-  lv_obj_set_style_pad_all(backFooter, 0, 0);
-  lv_obj_add_event_cb(backFooter, back_cb, LV_EVENT_CLICKED, nullptr);
-  lv_obj_t* bLbl = lv_label_create(backFooter);
-  lv_label_set_text(bLbl, "BACK");
-  lv_obj_set_style_text_font(bLbl, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(bLbl, COL_TEXT, 0);
-  lv_obj_center(bLbl);
-
-  lv_obj_t* saveBtn = lv_button_create(screen);
-  lv_obj_set_size(saveBtn, btnW + 60, footerH);
-  lv_obj_set_pos(saveBtn, PX + btnW + gap, footerY);
-  lv_obj_set_style_bg_color(saveBtn, COL_BG_ACTIVE, 0);
-  lv_obj_set_style_radius(saveBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(saveBtn, 2, 0);
-  lv_obj_set_style_border_color(saveBtn, COL_ACCENT, 0);
-  lv_obj_set_style_shadow_width(saveBtn, 0, 0);
-  lv_obj_set_style_pad_all(saveBtn, 0, 0);
-  lv_obj_add_event_cb(saveBtn, save_cb, LV_EVENT_CLICKED, nullptr);
-  lv_obj_t* sLbl = lv_label_create(saveBtn);
-  lv_label_set_text(sLbl, "SAVE");
-  lv_obj_set_style_text_font(sLbl, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(sLbl, COL_ACCENT, 0);
-  lv_obj_center(sLbl);
+  ui_create_action_bar(screen, PX, footerY, footerH, gap, btnW, btnW + 60,
+                        "BACK", back_cb, "SAVE", true, save_cb);
 
   LOG_I("Screen display: created");
 }

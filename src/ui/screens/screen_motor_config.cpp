@@ -176,20 +176,7 @@ void screen_motor_config_create() {
   const int PX = 16;
   const int CONTENT_W = SCREEN_W - 2 * PX;
 
-  lv_obj_t* header = lv_obj_create(screen);
-  lv_obj_set_size(header, SCREEN_W, SET_HEADER_H);
-  lv_obj_set_pos(header, 0, 0);
-  lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
-  lv_obj_set_style_pad_all(header, 0, 0);
-  lv_obj_set_style_border_width(header, 0, 0);
-  lv_obj_set_style_radius(header, 0, 0);
-  lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
-
-  lv_obj_t* title = lv_label_create(header);
-  lv_label_set_text(title, "MOTOR CONFIG");
-  lv_obj_set_style_text_font(title, SET_HEADER_FONT, 0);
-  lv_obj_set_style_text_color(title, COL_ACCENT, 0);
-  lv_obj_set_pos(title, PX, 6);
+  ui_create_header(screen, "MOTOR CONFIG", SET_HEADER_H, SET_HEADER_FONT, 6);
 
   constexpr int GAP_Y = 5;
   int y = SET_HEADER_H + GAP_Y;
@@ -479,37 +466,8 @@ void screen_motor_config_create() {
   int btnW = 170;
   int gap = 8;
 
-  lv_obj_t* backFooter = lv_button_create(screen);
-  lv_obj_set_size(backFooter, btnW, footerH);
-  lv_obj_set_pos(backFooter, PX, footerY);
-  lv_obj_set_style_bg_color(backFooter, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(backFooter, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(backFooter, 1, 0);
-  lv_obj_set_style_border_color(backFooter, COL_BORDER, 0);
-  lv_obj_set_style_shadow_width(backFooter, 0, 0);
-  lv_obj_set_style_pad_all(backFooter, 0, 0);
-  lv_obj_add_event_cb(backFooter, back_cb, LV_EVENT_CLICKED, nullptr);
-  lv_obj_t* bLbl = lv_label_create(backFooter);
-  lv_label_set_text(bLbl, "BACK");
-  lv_obj_set_style_text_font(bLbl, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(bLbl, COL_TEXT, 0);
-  lv_obj_center(bLbl);
-
-  lv_obj_t* saveBtn = lv_button_create(screen);
-  lv_obj_set_size(saveBtn, btnW + 80, footerH);
-  lv_obj_set_pos(saveBtn, PX + btnW + gap, footerY);
-  lv_obj_set_style_bg_color(saveBtn, COL_BG_ACTIVE, 0);
-  lv_obj_set_style_radius(saveBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(saveBtn, 2, 0);
-  lv_obj_set_style_border_color(saveBtn, COL_ACCENT, 0);
-  lv_obj_set_style_shadow_width(saveBtn, 0, 0);
-  lv_obj_set_style_pad_all(saveBtn, 0, 0);
-  lv_obj_add_event_cb(saveBtn, save_apply_cb, LV_EVENT_CLICKED, nullptr);
-  lv_obj_t* sLbl = lv_label_create(saveBtn);
-  lv_label_set_text(sLbl, "SAVE & APPLY");
-  lv_obj_set_style_text_font(sLbl, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(sLbl, COL_ACCENT, 0);
-  lv_obj_center(sLbl);
+  ui_create_action_bar(screen, PX, footerY, footerH, gap, btnW, btnW + 80,
+                        "BACK", back_cb, "SAVE & APPLY", true, save_apply_cb);
 }
 
 void screen_motor_config_invalidate_widgets() {

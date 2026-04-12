@@ -160,31 +160,6 @@ static void stop_event_cb(lv_event_t* e) {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// Helper: create a section row with label, value, progress bar, -/+ buttons
-// ───────────────────────────────────────────────────────────────────────────────
-static lv_obj_t* create_pm_btn(lv_obj_t* parent, int16_t x, int16_t y,
-                                int16_t w, int16_t h, const char* text,
-                                lv_event_cb_t cb, void* user_data) {
-  lv_obj_t* btn = lv_button_create(parent);
-  lv_obj_set_size(btn, w, h);
-  lv_obj_set_pos(btn, x, y);
-  lv_obj_set_style_bg_color(btn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(btn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(btn, 1, 0);
-  lv_obj_set_style_border_color(btn, COL_BORDER_SM, 0);
-  lv_obj_set_style_shadow_width(btn, 0, 0);
-  lv_obj_set_style_pad_all(btn, 0, 0);
-  lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, user_data);
-
-  lv_obj_t* lbl = lv_label_create(btn);
-  lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, FONT_XL, 0);
-  lv_obj_set_style_text_color(lbl, COL_TEXT, 0);
-  lv_obj_center(lbl);
-  return btn;
-}
-
-// ───────────────────────────────────────────────────────────────────────────────
 // SCREEN CREATE — matching new_ui.svg: header, 3 parameter rows, info line,
 // waveform preview, START/STOP buttons
 // ───────────────────────────────────────────────────────────────────────────────
@@ -192,22 +167,7 @@ void screen_pulse_create() {
   lv_obj_t* screen = screenRoots[SCREEN_PULSE];
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
-  // ── Header bar (y=0, h=30) ──
-  lv_obj_t* header = lv_obj_create(screen);
-  lv_obj_set_size(header, SCREEN_W, HEADER_H);
-  lv_obj_set_pos(header, 0, 0);
-  lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
-  lv_obj_set_style_pad_all(header, 0, 0);
-  lv_obj_set_style_border_width(header, 0, 0);
-  lv_obj_set_style_radius(header, 0, 0);
-  lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
-
-  // Title
-  lv_obj_t* title = lv_label_create(header);
-  lv_label_set_text(title, "PULSE MODE");
-  lv_obj_set_style_text_font(title, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(title, COL_ACCENT, 0);
-  lv_obj_set_pos(title, PAD_X, 8);
+  ui_create_header(screen, "PULSE MODE", HEADER_H, FONT_NORMAL, 8);
 
   // ── Parameter row layout constants ──
   const int secLabelX = 20;
@@ -215,8 +175,6 @@ void screen_pulse_create() {
   const int barX = 240;
   const int barW = 340;
   const int barH = 3;
-  const int btnW = BTN_W_PM;   // 44
-  const int btnH = BTN_H_PM;   // 30
   const int btnMinusX = 600;
   const int btnPlusX = 652;
 
@@ -250,11 +208,8 @@ void screen_pulse_create() {
   lv_obj_set_style_bg_color(onBar, COL_ACCENT, LV_PART_INDICATOR);
   lv_obj_set_style_radius(onBar, 1, LV_PART_INDICATOR);
 
-  // -/+ buttons
-  create_pm_btn(screen, btnMinusX, onY - 2, btnW, btnH,
-                "-", on_time_adj_cb, (void*)(intptr_t)-1);
-  create_pm_btn(screen, btnPlusX, onY - 2, btnW, btnH,
-                "+", on_time_adj_cb, (void*)(intptr_t)1);
+  ui_create_pm_btn(screen, btnMinusX, onY - 2, "-", FONT_XL, on_time_adj_cb, (void*)(intptr_t)-1);
+  ui_create_pm_btn(screen, btnPlusX, onY - 2, "+", FONT_XL, on_time_adj_cb, (void*)(intptr_t)1);
 
   // Range hint
   lv_obj_t* onHint = lv_label_create(screen);
@@ -293,10 +248,8 @@ void screen_pulse_create() {
   lv_obj_set_style_radius(offBar, 1, LV_PART_INDICATOR);
 
   // -/+ buttons
-  create_pm_btn(screen, btnMinusX, offY - 2, btnW, btnH,
-                "-", off_time_adj_cb, (void*)(intptr_t)-1);
-  create_pm_btn(screen, btnPlusX, offY - 2, btnW, btnH,
-                "+", off_time_adj_cb, (void*)(intptr_t)1);
+  ui_create_pm_btn(screen, btnMinusX, offY - 2, "-", FONT_XL, off_time_adj_cb, (void*)(intptr_t)-1);
+  ui_create_pm_btn(screen, btnPlusX, offY - 2, "+", FONT_XL, off_time_adj_cb, (void*)(intptr_t)1);
 
   // Range hint
   lv_obj_t* offHint = lv_label_create(screen);
@@ -335,10 +288,8 @@ void screen_pulse_create() {
   lv_obj_set_style_radius(rpmBar, 1, LV_PART_INDICATOR);
 
   // -/+ buttons
-  create_pm_btn(screen, btnMinusX, rpmY - 2, btnW, btnH,
-                "-", rpm_adj_cb, (void*)(intptr_t)-1);
-  create_pm_btn(screen, btnPlusX, rpmY - 2, btnW, btnH,
-                "+", rpm_adj_cb, (void*)(intptr_t)1);
+  ui_create_pm_btn(screen, btnMinusX, rpmY - 2, "-", FONT_XL, rpm_adj_cb, (void*)(intptr_t)-1);
+  ui_create_pm_btn(screen, btnPlusX, rpmY - 2, "+", FONT_XL, rpm_adj_cb, (void*)(intptr_t)1);
 
   // Range hint
   lv_obj_t* rpmHint = lv_label_create(screen);

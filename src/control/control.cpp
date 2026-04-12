@@ -187,6 +187,18 @@ void control_reset_step_accumulator() {
 // ───────────────────────────────────────────────────────────────────────────────
 // PENDING REQUEST PROCESSOR (runs in controlTask on Core 0)
 // ───────────────────────────────────────────────────────────────────────────────
+static void stop_active_mode(SystemState cur) {
+  if (cur == STATE_RUNNING) {
+    continuous_stop();
+  } else if (cur == STATE_PULSE) {
+    pulse_stop();
+  } else if (cur == STATE_JOG) {
+    jog_stop();
+  } else if (cur == STATE_STEP) {
+    control_transition_to(STATE_STOPPING);
+  }
+}
+
 static void process_pending_requests() {
   SystemState cur = currentState.load(std::memory_order_relaxed);
 
@@ -201,15 +213,7 @@ static void process_pending_requests() {
     pendingStop.store(false, std::memory_order_relaxed);
     pendingModeRequest.store(0, std::memory_order_relaxed);
     if (cur != STATE_IDLE && cur != STATE_STOPPING && cur != STATE_ESTOP) {
-      if (cur == STATE_RUNNING) {
-        continuous_stop();
-      } else if (cur == STATE_PULSE) {
-        pulse_stop();
-      } else if (cur == STATE_JOG) {
-        jog_stop();
-      } else if (cur == STATE_STEP) {
-        control_transition_to(STATE_STOPPING);
-      }
+      stop_active_mode(cur);
     }
     return;
   }
@@ -218,15 +222,7 @@ static void process_pending_requests() {
 
   if (cur != STATE_IDLE) {
     if (cur != STATE_STOPPING && cur != STATE_ESTOP) {
-      if (cur == STATE_RUNNING) {
-        continuous_stop();
-      } else if (cur == STATE_PULSE) {
-        pulse_stop();
-      } else if (cur == STATE_JOG) {
-        jog_stop();
-      } else if (cur == STATE_STEP) {
-        control_transition_to(STATE_STOPPING);
-      }
+      stop_active_mode(cur);
     }
     return;
   }

@@ -52,7 +52,7 @@ IMAGE: docs/images/social_preview.png (or embed YouTube: https://youtu.be/GygLl6
 | NC momentary push button (E-STOP) | 1 | Any NC mushroom button |
 | SPDT toggle switch (direction CW/CCW) | 1 | Any toggle switch |
 | Foot pedal with pot + switch | 1 | Optional |
-| 24V DC power supply (5A+) | 1 | For motor driver |
+| 24–36V DC power supply (5A+; **36V optimal**, **24V** works) | 1 | For motor driver `VM` |
 | USB-C cable (for programming) | 1 | USB-C data cable |
 | Hookup wire (22 AWG) | Various | Any |
 
@@ -135,8 +135,8 @@ IMAGE: docs/images/Wiring_diagram.v2.svg
 | GPIO 33 (PEDAL SW) | Foot pedal switch | Pull-up (optional) |
 | I2C (GPIO 7/8) | ADS1115 | Pedal pot ADC (optional, addr 0x48) |
 | 5V | Driver PUL-/DIR-/ENA+ | Logic power |
-| 24V PSU+ | Driver VCC / VM | Motor power |
-| 24V PSU- | Driver GND | Common ground |
+| Motor PSU+ (24V or 36V) | Driver VCC / VM | Motor power |
+| Motor PSU- | Driver GND | Common ground |
 
 ### Important Notes
 

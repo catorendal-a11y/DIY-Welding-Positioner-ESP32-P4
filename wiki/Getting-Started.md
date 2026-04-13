@@ -6,7 +6,7 @@
 - **Python** PlatformIO bundled Python (system Python 3.14 is incompatible)
 - **GUITION JC4880P443C** ESP32-P4 4.3" Touch Display dev board
 - **USB-C cable** for power and serial
-- **Hardware:** Stepper driver, NEMA 23 motor, 24V PSU, 10k pot, NC E-STOP button
+- **Hardware:** Stepper driver, NEMA 23 motor, 24–36V motor PSU (**36V optimal**, **24V** works), 10k pot, NC E-STOP button
 
 See [[Hardware Setup]] for full wiring details.
 

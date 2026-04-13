@@ -8,12 +8,12 @@
 | **Stepper Driver** | PUL/DIR or DM542T | 1 | Motor Config: Standard vs DM542T |
 | **Stepper Motor** | NEMA 23 (3 Nm) | 1 | |
 | **Gearbox** | NMRV030 + spur | 1 | **1:108** total (60:1 x 72/40) |
-| **Power Supply** | 24V DC, >=5A | 1 | Dedicated for stepper driver |
+| **Power Supply** | 24–36V DC, >=5A (**36V optimal**, **24V** works) | 1 | Dedicated for stepper driver |
 | **Potentiometer** | 10k linear (LA42DWQ-22) | 1 | Speed control, IP65 |
 | **E-STOP Button** | NC (Normally Closed) | 1 | Mushroom button |
 | **Direction Switch** | SPDT toggle | 1 | CW/CCW |
 | **Foot Pedal** | Analog pot + momentary switch | 1 | Optional |
-| **DC-DC Converter** | 24V -> 5V 2A | 1 | If not using USB-C for ESP32 |
+| **DC-DC Converter** | 36V or 24V -> 5V 2A | 1 | If not using USB-C for ESP32 |
 
 ## DIP stepper driver configuration
 
@@ -85,7 +85,7 @@ GPIO 28 (C6_U0TXD) and GPIO 32 (C6_U0RXD) are PCB-routed to the ESP32-C6 co-proc
 ## Power Sequencing
 
 1. Power ESP32-P4 first (USB-C or DC-DC)
-2. Then power the 24V motor supply
+2. Then power the motor supply (24V or 36V on driver VM)
 3. Firmware holds ENA HIGH (motor disabled) on boot — safe by default
 
 ## Validated Hardware
@@ -96,7 +96,7 @@ GPIO 28 (C6_U0TXD) and GPIO 32 (C6_U0RXD) are PCB-routed to the ESP32-C6 co-proc
 | PUL/DIR driver (1/4 and 1/8 microstepping) | Tested |
 | NEMA 23 (3 Nm) | Tested |
 | NMRV030 + spur (**1:108** total) | Tested |
-| 24V DC PSU | Tested |
+| 24–36V DC PSU (36V optimal) | Tested |
 | 10k Pot (LA42DWQ-22) | Tested |
 | NC E-STOP Button | Tested |
 | Direction switch (GPIO 29) | Tested |

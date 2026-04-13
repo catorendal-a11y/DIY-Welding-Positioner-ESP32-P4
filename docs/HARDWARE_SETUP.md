@@ -4,10 +4,10 @@ This guide details the physical electrical wiring and structural assembly requir
 
 ## 1. Electrical Component Selection
 - **ESP32-P4 Dev Board:** GUITION JC4880P443C (4.3" MIPI-DSI display, ESP32-P4 + ESP32-C6 co-processor).
-- **Micro-Stepper Driver:** Common **PUL/DIR** boards and/or **DM542T** (Leadshine-class DSP). Must handle motor supply (often 20–50 V DC on `VM`/`V+`) and motor current for NEMA 23. **Logic supply for PUL/DIR/ENA is separate** (typically 3.3 V or 5 V on the `+` inputs — do not feed 24 V motor power to the opto inputs).
+- **Micro-Stepper Driver:** Common **PUL/DIR** boards and/or **DM542T** (Leadshine-class DSP). Must handle motor supply (often 20–50 V DC on `VM`/`V+`) and motor current for NEMA 23. **Logic supply for PUL/DIR/ENA is separate** (typically 3.3 V or 5 V on the `+` inputs — do not feed motor `VM` to the opto inputs).
 - **Motor:** NEMA 23 Stepper Motor (approx 3.0 Nm holding torque recommended).
-- **Power Supply (PSU):** 24V DC, minimum 5.0A (120W+). Dedicated for the stepper driver.
-- **DC-DC Converter:** Step-down buck converter (24V -> 5V 2A) to power the ESP32-P4 if not using USB-C.
+- **Power Supply (PSU):** **36V DC** is optimal on the stepper `VM` bus for headroom; **24V DC** also works within typical driver input range (e.g. 18–50 V). Minimum **5.0 A** — size wattage for your chosen rail (~180 W @ 36 V, ~120 W @ 24 V as a rough guide). Dedicated for the stepper driver.
+- **DC-DC Converter:** Step-down buck converter (**36V** or **24V** → **5V**, 2 A) to power the ESP32-P4 if not using USB-C.
 - **Enclosure:** **Metallic (Aluminum/Steel) grounded enclosure**. Essential for EMI mitigation.
 
 ## 2. DIP stepper driver configuration (basic PUL/DIR boards)
@@ -26,7 +26,7 @@ Tables below match the **STEPPERONLINE DM542T** front label (same family as many
 
 The driver has a **5 V / 24 V** selector for the **control input** side (often labeled near **PWR** / alarm). For **ESP32-P4** (3.3 V GPIO):
 
-- Use the **5 V** logic position and wire **PUL+/DIR+/ENA+** to **3.3 V or 5 V** as in §3.4 — **not** 24 V motor supply on the opto inputs.
+- Use the **5 V** logic position and wire **PUL+/DIR+/ENA+** to **3.3 V or 5 V** as in §3.4 — **not** motor `VM` (24–36 V) on the opto inputs.
 - If pulses were ignored before, wrong voltage on this selector or on **+** inputs is a common cause.
 
 ### 3.2 Motor current — SW1, SW2, SW3 (peak / RMS)
@@ -68,7 +68,7 @@ Pick the row that equals **200 × (Motor Config microstep value)**. Wrong table 
 | **Microstep** | **1/16** in **Motor Config** if DIP = **3200** pulses/rev (recommended) |
 | **Driver** | **DM542T** + **SAVE & APPLY** |
 
-**Motor power:** **+Vdc** = **+18 V … +50 V** (motor supply), **GND** = power return. Do **not** connect 24 V to **PUL/DIR/ENA**.
+**Motor power:** **+Vdc** = **+18 V … +50 V** (motor supply), **GND** = power return. Do **not** connect motor `VM` to **PUL/DIR/ENA**.
 
 **Signal wiring (optocoupler “+” to logic VCC, “−” to GPIO — Style 2):**
 
@@ -140,7 +140,7 @@ Firmware: **LOW** on the ENA GPIO line = **motor enabled**, **HIGH** = disabled 
 
 ## 5. Safety & Thermal Management
 - **Heat Sinking:** Stepper drivers get hot during long welding runs. Mount the driver to the metal enclosure for thermal dissipation or add a 40mm fan.
-- **Power Sequencing:** Always power the logic (USB-C or DC-DC) first, then the motor 24V supply. The firmware holds the motor ENA pin HIGH (Disabled) on boot for safety.
+- **Power Sequencing:** Always power the logic (USB-C or DC-DC) first, then the **motor supply** (24 V or 36 V on `VM`). The firmware holds the motor ENA pin HIGH (Disabled) on boot for safety.
 
 ## 6. Validated Hardware
 
@@ -150,7 +150,7 @@ Firmware: **LOW** on the ENA GPIO line = **motor enabled**, **HIGH** = disabled 
 | **Stepper Driver** | PUL/DIR boards; DM542T | Standard drivers tested (1/4, 1/8); DM542T field checklist §3 |
 | **Stepper Motor** | NEMA 23 (3 Nm) | Tested |
 | **Gearbox** | NMRV030 + spur, **1:108** total | Tested |
-| **Power Supply** | 24V DC | Tested |
+| **Power Supply** | 36V DC (optimal); 24V DC works | Tested |
 | **Potentiometer** | 10k (LA42DWQ-22) | Tested (ADC range 0-3315) |
 | **E-STOP** | NC Button | Tested |
 | **Direction Switch** | SPDT toggle on GPIO 29 | Tested |

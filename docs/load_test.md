@@ -14,7 +14,7 @@
 - **Duration:** 60 minutes continuous
 - **Ambient Temperature:** ___ C
 - **Motor:** NEMA 23 (3 Nm rated)
-- **Driver:** PUL/DIR (24V supply)
+- **Driver:** PUL/DIR (motor supply 24V or 36V; **36V** optimal)
 
 ---
 
@@ -46,7 +46,7 @@
 | Component | Idle (mA) | Running (mA) | Peak (mA) |
 |-----------|-----------|--------------|------------|
 | 5V (logic) | ___ | ___ | ___ |
-| 24V (motor) | ___ | ___ | ___ |
+| 24–36V (motor) | ___ | ___ | ___ |
 
 ---
 

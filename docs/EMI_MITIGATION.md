@@ -16,8 +16,8 @@ To ensure your ESP32-P4 positioner runs flawlessly in an industrial welding envi
 - Ground the shielding braided mesh on **ONE END ONLY** (typically at the controller enclosure side). Grounding both ends creates a ground loop antenna.
 
 ## 3. Optoisolation
-Many stepper drivers have internal optocouplers separating the ESP32 3.3V logic circuit from the 24V motor drive circuit.
-- Ensure you do not accidentally bridge the ESP32 ground and the 24V motor power ground. They should only interact through the optocouplers inside the driver.
+Many stepper drivers have internal optocouplers separating the ESP32 3.3V logic circuit from the high-voltage motor supply (often **24–36 V DC** on `VM`; **36 V** is optimal for headroom where the hardware allows it).
+- Ensure you do not accidentally bridge the ESP32 ground and the motor power return. They should only interact through the optocouplers inside the driver.
 
 ## 4. Ferrite Chokes
 Snap-on ferrite bead chokes absorb high-frequency EMI spikes.

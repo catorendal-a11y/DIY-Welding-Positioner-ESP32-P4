@@ -5,7 +5,7 @@
 ### Motor does not move
 - Check STEP/DIR/ENA wiring continuity
 - Verify ENA pin logic: HIGH = disabled, LOW = enabled
-- Confirm motor supply outputs 24V at >=5A
+- Confirm motor supply is in range (24V or 36V on driver `VM`) at >=5A; **36V** is optimal if wiring and driver allow it
 - Check that microstepping DIP switches match the UI setting
 
 ### Motor stalls under load

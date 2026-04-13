@@ -231,7 +231,7 @@ controlTask  (pri 3, 4 KB)
 | **Stepper Driver** | PUL/DIR or DM542T | 1 |
 | **Stepper Motor** | NEMA 23 (3 Nm torque) | 1 |
 | **Gearbox** | NMRV030 + spur (**1:108** total) | 1 |
-| **Power Supply** | 24V DC, 5A+ | 1 |
+| **Power Supply** | 24–36V DC, 5A+ (**36V optimal**, **24V** works) | 1 |
 | **Speed Pot** | 10k potentiometer | 1 |
 | **Direction Switch** | SPDT toggle switch | 1 |
 | **E-STOP** | NC mushroom button | 1 |
@@ -333,7 +333,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 | **Dim + fault** | If the panel has dimmed on timeout, E-STOP still wakes the backlight so the red overlay is visible (`g_wakePending` / `dim_reset_activity()`) |
 | **Power Sequencing** | Never power motor without driver connected to coils |
 | **Motor Coils** | Never connect/disconnect coils while driver is powered |
-| **Voltage** | Verify 24V supply before connecting |
+| **Voltage** | Verify motor PSU (24V or 36V) before connecting; **36V** is optimal if your driver and wiring allow it |
 
 ---
 

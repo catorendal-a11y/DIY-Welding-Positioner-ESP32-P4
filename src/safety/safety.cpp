@@ -26,7 +26,13 @@ static uint32_t g_estopConfirmed = 0;
 // SAFETY INITIALIZATION — Cache stepper pointer for ISR
 // ───────────────────────────────────────────────────────────────────────────────
 void safety_cache_stepper() {
+  if (g_stepperMutex) {
+    xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
+  }
   estopStepper = motor_get_stepper();
+  if (g_stepperMutex) {
+    xSemaphoreGive(g_stepperMutex);
+  }
 }
 
 // ───────────────────────────────────────────────────────────────────────────────

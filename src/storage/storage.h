@@ -21,12 +21,12 @@
 
 struct SystemSettings {
     int acceleration;
-    int microstep;         // divisor: 8/16/32 -> 1600/3200/6400 PULSE/REV on NEMA 23
+    int microstep;         // divisor 4/8/16/32 -> 800/1600/3200/6400 pulses/rev (200-step motor)
     float max_rpm;         // UI/pot ceiling [MIN_RPM .. MAX_RPM], default MAX_RPM
     float calibration_factor;
     uint8_t brightness;    // 0-255 backlight PWM
     uint8_t dim_timeout;   // Seconds before auto-dim (0=off, 30, 60, 120, 300)
-    bool dir_switch_enabled; // CW/CCW hardware switch on GPIO28
+    bool dir_switch_enabled; // CW/CCW hardware switch (PIN_DIR_SWITCH)
     bool invert_direction;   // Invert CW/CCW direction
     uint8_t accent_color;  // Index into theme palette (0=Orange, 1=Cyan, etc.)
     uint8_t countdown_seconds; // Countdown before rotation start (1-10, default 3)

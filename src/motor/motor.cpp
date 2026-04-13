@@ -10,6 +10,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include <FastAccelStepper.h>
+#include <atomic>
+#include <cstdint>
 
 // ───────────────────────────────────────────────────────────────────────────────
 // FASTACCELSTEPPER ENGINE AND STEPPER INSTANCE
@@ -22,6 +24,9 @@ static FastAccelStepper* stepper = nullptr;
 // FreeRTOS mutex keeps tick interrupts enabled (prevents IWDT on cross-core contention)
 // ───────────────────────────────────────────────────────────────────────────────
 SemaphoreHandle_t g_stepperMutex = nullptr;
+
+// Published by motor_refresh_hz_cache() (motorTask). UI reads Hz/RPM without taking g_stepperMutex.
+static std::atomic<uint32_t> g_stepperMilliHzAbsCached{0};
 
 // DM542T datasheet: DIR setup >=5us before STEP; min pulse >=2.5us; input to 200kHz.
 // FastAccelStepper on ESP32 uses MIN_DIR_DELAY_US=200 when a non-zero dir delay is set.
@@ -64,7 +69,7 @@ void motor_gpio_init() {
   pinMode(PIN_STEP, OUTPUT);
   digitalWrite(PIN_STEP, LOW);
 
-  // ESTOP input (will be moved to safety module in Phase 3)
+  // ESTOP input (debounce + actions in safety_task; ISR in safety module)
   pinMode(PIN_ESTOP, INPUT_PULLUP);
   pinMode(PIN_DIR_SWITCH, INPUT_PULLUP);
 
@@ -105,6 +110,8 @@ void motor_init() {
   driverKind = g_settings.stepper_driver;
   xSemaphoreGive(g_settings_mutex);
 
+  // Same lock order as motor_apply_settings(): g_settings first, then stepper mutex.
+  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   // Configure stepper (DIR delay depends on stepper_driver snapshot)
   motor_apply_stepper_dir_timing(motor_dir_delay_us_from_driver(driverKind));
   // NOTE: Do NOT call setEnablePin() — ENA is controlled manually via digitalWrite()
@@ -115,6 +122,7 @@ void motor_init() {
   stepper->setAcceleration(accelSteps);
   stepper->setLinearAcceleration(200);
   stepper->setSpeedInHz(START_SPEED);
+  xSemaphoreGive(g_stepperMutex);
 
   LOG_I("FastAccelStepper init OK");
   LOG_I("  Steps/rev: %u", microstep_get_steps_per_rev());
@@ -129,6 +137,12 @@ void motor_run_cw() {
   if (safety_is_estop_active()) return;
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   if (stepper == nullptr) { xSemaphoreGive(g_stepperMutex); return; }
+  // Re-check after mutex: ISR may have asserted ESTOP between outer check and here;
+  // never pull ENA LOW if ESTOP is active (would override hardware disable path).
+  if (safety_is_estop_active()) {
+    xSemaphoreGive(g_stepperMutex);
+    return;
+  }
   digitalWrite(PIN_ENA, LOW);
   stepper->runForward();
   xSemaphoreGive(g_stepperMutex);
@@ -139,6 +153,10 @@ void motor_run_ccw() {
   if (safety_is_estop_active()) return;
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   if (stepper == nullptr) { xSemaphoreGive(g_stepperMutex); return; }
+  if (safety_is_estop_active()) {
+    xSemaphoreGive(g_stepperMutex);
+    return;
+  }
   digitalWrite(PIN_ENA, LOW);
   stepper->runBackward();
   xSemaphoreGive(g_stepperMutex);
@@ -180,29 +198,54 @@ bool motor_is_running() {
 }
 
 float motor_get_step_frequency_hz() {
-  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
-  if (stepper == nullptr) {
+  return (float)g_stepperMilliHzAbsCached.load(std::memory_order_acquire) / 1000.0f;
+}
+
+void motor_refresh_hz_cache(void) {
+  uint32_t absMilli = 0;
+  if (g_stepperMutex != nullptr && xSemaphoreTake(g_stepperMutex, portMAX_DELAY) == pdTRUE) {
+    if (stepper != nullptr) {
+      int32_t mhZ = stepper->getCurrentSpeedInMilliHz();
+      int64_t a = (int64_t)mhZ;
+      if (a < 0) {
+        a = -a;
+      }
+      if (a > (int64_t)UINT32_MAX) {
+        a = (int64_t)UINT32_MAX;
+      }
+      absMilli = (uint32_t)a;
+    }
     xSemaphoreGive(g_stepperMutex);
-    return 0.0f;
   }
-  int32_t mhZ = stepper->getCurrentSpeedInMilliHz();
-  xSemaphoreGive(g_stepperMutex);
-  return fabsf((float)mhZ) / 1000.0f;
+  g_stepperMilliHzAbsCached.store(absMilli, std::memory_order_release);
 }
 
 uint32_t motor_get_current_hz() {
   float hz = motor_get_step_frequency_hz();
   if (hz < 0.001f) return 0u;
+  if (hz >= (float)UINT32_MAX) return UINT32_MAX;
   return (uint32_t)(hz + 0.5f);
+}
+
+uint32_t motor_milli_hz_for_rpm_calibrated(float rpm_workpiece_command) {
+  float hz = rpmToStepHzCalibrated(rpm_workpiece_command);
+  if (hz != hz || hz < 0.0f) {
+    hz = 0.0f;
+  }
+  double mhzD = (double)hz * 1000.0;
+  if (mhzD > (double)UINT32_MAX) {
+    mhzD = (double)UINT32_MAX;
+  }
+  uint32_t mhz = (uint32_t)mhzD;
+  if (mhz < (uint32_t)START_SPEED * 1000u) {
+    mhz = (uint32_t)START_SPEED * 1000u;
+  }
+  return mhz;
 }
 
 void motor_apply_speed_for_rpm_locked(float rpm_workpiece_command) {
   if (stepper == nullptr) return;
-  float hz = rpmToStepHzCalibrated(rpm_workpiece_command);
-  uint32_t mhz = (uint32_t)(hz * 1000.0f);
-  if (mhz < (uint32_t)START_SPEED * 1000u) {
-    mhz = (uint32_t)START_SPEED * 1000u;
-  }
+  uint32_t mhz = motor_milli_hz_for_rpm_calibrated(rpm_workpiece_command);
   stepper->setSpeedInMilliHz(mhz);
   stepper->applySpeedAcceleration();
 }
@@ -219,6 +262,7 @@ void motor_apply_settings() {
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   if (stepper != nullptr) {
     stepper->setAcceleration(accelSteps);
+    stepper->setLinearAcceleration(200);
     motor_apply_stepper_dir_timing(dirDelayUs);
   }
   xSemaphoreGive(g_stepperMutex);

@@ -263,6 +263,7 @@ float speed_get_target_rpm() {
 }
 
 float speed_get_actual_rpm() {
+  // Hz from motor_refresh_hz_cache() (no g_stepperMutex — safe from lvglTask).
   float hz = motor_get_step_frequency_hz();
   if (hz < 1e-9f) return 0.0f;
   uint32_t spr = microstep_get_steps_per_rev();
@@ -314,9 +315,9 @@ void speed_apply() {
 
   if (!motor_is_running()) return;
   SystemState state = control_get_state();
-  if (state == STATE_JOG || state == STATE_STEP || state == STATE_STOPPING) return;
+  if (state == STATE_JOG || state == STATE_STEP || state == STATE_STOPPING || state == STATE_ESTOP) return;
 
-  uint32_t mhz = (uint32_t)(rpmToStepHzCalibrated(cachedTargetRpm) * 1000);
+  uint32_t mhz = motor_milli_hz_for_rpm_calibrated(cachedTargetRpm);
 
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   FastAccelStepper* stepper = motor_get_stepper();

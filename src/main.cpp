@@ -232,7 +232,9 @@ void motorTask(void* pvParameters) {
     }
     #endif
 
-     vTaskDelayUntil(&t, pdMS_TO_TICKS(5));
+    motor_refresh_hz_cache();
+
+    vTaskDelayUntil(&t, pdMS_TO_TICKS(5));
   }
 }
 
@@ -317,6 +319,7 @@ void setup() {
   calibration_init();
   motor_apply_settings();
   safety_cache_stepper();
+  motor_refresh_hz_cache();
 
   // Speed/pot + ADS1115 on display I2C bus (must run after display_init)
   speed_init();

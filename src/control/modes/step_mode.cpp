@@ -3,6 +3,7 @@
 #include "../control.h"
 #include "../../motor/motor.h"
 #include "../../motor/speed.h"
+#include "../../safety/safety.h"
 #include "../../config.h"
 #include <cstdlib>
 
@@ -32,29 +33,37 @@ void step_execute(float angle_deg) {
     return;
   }
 
-  stepCurrentAngle = angle_deg;
-  accumulatedAngle = 0.0f;
-
   long steps = angleToSteps(angle_deg);
   if (speed_get_direction() == DIR_CCW) {
     steps = -steps;
+  }
+  if (steps == 0) {
+    LOG_W("Step mode: zero steps for angle %.1f", angle_deg);
+    return;
   }
 
   LOG_I("Step mode: %.1f deg (%ld steps)", angle_deg, steps);
 
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
-  FastAccelStepper* stepper = motor_get_stepper();
-  if (stepper != nullptr) {
-    step_move_start_pos = stepper->getCurrentPosition();
-    motor_apply_speed_for_rpm_locked(speed_get_target_rpm());
-    stepper->move(steps);
-    digitalWrite(PIN_ENA, LOW);
-    step_move_steps_total = labs(steps);
-    step_finish_earliest_ms = millis() + 50u;
-  } else {
-    step_move_steps_total = 0;
-    step_finish_earliest_ms = 0u;
+  if (safety_is_estop_active()) {
+    xSemaphoreGive(g_stepperMutex);
+    return;
   }
+  FastAccelStepper* stepper = motor_get_stepper();
+  if (stepper == nullptr) {
+    LOG_W("Step mode: no stepper");
+    xSemaphoreGive(g_stepperMutex);
+    return;
+  }
+
+  stepCurrentAngle = angle_deg;
+  accumulatedAngle = 0.0f;
+  step_move_start_pos = stepper->getCurrentPosition();
+  motor_apply_speed_for_rpm_locked(speed_get_target_rpm());
+  stepper->move(steps);
+  digitalWrite(PIN_ENA, LOW);
+  step_move_steps_total = labs(steps);
+  step_finish_earliest_ms = millis() + 50u;
   // STATE_STEP before give: otherwise speed_apply() can setSpeedInMilliHz during move().
   control_transition_to(STATE_STEP);
   xSemaphoreGive(g_stepperMutex);

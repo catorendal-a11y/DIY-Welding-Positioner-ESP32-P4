@@ -1,3 +1,6 @@
+# Cursor / local tool locks (do not commit)
+skills-lock.json
+
 # Claude / AI settings
 .claude/
 .kilocode/

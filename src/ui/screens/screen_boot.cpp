@@ -125,7 +125,7 @@ void screen_boot_create() {
     lv_bar_set_value(progressBar, 0, LV_ANIM_OFF);
     lv_obj_set_style_base_dir(progressBar, LV_BASE_DIR_LTR, 0);
     lv_obj_set_style_pad_all(progressBar, 0, 0);
-    lv_obj_set_style_bg_color(progressBar, lv_color_hex(0x0A0A0A), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(progressBar, COL_BG_INPUT, LV_PART_MAIN);
     lv_obj_set_style_radius(progressBar, 0, LV_PART_MAIN);
     lv_obj_set_style_bg_color(progressBar, COL_ACCENT, LV_PART_INDICATOR);
     lv_obj_set_style_radius(progressBar, 0, LV_PART_INDICATOR);

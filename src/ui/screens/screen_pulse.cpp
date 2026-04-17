@@ -115,7 +115,7 @@ static void update_waveform() {
 static void back_event_cb(lv_event_t* e) { screens_show(SCREEN_MAIN); }
 
 static void on_time_adj_cb(lv_event_t* e) {
-  int delta = (intptr_t)(lv_obj_t*)lv_event_get_user_data(e);
+  int delta = (intptr_t)lv_event_get_user_data(e);
   if (delta > 0) pulseOnMs += 100;
   else if (pulseOnMs > 100) pulseOnMs -= 100;
   if (pulseOnMs > 10000) pulseOnMs = 10000;
@@ -125,7 +125,7 @@ static void on_time_adj_cb(lv_event_t* e) {
 }
 
 static void off_time_adj_cb(lv_event_t* e) {
-  int delta = (intptr_t)(lv_obj_t*)lv_event_get_user_data(e);
+  int delta = (intptr_t)lv_event_get_user_data(e);
   if (delta > 0) pulseOffMs += 100;
   else if (pulseOffMs > 100) pulseOffMs -= 100;
   if (pulseOffMs > 10000) pulseOffMs = 10000;
@@ -135,7 +135,7 @@ static void off_time_adj_cb(lv_event_t* e) {
 }
 
 static void rpm_adj_cb(lv_event_t* e) {
-  int delta = (intptr_t)(lv_obj_t*)lv_event_get_user_data(e);
+  int delta = (intptr_t)lv_event_get_user_data(e);
   if (delta > 0) targetRpm += 0.1f;
   else if (targetRpm > MIN_RPM) targetRpm -= 0.1f;
   float mx = speed_get_rpm_max();
@@ -337,7 +337,7 @@ void screen_pulse_create() {
   lv_obj_t* waveBox = lv_obj_create(screen);
   lv_obj_set_size(waveBox, waveW, waveH);
   lv_obj_set_pos(waveBox, 10, waveY);
-  lv_obj_set_style_bg_color(waveBox, lv_color_hex(0x0A0A0A), 0);
+  lv_obj_set_style_bg_color(waveBox, COL_PROTRACTOR_BG, 0);
   lv_obj_set_style_border_width(waveBox, 1, 0);
   lv_obj_set_style_border_color(waveBox, COL_BORDER_ROW, 0);
   lv_obj_set_style_radius(waveBox, RADIUS_CARD, 0);

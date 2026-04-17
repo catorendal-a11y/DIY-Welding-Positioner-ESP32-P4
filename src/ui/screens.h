@@ -159,6 +159,9 @@ lv_obj_t* ui_create_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t
                         lv_event_cb_t cb, void* user_data);
 lv_obj_t* ui_create_pm_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, const char* text,
                            const lv_font_t* label_font, lv_event_cb_t cb, void* user_data);
+// Shared slider styling (used by settings sub-screens). Applies accent indicator/knob on a
+// dark track. Caller still sets size/position/range/value.
+void ui_style_slider(lv_obj_t* slider);
 void ui_create_action_bar(lv_obj_t* parent, lv_coord_t pad_x, lv_coord_t footer_y, lv_coord_t footer_h,
                           lv_coord_t gap, lv_coord_t left_w, lv_coord_t right_w,
                           const char* left_text, lv_event_cb_t left_cb,

@@ -7,6 +7,7 @@
 #include "../../storage/storage.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include <atomic>
 
 static lv_obj_t* brightnessSlider = nullptr;
 static lv_obj_t* brightnessValueLabel = nullptr;
@@ -71,7 +72,7 @@ static void dim_cycle_cb(lv_event_t* e) {
   update_info_text();
 }
 
-static volatile bool themeRefreshPending = false;
+static std::atomic<bool> themeRefreshPending{false};
 
 static void theme_cycle_cb(lv_event_t* e) {
   uint8_t count = theme_get_count();
@@ -83,7 +84,7 @@ static void theme_cycle_cb(lv_event_t* e) {
   if (themeBtnLabel) {
     lv_label_set_text(themeBtnLabel, theme_get_name(next));
   }
-  themeRefreshPending = true;
+  themeRefreshPending.store(true, std::memory_order_release);
 }
 
 static void save_cb(lv_event_t* e) {
@@ -104,17 +105,7 @@ static void update_info_text() {
   lv_label_set_text(infoLabel, buf);
 }
 
-static void style_slider(lv_obj_t* slider) {
-  lv_obj_set_style_bg_color(slider, lv_color_hex(0x444444), 0);
-  lv_obj_set_style_bg_color(slider, COL_ACCENT, LV_PART_INDICATOR);
-  lv_obj_set_style_bg_color(slider, COL_ACCENT, LV_PART_KNOB);
-  lv_obj_set_style_bg_opa(slider, LV_OPA_COVER, LV_PART_KNOB);
-  lv_obj_set_style_border_color(slider, lv_color_hex(0x666666), 0);
-  lv_obj_set_style_border_color(slider, COL_ACCENT, LV_PART_INDICATOR);
-  lv_obj_set_style_border_width(slider, 2, 0);
-  lv_obj_set_style_radius(slider, 8, 0);
-  lv_obj_set_style_pad_all(slider, 0, 0);
-}
+// Uses shared ui_style_slider() from screens.cpp.
 
 void screen_display_create() {
   lv_obj_t* screen = screenRoots[SCREEN_DISPLAY];
@@ -169,11 +160,11 @@ void screen_display_create() {
   lv_slider_set_range(brightnessSlider, 20, 100);
   int initPct = brightPct < 20 ? 20 : brightPct;
   lv_slider_set_value(brightnessSlider, initPct, LV_ANIM_OFF);
-  lv_obj_set_style_bg_color(brightnessSlider, lv_color_hex(0x1A1A1A), 0);
+  lv_obj_set_style_bg_color(brightnessSlider, COL_SLIDER_TRACK, 0);
   lv_obj_set_style_bg_color(brightnessSlider, COL_ACCENT, LV_PART_INDICATOR);
   lv_obj_set_style_bg_color(brightnessSlider, COL_ACCENT, LV_PART_KNOB);
-  lv_obj_set_style_border_color(brightnessSlider, lv_color_hex(0x555555), 0);
-  lv_obj_set_style_border_color(brightnessSlider, lv_color_hex(0xFFFFFF), LV_PART_KNOB);
+  lv_obj_set_style_border_color(brightnessSlider, COL_SLIDER_BORDER, 0);
+  lv_obj_set_style_border_color(brightnessSlider, COL_KNOB_BORDER, LV_PART_KNOB);
   lv_obj_set_style_border_width(brightnessSlider, 2, 0);
   lv_obj_set_style_border_width(brightnessSlider, 2, LV_PART_KNOB);
   lv_obj_set_style_border_width(brightnessSlider, 0, LV_PART_INDICATOR);
@@ -275,8 +266,8 @@ void screen_display_invalidate_widgets() {
 }
 
 void screen_display_update() {
-  if (themeRefreshPending) {
-    themeRefreshPending = false;
+  if (themeRefreshPending.load(std::memory_order_acquire)) {
+    themeRefreshPending.store(false, std::memory_order_release);
     screens_request_theme_reinit();
     return;
   }

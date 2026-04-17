@@ -11,8 +11,10 @@
 #define COL_BG          lv_color_hex(0x050505)   // SVG: #050505 screen background
 #define COL_BG_HEADER   lv_color_hex(0x090909)   // SVG: #090909 header bar (.hd)
 #define COL_BG_CARD     lv_color_hex(0x0D0D0D)   // SVG: #0D0D0D card background
+#define COL_BG_CARD_ALT lv_color_hex(0x0B0B0B)   // Alt card (even rows in lists)
 #define COL_BG_DIM      lv_color_hex(0x080808)   // SVG: #080808 dim area (.dim)
 #define COL_BG_ROW      lv_color_hex(0x0E0E0E)   // SVG: #0E0E0E setting rows
+#define COL_BG_EMPTY    lv_color_hex(0x1A1A1A)   // Empty-slot placeholder rows / neutral dark fill
 #define COL_BTN_BG      lv_color_hex(0x141414)   // SVG: #141414 button fill (.b, .sm)
 // COL_BG_ACTIVE is now dynamic (see g_accent_dim below)
 #define COL_BG_DANGER   lv_color_hex(0x1A0A0A)   // SVG: #1A0A0A danger/stop (.br)
@@ -35,6 +37,9 @@ extern lv_color_t g_accent_border;
 #define COL_AMBER       g_accent
 #define COL_GREEN       lv_color_hex(0x00C853)
 #define COL_RED         lv_color_hex(0xFF1744)
+// Semantic warning colors (NOT tied to accent — kept stable across themes)
+#define COL_WARN        lv_color_hex(0xFF9500)   // Orange: flash usage / driver alarm / active cal step
+#define COL_YELLOW      lv_color_hex(0xFFAA00)   // Amber-yellow: countdown mid-range, transient warnings
 
 void theme_init();
 void theme_set_color(uint8_t idx);
@@ -62,6 +67,18 @@ uint8_t theme_get_count();
 #define COL_BORDER_DNG  lv_color_hex(0xFF1744)   // SVG: #FF1744 danger border (.br)
 #define COL_GAUGE_TICK  lv_color_hex(0x444444)   // SVG: #444 gauge tick marks
 #define COL_GAUGE_MINOR lv_color_hex(0x2A2A2A)   // SVG: #2A2A2A minor ticks
+
+// ───────────────────────────────────────────────────────────────────────────────
+// SLIDER / BAR COLORS (shared across sliders, bars, progress widgets)
+// ───────────────────────────────────────────────────────────────────────────────
+#define COL_SLIDER_TRACK    lv_color_hex(0x1A1A1A)   // Slider/bar main track
+#define COL_SLIDER_TRACK2   lv_color_hex(0x3A3A3A)   // Lighter track on dark rows
+#define COL_SLIDER_TRACK3   lv_color_hex(0x444444)   // Even lighter track (display brightness)
+#define COL_SLIDER_BORDER   lv_color_hex(0x555555)   // Slider track border
+#define COL_SLIDER_BORDER2  lv_color_hex(0x666666)   // Alt slider track border
+#define COL_KNOB_BORDER     lv_color_hex(0xFFFFFF)   // Slider knob highlight border
+#define COL_PROGRESS_BG     lv_color_hex(0x222222)   // Progress bar / wizard bar background
+#define COL_PROTRACTOR_BG   lv_color_hex(0x0A0A0A)   // Protractor / waveform box background
 
 // ───────────────────────────────────────────────────────────────────────────────
 // BUTTON STYLES (from new_ui.svg)

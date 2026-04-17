@@ -344,7 +344,7 @@ void screen_step_create() {
   lv_obj_t* protractor = lv_obj_create(screen);
   lv_obj_set_size(protractor, kProSz, kProSz);
   lv_obj_set_pos(protractor, kProX, kProY);
-  lv_obj_set_style_bg_color(protractor, lv_color_hex(0x0A0A0A), 0);
+  lv_obj_set_style_bg_color(protractor, COL_PROTRACTOR_BG, 0);
   lv_obj_set_style_radius(protractor, kProSz / 2, 0);
   lv_obj_set_style_border_width(protractor, 1, 0);
   lv_obj_set_style_border_color(protractor, COL_BORDER, 0);

@@ -3,6 +3,7 @@
 
 #include "../screens.h"
 #include "../theme.h"
+#include <atomic>
 
 // ───────────────────────────────────────────────────────────────────────────────
 // CALLBACKS
@@ -10,8 +11,11 @@
 static void (*onConfirmCallback)() = nullptr;
 static void (*onCancelCallback)() = nullptr;
 static ScreenId returnScreen = SCREEN_PROGRAMS;
-static volatile bool confirmPending = false;
-static volatile bool cancelPending = false;
+// Touch event callbacks run on lvglTask (Core 1); screen_confirm_update() also runs on
+// lvglTask, so these flags only cross function-call boundaries on the same core. Use
+// atomics anyway to match project standard and keep ordering explicit.
+static std::atomic<bool> confirmPending{false};
+static std::atomic<bool> cancelPending{false};
 
 // ───────────────────────────────────────────────────────────────────────────────
 // WIDGETS
@@ -23,16 +27,16 @@ static lv_obj_t* warnLabel = nullptr;
 // EVENT HANDLERS
 // ───────────────────────────────────────────────────────────────────────────────
 static void confirm_event_cb(lv_event_t* e) {
-  confirmPending = true;
+  confirmPending.store(true, std::memory_order_release);
 }
 
 static void cancel_event_cb(lv_event_t* e) {
-  cancelPending = true;
+  cancelPending.store(true, std::memory_order_release);
 }
 
 void screen_confirm_update() {
-  if (confirmPending) {
-    confirmPending = false;
+  if (confirmPending.load(std::memory_order_acquire)) {
+    confirmPending.store(false, std::memory_order_release);
     auto cb = onConfirmCallback;
     onConfirmCallback = nullptr;
     onCancelCallback = nullptr;
@@ -44,8 +48,8 @@ void screen_confirm_update() {
     screens_request_show(dest);
     return;
   }
-  if (cancelPending) {
-    cancelPending = false;
+  if (cancelPending.load(std::memory_order_acquire)) {
+    cancelPending.store(false, std::memory_order_release);
     auto cb = onCancelCallback;
     onConfirmCallback = nullptr;
     onCancelCallback = nullptr;

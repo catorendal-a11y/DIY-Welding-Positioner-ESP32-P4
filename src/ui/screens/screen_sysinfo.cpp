@@ -92,7 +92,7 @@ static lv_obj_t* make_bar(lv_obj_t* parent, int x, int y, int w, int h, lv_color
   lv_obj_t* bar = lv_bar_create(parent);
   lv_obj_set_size(bar, w, h);
   lv_obj_set_pos(bar, x, y);
-  lv_obj_set_style_bg_color(bar, lv_color_hex(0x1A1A1A), 0);
+  lv_obj_set_style_bg_color(bar, COL_SLIDER_TRACK, 0);
   lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, 0);
   lv_obj_set_style_border_width(bar, 0, 0);
   lv_obj_set_style_radius(bar, 2, 0);
@@ -177,7 +177,7 @@ void screen_sysinfo_create() {
   int flashPct = appTotal > 0 ? (int)((uint64_t)appUsed * 100 / appTotal) : 0;
   snprintf(buf, sizeof(buf), "%.1f MB", (double)flashTotal / (1024.0 * 1024.0));
   flashValueLabel = make_val_label(screen, valX, y, buf);
-  flashBar = make_bar(screen, barX, y + 3, barW, SET_BAR_H, lv_color_hex(0xFF9500));
+  flashBar = make_bar(screen, barX, y + 3, barW, SET_BAR_H, COL_WARN);
   lv_bar_set_value(flashBar, flashPct, LV_ANIM_OFF);
   y += rowH + 4;
 

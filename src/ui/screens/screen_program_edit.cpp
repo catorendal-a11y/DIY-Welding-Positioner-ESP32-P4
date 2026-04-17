@@ -8,6 +8,7 @@
 #include "../../storage/storage.h"
 #include "../../control/control.h"
 #include "../../motor/speed.h"
+#include <atomic>
 #include <cstdio>
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -33,7 +34,9 @@ static lv_obj_t* modeBtns[4] = { nullptr };
 // ───────────────────────────────────────────────────────────────────────────────
 static void keyboard_event_cb(lv_event_t* e);
 
-static volatile bool kbClosePending = false;
+// Keyboard close is deferred: event cb sets the flag, screen_program_edit_poll_keyboard()
+// performs the actual async delete outside the event callback (safe pattern).
+static std::atomic<bool> kbClosePending{false};
 
 static void do_cleanup_kb() {
   if (keyboard) {
@@ -43,7 +46,7 @@ static void do_cleanup_kb() {
     keyboard = nullptr;
     lv_obj_delete_async(kb);
   }
-  kbClosePending = false;
+  kbClosePending.store(false, std::memory_order_release);
 }
 
 static void back_event_cb(lv_event_t* e) {
@@ -54,7 +57,7 @@ static void back_event_cb(lv_event_t* e) {
 static void keyboard_event_cb(lv_event_t* e) {
   lv_event_code_t code = lv_event_get_code(e);
   if (code == LV_EVENT_CANCEL || code == LV_EVENT_READY) {
-    kbClosePending = true;
+    kbClosePending.store(true, std::memory_order_release);
   }
 }
 
@@ -586,7 +589,7 @@ void screen_program_edit_create(int slot) {
 // UPDATE UI with current preset values
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_program_edit_poll_keyboard() {
-  if (kbClosePending) {
+  if (kbClosePending.load(std::memory_order_acquire)) {
     do_cleanup_kb();
   }
 }
@@ -620,6 +623,6 @@ void screen_program_edit_invalidate_widgets() {
   rpmBarObj = nullptr;
   modeSettingsBtn = nullptr;
   keyboard = nullptr;
-  kbClosePending = false;
+  kbClosePending.store(false, std::memory_order_release);
   for (int i = 0; i < 4; i++) modeBtns[i] = nullptr;
 }

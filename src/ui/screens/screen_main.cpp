@@ -10,6 +10,8 @@
 #include "../../config.h"
 #include "../../motor/speed.h"
 #include "../../control/control.h"
+#include "../../storage/storage.h"
+#include "freertos/semphr.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // WIDGETS
@@ -32,7 +34,6 @@ static lv_obj_t* jogBtn = nullptr;
 static lv_obj_t* cwBtn = nullptr;
 static lv_obj_t* pulseBtn = nullptr;
 static lv_obj_t* pedalBtn = nullptr;
-static lv_obj_t* pedalLabel = nullptr;
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STATE
@@ -44,6 +45,7 @@ static SystemState prevState = STATE_IDLE;
 static Direction prevDir = DIR_CW;
 static float prevRpm = -1.0f;
 static bool prevPedalEnabled = false;
+static bool prevAdsPedalPresent = false;
 static bool mainDirty = true;
 
 static void screen_main_set_dirty() { mainDirty = true; }
@@ -98,8 +100,13 @@ static void pulse_off_up_cb(lv_event_t*) {
   screen_main_set_dirty();
 }
 static void pedal_toggle_cb(lv_event_t*) {
-  bool enabled = !speed_get_pedal_enabled();
-  speed_set_pedal_enabled(enabled);
+  bool wantOn = !speed_get_pedal_enabled();
+  if (wantOn && !speed_ads1115_pedal_present()) return;
+  speed_set_pedal_enabled(wantOn);
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  g_settings.pedal_enabled = speed_get_pedal_enabled();
+  xSemaphoreGive(g_settings_mutex);
+  storage_save_settings();
   screen_main_set_dirty();
 }
 static void menu_event_cb(lv_event_t*) {
@@ -262,7 +269,6 @@ void screen_main_create() {
 
   pedalBtn = make_btn(mainScreenPtr, rightX, 36 + (sideH + sideGap) * 3, sideW, sideH, "PEDAL", false);
   lv_obj_add_event_cb(pedalBtn, pedal_toggle_cb, LV_EVENT_CLICKED, nullptr);
-  pedalLabel = lv_obj_get_child(pedalBtn, 0);
 
   // ── Pulse time controls under PULSE button (left column x=8, w=170) ──
   // Layout: [-]  value  [+] ON  — buttons left, label right towards center
@@ -338,7 +344,6 @@ void screen_main_invalidate_widgets() {
   cwBtn = nullptr;
   pulseBtn = nullptr;
   pedalBtn = nullptr;
-  pedalLabel = nullptr;
 }
 
 void screen_main_update() {
@@ -361,15 +366,18 @@ void screen_main_update() {
   bool dirChanged = (dir != prevDir);
   // Epsilon so small actual-RPM changes still refresh the gauge needle during motion
   bool rpmChanged = (fabsf(rpm - prevRpm) > 0.003f);
-  bool pedalChanged = (speed_get_pedal_enabled() != prevPedalEnabled);
+  bool adsPresent = speed_ads1115_pedal_present();
+  bool pedalUiChanged =
+      (speed_get_pedal_enabled() != prevPedalEnabled) || (adsPresent != prevAdsPedalPresent);
 
-  if (!mainDirty && !stateChanged && !dirChanged && !rpmChanged && !pedalChanged) return;
+  if (!mainDirty && !stateChanged && !dirChanged && !rpmChanged && !pedalUiChanged) return;
 
   mainDirty = false;
   prevState = state;
   prevDir = dir;
   prevRpm = rpm;
   prevPedalEnabled = speed_get_pedal_enabled();
+  prevAdsPedalPresent = adsPresent;
 
   float mx = speed_get_rpm_max();
   int32_t arcMax = (int32_t)(mx * 100.0f + 0.5f);
@@ -427,12 +435,18 @@ void screen_main_update() {
     set_btn_style(pulseBtn, COL_BTN_BG, COL_BORDER, 1, COL_TEXT);
   }
 
-  // PEDAL button: accent when enabled
+  // PEDAL: Wiring v2 needs ADS1115 on touch I2C; GPIO33 SW when mode armed
   if (pedalBtn) {
-    if (speed_get_pedal_enabled()) {
-      set_btn_style(pedalBtn, COL_BG_ACTIVE, COL_ACCENT, 2, COL_ACCENT);
+    if (!adsPresent) {
+      lv_obj_remove_flag(pedalBtn, LV_OBJ_FLAG_CLICKABLE);
+      set_btn_style(pedalBtn, COL_BTN_BG, COL_BORDER, 1, COL_TEXT_VDIM);
     } else {
-      set_btn_style(pedalBtn, COL_BTN_BG, COL_BORDER, 1, COL_TEXT);
+      lv_obj_add_flag(pedalBtn, LV_OBJ_FLAG_CLICKABLE);
+      if (speed_get_pedal_enabled()) {
+        set_btn_style(pedalBtn, COL_BG_ACTIVE, COL_ACCENT, 2, COL_ACCENT);
+      } else {
+        set_btn_style(pedalBtn, COL_BTN_BG, COL_BORDER, 1, COL_TEXT);
+      }
     }
   }
 

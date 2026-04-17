@@ -223,7 +223,30 @@ void speed_init() {
   }
   lastDirSwitchState = digitalRead(PIN_DIR_SWITCH);
   speed_sync_rpm_limits_from_settings();
-  LOG_I("Speed control init: pot=%.0f pedal=%.0f", adcFiltered, pedalFiltered);
+
+  bool pedalPersist = false;
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  pedalPersist = g_settings.pedal_enabled;
+  xSemaphoreGive(g_settings_mutex);
+#if ENABLE_ADS1115_PEDAL
+  if (pedalPersist && ads1115Connected) {
+    pedalEnabled.store(true, std::memory_order_release);
+  } else {
+    pedalEnabled.store(false, std::memory_order_release);
+    if (pedalPersist && !ads1115Connected) {
+      xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+      g_settings.pedal_enabled = false;
+      xSemaphoreGive(g_settings_mutex);
+      storage_save_settings();
+    }
+  }
+#else
+  (void)pedalPersist;
+  pedalEnabled.store(false, std::memory_order_release);
+#endif
+
+  LOG_I("Speed control init: pot=%.0f pedal=%.0f ads=%d pedal_on=%d", adcFiltered, pedalFiltered,
+        (int)ads1115Connected, (int)pedalEnabled.load(std::memory_order_acquire));
 }
 
 void speed_sync_rpm_limits_from_settings() {
@@ -389,7 +412,11 @@ void speed_set_direction(Direction dir) {
 }
 
 void speed_set_pedal_enabled(bool enabled) {
+#if ENABLE_ADS1115_PEDAL
   if (enabled && !ads1115Connected) return;
+#else
+  if (enabled) return;
+#endif
   pedalEnabled.store(enabled, std::memory_order_release);
   pedalApplyPending.store(true, std::memory_order_release);
 }
@@ -399,6 +426,17 @@ bool speed_get_pedal_enabled() {
 }
 
 bool speed_pedal_connected() {
-  return ads1115Connected && pedalEnabled.load(std::memory_order_acquire)
-      && pedalFiltered > 100.0f && pedalFiltered < 3900.0f;
+#if ENABLE_ADS1115_PEDAL
+  return ads1115Connected && pedalEnabled.load(std::memory_order_acquire);
+#else
+  return false;
+#endif
+}
+
+bool speed_ads1115_pedal_present(void) {
+#if ENABLE_ADS1115_PEDAL
+  return ads1115Connected;
+#else
+  return false;
+#endif
 }

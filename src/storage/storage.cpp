@@ -15,7 +15,7 @@ std::vector<Preset> g_presets;
 SemaphoreHandle_t g_presets_mutex;
 SemaphoreHandle_t g_settings_mutex;
 SemaphoreHandle_t g_nvs_mutex;
-SystemSettings g_settings = { 7500, 16, MAX_RPM, 1.0f, 150, 60, true, false, 0, 3, STEPPER_DRIVER_DM542T, 1 };
+SystemSettings g_settings = { 7500, 16, MAX_RPM, 1.0f, 150, 60, true, false, 0, 3, STEPPER_DRIVER_DM542T, false, 1 };
 // Cross-core atomics (g_dir_switch_cache, g_flashWriting, g_screenRedraw) live in app_state.cpp.
 
 static std::atomic<bool> savePending{false};
@@ -299,6 +299,7 @@ static bool storage_apply_settings_doc(JsonObjectConst doc) {
     g_settings.countdown_seconds = constrain(doc["countdown_seconds"] | 3, (uint8_t)1, (uint8_t)10);
     // Missing JSON key: default to standard PUL/DIR timing for older NVS blobs (OTA / legacy).
     g_settings.stepper_driver = constrain(doc["stepper_driver"] | (int)STEPPER_DRIVER_STANDARD, 0, 1);
+    g_settings.pedal_enabled = doc["pedal_enabled"] | false;
     g_settings.settings_version = doc["settings_version"] | 0;
     const bool dirSw = g_settings.dir_switch_enabled;
     xSemaphoreGive(g_settings_mutex);
@@ -325,6 +326,7 @@ static bool storage_save_settings_internal() {
     doc["accent_color"] = snap.accent_color;
     doc["countdown_seconds"] = snap.countdown_seconds;
     doc["stepper_driver"] = snap.stepper_driver;
+    doc["pedal_enabled"] = snap.pedal_enabled;
     doc["settings_version"] = snap.settings_version;
 
     const size_t need = measureJson(doc);
@@ -432,7 +434,7 @@ void storage_format() {
     xSemaphoreGive(g_presets_mutex);
 
     xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-    g_settings = SystemSettings{ 5000, 8, MAX_RPM, 1.0f, 150, 60, false, false, 0, 3, STEPPER_DRIVER_STANDARD, 1 };
+    g_settings = SystemSettings{ 5000, 8, MAX_RPM, 1.0f, 150, 60, false, false, 0, 3, STEPPER_DRIVER_STANDARD, false, 1 };
     const bool dirSw = g_settings.dir_switch_enabled;
     xSemaphoreGive(g_settings_mutex);
 

@@ -25,7 +25,7 @@ static void back_event_cb(lv_event_t* e) {
 }
 
 static void rpm_adj_cb(lv_event_t* e) {
-  int delta = (intptr_t)(lv_obj_t*)lv_event_get_user_data(e);
+  int delta = (intptr_t)lv_event_get_user_data(e);
   float currentRpm = control_get_jog_speed();
   if (delta > 0) currentRpm += 0.1f;
   else if (currentRpm > 0.1f) currentRpm -= 0.1f;

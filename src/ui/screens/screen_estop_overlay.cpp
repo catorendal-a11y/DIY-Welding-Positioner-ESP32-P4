@@ -36,7 +36,7 @@ static constexpr int ESTOP_FRAME_PX = 10;
 // Accent: E-STOP red vs driver ALM orange (same overlay, stronger presence)
 // ───────────────────────────────────────────────────────────────────────────────
 static lv_color_t estop_overlay_accent_color(void) {
-  return safety_is_driver_alarm_latched() ? lv_color_hex(0xFF9800) : COL_RED;
+  return safety_is_driver_alarm_latched() ? COL_WARN : COL_RED;
 }
 
 static void estop_overlay_apply_accent(void) {

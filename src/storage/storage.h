@@ -31,6 +31,7 @@ struct SystemSettings {
     uint8_t accent_color;  // Index into theme palette (0=Orange, 1=Cyan, etc.)
     uint8_t countdown_seconds; // Countdown before rotation start (1-10, default 3)
     uint8_t stepper_driver;    // STEPPER_DRIVER_STANDARD or STEPPER_DRIVER_DM542T (pulse/dir timing)
+    bool pedal_enabled;        // Foot pedal armed (Wiring v2: needs ADS1115 AIN0 + GPIO33 SW)
     uint8_t settings_version;
 };
 

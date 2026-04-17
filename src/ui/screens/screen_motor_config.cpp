@@ -154,22 +154,7 @@ static void save_apply_cb(lv_event_t* e) {
   lv_timer_set_repeat_count(saveNavTimer, 1);
 }
 
-// Track must read clearly on COL_BG (0x05); border + opa match working display brightness slider.
-static void style_slider(lv_obj_t* slider) {
-  lv_obj_set_style_bg_color(slider, lv_color_hex(0x3A3A3A), LV_PART_MAIN);
-  lv_obj_set_style_bg_opa(slider, LV_OPA_COVER, LV_PART_MAIN);
-  lv_obj_set_style_border_color(slider, COL_BORDER, LV_PART_MAIN);
-  lv_obj_set_style_border_width(slider, 1, LV_PART_MAIN);
-  lv_obj_set_style_radius(slider, 4, LV_PART_MAIN);
-  lv_obj_set_style_pad_all(slider, 0, LV_PART_MAIN);
-  lv_obj_set_style_bg_color(slider, COL_ACCENT, LV_PART_INDICATOR);
-  lv_obj_set_style_bg_opa(slider, LV_OPA_COVER, LV_PART_INDICATOR);
-  lv_obj_set_style_bg_color(slider, COL_ACCENT, LV_PART_KNOB);
-  lv_obj_set_style_bg_opa(slider, LV_OPA_COVER, LV_PART_KNOB);
-  lv_obj_set_style_border_width(slider, 2, LV_PART_KNOB);
-  lv_obj_set_style_border_color(slider, COL_TEXT_DIM, LV_PART_KNOB);
-  lv_obj_set_style_radius(slider, 10, LV_PART_KNOB);
-}
+// Uses shared ui_style_slider() from screens.cpp.
 
 void screen_motor_config_create() {
   lv_obj_t* screen = screenRoots[SCREEN_MOTOR_CONFIG];
@@ -275,7 +260,7 @@ void screen_motor_config_create() {
   lv_slider_set_range(accelSlider, kAccelMin, kAccelMax);
   lv_slider_set_value(accelSlider, (int)acceleration_get(), LV_ANIM_OFF);
   motor_config_accel_sync_ui((int)acceleration_get());
-  style_slider(accelSlider);
+  ui_style_slider(accelSlider);
   lv_obj_add_event_cb(accelSlider, accel_slider_cb, LV_EVENT_VALUE_CHANGED, nullptr);
 
   y += 72 + GAP_Y;
@@ -326,7 +311,7 @@ void screen_motor_config_create() {
     if (mi > kMaxRpmMilliMax) mi = kMaxRpmMilliMax;
     lv_slider_set_value(maxRpmSlider, mi, LV_ANIM_OFF);
   }
-  style_slider(maxRpmSlider);
+  ui_style_slider(maxRpmSlider);
   lv_obj_add_event_cb(maxRpmSlider, max_rpm_slider_cb, LV_EVENT_VALUE_CHANGED, nullptr);
   motor_config_max_rpm_sync_ui(lv_slider_get_value(maxRpmSlider));
 
@@ -512,9 +497,7 @@ void screen_motor_config_invalidate_widgets() {
 
 void screen_motor_config_update() {
   if (!statusLabel) return;
-  SystemState st = control_get_state();
-  const char* stateStr = (st == STATE_IDLE) ? "IDLE" : (st == STATE_ESTOP) ? "ESTOP" : "RUNNING";
-  char buf[32];
-  snprintf(buf, sizeof(buf), "MOTOR: %s", stateStr);
+  char buf[48];
+  snprintf(buf, sizeof(buf), "MOTOR: %s", control_get_state_string());
   lv_label_set_text(statusLabel, buf);
 }

@@ -284,7 +284,7 @@ void screen_programs_update() {
     lv_obj_t* card = lv_obj_create(programList);
     lv_obj_set_size(card, cardW, cardH);
     lv_obj_set_pos(card, cardX, yPos);
-    lv_obj_set_style_bg_color(card, (i % 2 == 0) ? COL_BG_CARD : lv_color_hex(0x0B0B0B), 0);
+    lv_obj_set_style_bg_color(card, (i % 2 == 0) ? COL_BG_CARD : COL_BG_CARD_ALT, 0);
     lv_obj_set_style_radius(card, RADIUS_CARD, 0);
     lv_obj_set_style_border_width(card, 1, 0);
     lv_obj_set_style_border_color(card, COL_BORDER, 0);
@@ -401,7 +401,7 @@ void screen_programs_update() {
       lv_obj_t* emptyCard = lv_obj_create(programList);
       lv_obj_set_size(emptyCard, cardW, 44);
       lv_obj_set_pos(emptyCard, cardX, yPos);
-      lv_obj_set_style_bg_color(emptyCard, lv_color_hex(0x1A1A1A), 0);
+      lv_obj_set_style_bg_color(emptyCard, COL_BG_EMPTY, 0);
       lv_obj_set_style_radius(emptyCard, RADIUS_BTN, 0);
       lv_obj_set_style_border_width(emptyCard, 0, 0);
       lv_obj_set_style_pad_all(emptyCard, 0, 0);

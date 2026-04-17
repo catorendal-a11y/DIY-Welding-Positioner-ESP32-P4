@@ -89,7 +89,7 @@ static void back_event_cb(lv_event_t* e) {
 
 static void on_time_adj_cb(lv_event_t* e) {
   if (!onTimeLabel) return;
-  int delta = (int)(intptr_t)(lv_obj_t*)lv_event_get_user_data(e);
+  int delta = (int)(intptr_t)lv_event_get_user_data(e);
   editOnMs += delta;
   if (editOnMs < 100) editOnMs = 100;
   if (editOnMs > 10000) editOnMs = 10000;
@@ -99,7 +99,7 @@ static void on_time_adj_cb(lv_event_t* e) {
 
 static void off_time_adj_cb(lv_event_t* e) {
   if (!offTimeLabel) return;
-  int delta = (int)(intptr_t)(lv_obj_t*)lv_event_get_user_data(e);
+  int delta = (int)(intptr_t)lv_event_get_user_data(e);
   editOffMs += delta;
   if (editOffMs < 100) editOffMs = 100;
   if (editOffMs > 10000) editOffMs = 10000;
@@ -109,7 +109,7 @@ static void off_time_adj_cb(lv_event_t* e) {
 
 static void rpm_adj_cb(lv_event_t* e) {
   if (!rpmLabel) return;
-  int delta = (int)(intptr_t)(lv_obj_t*)lv_event_get_user_data(e);
+  int delta = (int)(intptr_t)lv_event_get_user_data(e);
   if (delta > 0) editRpm += 0.1f;
   else if (editRpm > MIN_RPM) editRpm -= 0.1f;
   if (editRpm < MIN_RPM) editRpm = MIN_RPM;
@@ -120,7 +120,7 @@ static void rpm_adj_cb(lv_event_t* e) {
 
 static void cycles_adj_cb(lv_event_t* e) {
   if (!cyclesLabel) return;
-  int delta = (int)(intptr_t)(lv_obj_t*)lv_event_get_user_data(e);
+  int delta = (int)(intptr_t)lv_event_get_user_data(e);
   editCycles += delta;
   if (editCycles < 0) editCycles = 0;
   if (editCycles > 999) editCycles = 999;

@@ -43,7 +43,7 @@ static void save_cb(lv_event_t* e) {
 
 static void update_checklist() {
   lv_color_t doneCol = COL_GREEN;
-  lv_color_t activeCol = lv_color_hex(0xFF9500);
+  lv_color_t activeCol = COL_ACCENT;
   lv_color_t pendingCol = COL_TEXT_VDIM;
 
   const char* marks[] = { "[+]", "[+]", "[>]", "[ ]" };
@@ -145,7 +145,7 @@ void screen_calibration_create() {
   progressLine = lv_obj_create(screen);
   lv_obj_set_size(progressLine, 2, 4 * 36 - 8);
   lv_obj_set_pos(progressLine, PX + 8, y + 4);
-  lv_obj_set_style_bg_color(progressLine, lv_color_hex(0x222222), 0);
+  lv_obj_set_style_bg_color(progressLine, COL_PROGRESS_BG, 0);
   lv_obj_set_style_border_width(progressLine, 0, 0);
   lv_obj_set_style_radius(progressLine, 1, 0);
   lv_obj_set_style_pad_all(progressLine, 0, 0);
@@ -232,7 +232,7 @@ void screen_calibration_create() {
   lv_obj_set_pos(progressBar, 590, 22);
   lv_bar_set_range(progressBar, 0, 100);
   lv_bar_set_value(progressBar, 0, LV_ANIM_OFF);
-  lv_obj_set_style_bg_color(progressBar, lv_color_hex(0x222222), 0);
+  lv_obj_set_style_bg_color(progressBar, COL_PROGRESS_BG, 0);
   lv_obj_set_style_bg_color(progressBar, COL_GREEN, LV_PART_INDICATOR);
   lv_obj_set_style_border_width(progressBar, 0, 0);
   lv_obj_set_style_radius(progressBar, 2, 0);

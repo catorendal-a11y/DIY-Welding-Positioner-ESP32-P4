@@ -198,7 +198,7 @@ void motorTask(void* pvParameters) {
       motor_apply_settings();
     }
 
-    if (speed_get_pedal_enabled() && speed_pedal_connected()) {
+    if (speed_pedal_connected()) {
       bool swPressed = (digitalRead(PIN_PEDAL_SW) == LOW);
       if (swPressed && !pedalSwWasPressed) {
         if (control_get_state() == STATE_IDLE) control_start_continuous();

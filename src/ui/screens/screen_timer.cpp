@@ -12,18 +12,21 @@
 #include "../../safety/safety.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include <atomic>
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STATE
 // ───────────────────────────────────────────────────────────────────────────────
 static int countdownSec = 3;
-static volatile bool countingDown = false;
-static volatile bool startPending = false;
+// Touch event callbacks and screen_timer_update() both run on lvglTask (Core 1), but
+// keep atomics to match project-wide standard and make memory ordering explicit.
+static std::atomic<bool> countingDown{false};
+static std::atomic<bool> startPending{false};
 static uint32_t countdownStartMs = 0;
 static int countdownRemaining = 0;
 static int lastDisplayedSec = -1;
 static uint32_t pulseStartMs = 0;
-static volatile bool backPending = false;
+static std::atomic<bool> backPending{false};
 
 static lv_obj_t* arcRing = nullptr;
 static lv_obj_t* bigNumberLabel = nullptr;
@@ -38,7 +41,7 @@ static lv_color_t countdown_color(int remaining, int total) {
   if (total <= 0) return COL_GREEN;
   int pct = remaining * 100 / total;
   if (pct > 66) return COL_GREEN;
-  if (pct > 33) return lv_color_hex(0xFFAA00);
+  if (pct > 33) return COL_YELLOW;
   return COL_RED;
 }
 
@@ -46,13 +49,13 @@ static lv_color_t countdown_color(int remaining, int total) {
 // EVENT HANDLERS
 // ───────────────────────────────────────────────────────────────────────────────
 static void back_event_cb(lv_event_t* e) {
-  countingDown = false;
-  startPending = false;
-  backPending = true;
+  countingDown.store(false, std::memory_order_release);
+  startPending.store(false, std::memory_order_release);
+  backPending.store(true, std::memory_order_release);
 }
 
 static void sec_adj_cb(lv_event_t* e) {
-  if (countingDown) return;
+  if (countingDown.load(std::memory_order_acquire)) return;
   int delta = (int)(intptr_t)lv_event_get_user_data(e);
   countdownSec += delta;
   if (countdownSec < 1) countdownSec = 1;
@@ -71,11 +74,11 @@ static void rpm_adj_cb(lv_event_t* e) {
 }
 
 static void start_event_cb(lv_event_t* e) {
-  if (countingDown) return;
+  if (countingDown.load(std::memory_order_acquire)) return;
   if (safety_inhibit_motion()) return;
   if (control_get_state() != STATE_IDLE) return;
 
-  countingDown = true;
+  countingDown.store(true, std::memory_order_release);
   countdownRemaining = countdownSec;
   lastDisplayedSec = -1;
   countdownStartMs = millis();
@@ -83,8 +86,8 @@ static void start_event_cb(lv_event_t* e) {
 }
 
 static void stop_event_cb(lv_event_t* e) {
-  countingDown = false;
-  startPending = false;
+  countingDown.store(false, std::memory_order_release);
+  startPending.store(false, std::memory_order_release);
   if (control_get_state() != STATE_IDLE && control_get_state() != STATE_ESTOP) {
     control_stop();
   }
@@ -102,9 +105,9 @@ void screen_timer_create() {
   xSemaphoreGive(g_settings_mutex);
   if (countdownSec < 1) countdownSec = 3;
   if (countdownSec > 10) countdownSec = 10;
-  countingDown = false;
-  startPending = false;
-  backPending = false;
+  countingDown.store(false, std::memory_order_release);
+  startPending.store(false, std::memory_order_release);
+  backPending.store(false, std::memory_order_release);
   lastDisplayedSec = -1;
 
   ui_create_header(screen, "COUNTDOWN");
@@ -208,18 +211,18 @@ void screen_timer_invalidate_widgets() {
   statusLabel = nullptr;
   rpmLabel = nullptr;
   secLabel = nullptr;
-  countingDown = false;
-  startPending = false;
-  backPending = false;
+  countingDown.store(false, std::memory_order_release);
+  startPending.store(false, std::memory_order_release);
+  backPending.store(false, std::memory_order_release);
 }
 
 void screen_timer_update() {
   if (!screens_is_active(SCREEN_TIMER)) return;
 
-  if (backPending) {
-    backPending = false;
-    countingDown = false;
-    startPending = false;
+  if (backPending.load(std::memory_order_acquire)) {
+    backPending.store(false, std::memory_order_release);
+    countingDown.store(false, std::memory_order_release);
+    startPending.store(false, std::memory_order_release);
     xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
     g_settings.countdown_seconds = (uint8_t)countdownSec;
     xSemaphoreGive(g_settings_mutex);
@@ -229,17 +232,19 @@ void screen_timer_update() {
   }
 
   // Handle pending start (countdown reached 0)
-  if (startPending) {
-    startPending = false;
-    countingDown = false;
+  if (startPending.load(std::memory_order_acquire)) {
+    startPending.store(false, std::memory_order_release);
+    countingDown.store(false, std::memory_order_release);
     control_start_continuous();
     screens_request_show(SCREEN_MAIN);
     return;
   }
 
-  if (countingDown) {
-    uint32_t elapsed = (millis() - countdownStartMs) / 1000;
-    int remaining = countdownSec - (int)elapsed;
+  if (countingDown.load(std::memory_order_acquire)) {
+    // Count elapsed milliseconds and floor-divide to whole seconds so the big
+    // number ticks N, N-1, ... 1 and hits 0 at the exact (countdownSec * 1000)ms mark.
+    uint32_t elapsedMs = millis() - countdownStartMs;
+    int remaining = countdownSec - (int)(elapsedMs / 1000);
 
     if (remaining <= 0) {
       // GO!
@@ -257,7 +262,7 @@ void screen_timer_update() {
         lv_arc_set_angles(arcRing, 0, 360);
         lv_obj_set_style_arc_color(arcRing, COL_GREEN, LV_PART_INDICATOR);
       }
-      startPending = true;
+      startPending.store(true, std::memory_order_release);
       return;
     }
 

@@ -379,6 +379,25 @@ lv_obj_t* ui_create_pm_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, const c
   return btn;
 }
 
+// Shared slider style — dark track with accent indicator/knob. Individual callers may still
+// override knob size or per-part padding afterwards if needed.
+void ui_style_slider(lv_obj_t* slider) {
+  lv_obj_set_style_bg_color(slider, COL_SLIDER_TRACK2, LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(slider, LV_OPA_COVER, LV_PART_MAIN);
+  lv_obj_set_style_border_color(slider, COL_BORDER, LV_PART_MAIN);
+  lv_obj_set_style_border_width(slider, 1, LV_PART_MAIN);
+  lv_obj_set_style_radius(slider, 4, LV_PART_MAIN);
+  lv_obj_set_style_pad_all(slider, 0, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(slider, COL_ACCENT, LV_PART_INDICATOR);
+  lv_obj_set_style_bg_opa(slider, LV_OPA_COVER, LV_PART_INDICATOR);
+  lv_obj_set_style_border_width(slider, 0, LV_PART_INDICATOR);
+  lv_obj_set_style_bg_color(slider, COL_ACCENT, LV_PART_KNOB);
+  lv_obj_set_style_bg_opa(slider, LV_OPA_COVER, LV_PART_KNOB);
+  lv_obj_set_style_border_color(slider, COL_TEXT_DIM, LV_PART_KNOB);
+  lv_obj_set_style_border_width(slider, 2, LV_PART_KNOB);
+  lv_obj_set_style_radius(slider, 10, LV_PART_KNOB);
+}
+
 void ui_create_action_bar(lv_obj_t* parent, lv_coord_t pad_x, lv_coord_t footer_y, lv_coord_t footer_h,
                           lv_coord_t gap, lv_coord_t left_w, lv_coord_t right_w,
                           const char* left_text, lv_event_cb_t left_cb,

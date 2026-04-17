@@ -81,7 +81,7 @@ static void back_event_cb(lv_event_t* e) {
 }
 
 static void angle_adj_cb(lv_event_t* e) {
-  float delta = (float)(intptr_t)(lv_obj_t*)lv_event_get_user_data(e);
+  float delta = (float)(intptr_t)lv_event_get_user_data(e);
   editAngle += delta;
   if (editAngle < 1.0f) editAngle = 1.0f;
   if (editAngle > 360.0f) editAngle = 360.0f;
@@ -90,7 +90,7 @@ static void angle_adj_cb(lv_event_t* e) {
 }
 
 static void rpm_adj_cb(lv_event_t* e) {
-  float delta = (float)(intptr_t)(lv_obj_t*)lv_event_get_user_data(e) * 0.1f;
+  float delta = (float)(intptr_t)lv_event_get_user_data(e) * 0.1f;
   editRpm += delta;
   if (editRpm < MIN_RPM) editRpm = MIN_RPM;
   if (editRpm > speed_get_rpm_max()) editRpm = speed_get_rpm_max();
@@ -99,13 +99,13 @@ static void rpm_adj_cb(lv_event_t* e) {
 }
 
 static void dir_cb(lv_event_t* e) {
-  int index = (int)(intptr_t)(lv_obj_t*)lv_event_get_user_data(e);
+  int index = (int)(intptr_t)lv_event_get_user_data(e);
   editDir = index;
   update_dir_buttons();
 }
 
 static void repeats_adj_cb(lv_event_t* e) {
-  int delta = (int)(intptr_t)(lv_obj_t*)lv_event_get_user_data(e);
+  int delta = (int)(intptr_t)lv_event_get_user_data(e);
   editRepeats += delta;
   if (editRepeats < 1) editRepeats = 1;
   if (editRepeats > 99) editRepeats = 99;
@@ -114,7 +114,7 @@ static void repeats_adj_cb(lv_event_t* e) {
 }
 
 static void dwell_adj_cb(lv_event_t* e) {
-  float delta = (float)(intptr_t)(lv_obj_t*)lv_event_get_user_data(e) * 0.5f;
+  float delta = (float)(intptr_t)lv_event_get_user_data(e) * 0.5f;
   editDwell += delta;
   if (editDwell < 0.0f) editDwell = 0.0f;
   if (editDwell > 30.0f) editDwell = 30.0f;

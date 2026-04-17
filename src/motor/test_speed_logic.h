@@ -190,3 +190,24 @@ inline uint32_t microstep_init_default_testable(uint32_t stored) {
   if (stored != 4 && stored != 8 && stored != 16 && stored != 32) return 16;
   return stored;
 }
+
+// ───────────────────────────────────────────────────────────────────────────────
+// MILLI-HZ WITH START_SPEED FLOOR
+// Mirrors motor_milli_hz_for_rpm_calibrated() in motor.cpp — takes a calibrated
+// Hz and returns milliHz clamped to at least start_speed*1000 so the stepper
+// pulse train stays reliable at very low RPM.
+//
+// Production signature takes RPM and internally calls rpmToStepHzCalibrated;
+// the testable version takes Hz directly so it can be exercised from unit
+// tests without the calibration global.
+// ───────────────────────────────────────────────────────────────────────────────
+inline uint32_t milli_hz_floor_testable(float hz, uint32_t start_speed_hz) {
+  if (std::isnan(hz) || hz < 0.0f) hz = 0.0f;
+  double mhzD = (double)hz * 1000.0;
+  const double kMaxU32 = 4294967295.0;
+  if (mhzD > kMaxU32) mhzD = kMaxU32;
+  uint32_t mhz = (uint32_t)mhzD;
+  uint32_t floor_mhz = start_speed_hz * 1000u;
+  if (mhz < floor_mhz) mhz = floor_mhz;
+  return mhz;
+}

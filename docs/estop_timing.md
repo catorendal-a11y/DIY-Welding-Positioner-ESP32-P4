@@ -1,7 +1,7 @@
 # ESTOP Timing Verification
 
 ## Hardware: GUITION JC4880P443C (ESP32-P4 + ESP32-C6)
-## Firmware: v2.0.4 (see `FW_VERSION` in `src/config.h`)
+## Firmware: v2.0.5 (see `FW_VERSION` in `src/config.h`)
 ## Test Date: [FILL IN AFTER HARDWARE TEST]
 
 ---
@@ -42,17 +42,21 @@ RC time constant: ~1 ms. Blocks TIG HF glitches and contact bounce.
 
 ```cpp
 void IRAM_ATTR estopISR() {
-  GPIO.out1_w1ts.val = (1UL << (PIN_ENA - 32));  // ENA HIGH → disabled
-  g_estopPending = true;
-  g_wakePending = true;  // wake backlight if dimmed (Core 1 dim_update / overlay)
+  GPIO.out1_w1ts.val = (1UL << (PIN_ENA - 32));  // ENA HIGH -> disabled
+  g_estopPending.store(true, std::memory_order_release);
+  g_wakePending.store(true, std::memory_order_release);  // wake backlight if dimmed
 }
 ```
 
-(No `digitalWrite`, no stepper calls in ISR — matches `src/safety/safety.cpp`.)
+(No `digitalWrite`, no stepper calls, no `millis()` in ISR — matches `src/safety/safety.cpp`. Flags are declared in `src/app_state.h`.)
 
 ### Layer 2: State transition (< ~5 ms)
 
-`safetyTask` debounces `g_estopPending`, then `control_transition_to(STATE_ESTOP)` via CAS.
+`safetyTask` acquire-loads `g_estopPending`, debounces it, records `g_estopTriggerMs` on the debounced edge, then calls `control_transition_to(STATE_ESTOP)` via CAS.
+
+### Layer 2b: Boot-time sampling
+
+`safety_init()` samples `PIN_ESTOP` 3× with 500 µs spacing after `INPUT_PULLUP` + 2 ms settle; requires ≥2/3 LOW to treat ESTOP as pressed. GPIO34 has no internal pull-up on ESP32-P4, so this avoids false power-on ESTOPs from a floating line.
 
 ### Layer 3: UI overlay
 

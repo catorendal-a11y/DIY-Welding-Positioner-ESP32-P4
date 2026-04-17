@@ -79,7 +79,7 @@ static lv_obj_t* idleToggle = nullptr;
 static lv_obj_t* idleToggleLbl = nullptr;
 static lv_obj_t* statusLabel = nullptr;
 
-std::atomic<bool> motorConfigApplyPending{false};
+// motorConfigApplyPending is defined in src/app_state.cpp.
 
 static void back_cb(lv_event_t* e) {
   (void)e;

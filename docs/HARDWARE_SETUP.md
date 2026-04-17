@@ -81,7 +81,7 @@ Pick the row that equals **200 × (Motor Config microstep value)**. Wrong table 
 | **ENA+** | Same logic **3.3 V** (or 5 V as above) |
 | **ENA−** | **GPIO 52** (ENA) |
 
-**ALM+ / ALM−:** fault output from the driver — leave **unconnected** unless you design safe interfacing to the ESP32.
+**ALM+ / ALM−:** fault output (open-drain, **active LOW** on alarm for typical DM542T wiring to ESP GND). Firmware reads **GPIO 32** (`PIN_DRIVER_ALM`, `INPUT_PULLUP`). Wire so the pin is **HIGH when OK** and **pulled LOW on driver fault** (follow your driver manual; often ALM− to signal GND and ALM+ / opto side per datasheet). **RESET** on the ESTOP overlay stays disabled until ALM is high again and the physical E-STOP is released.
 
 - **Common GND:** Driver signal **GND** / **`COM`** / logic reference must tie to **ESP32 GND**.
 - Inputs are usually **5 V tolerant**; **3.3 V** on the `+` side often works with the opto current your manual specifies.

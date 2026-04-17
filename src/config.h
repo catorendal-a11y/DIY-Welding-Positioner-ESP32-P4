@@ -1,9 +1,8 @@
 #pragma once
-#include <atomic>
 // TIG Welding Rotator Controller - Hardware Configuration
 // Waveshare/Guition ESP32-P4 4.3" Touch Display Dev Board
 
-#define FW_VERSION "v2.0.4"
+#define FW_VERSION "v2.0.5"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // GPIO HEADER PINS (2×13 pin header)
@@ -20,6 +19,7 @@
 #define PIN_DIR_SWITCH  29   // CW/CCW direction switch (INPUT_PULLUP, LOW=CCW, HIGH=CW)
 #define PIN_POT         49   // ADC — Potentiometer speed input (ADC2_CH0)
 #define PIN_PEDAL_SW    33   // Foot pedal start switch (INPUT_PULLUP, LOW=pressed)
+#define PIN_DRIVER_ALM  32   // DM542T ALM fault (INPUT_PULLUP; LOW = driver alarm, open-drain to GND)
 #define ADS1115_ADDR    0x48 // ADS1115 I2C address when ENABLE_ADS1115_PEDAL is 1
 #ifndef ENABLE_ADS1115_PEDAL
 #define ENABLE_ADS1115_PEDAL 0  // 1 = probe touch I2C bus for ADS1115 pedal ADC (SDA7/SCL8)
@@ -39,9 +39,10 @@
 #define PIN_TOUCH_SCL    8   // I2C SCL (board internal I2C bus)
 #define TOUCH_ADDR_GT911 0x5D // GT911 default I2C address
 
-// MIPI-DSI lane configuration (ESP32-P4 hardware)
-#define MIPI_DSI_LANE_NUM       2    // 2-lane MIPI-DSI
-#define MIPI_DSI_LANE_BITRATE   (1000 * 1000 * 1000)  // 1 Gbps per lane
+// MIPI-DSI lane configuration — actual hardware settings live in display.cpp
+// (esp_lcd_dsi_bus_config_t). These macros are informational/reference only.
+#define MIPI_DSI_LANE_NUM       2           // 2-lane MIPI-DSI
+#define MIPI_DSI_LANE_BITRATE_MBPS 500u     // Matches display.cpp bus_cfg.lane_bit_rate_mbps
 
 // Display resolution
 // Physical panel: 480x800 portrait
@@ -99,16 +100,17 @@
 // ───────────────────────────────────────────────────────────────────────────────
 // DEBUG LOGGING MACROS
 // ───────────────────────────────────────────────────────────────────────────────
+// LOG_E is always compiled in — errors must be diagnosable in the field.
+// LOG_W/I/D are debug-only for quiet production serial output.
+#define LOG_E(f,...) Serial.printf("[E] " f "\n", ##__VA_ARGS__)
 #if DEBUG_BUILD
   #define LOG_D(f,...) Serial.printf("[D] " f "\n", ##__VA_ARGS__)
   #define LOG_I(f,...) Serial.printf("[I] " f "\n", ##__VA_ARGS__)
   #define LOG_W(f,...) Serial.printf("[W] " f "\n", ##__VA_ARGS__)
-  #define LOG_E(f,...) Serial.printf("[E] " f "\n", ##__VA_ARGS__)
 #else
   #define LOG_D(...) do{}while(0)
   #define LOG_I(...) do{}while(0)
   #define LOG_W(...) do{}while(0)
-  #define LOG_E(f,...) do{}while(0)  // Suppress in release build
 #endif
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -121,10 +123,8 @@ inline void sanitize_ascii(char* buf, unsigned int len) {
   }
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// CROSS-CORE FLAGS
-// ───────────────────────────────────────────────────────────────────────────────
-extern std::atomic<bool> g_wakePending;  // Core 0 sets (pot/dir/ESTOP); Core 1 clears in dim_update
+// Cross-core atomic flags (g_wakePending etc.) live in src/app_state.h.
+// Files that need them should include "app_state.h" directly.
 
 // ───────────────────────────────────────────────────────────────────────────────
 // PROTECTED GPIO — NEVER USE (ESP32-P4 specific)

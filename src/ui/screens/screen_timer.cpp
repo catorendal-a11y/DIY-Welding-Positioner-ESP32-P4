@@ -72,7 +72,7 @@ static void rpm_adj_cb(lv_event_t* e) {
 
 static void start_event_cb(lv_event_t* e) {
   if (countingDown) return;
-  if (safety_is_estop_active()) return;
+  if (safety_inhibit_motion()) return;
   if (control_get_state() != STATE_IDLE) return;
 
   countingDown = true;

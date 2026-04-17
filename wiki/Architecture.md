@@ -45,14 +45,17 @@ Any  ──> ESTOP   ──> IDLE (manual reset via Core 0)
 ## Thread Safety Patterns
 
 ### Pending-Flag Pattern (UI -> Core 0)
-UI callbacks on Core 1 set volatile flags. Core 0 tasks check and execute within their cycle:
+UI callbacks on Core 1 set `std::atomic` flags with `memory_order_release`. Core 0 tasks check them with `memory_order_acquire` and execute within their cycle. `volatile` alone is insufficient on RISC-V SMP, so all cross-core flags are `std::atomic` with explicit memory ordering. The canonical list of cross-core atomics is declared in `src/app_state.h` and defined in `src/app_state.cpp` (`g_estopPending`, `g_estopTriggerMs`, `g_uiResetPending`, `g_wakePending`, `g_flashWriting`, `g_screenRedraw`, `g_dir_switch_cache`, `motorConfigApplyPending`).
+
 ```
-UI callback (Core 1)              Core 0 task (every 5ms)
-─────────────────              ────────────────────────
-speed_slider_set(rpm)  ──>
-  sets std::atomic sliderRPM
-  speed_request_update()  ──>  speed_apply()
-  sets speedUpdatePending         checks flag, applies speed
+UI callback (Core 1)                   Core 0 task (every 5ms)
+─────────────────────                ────────────────────────
+speed_slider_set(rpm)     ──>
+  stores std::atomic sliderRPM
+  speed_request_update()  ──>       speed_apply()
+  sets speedUpdatePending             acquire-loads flag, applies speed
+                                      via motor_set_target_milli_hz()
+                                      (encapsulates g_stepperMutex)
 ```
 
 ### CAS State Transition
@@ -111,10 +114,13 @@ Preset vector access protected by `g_presets_mutex` semaphore. Copy-based API: `
 ### `src/safety/` — Emergency Stop
 
 Two-layer ESTOP architecture:
-1. **ISR layer (<0.5ms):** GPIO 34 interrupt sets ENA HIGH via direct register write + sets `g_estopPending` flag (NO function calls)
-2. **Task layer (<5ms):** `safetyTask` debounces and transitions to STATE_ESTOP
+1. **ISR layer (<0.5ms):** GPIO 34 interrupt sets ENA HIGH via direct register write + sets `g_estopPending.store(true, std::memory_order_release)` + `g_wakePending.store(true, ...)` (NO function calls — flash may be disabled during NVS writes)
+2. **Task layer (<5ms):** `safetyTask` debounces and transitions to STATE_ESTOP; stores `g_estopTriggerMs` on the debounced rising edge
 3. **UI layer:** `lvglTask` shows/hides red overlay based on current state
-4. **Reset:** UI sets `g_uiResetPending`, Core 0 processes via `controlTask`
+4. **Reset:** UI sets `g_uiResetPending.store(true, ...)`, Core 0 processes via `controlTask`
+5. **Boot sampling:** `safety_init()` takes 3 samples of `PIN_ESTOP` with 500 µs spacing after `INPUT_PULLUP` + 2 ms settle, requires ≥2/3 LOW before treating ESTOP as pressed (GPIO34 has no internal pull-up)
+
+All shared flags (`g_estopPending`, `g_estopTriggerMs`, `g_uiResetPending`, `g_wakePending`) are declared in `src/app_state.h` / defined in `src/app_state.cpp` — single source of truth.
 
 ### `src/storage/` — Persistence
 

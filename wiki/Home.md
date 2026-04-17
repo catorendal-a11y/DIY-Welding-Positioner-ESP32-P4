@@ -2,9 +2,9 @@
 
 **ESP32-P4 / C6 GUITION JC4880P443C** | Open-source firmware for TIG/MIG welding rotators
 
-## Current Status: v2.0.4 — Firmware + docs aligned with `config.h`
+## Current Status: v2.0.5 — Cross-core & error-handling cleanup
 
-Release **v2.0.4** updates the main RPM UI (pot-only gauge), jog RPM row, and SMP-related mutex/atomics. See `CHANGELOG.md` for the full list.
+Release **v2.0.5** centralises all cross-core `std::atomic` flags in `src/app_state.h`, introduces `fatal_halt()` for diagnosable init failures, makes `LOG_E` visible in release builds, adds a non-blocking ADS1115 pedal ADC path and boot-time ESTOP de-floating, and extends native tests. Release **v2.0.4** previously updated the main RPM UI (pot-only gauge), jog RPM row, and SMP-related mutex/atomics. See `CHANGELOG.md` for the full list.
 
 All core features tested and confirmed working on real hardware:
 
@@ -43,6 +43,7 @@ Open-source welding positioner controller for rotary welding tables, pipe weldin
 | Microstepping | 1/4, 1/8, 1/16, 1/32 (selectable) |
 | RPM Range | 0.001 – 3.0 RPM (`MIN_RPM`/`MAX_RPM`); UI max ≤ cap via Motor Config (NVS). Roadmap: higher limits with DM542T |
 | Storage | NVS (`Preferences`) + ArduinoJson blobs `cfg` / `prs` (16 presets, settings); one-time LittleFS import |
+| Cross-core | `std::atomic` with explicit memory ordering; single source of truth in `src/app_state.h` |
 
 ## Repository Structure
 

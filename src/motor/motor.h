@@ -37,6 +37,9 @@ void motor_refresh_hz_cache(void);
 uint32_t motor_milli_hz_for_rpm_calibrated(float rpm_workpiece_command);
 // Caller must hold g_stepperMutex.
 void motor_apply_speed_for_rpm_locked(float rpm_workpiece_command);
+// Apply a new target step rate (milliHz) with acceleration. Handles stepper mutex internally.
+// Safe to call from Core 0 tasks (motorTask). No-op if stepper not yet initialized.
+void motor_set_target_milli_hz(uint32_t mhz);
 FastAccelStepper* motor_get_stepper();  // Get stepper instance (caller must hold g_stepperMutex)
 void motor_apply_settings();  // Apply acceleration from g_settings
 

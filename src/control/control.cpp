@@ -128,7 +128,7 @@ const char* control_state_name(SystemState s) {
 // MODE CONTROL FUNCTIONS (non-blocking — set flags for controlTask)
 // ───────────────────────────────────────────────────────────────────────────────
 void control_start_continuous() {
-  if (safety_is_estop_active()) return;
+  if (safety_inhibit_motion()) return;
   pendingModeRequest.store(1, std::memory_order_release);
 }
 
@@ -137,7 +137,7 @@ void control_stop() {
 }
 
 void control_start_pulse(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
-  if (safety_is_estop_active()) return;
+  if (safety_inhibit_motion()) return;
   pendingPulseOnMs.store(on_ms, std::memory_order_release);
   pendingPulseOffMs.store(off_ms, std::memory_order_release);
   pendingPulseCycles.store(cycles, std::memory_order_release);
@@ -145,18 +145,18 @@ void control_start_pulse(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
 }
 
 void control_start_step(float angle_deg) {
-  if (safety_is_estop_active()) return;
+  if (safety_inhibit_motion()) return;
   pendingStepAngle.store(angle_deg, std::memory_order_release);
   pendingModeRequest.store(3, std::memory_order_release);
 }
 
 void control_start_jog_cw() {
-  if (safety_is_estop_active()) return;
+  if (safety_inhibit_motion()) return;
   pendingModeRequest.store(4, std::memory_order_release);
 }
 
 void control_start_jog_ccw() {
-  if (safety_is_estop_active()) return;
+  if (safety_inhibit_motion()) return;
   pendingModeRequest.store(5, std::memory_order_release);
 }
 

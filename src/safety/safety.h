@@ -4,13 +4,7 @@
 #pragma once
 #include <Arduino.h>
 #include <hal/wdt_hal.h>
-
-// ───────────────────────────────────────────────────────────────────────────────
-// SAFETY GLOBALS (shared with ISR)
-// ───────────────────────────────────────────────────────────────────────────────
-extern volatile bool g_estopPending;        // Set by ISR, cleared by safetyTask
-extern volatile uint32_t g_estopTriggerMs;  // Timestamp of ESTOP event (milliseconds, 32-bit atomic on RV32)
-extern volatile bool g_uiResetPending;      // Set by UI, processed by safety task
+#include "../app_state.h"  // g_estopPending, g_estopTriggerMs, g_uiResetPending
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SAFETY FUNCTIONS
@@ -21,6 +15,9 @@ void safety_attach_estop();            // Attach ESTOP interrupt (call after mot
 
 // ESTOP status
 bool safety_is_estop_active();         // Returns true if ESTOP is pressed
+bool safety_is_driver_alarm_latched(); // DM542T ALM held low (debounced) — blocks motion / reset
+bool safety_inhibit_motion();          // ESTOP pin OR driver alarm (use before enabling motor)
+bool safety_can_reset_from_overlay();  // ESTOP released and driver alarm clear (for RESET UI)
 bool safety_is_estop_locked();         // Returns true if in ESTOP state
 void safety_reset_estop();             // Reset ESTOP (only when physical button released)
 bool safety_check_ui_reset();          // Check if UI requested reset, process if safe

@@ -6,6 +6,7 @@
 #include "speed.h"
 #include "microstep.h"
 #include "../config.h"
+#include "../app_state.h"   // fatal_halt
 #include "../safety/safety.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
@@ -72,11 +73,13 @@ void motor_gpio_init() {
   // ESTOP input (debounce + actions in safety_task; ISR in safety module)
   pinMode(PIN_ESTOP, INPUT_PULLUP);
   pinMode(PIN_DIR_SWITCH, INPUT_PULLUP);
+  pinMode(PIN_DRIVER_ALM, INPUT_PULLUP);
 
   LOG_I("Motor GPIO init OK");
   LOG_I("  ENA=%d (must be HIGH)", digitalRead(PIN_ENA));
   LOG_I("  DIR=%d STEP=%d", digitalRead(PIN_DIR), digitalRead(PIN_STEP));
-  LOG_I("  ESTOP=%d DIR_SW=%d", digitalRead(PIN_ESTOP), digitalRead(PIN_DIR_SWITCH));
+  LOG_I("  ESTOP=%d DIR_SW=%d ALM=%d", digitalRead(PIN_ESTOP), digitalRead(PIN_DIR_SWITCH),
+        digitalRead(PIN_DRIVER_ALM));
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -86,10 +89,7 @@ void motor_init() {
   motor_gpio_init();
 
   g_stepperMutex = xSemaphoreCreateMutex();
-  if (!g_stepperMutex) {
-    LOG_E("Failed to create stepper mutex!");
-    ESP.restart();
-  }
+  if (!g_stepperMutex) fatal_halt("motor: stepper mutex alloc");
 
   // Pin stepper engine to Core 0 — motorTask, controlTask and safetyTask all run here.
   // Without pinning, FastAccelStepper's internal timer ISR may fire on Core 1
@@ -98,10 +98,7 @@ void motor_init() {
 
   // Connect stepper to step pin with RMT driver
   stepper = engine.stepperConnectToPin(PIN_STEP);
-  if (stepper == nullptr) {
-    LOG_E("FastAccelStepper init failed");
-    ESP.restart();
-  }
+  if (stepper == nullptr) fatal_halt("motor: FastAccelStepper init");
 
   int accelSteps = 7500;
   uint8_t driverKind = STEPPER_DRIVER_STANDARD;
@@ -134,12 +131,12 @@ void motor_init() {
 // MOTOR CONTROL FUNCTIONS
 // ───────────────────────────────────────────────────────────────────────────────
 void motor_run_cw() {
-  if (safety_is_estop_active()) return;
+  if (safety_inhibit_motion()) return;
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   if (stepper == nullptr) { xSemaphoreGive(g_stepperMutex); return; }
   // Re-check after mutex: ISR may have asserted ESTOP between outer check and here;
   // never pull ENA LOW if ESTOP is active (would override hardware disable path).
-  if (safety_is_estop_active()) {
+  if (safety_inhibit_motion()) {
     xSemaphoreGive(g_stepperMutex);
     return;
   }
@@ -150,10 +147,10 @@ void motor_run_cw() {
 }
 
 void motor_run_ccw() {
-  if (safety_is_estop_active()) return;
+  if (safety_inhibit_motion()) return;
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   if (stepper == nullptr) { xSemaphoreGive(g_stepperMutex); return; }
-  if (safety_is_estop_active()) {
+  if (safety_inhibit_motion()) {
     xSemaphoreGive(g_stepperMutex);
     return;
   }
@@ -181,6 +178,12 @@ void motor_halt() {
 }
 
 void motor_disable() {
+  // Safe to call before motor_init(): ENA is the only side effect and is
+  // already driven HIGH at the very top of setup(). Guard against null mutex.
+  if (g_stepperMutex == nullptr) {
+    digitalWrite(PIN_ENA, HIGH);
+    return;
+  }
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   digitalWrite(PIN_ENA, HIGH);
   xSemaphoreGive(g_stepperMutex);
@@ -248,6 +251,16 @@ void motor_apply_speed_for_rpm_locked(float rpm_workpiece_command) {
   uint32_t mhz = motor_milli_hz_for_rpm_calibrated(rpm_workpiece_command);
   stepper->setSpeedInMilliHz(mhz);
   stepper->applySpeedAcceleration();
+}
+
+void motor_set_target_milli_hz(uint32_t mhz) {
+  if (g_stepperMutex == nullptr) return;
+  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
+  if (stepper != nullptr) {
+    stepper->setSpeedInMilliHz(mhz);
+    stepper->applySpeedAcceleration();
+  }
+  xSemaphoreGive(g_stepperMutex);
 }
 
 void motor_apply_settings() {

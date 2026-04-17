@@ -45,7 +45,7 @@ void step_execute(float angle_deg) {
   LOG_I("Step mode: %.1f deg (%ld steps)", angle_deg, steps);
 
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
-  if (safety_is_estop_active()) {
+  if (safety_inhibit_motion()) {
     xSemaphoreGive(g_stepperMutex);
     return;
   }

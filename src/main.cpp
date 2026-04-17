@@ -15,10 +15,8 @@
 #include "control/control.h"
 
 #include <atomic>
-
+#include "app_state.h"
 #include "safety/safety.h"
-
-std::atomic<bool> g_wakePending{false};
 #include "storage/storage.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -56,37 +54,35 @@ void lvglTask(void* pvParameters) {
   // Initialize screens after LVGL is ready
   screens_init();
 
-  // Show boot screen during initialization
+  // Show boot screen during initialization.
+  // All lv_* calls wrapped in lvgl_lock/unlock per AGENTS.md, even in boot sequence:
+  // storageTask starts soon after and also acquires the LVGL mutex.
+  auto boot_step = [](uint8_t pct, const char* label, uint32_t delayMs) {
+    lvgl_lock();
+    screen_boot_update(pct, label);
+    lv_timer_handler();
+    lvgl_unlock();
+    vTaskDelay(pdMS_TO_TICKS(delayMs));
+  };
+
+  lvgl_lock();
   screens_show(SCREEN_BOOT);
   screen_boot_update(10, "INITIALIZING DISPLAY");
-
   for (int i = 0; i < 5; i++) {
     lv_timer_handler();
     vTaskDelay(pdMS_TO_TICKS(50));
   }
+  lvgl_unlock();
 
-  screen_boot_update(30, "LOADING SETTINGS");
-  lv_timer_handler();
-  vTaskDelay(pdMS_TO_TICKS(100));
+  boot_step(30, "LOADING SETTINGS", 100);
+  boot_step(50, "MOTOR SYSTEM",     100);
+  boot_step(70, "SAFETY SYSTEM",    100);
+  boot_step(90, "SUBSYSTEMS",       100);
+  boot_step(100, "READY",           50);
 
-  screen_boot_update(50, "MOTOR SYSTEM");
-  lv_timer_handler();
-  vTaskDelay(pdMS_TO_TICKS(100));
-
-  screen_boot_update(70, "SAFETY SYSTEM");
-  lv_timer_handler();
-  vTaskDelay(pdMS_TO_TICKS(100));
-
-  screen_boot_update(90, "SUBSYSTEMS");
-  lv_timer_handler();
-  vTaskDelay(pdMS_TO_TICKS(100));
-
-  screen_boot_update(100, "READY");
-  lv_timer_handler();
-  vTaskDelay(pdMS_TO_TICKS(50));
-
-  // Transition to main screen
+  lvgl_lock();
   screens_show(SCREEN_MAIN);
+  lvgl_unlock();
 
   for (;;) {
     screens_process_pending();
@@ -282,9 +278,11 @@ void setup() {
   // CRITICAL SAFETY: ENA MUST BE HIGH BEFORE ANYTHING ELSE
   // ─────────────────────────────────────────────────────────────────────────
   pinMode(PIN_ENA, OUTPUT);
-  digitalWrite(PIN_ENA, HIGH);
+  digitalWrite(PIN_ENA, HIGH);           // MOTOR OFF — cannot move
 
-  pinMode(PIN_PEDAL_SW, INPUT_PULLUP);   // MOTOR OFF — cannot move
+  // Foot pedal switch: active LOW, INPUT_PULLUP. Configured early so a stuck
+  // pedal cannot be read as "pressed" during motorTask init.
+  pinMode(PIN_PEDAL_SW, INPUT_PULLUP);
   // ─────────────────────────────────────────────────────────────────────────
 
   Serial.begin(115200);

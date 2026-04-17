@@ -18,10 +18,12 @@
 │                              └──────────────────────┘                            │
 │                                                                             │
 │  ISR: estopISR (FALLING edge on GPIO34)                                     │
-│  ┌─────────────────────┐                                                      │
-│  │ GPIO.out1_w1ts      │  ← ONLY GPIO write + set flag                     │
-│  │ g_estopPending=true │                                                      │
-│  └─────────────────────┘                                                      │
+│  ┌────────────────────────────────────────────┐                              │
+│  │ GPIO.out1_w1ts                             │  ← ONLY GPIO write + flags  │
+│  │ g_estopPending.store(true, release)        │                              │
+│  │ g_wakePending.store(true, release)         │                              │
+│  └────────────────────────────────────────────┘                              │
+│  (flags declared in src/app_state.h)                                         │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -151,33 +153,34 @@ ESTOP button pressed (GPIO34 LOW)
          │
          ▼
 ┌─────────────────────────────────────────┐
-│ estopISR (interrupt, IRAM_ATTR)         │
-│                                         │
-│ 1. GPIO.out1_w1ts = ENA HIGH           │
-│    → Motor disabled (direct register)  │
-│ 2. g_estopPending = true               │
-│                                         │
-│ TOTAL: ~2-3 CPU cycles                  │
-│ NO function calls, NO flash access      │
-└─────────────────┬───────────────────────┘
+│ estopISR (interrupt, IRAM_ATTR)                │
+│                                                │
+│ 1. GPIO.out1_w1ts = ENA HIGH                  │
+│    → Motor disabled (direct register)         │
+│ 2. g_estopPending.store(true, release)        │
+│ 3. g_wakePending.store(true, release)         │
+│                                                │
+│ TOTAL: ~2-3 CPU cycles                         │
+│ NO function calls, NO flash access             │
+└─────────────────┬──────────────────────────────┘
                   │
                   │  (next 1ms safetyTask loop)
                   ▼
-┌─────────────────────────────────────────┐
-│ safetyTask (Core 0, priority 5)         │
-│                                         │
-│ 1. WDT feed                            │
-│ 2. if (g_estopPending)                 │
-│    a. g_estopTriggerMs = millis()      │
-│    b. estopStepper->forceStop()         │
-│    c. Wait 5ms (debounce)              │
-│    d. Verify PIN still LOW              │
-│    e. control_transition_to(STATE_ESTOP)│
-│       → motor_halt()                   │
-│       → estopLocked = true             │
-│    f. g_estopPending = false            │
-│    g. g_estopTriggerMs = 0             │
-└─────────────────────────────────────────┘
+┌────────────────────────────────────────────────┐
+│ safetyTask (Core 0, priority 5)                │
+│                                                │
+│ 1. WDT feed                                    │
+│ 2. if (g_estopPending.load(acquire))           │
+│    a. g_estopTriggerMs.store(millis(), release)│
+│    b. estopStepper->forceStop()                │
+│    c. Wait 5ms (debounce)                      │
+│    d. Verify PIN still LOW                     │
+│    e. control_transition_to(STATE_ESTOP)       │
+│       → motor_halt()                          │
+│       → estopLocked.store(true, release)       │
+│    f. g_estopPending.store(false, release)     │
+│    g. g_estopTriggerMs.store(0, release)       │
+└────────────────────────────────────────────────┘
 ```
 
 ---
@@ -298,17 +301,24 @@ The callback is marked `IRAM_ATTR` which is correct — it ensures the function 
 
 ## SHARED STATE BETWEEN CORES
 
+All cross-core atomic flags below are declared in `src/app_state.h` and defined in `src/app_state.cpp` (single source of truth).
+
 | Variable | Type | Writer | Reader | Protection |
 |---|---|---|---|---|
-| `currentState` | `atomic<SystemState>` | controlTask | All | Lock-free atomic |
-| `g_estopPending` | `volatile bool` | estopISR | safetyTask | Single writer ISR |
-| `g_estopTriggerMs` | `volatile uint32_t` | safetyTask | safetyTask | Single task |
+| `currentState` | `atomic<SystemState>` | controlTask | All | Lock-free atomic + CAS |
+| `g_estopPending` | `std::atomic<bool>` | estopISR | safetyTask | release/acquire ordering |
+| `g_estopTriggerMs` | `std::atomic<uint32_t>` | safetyTask | safetyTask | release/acquire ordering |
+| `g_uiResetPending` | `std::atomic<bool>` | lvglTask (estop overlay) | controlTask | release/acquire ordering |
+| `g_wakePending` | `std::atomic<bool>` | estopISR / boot | lvglTask (dim) | release/acquire ordering |
+| `g_flashWriting` | `std::atomic<bool>` | storageTask | lvglTask | release/acquire ordering |
+| `g_screenRedraw` | `std::atomic<bool>` | lvglTask (callbacks) | lvglTask | release/acquire ordering |
+| `g_dir_switch_cache` | `std::atomic<bool>` | safetyTask / motorTask | motorTask / UI | release/acquire ordering |
+| `motorConfigApplyPending` | `std::atomic<bool>` | lvglTask (callbacks) | motorTask | release/acquire ordering |
 | `sliderRPM` | `atomic<float>` | lvglTask (callbacks) | motorTask | Lock-free atomic |
 | `cachedTargetRpm` | `atomic<float>` | motorTask | motorTask | Lock-free atomic |
 | `jogRPM` | `atomic<float>` | lvglTask (callbacks) | jog.cpp | Lock-free atomic |
 | `pendingJogSpeed` | `atomic<float>` | lvglTask (callbacks) | motorTask | Lock-free atomic |
-| `motorConfigApplyPending` | `atomic<bool>` | lvglTask (callbacks) | motorTask | Lock-free atomic |
-| `g_settings` | plain struct | lvglTask + storageTask | All | NOT protected — single-writer-at-a-time assumed |
+| `g_settings` | plain struct | lvglTask + storageTask | All | `g_settings_mutex` on cross-core touches |
 | `g_presets` | vector | storageTask + lvglTask | lvglTask | `g_presets_mutex` |
 | `g_accent` | `lv_color_t` | lvglTask | lvglTask (via COL_ACCENT) | No mutex needed — same core |
 
@@ -318,19 +328,20 @@ The callback is marked `IRAM_ATTR` which is correct — it ensures the function 
 
 ### 1. Add flash write guard to lvglTask (fixes blue screen)
 
+> **Status (v2.0.5):** `g_flashWriting` already exists as `std::atomic<bool>` in `src/app_state.h` / `src/app_state.cpp`. Tightening the `lvglTask` loop to skip work during the cache-off window is still optional cosmetic work.
+
 ```cpp
-// In storage.cpp:
-volatile bool g_flashWriteInProgress = false;
+// Declared in src/app_state.h:
+extern std::atomic<bool> g_flashWriting;
 
-void storage_save_settings_internal() {
-  g_flashWriteInProgress = true;
-  // ... existing write code ...
-  g_flashWriteInProgress = false;
-}
+// In storage.cpp (storage_save_settings_internal / _presets_internal):
+g_flashWriting.store(true, std::memory_order_release);
+// ... existing write code ...
+g_flashWriting.store(false, std::memory_order_release);
 
-// In main.cpp lvglTask loop:
+// In main.cpp lvglTask loop (optional):
 for (;;) {
-  if (!g_flashWriteInProgress) {
+  if (!g_flashWriting.load(std::memory_order_acquire)) {
     screens_process_pending();
     lvgl_lock();
     lv_timer_handler();

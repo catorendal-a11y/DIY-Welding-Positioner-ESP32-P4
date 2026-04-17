@@ -94,13 +94,10 @@ extern SemaphoreHandle_t g_presets_mutex;
 extern SystemSettings g_settings;
 extern SemaphoreHandle_t g_settings_mutex;
 extern SemaphoreHandle_t g_nvs_mutex;
-extern std::atomic<bool> g_dir_switch_cache;
 
-// Flash write coordination — set true during NVS writes (flash cache may be disabled).
-// lvglTask skips rendering while this is true to prevent blue screen flashes
-// caused by CPU cache being disabled during flash operations.
-extern std::atomic<bool> g_flashWriting;
-extern std::atomic<bool> g_screenRedraw;
+// Cross-core atomics (g_dir_switch_cache, g_flashWriting, g_screenRedraw)
+// are declared in app_state.h.
+#include "../app_state.h"
 
 // Core functions
 void storage_init();

@@ -4,7 +4,7 @@
 
 ### Precision Multi-Mode Welding Rotator for TIG, MIG, and Pipe Welding
 
-**ESP32-P4 &nbsp;&middot;&nbsp; Firmware v2.0.4**
+**ESP32-P4 &nbsp;&middot;&nbsp; Firmware v2.0.5**
 
 <sub>GUITION JC4880P443C 4.3" touch display board.</sub>
 
@@ -83,7 +83,13 @@ Open-source welding positioner controller with a glove-safe industrial touch UI 
    pio run -t upload -e esp32p4-debug
    ```
 
-5. **Connect hardware** per the [wiring diagram](#wiring-diagram) below.
+5. **(Optional) Run native unit tests** — pure logic, no hardware required:
+
+   ```bash
+   pio test -e native
+   ```
+
+6. **Connect hardware** per the [wiring diagram](#wiring-diagram) below.
 
 ---
 
@@ -105,15 +111,16 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 |:---|:---|
 | **Welding Modes** | 5 modes — Continuous, Jog, Pulse, Step, and Countdown (configurable 1-10s delay) |
 | **Speed Control** | Live RPM via **potentiometer** on the main screen; touch **+/-** on **Jog** (and presets/settings where applicable) |
-| **Foot Pedal** | Analog speed input (via ADS1115 I2C ADC) + digital start switch |
+| **Foot Pedal** | Digital start switch (GPIO 33); optional analog speed via ADS1115 I2C ADC (opt-in with `ENABLE_ADS1115_PEDAL=1`, non-blocking I2C reads in `motorTask`) |
 | **Direction Switch** | Physical CW/CCW toggle (GPIO 29) |
+| **Driver Fault** | DM542T `ALM` fault input on GPIO 32 (open-drain, `INPUT_PULLUP`, LOW = alarm) |
 | **Touch UI** | LVGL 9.x glove-safe interface, high-contrast dark theme, 8 accent colors |
 | **Program Presets** | Save/load up to 16 welding parameter sets to **NVS** (flash, JSON blobs) |
 | **Motor Config** | Microstepping (1/4 – 1/32), acceleration, calibration, direction invert |
 | **Display Settings** | Brightness slider, dim timeout, theme color selection |
 | **System Info** | Live CPU core load, free heap, PSRAM usage, uptime |
-| **Hardware Safety** | NC E-STOP interrupt (<0.5 ms), software watchdog, CAS state transitions; dimmed backlight wakes on ESTOP |
-| **Thread Safety** | Mutex-protected stepper access, atomic cross-core variables, pending-flag patterns |
+| **Hardware Safety** | NC E-STOP interrupt (<0.5 ms), software watchdog, CAS state transitions, boot-time ESTOP de-floating (3-sample majority vote), `fatal_halt()` with serial-visible reason on unrecoverable init errors; dimmed backlight wakes on ESTOP |
+| **Thread Safety** | FreeRTOS mutex-protected stepper access, `std::atomic` cross-core variables with explicit memory ordering (single source of truth in `src/app_state.h`), pending-flag patterns |
 
 ---
 
@@ -121,29 +128,28 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 
 The interface is built from many full-screen flows and editors—each purpose-built for industrial use with glove-safe touch targets (see `docs/images/ui_screens.svg` for the full visual map). In firmware, root views are registered as **`ScreenId` values** in `src/ui/screens.h`: there are **19** distinct roots from `SCREEN_MAIN` through `SCREEN_ABOUT` (including boot, confirm, preset editors, settings hub, modes, programs, calibration, motor config, display, about, etc.), plus a separate full-screen **E-STOP overlay** module that is not a `ScreenId` but can appear over any active screen. Older documentation sometimes referred to a larger “screen count” when counting every mockup panel separately; the numbers above match the current C++ registry.
 
-| Screen | Description |
-|:---|:---|
-| **Boot** | Startup splash / transition to main |
-| **Main** | Large RPM gauge (pot-driven), start/stop, mode quick-access (no main-screen RPM +/-) |
-| **Menu** | Advanced mode selection and settings |
-| **Continuous** | Constant rotation at set RPM |
-| **Jog** | Touch-and-hold rotation for manual positioning |
-| **Pulse** | ON/OFF cycle for tack welding |
-| **Step** | Rotate exact angle, then stop |
-| **Countdown** | Visual 3-2-1 before rotation starts |
-| **Programs** | Preset list with save, load, delete |
-| **Program Edit** | Full preset editor with on-screen keyboard |
-| **Edit Pulse** | Quick preset edit for pulse parameters |
-| **Edit Step** | Quick preset edit for step parameters |
-| **Edit Continuous** | Quick preset edit for continuous / RPM preset fields |
-| **Settings** | Hub for Display, System Info, Calibration, Motor Config, About |
-| **Display** | Brightness slider, dim timeout |
-| **System Info** | Core load, heap, PSRAM, uptime |
-| **Calibration** | Motor calibration factor adjustment |
-| **Motor Config** | Microstepping, acceleration, direction switch, pedal enable |
-| **About** | Firmware version, hardware info |
-| **Confirm** | Shared confirmation dialog (destructive actions, etc.) |
-| **E-STOP Overlay** | Full-screen red overlay on any active screen |
+| Screen | `ScreenId` | Description |
+|:---|:---|:---|
+| **Boot** | `SCREEN_BOOT` | Startup splash / transition to main |
+| **Main** | `SCREEN_MAIN` | Large RPM gauge (pot-driven), start/stop, mode quick-access (no main-screen RPM +/-) |
+| **Menu** | `SCREEN_MENU` | Advanced mode selection and settings |
+| **Jog** | `SCREEN_JOG` | Touch-and-hold rotation for manual positioning (has its own RPM +/-) |
+| **Pulse** | `SCREEN_PULSE` | ON/OFF cycle for tack welding |
+| **Step** | `SCREEN_STEP` | Rotate exact angle, then stop |
+| **Timer (Countdown)** | `SCREEN_TIMER` | Visual 3-2-1 countdown before continuous rotation starts (1-10 s configurable) |
+| **Programs** | `SCREEN_PROGRAMS` | Preset list with save, load, delete |
+| **Program Edit** | `SCREEN_PROGRAM_EDIT` | Full preset editor with on-screen keyboard |
+| **Edit Pulse** | `SCREEN_EDIT_PULSE` | Quick preset edit for pulse parameters |
+| **Edit Step** | `SCREEN_EDIT_STEP` | Quick preset edit for step parameters |
+| **Edit Continuous** | `SCREEN_EDIT_CONT` | Quick preset edit for continuous / RPM preset fields |
+| **Settings** | `SCREEN_SETTINGS` | Hub for Display, System Info, Calibration, Motor Config, About |
+| **Display** | `SCREEN_DISPLAY` | Brightness slider, dim timeout, accent theme selection |
+| **System Info** | `SCREEN_SYSINFO` | Core load, heap, PSRAM, uptime |
+| **Calibration** | `SCREEN_CALIBRATION` | Motor calibration factor adjustment |
+| **Motor Config** | `SCREEN_MOTOR_CONFIG` | Microstepping, acceleration, direction switch, pedal enable |
+| **About** | `SCREEN_ABOUT` | Firmware version, hardware info |
+| **Confirm** | `SCREEN_CONFIRM` | Shared confirmation dialog (destructive actions, etc.) |
+| **E-STOP Overlay** | _(separate module, not a `ScreenId`)_ | Full-screen red overlay on any active screen |
 
 ---
 
@@ -204,15 +210,13 @@ controlTask  (pri 3, 4 KB)
 | **GPIO 50** | STEP (Output) | RMT pulse to driver PUL+ |
 | **GPIO 51** | DIR (Output) | Direction to driver DIR+ |
 | **GPIO 52** | ENABLE (Output) | Active LOW to driver ENA |
-| **GPIO 49** | POT (ADC Input) | 10k speed potentiometer |
-| **GPIO 29** | DIR SWITCH (Input) | CW/CCW toggle, INPUT_PULLUP |
-| **GPIO 34** | E-STOP (Input, ISR) | NC contact, active LOW |
-| **GPIO 35** | (no ADC) | Digital only |
-| **GPIO 33** | PEDAL SW (Input) | Foot pedal switch, active LOW |
-| GPIO 7 / 8 | Touch I2C | GT911 + ADS1115 (shared bus) |
-| GPIO 14–19, 28, 32, 54 | Board / C6 routing | On GUITION JC4880P443C some pins route to the on-board ESP32-C6; **application firmware uses only the ESP32-P4 side for control**. Do not repurpose without the vendor schematic. |
-
----
+| **GPIO 49** | POT (ADC Input) | 10k speed potentiometer (ADC2_CH0, 11 dB attenuation, ref range 0-3315) |
+| **GPIO 29** | DIR SWITCH (Input) | CW/CCW toggle, `INPUT_PULLUP` (LOW = CCW, HIGH = CW) |
+| **GPIO 34** | E-STOP (Input, ISR) | NC contact, active LOW, `FALLING` edge, 3-sample boot de-floating (no internal pull-up on ESP32-P4 — add external pull-up for long/noisy leads) |
+| **GPIO 33** | PEDAL SW (Input) | Foot pedal switch, `INPUT_PULLUP`, active LOW |
+| **GPIO 32** | DRIVER ALM (Input) | DM542T alarm input, `INPUT_PULLUP`, open-drain active LOW |
+| GPIO 7 / 8 | Touch I2C | GT911 @ 0x5D (always) + ADS1115 @ 0x48 (only when `ENABLE_ADS1115_PEDAL=1`) |
+| GPIO 14–19, 28, 54 | Board / C6 routing | On GUITION JC4880P443C some pins route to the on-board ESP32-C6; **application firmware uses only the ESP32-P4 side for control**. Do not repurpose without the vendor schematic. |
 
 ---
 
@@ -247,12 +251,12 @@ controlTask  (pri 3, 4 KB)
 | **Output RPM Range** | **0.001 – 3.0 RPM** workpiece (`MIN_RPM` / `MAX_RPM` in `config.h`); Motor Config can set a lower **max RPM** ceiling in NVS |
 | **Gear Ratio** | **1 : 108** total &ensp; (NMRV030 60:1 x spur 72/40) |
 | **Roller / workpiece (defaults)** | `D_RULLE` 80 mm roller, `D_EMNE` 300 mm reference workpiece OD — used in `rpmToStepHz()` / `angleToSteps()` (see `config.h`, `speed.cpp`) |
-| **Microstepping** | 1/4, 1/8, 1/16, 1/32 (configurable) |
+| **Microstepping** | 1/4, 1/8, 1/16 (default), 1/32 — selectable in Motor Config, persisted to NVS |
 | **Motor Torque** | 3.0 Nm (NEMA 23) |
-| **Control Resolution** | 0.01 RPM |
-| **Display** | 800 x 480, landscape, LVGL 9.x |
-| **Flash Usage** | ~27% &ensp; (1.8 MB / 6.5 MB) |
-| **RAM Usage** | ~13% &ensp; (41 KB / 320 KB) |
+| **Control Resolution** | Sub-milli-RPM (speed is computed in milli-Hz and applied via `setSpeedInMilliHz()` + `applySpeedAcceleration()`) |
+| **Display** | 800 x 480, landscape, LVGL 9.5.0, RGB565, 2-lane MIPI-DSI |
+| **Flash partition** | 16 MB total; 2x 4 MB app (OTA-capable); 8 MB storage partition |
+| **RAM Usage** | ~13% &ensp; (41 KB / 320 KB internal SRAM) — LVGL buffers live in PSRAM (`CONFIG_SPIRAM_FETCH_INSTRUCTIONS`) |
 
 ---
 
@@ -364,13 +368,30 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 
 </details>
 
+<details>
+<summary><b>ESTOP triggered at power-on with button released</b></summary>
+
+- GPIO 34 has **no internal pull-up** on ESP32-P4; a disconnected or long-wired ESTOP line can float at boot
+- v2.0.5+ samples `PIN_ESTOP` three times with 500 µs spacing (requires 2/3 LOW before treating as pressed); serial log will show `Safety init: ESTOP=PRESSED (low samples X/3)`
+- If you still see false boot ESTOPs, add an **external 10 kΩ pull-up to 3V3** on GPIO 34 and/or shorten/shield the E-STOP wiring (see `docs/EMI_MITIGATION.md`)
+
+</details>
+
+<details>
+<summary><b>Boot loop after flashing</b></summary>
+
+- Open the serial monitor — v2.0.5+ logs fatal init errors via `LOG_E` (always compiled in) before rebooting, e.g. `FATAL: storage: NVS namespace open — rebooting`. The reason string tells you which subsystem failed.
+- Common causes: corrupt NVS (erase flash and retry), missing partition (`default_16MB.csv`), or hardware not powered (driver unpowered when motor init runs)
+
+</details>
+
 ---
 
 ## Known Limitations
 
 - Single-axis control only
 - Basic PUL/DIR drivers have no anti-resonance DSP — DM542T recommended for higher RPM
-- GPIO 14–19, 28, 32, 54 may be tied to the on-board ESP32-C6 per PCB — confirm the board pinout before using as GPIO for custom circuits
+- GPIO 14–19, 28, 54 may be tied to the on-board ESP32-C6 per PCB — confirm the board pinout before using as GPIO for custom circuits
 
 ---
 
@@ -381,7 +402,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - [x] 5 welding modes (Continuous, Jog, Pulse, Step, Timer)
 - [x] Program preset storage (NVS JSON blobs, 16 slots; legacy LittleFS migration on boot)
 - [x] Live RPM adjustment (pot on main; touch +/- on Jog and in program flows)
-- [x] Foot pedal support
+- [x] Foot pedal support (digital + optional ADS1115 analog)
 - [x] Direction switch
 - [x] 8 accent color themes
 - [x] Display settings (brightness, dim timeout)
@@ -391,6 +412,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - [x] Countdown before start (configurable 1-10s delay with visual countdown)
 - [x] LVGL async object deletion + widget invalidation pattern
 - [x] E-STOP wakes dimmed display (backlight / dim pipeline, v2.0.3+)
+- [x] v2.0.5: centralised cross-core atomics in `src/app_state.h`, `fatal_halt()` with serial-visible reason, `LOG_E` always compiled in, boot-time ESTOP de-floating, non-blocking ADS1115 pedal ADC, extended native tests
 
 ---
 
@@ -398,27 +420,34 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 
 ```
 src/
-  main.cpp                  Setup, FreeRTOS tasks
-  config.h                  Pinouts, gear ratio, RPM limits
+  main.cpp                  Setup, FreeRTOS tasks (Core 0 / Core 1 pinning)
+  config.h                  Pinouts, gear ratio, RPM limits, log macros
+  app_state.h/cpp           Single source of truth for cross-core std::atomic flags
+                              (g_estopPending, g_uiResetPending, g_wakePending,
+                               g_flashWriting, g_screenRedraw, g_dir_switch_cache,
+                               motorConfigApplyPending) + fatal_halt()
   control/                  State machine + welding modes
     control.cpp               Core state machine with CAS transitions
     modes/                    continuous, jog, pulse, step_mode, timer
   motor/                    Stepper driver
-    motor.cpp                 FastAccelStepper init, run, stop
-    speed.cpp                 ADC pot, pedal, direction, RPM control
+    motor.cpp                 FastAccelStepper init, run, stop, motor_set_target_milli_hz()
+    speed.cpp                 ADC pot, pedal (non-blocking ADS1115 state machine), direction, RPM
     acceleration.cpp          Acceleration ramps
     microstep.cpp             Microstepping config
     calibration.cpp           Calibration factor
   safety/                   E-STOP + watchdog
-    safety.cpp                ISR, UI reset, state guard
+    safety.cpp                ISR (GPIO + atomic flags only), boot de-floating, UI reset, state guard
   storage/                  NVS persistence (Preferences + JSON blobs)
     storage.cpp               Settings/presets serialize, NVS mutex, LittleFS migration
   ui/                       LVGL display
     display.cpp               MIPI-DSI ST7701 init
-    lvgl_hal.cpp              Flush callback, dim, touch polling
-    theme.cpp/h               Color themes, font definitions
-    screens.cpp/h             Screen management, lazy creation
+    lvgl_hal.cpp              Flush callback (manual 90° rotation), dim, touch polling
+    theme.cpp/h               Color themes, font definitions, layout constants
+    screens.cpp/h             Screen management, lazy creation, g_lvgl_mutex
     screens/                  screen_*.cpp (19 ScreenId roots + ESTOP overlay module)
+test/
+  test_logic/               Native Unity tests (no hardware required)
+  test_device_*/            On-device integration tests (require ESP32-P4)
 docs/images/                Wiring diagrams, UI mockups
 ```
 

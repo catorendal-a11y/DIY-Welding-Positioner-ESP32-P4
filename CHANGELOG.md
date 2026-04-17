@@ -7,8 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.5] - 2026-04-17
+
 ### Changed
+- **Cross-core atomics centralised** — new `src/app_state.h` / `src/app_state.cpp` are the single source of truth for `g_estopPending`, `g_estopTriggerMs`, `g_uiResetPending`, `g_wakePending`, `g_flashWriting`, `g_screenRedraw`, `g_dir_switch_cache`, `motorConfigApplyPending`. `safety.cpp` / `safety.h`, `storage.cpp` / `storage.h`, and `main.cpp` no longer redeclare them.
+- **`volatile` → `std::atomic`** on all cross-core globals (RISC-V SMP safety): `g_estopPending`, `g_estopTriggerMs`, `estopLocked`, `estopResetPending`, `g_uiResetPending` now use `std::atomic<>` with explicit `memory_order_acquire` / `memory_order_release`.
+- **`LOG_E` is now always compiled in** (release + debug) so field failures show on serial even in silent release builds. `LOG_W`, `LOG_I`, `LOG_D` remain debug-only.
+- **`MIPI_DSI_LANE_BITRATE_MBPS` in `config.h`** — renamed and set to `500u` to reflect the value hardcoded in `display.cpp`; flagged as informational (actual PHY negotiation runs from ESP-IDF / board config).
+- **`platformio.ini`** — removed an unused/non-existent private ESP-IDF include path.
+- **`lvglTask` boot sequence (`main.cpp`)** — all `lv_timer_handler()` calls and screen updates during boot are now wrapped in `lvgl_lock()` / `lvgl_unlock()`.
+- **`speed.cpp` → `motor_set_target_milli_hz()`** — stepper mutex locking for speed updates is now encapsulated inside `motor.cpp` instead of being taken directly from `speed.cpp`.
 - **`docs/images/main_screen.svg`** — matches v2.0.4 UI: larger gauge (`MAIN_GAUGE_*`), no main-screen RPM +/-, FONT_HUGE-scale RPM + unit, scale 0–3.0 RPM, **X STOP**, pot hint.
+
+### Added
+- **`fatal_halt(const char* reason)`** (`src/app_state.h/cpp`) — logs reason via `LOG_E`, drains serial, then reboots. Replaces direct `ESP.restart()` in `storage.cpp` and `motor.cpp` init paths with diagnosable error strings (e.g. `"storage: NVS namespace open"`, `"motor: FastAccelStepper init"`).
+- **Non-blocking ADS1115 pedal ADC** — new `ads_poll_and_start()` state machine in `src/motor/speed.cpp` so `motorTask` never blocks on I2C during its 5 ms loop. Blocking helper reserved for `speed_init()`.
+- **Boot-time ESTOP de-floating** — `safety_init()` samples `PIN_ESTOP` three times with 500 µs spacing after `INPUT_PULLUP` + 2 ms settle, requiring ≥2/3 LOW before treating ESTOP as pressed. Protects against false boot ESTOPs from floating GPIO34 (no internal pull-ups on this pin).
+- **`motor_set_target_milli_hz()`** public API in `motor.h` (handles `g_stepperMutex` internally + `applySpeedAcceleration()`).
+- **Native tests** — 8 new cases for `milli_hz_floor_testable`: zero, negative, NaN, values at / below / above floor, and `UINT32_MAX` saturation. All native tests pass.
+
+### Fixed
+- **`motor_disable()`** — added `g_stepperMutex != nullptr` guard (previously could dereference null if called before `motor_init()`).
+- **`speed_apply()`** — `motor_is_running()` was called twice per cycle, each acquiring `g_stepperMutex`; now cached in a local at the top of the function.
+
+### Removed
+- **Build artefacts / IDE scratch** — `.cache/`, `.venv/`, `.ruff_cache/`, and `compile_commands.json` (11 MB) are now gitignored. Stale `build_log*.txt`, `nm*.txt`, `commit_out.txt`, etc. removed from repo root.
+
+### Documentation
+- **STATUS.md**, **README.md**, **AGENTS.md**, **CLAUDE.md**, **CONTRIBUTING.md**, **wiki/Troubleshooting.md**, **wiki/Home.md**, **wiki/Roadmap.md**, **wiki/Architecture.md**, **docs/SAFETY_SYSTEM.md**, **docs/estop_timing.md**, **docs/PROJECT_IMPLEMENTATION.md**, **PROCESS_ANALYSIS.md** updated to reflect `std::atomic` cross-core model, `app_state.h` single source of truth, `fatal_halt()`, ESTOP boot sampling, non-blocking pedal ADC, and the `MIPI_DSI_LANE_BITRATE_MBPS` rename.
 
 ## [2.0.4] - 2026-04-12
 

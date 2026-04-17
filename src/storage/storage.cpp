@@ -16,9 +16,7 @@ SemaphoreHandle_t g_presets_mutex;
 SemaphoreHandle_t g_settings_mutex;
 SemaphoreHandle_t g_nvs_mutex;
 SystemSettings g_settings = { 7500, 16, MAX_RPM, 1.0f, 150, 60, true, false, 0, 3, STEPPER_DRIVER_DM542T, 1 };
-std::atomic<bool> g_dir_switch_cache{true};
-std::atomic<bool> g_flashWriting{false};
-std::atomic<bool> g_screenRedraw{false};
+// Cross-core atomics (g_dir_switch_cache, g_flashWriting, g_screenRedraw) live in app_state.cpp.
 
 static std::atomic<bool> savePending{false};
 static uint32_t lastSaveMs = 0;
@@ -35,26 +33,16 @@ static bool storage_parse_presets_buffer(const uint8_t* data, size_t len);
 void storage_init() {
     LOG_I("Initializing NVS storage...");
     g_nvs_mutex = xSemaphoreCreateMutex();
-    if (!g_nvs_mutex) {
-        LOG_E("Failed to create NVS mutex!");
-        ESP.restart();
-    }
+    if (!g_nvs_mutex) fatal_halt("storage: NVS mutex alloc");
     g_presets_mutex = xSemaphoreCreateMutex();
-    if (!g_presets_mutex) {
-        LOG_E("Failed to create presets mutex!");
-        ESP.restart();
-    }
+    if (!g_presets_mutex) fatal_halt("storage: presets mutex alloc");
     g_settings_mutex = xSemaphoreCreateMutex();
-    if (!g_settings_mutex) {
-        LOG_E("Failed to create settings mutex!");
-        ESP.restart();
-    }
+    if (!g_settings_mutex) fatal_halt("storage: settings mutex alloc");
 
     xSemaphoreTake(g_nvs_mutex, portMAX_DELAY);
     if (!g_prefs.begin(NVS_NS, false)) {
-        LOG_E("NVS namespace open failed");
         xSemaphoreGive(g_nvs_mutex);
-        ESP.restart();
+        fatal_halt("storage: NVS namespace open");
     }
     g_prefs_open = true;
     xSemaphoreGive(g_nvs_mutex);

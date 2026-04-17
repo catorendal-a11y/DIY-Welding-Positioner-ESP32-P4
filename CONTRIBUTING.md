@@ -88,7 +88,7 @@ controlTask (pri 3, 4KB)
 - **Header guards:** `#pragma once` exclusively
 - **No namespaces** — module prefixes (`motor_`, `safety_`, `control_`, `screen_`)
 - **No classes** — free functions with file-scope statics
-- **Error handling:** `LOG_E()`, `LOG_W()`, `LOG_I()`, `LOG_D()` macros (suppressed in release)
+- **Error handling:** `LOG_E()` is **always compiled in** (release + debug) so field failures show up on serial; `LOG_W/I/D` are debug-build only. Use `fatal_halt("<context>")` from `src/app_state.h` for unrecoverable init errors instead of calling `ESP.restart()` directly.
 - **Safe strings:** `strlcpy()` (not `strcpy` or `strncpy`)
 
 ### Naming Conventions

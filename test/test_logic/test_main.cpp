@@ -998,6 +998,58 @@ void test_microstep_init_invalid() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 16b: MILLI-HZ START_SPEED FLOOR
+// Mirrors motor_milli_hz_for_rpm_calibrated in motor.cpp
+// ═══════════════════════════════════════════════════════════════════════════════
+void test_milli_hz_zero_hz_clamps_to_floor() {
+  uint32_t mhz = milli_hz_floor_testable(0.0f, 100u);
+  TEST_ASSERT_EQUAL_UINT32(100u * 1000u, mhz);
+}
+
+void test_milli_hz_negative_hz_clamps_to_floor() {
+  // Negative inputs must be treated as zero, then floored.
+  uint32_t mhz = milli_hz_floor_testable(-5.0f, 100u);
+  TEST_ASSERT_EQUAL_UINT32(100u * 1000u, mhz);
+}
+
+void test_milli_hz_nan_clamps_to_floor() {
+  uint32_t mhz = milli_hz_floor_testable(NAN, 100u);
+  TEST_ASSERT_EQUAL_UINT32(100u * 1000u, mhz);
+}
+
+void test_milli_hz_above_floor_passes_through() {
+  // 5000 Hz = 5_000_000 mHz, well above 100*1000 floor.
+  uint32_t mhz = milli_hz_floor_testable(5000.0f, 100u);
+  TEST_ASSERT_EQUAL_UINT32(5000000u, mhz);
+}
+
+void test_milli_hz_just_at_floor() {
+  // 100 Hz exactly = floor = 100_000 mHz.
+  uint32_t mhz = milli_hz_floor_testable(100.0f, 100u);
+  TEST_ASSERT_EQUAL_UINT32(100u * 1000u, mhz);
+}
+
+void test_milli_hz_just_below_floor_is_raised() {
+  // 99 Hz = 99_000 mHz, below 100_000 floor → raised.
+  uint32_t mhz = milli_hz_floor_testable(99.0f, 100u);
+  TEST_ASSERT_EQUAL_UINT32(100u * 1000u, mhz);
+}
+
+void test_milli_hz_huge_value_saturates_to_u32_max() {
+  // Very large Hz must not overflow — clamped to UINT32_MAX.
+  uint32_t mhz = milli_hz_floor_testable(1e12f, 100u);
+  TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, mhz);
+}
+
+void test_milli_hz_different_floor_levels() {
+  // Floor follows start_speed param.
+  TEST_ASSERT_EQUAL_UINT32(50u * 1000u,
+      milli_hz_floor_testable(10.0f, 50u));
+  TEST_ASSERT_EQUAL_UINT32(200u * 1000u,
+      milli_hz_floor_testable(10.0f, 200u));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 17: PULSE TIME CLAMPS
 // ═══════════════════════════════════════════════════════════════════════════════
 void test_pulse_clamp_on_in_range() {
@@ -1269,6 +1321,16 @@ int main(int argc, char** argv) {
   // Section 16: Microstep init default (2 tests)
   RUN_TEST(test_microstep_init_valid);
   RUN_TEST(test_microstep_init_invalid);
+
+  // Section 16b: Milli-Hz START_SPEED floor (8 tests)
+  RUN_TEST(test_milli_hz_zero_hz_clamps_to_floor);
+  RUN_TEST(test_milli_hz_negative_hz_clamps_to_floor);
+  RUN_TEST(test_milli_hz_nan_clamps_to_floor);
+  RUN_TEST(test_milli_hz_above_floor_passes_through);
+  RUN_TEST(test_milli_hz_just_at_floor);
+  RUN_TEST(test_milli_hz_just_below_floor_is_raised);
+  RUN_TEST(test_milli_hz_huge_value_saturates_to_u32_max);
+  RUN_TEST(test_milli_hz_different_floor_levels);
 
   // Section 17: Pulse time clamps (6 tests)
   RUN_TEST(test_pulse_clamp_on_in_range);

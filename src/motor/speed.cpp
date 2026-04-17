@@ -57,6 +57,7 @@ static bool ads_i2c_read_reg(uint8_t reg, uint16_t* out) {
   return true;
 }
 
+// Synchronous blocking read — used only at init. Do not call from motorTask.
 static int16_t ads_read_channel0_blocking() {
   if (!s_ads_dev) return 0;
   uint16_t config = ADS_CFG_CQUE_1CONV | ADS_CFG_CLAT_NONLAT | ADS_CFG_CPOL_ACTVLOW | ADS_CFG_CMODE_TRAD
@@ -73,6 +74,43 @@ static int16_t ads_read_channel0_blocking() {
   uint16_t raw = 0;
   if (!ads_i2c_read_reg(ADS_REG_PTR_CONVERT, &raw)) return 0;
   return (int16_t)raw;
+}
+
+// Non-blocking ADS1115 state machine — fits inside motorTask 5ms budget.
+// ADS1115 @ 128 SPS needs ~8ms; we start a conversion on one tick and read the
+// result on a later tick instead of polling-blocking on I2C.
+enum AdsState : uint8_t { ADS_IDLE, ADS_CONVERTING };
+static AdsState s_adsState = ADS_IDLE;
+static uint32_t s_adsStartedMs = 0;
+static int16_t s_adsLastValue = 0;
+
+// Kick off a new conversion (non-blocking). Returns false on I2C error.
+static bool ads_start_conversion() {
+  if (!s_ads_dev) return false;
+  uint16_t config = ADS_CFG_CQUE_1CONV | ADS_CFG_CLAT_NONLAT | ADS_CFG_CPOL_ACTVLOW | ADS_CFG_CMODE_TRAD
+      | ADS_CFG_MODE_SINGLE | ADS_CFG_PGA_4_096V | ADS_CFG_DR_128SPS | ADS_CFG_MUX_SINGLE_0 | ADS_CFG_OS_START;
+  return ads_i2c_write_reg(ADS_REG_PTR_CONFIG, config);
+}
+
+// If a conversion is in flight and >= ~8ms old, read and complete it.
+// Returns true when a fresh value was fetched; *out holds last good value.
+static bool ads_poll_and_start(int16_t* out) {
+  const uint32_t now = millis();
+  if (s_adsState == ADS_CONVERTING && (now - s_adsStartedMs) >= 9u) {
+    uint16_t raw = 0;
+    if (ads_i2c_read_reg(ADS_REG_PTR_CONVERT, &raw)) {
+      s_adsLastValue = (int16_t)raw;
+    }
+    s_adsState = ADS_IDLE;
+  }
+  if (s_adsState == ADS_IDLE) {
+    if (ads_start_conversion()) {
+      s_adsState = ADS_CONVERTING;
+      s_adsStartedMs = now;
+    }
+  }
+  if (out) *out = s_adsLastValue;
+  return s_adsState == ADS_IDLE;  // Unused for now; informational.
 }
 #endif
 
@@ -223,7 +261,8 @@ void speed_update_adc() {
 
 #if ENABLE_ADS1115_PEDAL
   if (pedalEnabled.load(std::memory_order_acquire) && ads1115Connected) {
-    int16_t adsVal = ads_read_channel0_blocking();
+    int16_t adsVal = 0;
+    ads_poll_and_start(&adsVal);  // non-blocking; returns last known value
     float pedalAdc = (float)adsVal * ADS1115_TO_ADC_SCALE;
     if (pedalSettingsTick) {
       pedalFiltered = pedalAdc;
@@ -279,14 +318,17 @@ bool speed_using_slider() {
 }
 
 void speed_apply() {
+  // Cache motor_is_running() once — each call takes g_stepperMutex.
+  const bool motorRunning = motor_is_running();
+
   bool pedOn = pedalEnabled.load(std::memory_order_acquire);
   bool usePedal = pedOn && pedalFiltered > 100.0f && pedalFiltered < 3900.0f;
   float activeAdc = usePedal ? pedalFiltered : adcFiltered;
   float adc = constrain(activeAdc, 0.0f, 4095.0f);
   float normalized = (3315.0f - adc) / 3315.0f;
   normalized = constrain(normalized, 0.0f, 1.0f);
-  float snapMax = motor_is_running() ? (float)POT_ADC_SNAP_MAX_RPM_RUNNING
-                                     : (float)POT_ADC_SNAP_MAX_RPM;
+  float snapMax = motorRunning ? (float)POT_ADC_SNAP_MAX_RPM_RUNNING
+                               : (float)POT_ADC_SNAP_MAX_RPM;
   if (snapMax > 0.0f && adc <= snapMax) {
     normalized = 1.0f;
   }
@@ -313,19 +355,13 @@ void speed_apply() {
     cachedTargetRpm.store(pot_rpm, std::memory_order_relaxed);
   }
 
-  if (!motor_is_running()) return;
+  if (!motorRunning) return;
   SystemState state = control_get_state();
   if (state == STATE_JOG || state == STATE_STEP || state == STATE_STOPPING || state == STATE_ESTOP) return;
 
-  uint32_t mhz = motor_milli_hz_for_rpm_calibrated(cachedTargetRpm);
-
-  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
-  FastAccelStepper* stepper = motor_get_stepper();
-  if (stepper != nullptr) {
-    stepper->setSpeedInMilliHz(mhz);
-    stepper->applySpeedAcceleration();
-  }
-  xSemaphoreGive(g_stepperMutex);
+  uint32_t mhz = motor_milli_hz_for_rpm_calibrated(
+      cachedTargetRpm.load(std::memory_order_relaxed));
+  motor_set_target_milli_hz(mhz);
 }
 
 void speed_request_update() {

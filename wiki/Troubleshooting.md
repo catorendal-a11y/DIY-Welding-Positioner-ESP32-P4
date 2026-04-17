@@ -111,9 +111,13 @@
 - If motor moves on boot, check for hardware wiring issue with ENA pin
 
 ### E-STOP reset doesn't work
-- Tap the red overlay to dismiss — sets `g_uiResetPending` flag
+- Tap the red overlay to dismiss — sets `g_uiResetPending.store(true, std::memory_order_release)` (declared in `src/app_state.h`)
 - `controlTask` on Core 0 processes the reset via `safety_check_ui_reset()`
 - State transitions use CAS pattern to prevent race conditions
+
+### ESTOP triggered at power-on even though the button isn't pressed
+- GPIO34 has **no internal pull-up** on ESP32-P4 and can float during boot if the E-STOP loop is disconnected or long-wired
+- v2.0.5+: `safety_init()` samples `PIN_ESTOP` three times with 500 µs spacing after `INPUT_PULLUP` + 2 ms settle, and requires ≥2/3 LOW before treating ESTOP as pressed. If you still see "ESTOP=PRESSED (low samples X/3)" with the button released, add an **external pull-up** to 3V3 (e.g. 10 kΩ) on the E-STOP input and/or shorten/shield the wiring (see `EMI_MITIGATION.md`).
 
 ## Keyboard Crash
 

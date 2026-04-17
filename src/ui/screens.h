@@ -4,7 +4,7 @@
 #pragma once
 #include "lvgl.h"
 #include "../storage/storage.h"  // For Preset type
-#include <atomic>
+#include "../app_state.h"        // motorConfigApplyPending and friends
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
@@ -16,8 +16,6 @@ void lvgl_unlock();
 // GLOBAL SCREEN ROOTS ARRAY
 // ───────────────────────────────────────────────────────────────────────────────
 extern lv_obj_t* screenRoots[];
-
-extern std::atomic<bool> motorConfigApplyPending;
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN ENUM

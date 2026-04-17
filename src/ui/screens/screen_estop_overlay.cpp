@@ -17,28 +17,92 @@
 static lv_obj_t* estopOverlay   = nullptr;
 static lv_obj_t* resetBtn       = nullptr;
 static lv_obj_t* warningLabel   = nullptr;
+static lv_obj_t* estopTitleLabel = nullptr;
+static lv_obj_t* estopSubtitleLabel = nullptr;
+static lv_obj_t* estopBottomHint = nullptr;
 static lv_obj_t* infoLabels[6]  = {nullptr};
+static lv_obj_t* s_redTint        = nullptr;
+static lv_obj_t* s_innerBorder    = nullptr;
+static lv_obj_t* s_infoPanel      = nullptr;
+static lv_obj_t* s_borderBars[4]  = {nullptr};
 static bool estopVisible = false;
 static lv_timer_t* blinkTimer = nullptr;
 static bool blinkState = false;
 static uint32_t lastOverlayUpdate = 0;
 
+static constexpr int ESTOP_FRAME_PX = 10;
+
 // ───────────────────────────────────────────────────────────────────────────────
-// BLINK TIMER CALLBACK (1 Hz)
+// Accent: E-STOP red vs driver ALM orange (same overlay, stronger presence)
+// ───────────────────────────────────────────────────────────────────────────────
+static lv_color_t estop_overlay_accent_color(void) {
+  return safety_is_driver_alarm_latched() ? lv_color_hex(0xFF9800) : COL_RED;
+}
+
+static void estop_overlay_apply_accent(void) {
+  if (!estopOverlay) return;
+  const lv_color_t accent = estop_overlay_accent_color();
+  const lv_opa_t washOpa = safety_is_driver_alarm_latched() ? 52 : 62;
+
+  if (s_redTint) {
+    lv_obj_set_style_bg_color(s_redTint, accent, 0);
+    lv_obj_set_style_bg_opa(s_redTint, washOpa, 0);
+  }
+  if (s_innerBorder) {
+    lv_obj_set_style_border_color(s_innerBorder, accent, 0);
+    lv_obj_set_style_border_opa(s_innerBorder, 200, 0);
+    lv_obj_set_style_border_width(s_innerBorder, 4, 0);
+  }
+  for (int i = 0; i < 4; i++) {
+    if (s_borderBars[i]) {
+      lv_obj_set_style_bg_color(s_borderBars[i], accent, 0);
+      lv_obj_set_style_bg_opa(s_borderBars[i], LV_OPA_COVER, 0);
+    }
+  }
+  if (s_infoPanel) {
+    lv_obj_set_style_border_color(s_infoPanel, accent, 0);
+    lv_obj_set_style_border_opa(s_infoPanel, 200, 0);
+    lv_obj_set_style_border_width(s_infoPanel, 2, 0);
+  }
+  if (warningLabel) {
+    lv_obj_set_style_text_color(warningLabel, accent, 0);
+  }
+  if (estopTitleLabel) {
+    lv_obj_set_style_text_color(estopTitleLabel, accent, 0);
+  }
+  if (estopSubtitleLabel) {
+    lv_obj_set_style_text_color(estopSubtitleLabel, accent, 0);
+  }
+  if (estopBottomHint) {
+    lv_obj_set_style_text_color(estopBottomHint, accent, 0);
+  }
+  if (resetBtn) {
+    lv_obj_set_style_border_color(resetBtn, accent, 0);
+    lv_obj_t* resetLabel = lv_obj_get_child(resetBtn, 0);
+    if (resetLabel) {
+      lv_obj_set_style_text_color(resetLabel, accent, 0);
+    }
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
+// BLINK TIMER CALLBACK (~3 Hz on warning strip)
 // ───────────────────────────────────────────────────────────────────────────────
 static void blink_timer_cb(lv_timer_t* timer) {
   if (!estopVisible) return;
 
   blinkState = !blinkState;
-  lv_obj_set_style_text_opa(warningLabel, blinkState ? LV_OPA_50 : LV_OPA_20, 0);
+  if (warningLabel) {
+    lv_obj_set_style_text_opa(warningLabel, blinkState ? LV_OPA_COVER : LV_OPA_40, 0);
+  }
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
 // RESET BUTTON EVENT
 // ───────────────────────────────────────────────────────────────────────────────
 static void reset_event_cb(lv_event_t* e) {
-  if (digitalRead(PIN_ESTOP) == HIGH) {
-    g_uiResetPending = true;
+  if (safety_can_reset_from_overlay()) {
+    g_uiResetPending.store(true, std::memory_order_release);
   }
 }
 
@@ -52,7 +116,7 @@ static lv_obj_t* create_border_bar(lv_obj_t* parent, lv_coord_t x, lv_coord_t y,
   lv_obj_set_size(bar, w, h);
   lv_obj_set_pos(bar, x, y);
   lv_obj_set_style_bg_color(bar, COL_RED, 0);
-  lv_obj_set_style_bg_opa(bar, LV_OPA_80, 0);
+  lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, 0);
   lv_obj_set_style_radius(bar, 0, 0);
   lv_obj_remove_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_remove_flag(bar, LV_OBJ_FLAG_CLICKABLE);
@@ -77,83 +141,84 @@ void estop_overlay_create() {
   // Initially hidden
   lv_obj_add_flag(estopOverlay, LV_OBJ_FLAG_HIDDEN);
 
-  // ── Red tint overlay (full screen, 8% opacity) ──
-  lv_obj_t* redTint = lv_obj_create(estopOverlay);
-  lv_obj_remove_style_all(redTint);
-  lv_obj_set_size(redTint, SCREEN_W, SCREEN_H);
-  lv_obj_set_pos(redTint, 0, 0);
-  lv_obj_set_style_bg_color(redTint, COL_RED, 0);
-  lv_obj_set_style_bg_opa(redTint, 20, 0);   // ~8% of 255
-  lv_obj_set_style_radius(redTint, 0, 0);
-  lv_obj_remove_flag(redTint, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_remove_flag(redTint, LV_OBJ_FLAG_CLICKABLE);
+  // ── Full-screen color wash (stronger than v2.0; hue follows ALM vs E-STOP) ──
+  s_redTint = lv_obj_create(estopOverlay);
+  lv_obj_remove_style_all(s_redTint);
+  lv_obj_set_size(s_redTint, SCREEN_W, SCREEN_H);
+  lv_obj_set_pos(s_redTint, 0, 0);
+  lv_obj_set_style_bg_color(s_redTint, COL_RED, 0);
+  lv_obj_set_style_bg_opa(s_redTint, 62, 0);
+  lv_obj_set_style_radius(s_redTint, 0, 0);
+  lv_obj_remove_flag(s_redTint, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_remove_flag(s_redTint, LV_OBJ_FLAG_CLICKABLE);
 
-  // ── Red border frame: 4 bars (top/bottom/left/right, 5px, 85% opacity) ──
-  create_border_bar(estopOverlay, 0, 0, SCREEN_W, 5);         // Top
-  create_border_bar(estopOverlay, 0, SCREEN_H - 5, SCREEN_W, 5); // Bottom
-  create_border_bar(estopOverlay, 0, 0, 5, SCREEN_H);         // Left
-  create_border_bar(estopOverlay, SCREEN_W - 5, 0, 5, SCREEN_H); // Right
+  // ── Border frame (thick bars, full opacity) ──
+  s_borderBars[0] = create_border_bar(estopOverlay, 0, 0, SCREEN_W, ESTOP_FRAME_PX);
+  s_borderBars[1] = create_border_bar(estopOverlay, 0, SCREEN_H - ESTOP_FRAME_PX, SCREEN_W, ESTOP_FRAME_PX);
+  s_borderBars[2] = create_border_bar(estopOverlay, 0, 0, ESTOP_FRAME_PX, SCREEN_H);
+  s_borderBars[3] = create_border_bar(estopOverlay, SCREEN_W - ESTOP_FRAME_PX, 0, ESTOP_FRAME_PX, SCREEN_H);
 
-  // ── Inner border: rect(8,8,784,464), stroke=#FF1744, opacity=20%, rx=4 ──
-  lv_obj_t* innerBorder = lv_obj_create(estopOverlay);
-  lv_obj_remove_style_all(innerBorder);
-  lv_obj_set_size(innerBorder, 784, 464);
-  lv_obj_set_pos(innerBorder, 8, 8);
-  lv_obj_set_style_border_color(innerBorder, COL_RED, 0);
-  lv_obj_set_style_border_opa(innerBorder, LV_OPA_20, 0);
-  lv_obj_set_style_border_width(innerBorder, 1, 0);
-  lv_obj_set_style_radius(innerBorder, RADIUS_CARD, 0);
-  lv_obj_set_style_bg_opa(innerBorder, LV_OPA_TRANSP, 0);
-  lv_obj_remove_flag(innerBorder, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_remove_flag(innerBorder, LV_OBJ_FLAG_CLICKABLE);
+  // ── Inner border (heavier stroke) ──
+  s_innerBorder = lv_obj_create(estopOverlay);
+  lv_obj_remove_style_all(s_innerBorder);
+  lv_obj_set_size(s_innerBorder, 784, 464);
+  lv_obj_set_pos(s_innerBorder, 8, 8);
+  lv_obj_set_style_border_color(s_innerBorder, COL_RED, 0);
+  lv_obj_set_style_border_opa(s_innerBorder, 200, 0);
+  lv_obj_set_style_border_width(s_innerBorder, 4, 0);
+  lv_obj_set_style_radius(s_innerBorder, RADIUS_CARD, 0);
+  lv_obj_set_style_bg_opa(s_innerBorder, LV_OPA_TRANSP, 0);
+  lv_obj_remove_flag(s_innerBorder, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_remove_flag(s_innerBorder, LV_OBJ_FLAG_CLICKABLE);
 
-  // ── Warning bars text: "xxx  xxx  xxx" at y=140 ──
+  // ── Warning strip (large type, fast blink) ──
   warningLabel = lv_label_create(estopOverlay);
   lv_label_set_text(warningLabel, "!!!   !!!   !!!   !!!   !!!   !!!   !!!   !!!");
-  lv_obj_set_style_text_font(warningLabel, FONT_NORMAL, 0);
+  lv_obj_set_style_text_font(warningLabel, FONT_XXL, 0);
   lv_obj_set_style_text_color(warningLabel, COL_RED, 0);
-  lv_obj_set_style_text_opa(warningLabel, LV_OPA_50, 0);
-  lv_obj_set_style_text_letter_space(warningLabel, 6, 0);
-  lv_obj_set_pos(warningLabel, 0, 140);
+  lv_obj_set_style_text_opa(warningLabel, LV_OPA_COVER, 0);
+  lv_obj_set_style_text_letter_space(warningLabel, 10, 0);
+  lv_obj_set_pos(warningLabel, 0, 118);
   lv_obj_set_width(warningLabel, SCREEN_W);
   lv_obj_set_style_text_align(warningLabel, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_remove_flag(warningLabel, LV_OBJ_FLAG_SCROLLABLE);
 
   // ── "E-STOP" title at (400,190), font-size=36 (use FONT_HUGE=40 closest) ──
-  lv_obj_t* titleLabel = lv_label_create(estopOverlay);
-  lv_label_set_text(titleLabel, "E-STOP");
-  lv_obj_set_style_text_font(titleLabel, FONT_HUGE, 0);
-  lv_obj_set_style_text_color(titleLabel, COL_RED, 0);
-  lv_obj_set_style_text_align(titleLabel, LV_TEXT_ALIGN_CENTER, 0);
-  lv_obj_set_width(titleLabel, SCREEN_W);
-  lv_obj_set_pos(titleLabel, 0, 175);
-  lv_obj_remove_flag(titleLabel, LV_OBJ_FLAG_SCROLLABLE);
+  estopTitleLabel = lv_label_create(estopOverlay);
+  lv_label_set_text(estopTitleLabel, "E-STOP");
+  lv_obj_set_style_text_font(estopTitleLabel, FONT_HUGE, 0);
+  lv_obj_set_style_text_color(estopTitleLabel, COL_RED, 0);
+  lv_obj_set_style_text_align(estopTitleLabel, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_width(estopTitleLabel, SCREEN_W);
+  lv_obj_set_style_text_opa(estopTitleLabel, LV_OPA_COVER, 0);
+  lv_obj_set_pos(estopTitleLabel, 0, 168);
+  lv_obj_remove_flag(estopTitleLabel, LV_OBJ_FLAG_SCROLLABLE);
 
-  // ── "EMERGENCY STOP ACTIVATED" at (400,218), opacity=60% ──
-  lv_obj_t* subtitleLabel = lv_label_create(estopOverlay);
-  lv_label_set_text(subtitleLabel, "EMERGENCY STOP ACTIVATED");
-  lv_obj_set_style_text_font(subtitleLabel, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(subtitleLabel, COL_RED, 0);
-  lv_obj_set_style_text_opa(subtitleLabel, LV_OPA_60, 0);
-  lv_obj_set_style_text_align(subtitleLabel, LV_TEXT_ALIGN_CENTER, 0);
-  lv_obj_set_width(subtitleLabel, SCREEN_W);
-  lv_obj_set_pos(subtitleLabel, 0, 222);
-  lv_obj_remove_flag(subtitleLabel, LV_OBJ_FLAG_SCROLLABLE);
+  // ── Subtitle (larger, full strength) ──
+  estopSubtitleLabel = lv_label_create(estopOverlay);
+  lv_label_set_text(estopSubtitleLabel, "EMERGENCY STOP ACTIVATED");
+  lv_obj_set_style_text_font(estopSubtitleLabel, FONT_XL, 0);
+  lv_obj_set_style_text_color(estopSubtitleLabel, COL_RED, 0);
+  lv_obj_set_style_text_opa(estopSubtitleLabel, LV_OPA_COVER, 0);
+  lv_obj_set_style_text_align(estopSubtitleLabel, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_width(estopSubtitleLabel, SCREEN_W);
+  lv_obj_set_pos(estopSubtitleLabel, 0, 218);
+  lv_obj_remove_flag(estopSubtitleLabel, LV_OBJ_FLAG_SCROLLABLE);
 
-  // ── Info panel: rect(100,240,600,100), fill=#0A0505, stroke=#FF1744, opa=30%, rx=4 ──
-  lv_obj_t* infoPanel = lv_obj_create(estopOverlay);
-  lv_obj_remove_style_all(infoPanel);
-  lv_obj_set_size(infoPanel, 600, 100);
-  lv_obj_set_pos(infoPanel, 100, 240);
-  lv_obj_set_style_bg_color(infoPanel, lv_color_hex(0x0A0505), 0);
-  lv_obj_set_style_bg_opa(infoPanel, LV_OPA_COVER, 0);
-  lv_obj_set_style_border_color(infoPanel, COL_RED, 0);
-  lv_obj_set_style_border_opa(infoPanel, LV_OPA_30, 0);
-  lv_obj_set_style_border_width(infoPanel, 1, 0);
-  lv_obj_set_style_radius(infoPanel, RADIUS_CARD, 0);
-  lv_obj_set_style_pad_all(infoPanel, 8, 0);
-  lv_obj_remove_flag(infoPanel, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_remove_flag(infoPanel, LV_OBJ_FLAG_CLICKABLE);
+  // ── Info panel (stronger frame) ──
+  s_infoPanel = lv_obj_create(estopOverlay);
+  lv_obj_remove_style_all(s_infoPanel);
+  lv_obj_set_size(s_infoPanel, 600, 100);
+  lv_obj_set_pos(s_infoPanel, 100, 252);
+  lv_obj_set_style_bg_color(s_infoPanel, lv_color_hex(0x0A0505), 0);
+  lv_obj_set_style_bg_opa(s_infoPanel, LV_OPA_COVER, 0);
+  lv_obj_set_style_border_color(s_infoPanel, COL_RED, 0);
+  lv_obj_set_style_border_opa(s_infoPanel, 200, 0);
+  lv_obj_set_style_border_width(s_infoPanel, 2, 0);
+  lv_obj_set_style_radius(s_infoPanel, RADIUS_CARD, 0);
+  lv_obj_set_style_pad_all(s_infoPanel, 8, 0);
+  lv_obj_remove_flag(s_infoPanel, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_remove_flag(s_infoPanel, LV_OBJ_FLAG_CLICKABLE);
 
   // Info grid: 2 rows x 3 cols — labels must match estop_overlay_update() values
   // Row 1: MODE (state), FREQ (step Hz), CURRENT (unused)
@@ -168,7 +233,7 @@ void estop_overlay_create() {
     int col = i % 3;
 
     // Label name (dim)
-    lv_obj_t* nameLbl = lv_label_create(infoPanel);
+    lv_obj_t* nameLbl = lv_label_create(s_infoPanel);
     lv_label_set_text(nameLbl, info_names[i]);
     lv_obj_set_style_text_font(nameLbl, FONT_NORMAL, 0);
     lv_obj_set_style_text_color(nameLbl, COL_RED, 0);
@@ -177,7 +242,7 @@ void estop_overlay_create() {
     lv_obj_remove_flag(nameLbl, LV_OBJ_FLAG_SCROLLABLE);
 
     // Value placeholder (dimmer)
-    lv_obj_t* valLbl = lv_label_create(infoPanel);
+    lv_obj_t* valLbl = lv_label_create(s_infoPanel);
     lv_label_set_text(valLbl, "---");
     lv_obj_set_style_text_font(valLbl, FONT_SUBTITLE, 0);
     lv_obj_set_style_text_color(valLbl, COL_RED, 0);
@@ -192,7 +257,7 @@ void estop_overlay_create() {
   resetBtn = lv_button_create(estopOverlay);
   lv_obj_remove_style_all(resetBtn);
   lv_obj_set_size(resetBtn, 300, 60);
-  lv_obj_set_pos(resetBtn, 250, 360);
+  lv_obj_set_pos(resetBtn, 250, 372);
   lv_obj_set_style_bg_color(resetBtn, COL_BG_DANGER, 0);
   lv_obj_set_style_bg_opa(resetBtn, LV_OPA_COVER, 0);
   lv_obj_set_style_border_color(resetBtn, COL_RED, 0);
@@ -208,16 +273,18 @@ void estop_overlay_create() {
   lv_obj_set_style_text_color(resetLabel, COL_RED, 0);
   lv_obj_center(resetLabel);
 
-  // ── Bottom text: "Release physical E-STOP button first" at (400,448), opacity=40% ──
-  lv_obj_t* bottomLabel = lv_label_create(estopOverlay);
-  lv_label_set_text(bottomLabel, "Release physical E-STOP button first");
-  lv_obj_set_style_text_font(bottomLabel, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(bottomLabel, COL_RED, 0);
-  lv_obj_set_style_text_opa(bottomLabel, LV_OPA_60, 0);
-  lv_obj_set_style_text_align(bottomLabel, LV_TEXT_ALIGN_CENTER, 0);
-  lv_obj_set_width(bottomLabel, SCREEN_W);
-  lv_obj_set_pos(bottomLabel, 0, 448);
-  lv_obj_remove_flag(bottomLabel, LV_OBJ_FLAG_SCROLLABLE);
+  // ── Bottom hint (ESTOP vs driver ALM) at (400,448), opacity=40% ──
+  estopBottomHint = lv_label_create(estopOverlay);
+  lv_label_set_text(estopBottomHint, "Release physical E-STOP button first");
+  lv_obj_set_style_text_font(estopBottomHint, FONT_NORMAL, 0);
+  lv_obj_set_style_text_color(estopBottomHint, COL_RED, 0);
+  lv_obj_set_style_text_opa(estopBottomHint, LV_OPA_80, 0);
+  lv_obj_set_style_text_align(estopBottomHint, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_width(estopBottomHint, SCREEN_W);
+  lv_obj_set_pos(estopBottomHint, 0, 440);
+  lv_obj_remove_flag(estopBottomHint, LV_OBJ_FLAG_SCROLLABLE);
+
+  estop_overlay_apply_accent();
 
   LOG_I("ESTOP overlay: created (brutalist v2.0)");
 }
@@ -232,9 +299,11 @@ void estop_overlay_show() {
   lv_obj_remove_flag(estopOverlay, LV_OBJ_FLAG_HIDDEN);
   estopVisible = true;
 
-  // Start blink timer
-  if (blinkTimer == 0) {
-    blinkTimer = lv_timer_create(blink_timer_cb, 500, nullptr);
+  estop_overlay_apply_accent();
+
+  // Start blink timer (~3.3 Hz on warning strip)
+  if (blinkTimer == nullptr) {
+    blinkTimer = lv_timer_create(blink_timer_cb, 300, nullptr);
   }
 
   LOG_E("ESTOP overlay: shown");
@@ -271,6 +340,13 @@ void estop_overlay_destroy() {
   }
   resetBtn = nullptr;
   warningLabel = nullptr;
+  estopTitleLabel = nullptr;
+  estopSubtitleLabel = nullptr;
+  estopBottomHint = nullptr;
+  s_redTint = nullptr;
+  s_innerBorder = nullptr;
+  s_infoPanel = nullptr;
+  for (int i = 0; i < 4; i++) s_borderBars[i] = nullptr;
   estopVisible = false;
   blinkState = false;
   for (int i = 0; i < 6; i++) infoLabels[i] = nullptr;
@@ -320,16 +396,29 @@ void estop_overlay_update() {
     lv_label_set_text(infoLabels[5], tbuf);
   }
 
-  // Enable/disable reset button based on ESTOP state
-  bool estopPressed = safety_is_estop_active();
+  if (estopTitleLabel && estopSubtitleLabel && estopBottomHint) {
+    if (safety_is_driver_alarm_latched()) {
+      lv_label_set_text(estopTitleLabel, "DRIVER FAULT");
+      lv_label_set_text(estopSubtitleLabel, "STEPPER DRIVER ALARM (ALM)");
+      lv_label_set_text(estopBottomHint, "Clear fault on driver; ALM high before RESET");
+    } else {
+      lv_label_set_text(estopTitleLabel, "E-STOP");
+      lv_label_set_text(estopSubtitleLabel, "EMERGENCY STOP ACTIVATED");
+      lv_label_set_text(estopBottomHint, "Release physical E-STOP button first");
+    }
+    estop_overlay_apply_accent();
+  }
+
+  // Enable/disable reset when ESTOP released and driver ALM clear
+  bool blockReset = !safety_can_reset_from_overlay();
   lv_obj_t* resetLabel = lv_obj_get_child(resetBtn, 0);
 
-  if (estopPressed) {
+  if (blockReset) {
     lv_obj_add_state(resetBtn, LV_STATE_DISABLED);
     lv_obj_set_style_bg_opa(resetBtn, LV_OPA_40, 0);
-    lv_obj_set_style_border_opa(resetBtn, LV_OPA_30, 0);
+    lv_obj_set_style_border_opa(resetBtn, LV_OPA_40, 0);
     if (resetLabel) {
-      lv_obj_set_style_text_opa(resetLabel, LV_OPA_30, 0);
+      lv_obj_set_style_text_opa(resetLabel, LV_OPA_40, 0);
     }
   } else {
     lv_obj_remove_state(resetBtn, LV_STATE_DISABLED);

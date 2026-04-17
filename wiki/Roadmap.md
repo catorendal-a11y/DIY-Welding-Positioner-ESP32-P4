@@ -1,6 +1,20 @@
 # Roadmap
 
-## v2.0.4 — Current Release (main UI, jog, SMP)
+## v2.0.5 — Current Release (cross-core & error-handling cleanup)
+
+### v2.0.5 (2026-04-17)
+- [x] All cross-core `std::atomic` flags centralised in `src/app_state.h` / `app_state.cpp` (single source of truth)
+- [x] `fatal_halt("<context>")` utility replaces raw `ESP.restart()` in storage/motor init paths (logs reason before reboot)
+- [x] `LOG_E` always compiled in (release + debug) so field failures are serial-visible
+- [x] Remaining `volatile` cross-core flags converted to `std::atomic` with explicit memory ordering
+- [x] Non-blocking ADS1115 pedal ADC path (state-machine poll, never stalls 5 ms motor loop)
+- [x] Boot-time ESTOP de-floating (3-sample majority vote on `INPUT_PULLUP` settle)
+- [x] `motor_set_target_milli_hz()` encapsulates stepper mutex for non-motor callers
+- [x] `lvglTask` boot sequence wrapped in `lvgl_lock()` / `lvgl_unlock()`
+- [x] Native tests extended (`milli_hz_floor` edge cases)
+- [x] Repo hygiene (`compile_commands.json`, `.cache/`, `.venv/` gitignored)
+
+## v2.0.4 — main UI, jog, SMP
 
 ### v2.0.4 (2026-04-12)
 - [x] Main screen pot-only RPM gauge (no +/-), larger gauge, centered RPM display

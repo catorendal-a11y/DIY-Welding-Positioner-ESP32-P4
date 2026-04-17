@@ -9,13 +9,16 @@
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SAFETY GLOBALS
+// Cross-core atomics live in src/app_state.cpp (see app_state.h).
 // ───────────────────────────────────────────────────────────────────────────────
-volatile bool g_estopPending = false;
-volatile uint32_t g_estopTriggerMs = 0;
-static bool estopLocked = false;
+static std::atomic<bool> estopLocked{false};
 static FastAccelStepper* estopStepper = nullptr;
-static volatile bool estopResetPending = false;
-volatile bool g_uiResetPending = false;
+static std::atomic<bool> estopResetPending{false};
+
+// DM542T ALM: open-drain active LOW on fault; INPUT_PULLUP on PIN_DRIVER_ALM.
+static bool s_driverAlarmLatched = false;
+static uint16_t s_almLowMs = 0;
+static uint16_t s_almHighMs = 0;
 
 #if DEBUG_BUILD
 static uint32_t g_estopISRCount  = 0;
@@ -37,12 +40,16 @@ void safety_cache_stepper() {
 
 // ───────────────────────────────────────────────────────────────────────────────
 // ESTOP INTERRUPT SERVICE ROUTINE
-// Layer 1: < 0.5 ms response — Direct hardware action only
+// Layer 1: < 0.5 ms response — Direct hardware action only.
+// Invariants:
+//   - No flash access (millis/forceStop/LOG_*) — cache may be disabled during
+//     LittleFS/NVS writes, would crash IWDT.
+//   - Only GPIO register writes + atomic flag stores are allowed here.
+//   - g_estopTriggerMs is set by safetyTask (after flag load), never by ISR.
 // ───────────────────────────────────────────────────────────────────────────────
 void IRAM_ATTR estopISR() {
   GPIO.out1_w1ts.val = (1UL << (PIN_ENA - 32));
-  g_estopPending = true;
-  // Pairs with dim_update() load(acquire): publish wake to Core 1 without relying on relaxed-only visibility.
+  g_estopPending.store(true, std::memory_order_release);
   g_wakePending.store(true, std::memory_order_release);
 }
 
@@ -50,18 +57,25 @@ void IRAM_ATTR estopISR() {
 // SAFETY INITIALIZATION
 // ───────────────────────────────────────────────────────────────────────────────
 void safety_init() {
-  // Configure ESTOP pin as input with pull-up
+  // Configure ESTOP pin as input with pull-up.
+  // GPIO34 has NO internal pulls on ESP32-P4 — we rely on the external NC
+  // contact pull-up. Sample a few times to reject startup glitches.
   pinMode(PIN_ESTOP, INPUT_PULLUP);
-
-  // Verify ESTOP is not pressed at boot (NC contact = HIGH when released)
-  bool estopPressed = (digitalRead(PIN_ESTOP) == LOW);
-  LOG_I("Safety init: ESTOP=%s", estopPressed ? "PRESSED" : "OK");
+  delay(2);
+  uint8_t lowCount = 0;
+  for (int i = 0; i < 3; i++) {
+    if (digitalRead(PIN_ESTOP) == LOW) lowCount++;
+    delayMicroseconds(500);
+  }
+  bool estopPressed = (lowCount >= 2);
+  LOG_I("Safety init: ESTOP=%s (low samples %u/3)",
+        estopPressed ? "PRESSED" : "OK", (unsigned)lowCount);
 
   if (estopPressed) {
     LOG_W("ESTOP pressed at boot — system locked");
-    estopLocked = true;
-    g_estopPending = true;
-    g_estopTriggerMs = millis();
+    estopLocked.store(true, std::memory_order_release);
+    g_estopPending.store(true, std::memory_order_release);
+    g_estopTriggerMs.store(millis(), std::memory_order_release);
     g_wakePending.store(true, std::memory_order_release);
   }
 
@@ -82,18 +96,30 @@ bool safety_is_estop_active() {
   return (digitalRead(PIN_ESTOP) == LOW);
 }
 
+bool safety_is_driver_alarm_latched() {
+  return s_driverAlarmLatched;
+}
+
+bool safety_inhibit_motion() {
+  return safety_is_estop_active() || s_driverAlarmLatched;
+}
+
+bool safety_can_reset_from_overlay() {
+  return (digitalRead(PIN_ESTOP) == HIGH) && !s_driverAlarmLatched;
+}
+
 bool safety_is_estop_locked() {
-  return estopLocked;
+  return estopLocked.load(std::memory_order_acquire);
 }
 
 void safety_reset_estop() {
-  estopResetPending = true;
+  estopResetPending.store(true, std::memory_order_release);
 }
 
 static void safety_handle_reset() {
   if (digitalRead(PIN_ESTOP) == HIGH) {
-    estopLocked = false;
-    g_estopPending = false;
+    estopLocked.store(false, std::memory_order_release);
+    g_estopPending.store(false, std::memory_order_release);
     LOG_I("ESTOP reset");
   } else {
     LOG_W("ESTOP reset failed - button still pressed");
@@ -101,19 +127,55 @@ static void safety_handle_reset() {
 }
 
 bool safety_check_ui_reset() {
-  if (g_uiResetPending && digitalRead(PIN_ESTOP) == HIGH) {
-    g_uiResetPending = false;
-    estopLocked = false;
-    g_estopPending = false;
+  if (g_uiResetPending.load(std::memory_order_acquire) && safety_can_reset_from_overlay()) {
+    g_uiResetPending.store(false, std::memory_order_release);
+    estopLocked.store(false, std::memory_order_release);
+    g_estopPending.store(false, std::memory_order_release);
     return true;
   }
-  g_uiResetPending = false;
+  g_uiResetPending.store(false, std::memory_order_release);
   return false;
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SAFETY TASK — Layer 2: State transition within 5 ms
 // ───────────────────────────────────────────────────────────────────────────────
+static void safety_poll_driver_alarm(void) {
+  const bool low = (digitalRead(PIN_DRIVER_ALM) == LOW);
+  if (low) {
+    s_almHighMs = 0;
+    if (s_almLowMs < 5000) {
+      s_almLowMs++;
+    }
+    if (s_almLowMs >= 5 && !s_driverAlarmLatched) {
+      s_driverAlarmLatched = true;
+      digitalWrite(PIN_ENA, HIGH);
+      g_wakePending.store(true, std::memory_order_release);
+      if (estopStepper != nullptr) {
+        if (g_stepperMutex && xSemaphoreTake(g_stepperMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+          estopStepper->forceStop();
+          xSemaphoreGive(g_stepperMutex);
+        } else {
+          estopStepper->forceStop();
+        }
+      }
+      if (control_get_state() != STATE_ESTOP) {
+        control_transition_to(STATE_ESTOP);
+        estopLocked.store(true, std::memory_order_release);
+      }
+      LOG_E("Driver ALM fault (GPIO %u)", (unsigned)PIN_DRIVER_ALM);
+    }
+  } else {
+    s_almLowMs = 0;
+    if (s_almHighMs < 5000) {
+      s_almHighMs++;
+    }
+    if (s_almHighMs >= 50) {
+      s_driverAlarmLatched = false;
+    }
+  }
+}
+
 void safetyTask(void* pvParameters) {
   LOG_I("Safety task started on Core %d", xPortGetCoreID());
   esp_task_wdt_add(NULL);  // Register with watchdog (BUG-03 fix)
@@ -126,15 +188,17 @@ void safetyTask(void* pvParameters) {
     // Feed watchdog every cycle
     safety_feed_watchdog();
 
-    // Check for pending ESTOP from ISR
-    if (estopResetPending) {
-      estopResetPending = false;
+    safety_poll_driver_alarm();
+
+    if (estopResetPending.exchange(false, std::memory_order_acq_rel)) {
       safety_handle_reset();
     }
 
-    if (g_estopPending) {
-      if (g_estopTriggerMs == 0) {
-        g_estopTriggerMs = millis();
+    if (g_estopPending.load(std::memory_order_acquire)) {
+      uint32_t trigMs = g_estopTriggerMs.load(std::memory_order_acquire);
+      if (trigMs == 0) {
+        trigMs = millis();
+        g_estopTriggerMs.store(trigMs, std::memory_order_release);
         if (estopStepper != nullptr) {
           if (g_stepperMutex && xSemaphoreTake(g_stepperMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
             estopStepper->forceStop();
@@ -145,13 +209,13 @@ void safetyTask(void* pvParameters) {
         }
       }
 
-      uint32_t elapsedMs = millis() - g_estopTriggerMs;
+      uint32_t elapsedMs = millis() - trigMs;
 
       if (elapsedMs >= 5) {
         if (digitalRead(PIN_ESTOP) == LOW) {
           if (control_get_state() != STATE_ESTOP) {
             control_transition_to(STATE_ESTOP);
-            estopLocked = true;
+            estopLocked.store(true, std::memory_order_release);
 
             #if DEBUG_BUILD
             g_estopConfirmed++;
@@ -163,8 +227,8 @@ void safetyTask(void* pvParameters) {
         } else {
           LOG_W("ESTOP glitch detected (< 5ms)");
         }
-        g_estopPending = false;
-        g_estopTriggerMs = 0;
+        g_estopPending.store(false, std::memory_order_release);
+        g_estopTriggerMs.store(0, std::memory_order_release);
       }
     }
 

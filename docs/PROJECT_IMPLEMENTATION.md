@@ -3,7 +3,7 @@
 **Board**: GUITION JC4880P443C ESP32-P4 4.3" Touch Display (with ESP32-C6 co-processor)
 **Display**: ST7701S 480x800 MIPI-DSI (rotated to 800x480 landscape)
 **Touch**: GT911 capacitive touch controller
-**Firmware**: v2.0.4 (`FW_VERSION` in `src/config.h`)
+**Firmware**: v2.0.5 (`FW_VERSION` in `src/config.h`)
 
 ---
 
@@ -22,7 +22,7 @@
 ## 1. MIPI-DSI Display Setup
 
 ### Hardware Configuration
-- **Bus**: 2-lane MIPI-DSI — `config.h` sets **1 Gbps per lane** nominal (`MIPI_DSI_LANE_BITRATE`); actual PHY negotiation follows ESP-IDF / board config
+- **Bus**: 2-lane MIPI-DSI — `config.h` documents **500 Mbps per lane** (`MIPI_DSI_LANE_BITRATE_MBPS`) as informational/reference only. The actual lane bitrate is set by the panel init sequence in `src/ui/display.cpp` and the ESP-IDF DSI driver; the constant in `config.h` is for documentation, not a live control.
 - **DPI Clock**: 34 MHz for 60Hz refresh
 - **Pixel Format**: RGB565 (16-bit)
 - **Framebuffers**: 2 (double-buffered)
@@ -65,20 +65,23 @@
 
 - **FastAccelStepper 0.33.x** with RMT driver on GPIO 50
 - **Live speed**: `applySpeedAcceleration()` required after `setSpeedInMilliHz()` for changes during running
-- **Cross-core**: Shared RPM variables use `std::atomic<float>` with `.load()`/`.store()`
-- **Stepper mutex**: `g_stepperMutex` (`SemaphoreHandle_t`, FreeRTOS mutex) protects all stepper calls — uses `xSemaphoreTake`/`xSemaphoreGive`, keeps interrupts enabled during cross-core contention
-- **Pending-flag pattern**: UI sets volatile flags, motorTask executes within 5ms cycle
+- **Cross-core**: Shared RPM variables use `std::atomic<float>` with explicit `.load(memory_order_*)` / `.store(...)`. All cross-core atomic flags are declared in `src/app_state.h` / defined in `src/app_state.cpp` (single source of truth).
+- **Stepper mutex**: `g_stepperMutex` (`SemaphoreHandle_t`, FreeRTOS mutex) protects all stepper calls — uses `xSemaphoreTake`/`xSemaphoreGive`, keeps interrupts enabled during cross-core contention. Non-motor modules should call `motor_set_target_milli_hz()` instead of taking the mutex directly (it wraps `setSpeedInMilliHz` + `applySpeedAcceleration`).
+- **Pending-flag pattern**: UI `.store()`s atomic flags with `memory_order_release`; motorTask `.load()`s them with `memory_order_acquire` and executes within 5 ms cycle.
+- **Non-blocking pedal ADC**: When `ENABLE_ADS1115_PEDAL=1`, `motorTask` uses a state-machine (`ads_poll_and_start()` in `src/motor/speed.cpp`) that starts a single-shot conversion in one tick and reads the result in a later tick — so the 5 ms loop is never blocked by I2C. Blocking helper (`ads_read_channel0_blocking()`) is reserved for `speed_init()`.
 
 ---
 
 ## 4. Safety System
 
 - **E-STOP**: GPIO 34, NC contact, INPUT_PULLUP, hardware ISR
-- **ISR**: GPIO register write (ENA HIGH) + `g_estopPending` + `g_wakePending` (NO function calls — flash may be disabled)
-- **Debounce**: 5ms in safetyTask before STATE_ESTOP transition
+- **ISR**: GPIO register write (ENA HIGH) + `g_estopPending.store(true, std::memory_order_release)` + `g_wakePending.store(true, ...)` (NO function calls — flash may be disabled)
+- **Boot sampling**: `safety_init()` takes 3 samples of `PIN_ESTOP` with 500 µs spacing after `INPUT_PULLUP` + 2 ms settle, requires ≥2/3 LOW (mitigates floating GPIO34 at power-on — this pin has no internal pull-up on ESP32-P4)
+- **Debounce**: 5ms in safetyTask before STATE_ESTOP transition; `g_estopTriggerMs` is set by `safetyTask` on the debounced edge (not by the ISR)
 - **CAS transitions**: `control_transition_to()` uses `compare_exchange_strong` for race-free state changes
-- **UI reset**: `g_uiResetPending` flag from UI, processed in controlTask on Core 0
+- **UI reset**: `g_uiResetPending.store(true, std::memory_order_release)` from UI, processed in controlTask on Core 0
 - **Overlay**: lvglTask auto-shows/hides ESTOP overlay based on current state
+- **Fatal errors**: Storage/motor init failures call `fatal_halt("<context>")` (in `src/app_state.h`) instead of `ESP.restart()` directly — it logs the reason via `LOG_E` (always compiled in) and drains serial before rebooting.
 
 ---
 
@@ -111,19 +114,25 @@
 
 ### Pending-Flag Pattern (UI -> Core 0)
 ```cpp
-// UI callback (Core 1) — sets flag only
-volatile bool g_uiResetPending = false;
-void estop_reset_cb(lv_event_t* e) { g_uiResetPending = true; }
+// Declaration in src/app_state.h:
+extern std::atomic<bool> g_uiResetPending;
 
-// Core 0 task — executes within cycle
+// UI callback (Core 1) — release-store the flag only
+void estop_reset_cb(lv_event_t* e) {
+  g_uiResetPending.store(true, std::memory_order_release);
+}
+
+// Core 0 task — acquire-load and execute within the cycle
 void controlTask(void* pvParameters) {
-  if (g_uiResetPending) {
-    g_uiResetPending = false;
+  if (g_uiResetPending.load(std::memory_order_acquire)) {
+    g_uiResetPending.store(false, std::memory_order_release);
     safety_check_ui_reset();
     control_transition_to(STATE_IDLE);
   }
 }
 ```
+
+All cross-core flags (`g_estopPending`, `g_estopTriggerMs`, `g_uiResetPending`, `g_wakePending`, `g_flashWriting`, `g_screenRedraw`, `g_dir_switch_cache`, `motorConfigApplyPending`) live in `src/app_state.h` / `src/app_state.cpp`. Do not redeclare them in other headers.
 
 ### CAS State Transition
 ```cpp

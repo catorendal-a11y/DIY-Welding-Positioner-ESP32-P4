@@ -65,6 +65,23 @@ inline const char* control_state_name(SystemState s) {
   }
 }
 
+enum ModeRequestTestable : unsigned char {
+  MODE_REQ_NONE_TESTABLE = 0,
+  MODE_REQ_CONTINUOUS_TESTABLE = 1,
+  MODE_REQ_PULSE_TESTABLE = 2,
+  MODE_REQ_STEP_TESTABLE = 3,
+  MODE_REQ_JOG_CW_TESTABLE = 4,
+  MODE_REQ_JOG_CCW_TESTABLE = 5
+};
+
+inline bool control_request_is_jog_testable(unsigned char req) {
+  return req == MODE_REQ_JOG_CW_TESTABLE || req == MODE_REQ_JOG_CCW_TESTABLE;
+}
+
+inline unsigned char control_cancel_jog_request_testable(unsigned char req) {
+  return control_request_is_jog_testable(req) ? MODE_REQ_NONE_TESTABLE : req;
+}
+
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN NEEDS REBUILD — mirrors screen_needs_rebuild() in screens.cpp
 // ScreenId values from screens.h enum:

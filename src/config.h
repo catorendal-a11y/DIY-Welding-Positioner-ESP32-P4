@@ -76,8 +76,8 @@
 
 // SPEED CHARACTERISTICS
 // Hz — minimum step frequency when RPM maps lower (motor_milli_hz_for_rpm_calibrated).
-// Example: MIN_RPM with default D_EMNE/D_RULLE and 3200 spr is ~22 Hz; floor keeps pulse timing reliable.
-#define START_SPEED     100
+// MIN_RPM with default D_EMNE/D_RULLE and 3200 spr is ~22 Hz, so keep this below that.
+#define START_SPEED     20
 
 // Pot ADC (PIN_POT): ref 3315 matches MIN-RPM end of travel (see speed.cpp).
 // Snap band (0 = off): if > 0, ADC at/below this maps to RPM ceiling (EMI helper; hurts top-end precision).

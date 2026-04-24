@@ -14,6 +14,8 @@ void continuous_start() {
 
   LOG_I("Continuous mode: start");
 
+  motor_set_target_milli_hz(motor_milli_hz_for_rpm_calibrated(speed_get_target_rpm()));
+
   // Set direction and enable motor
   Direction dir = speed_get_direction();
   if (dir == DIR_CW) {

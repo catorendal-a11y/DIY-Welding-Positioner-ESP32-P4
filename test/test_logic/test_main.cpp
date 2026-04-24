@@ -28,6 +28,7 @@ static const float MIN_RPM        = 0.001f;
 static const float MAX_RPM        = 3.0f;
 static const float ADC_REF        = 3315.0f;
 static const float POT_ADC_SNAP_TEST_BAND = 380.0f;  // explicit snap for unit tests (production often 0)
+static const uint32_t START_SPEED_HZ = 20;
 static const uint32_t STEPS_1_4   = 800;      // 200 * 4 (1/4 microstepping)
 static const uint32_t STEPS_1_8   = 1600;     // 200 * 8
 static const uint32_t STEPS_1_16  = 3200;     // 200 * 16
@@ -279,6 +280,28 @@ void test_state_name_returns_nonnull() {
     TEST_ASSERT_NOT_NULL(name);
     TEST_ASSERT_TRUE(strlen(name) > 0);
   }
+}
+
+void test_control_request_is_jog() {
+  TEST_ASSERT_FALSE(control_request_is_jog_testable(MODE_REQ_NONE_TESTABLE));
+  TEST_ASSERT_FALSE(control_request_is_jog_testable(MODE_REQ_CONTINUOUS_TESTABLE));
+  TEST_ASSERT_FALSE(control_request_is_jog_testable(MODE_REQ_PULSE_TESTABLE));
+  TEST_ASSERT_FALSE(control_request_is_jog_testable(MODE_REQ_STEP_TESTABLE));
+  TEST_ASSERT_TRUE(control_request_is_jog_testable(MODE_REQ_JOG_CW_TESTABLE));
+  TEST_ASSERT_TRUE(control_request_is_jog_testable(MODE_REQ_JOG_CCW_TESTABLE));
+}
+
+void test_control_cancel_jog_request() {
+  TEST_ASSERT_EQUAL_UINT8(MODE_REQ_NONE_TESTABLE,
+                          control_cancel_jog_request_testable(MODE_REQ_JOG_CW_TESTABLE));
+  TEST_ASSERT_EQUAL_UINT8(MODE_REQ_NONE_TESTABLE,
+                          control_cancel_jog_request_testable(MODE_REQ_JOG_CCW_TESTABLE));
+  TEST_ASSERT_EQUAL_UINT8(MODE_REQ_CONTINUOUS_TESTABLE,
+                          control_cancel_jog_request_testable(MODE_REQ_CONTINUOUS_TESTABLE));
+  TEST_ASSERT_EQUAL_UINT8(MODE_REQ_PULSE_TESTABLE,
+                          control_cancel_jog_request_testable(MODE_REQ_PULSE_TESTABLE));
+  TEST_ASSERT_EQUAL_UINT8(MODE_REQ_STEP_TESTABLE,
+                          control_cancel_jog_request_testable(MODE_REQ_STEP_TESTABLE));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1049,6 +1072,11 @@ void test_milli_hz_different_floor_levels() {
       milli_hz_floor_testable(10.0f, 200u));
 }
 
+void test_min_rpm_default_microstep_stays_above_start_floor() {
+  float hz = rpmToStepHz_testable(MIN_RPM, GEAR_RATIO, D_EMNE, D_RULLE, STEPS_1_16);
+  TEST_ASSERT_TRUE(hz > (float)START_SPEED_HZ);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 17: PULSE TIME CLAMPS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1191,6 +1219,8 @@ int main(int argc, char** argv) {
   RUN_TEST(test_state_name_unknown_neg);
   RUN_TEST(test_state_name_unknown_255);
   RUN_TEST(test_state_name_returns_nonnull);
+  RUN_TEST(test_control_request_is_jog);
+  RUN_TEST(test_control_cancel_jog_request);
 
   // Section 3: RPM to step Hz (16 tests)
   RUN_TEST(test_rpm_zero);
@@ -1331,6 +1361,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_milli_hz_just_below_floor_is_raised);
   RUN_TEST(test_milli_hz_huge_value_saturates_to_u32_max);
   RUN_TEST(test_milli_hz_different_floor_levels);
+  RUN_TEST(test_min_rpm_default_microstep_stays_above_start_floor);
 
   // Section 17: Pulse time clamps (6 tests)
   RUN_TEST(test_pulse_clamp_on_in_range);

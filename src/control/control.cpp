@@ -18,13 +18,39 @@ static std::atomic<SystemState> currentState{STATE_IDLE};
 static std::atomic<SystemState> previousState{STATE_IDLE};
 
 // Pending request pattern — UI callbacks set flags, controlTask executes
-static std::atomic<uint8_t> pendingModeRequest{0};
+enum ModeRequest : uint8_t {
+  MODE_REQ_NONE = 0,
+  MODE_REQ_CONTINUOUS = 1,
+  MODE_REQ_PULSE = 2,
+  MODE_REQ_STEP = 3,
+  MODE_REQ_JOG_CW = 4,
+  MODE_REQ_JOG_CCW = 5
+};
+
+static std::atomic<uint8_t> pendingModeRequest{MODE_REQ_NONE};
 static std::atomic<bool> pendingStop{false};
 static std::atomic<uint32_t> pendingPulseOnMs{0};
 static std::atomic<uint32_t> pendingPulseOffMs{0};
 static std::atomic<uint16_t> pendingPulseCycles{0};
 static std::atomic<float> pendingStepAngle{0.0f};
 static std::atomic<bool> pendingStopJog{false};
+
+static bool is_jog_request(uint8_t req) {
+  return req == MODE_REQ_JOG_CW || req == MODE_REQ_JOG_CCW;
+}
+
+static void cancel_pending_jog_request() {
+  uint8_t req = pendingModeRequest.load(std::memory_order_acquire);
+  if (is_jog_request(req)) {
+    pendingModeRequest.compare_exchange_strong(req, MODE_REQ_NONE, std::memory_order_acq_rel,
+                                               std::memory_order_acquire);
+  }
+}
+
+static void queue_mode_request(uint8_t req) {
+  pendingStop.store(false, std::memory_order_release);
+  pendingModeRequest.store(req, std::memory_order_release);
+}
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STATE TRANSITION VALIDATION
@@ -129,7 +155,7 @@ const char* control_state_name(SystemState s) {
 // ───────────────────────────────────────────────────────────────────────────────
 void control_start_continuous() {
   if (safety_inhibit_motion()) return;
-  pendingModeRequest.store(1, std::memory_order_release);
+  queue_mode_request(MODE_REQ_CONTINUOUS);
 }
 
 void control_stop() {
@@ -141,26 +167,27 @@ void control_start_pulse(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
   pendingPulseOnMs.store(on_ms, std::memory_order_release);
   pendingPulseOffMs.store(off_ms, std::memory_order_release);
   pendingPulseCycles.store(cycles, std::memory_order_release);
-  pendingModeRequest.store(2, std::memory_order_release);
+  queue_mode_request(MODE_REQ_PULSE);
 }
 
 void control_start_step(float angle_deg) {
   if (safety_inhibit_motion()) return;
   pendingStepAngle.store(angle_deg, std::memory_order_release);
-  pendingModeRequest.store(3, std::memory_order_release);
+  queue_mode_request(MODE_REQ_STEP);
 }
 
 void control_start_jog_cw() {
   if (safety_inhibit_motion()) return;
-  pendingModeRequest.store(4, std::memory_order_release);
+  queue_mode_request(MODE_REQ_JOG_CW);
 }
 
 void control_start_jog_ccw() {
   if (safety_inhibit_motion()) return;
-  pendingModeRequest.store(5, std::memory_order_release);
+  queue_mode_request(MODE_REQ_JOG_CCW);
 }
 
 void control_stop_jog() {
+  cancel_pending_jog_request();
   pendingStopJog.store(true, std::memory_order_release);
 }
 
@@ -208,18 +235,20 @@ static void process_pending_requests() {
   if (pendingStopJog.exchange(false, std::memory_order_acq_rel)) {
     if (cur == STATE_JOG) {
       jog_stop();
+    } else {
+      cancel_pending_jog_request();
     }
   }
 
   if (pendingStop.exchange(false, std::memory_order_acq_rel)) {
-    pendingModeRequest.store(0, std::memory_order_release);
+    pendingModeRequest.store(MODE_REQ_NONE, std::memory_order_release);
     if (cur != STATE_IDLE && cur != STATE_STOPPING && cur != STATE_ESTOP) {
       stop_active_mode(cur);
     }
     return;
   }
 
-  if (pendingModeRequest.load(std::memory_order_acquire) == 0) return;
+  if (pendingModeRequest.load(std::memory_order_acquire) == MODE_REQ_NONE) return;
 
   if (cur != STATE_IDLE) {
     if (cur != STATE_STOPPING && cur != STATE_ESTOP) {
@@ -228,24 +257,24 @@ static void process_pending_requests() {
     return;
   }
 
-  uint8_t req = pendingModeRequest.exchange(0, std::memory_order_acq_rel);
+  uint8_t req = pendingModeRequest.exchange(MODE_REQ_NONE, std::memory_order_acq_rel);
 
   switch (req) {
-    case 1:
+    case MODE_REQ_CONTINUOUS:
       continuous_start();
       break;
-    case 2:
+    case MODE_REQ_PULSE:
       pulse_start(pendingPulseOnMs.load(std::memory_order_acquire),
                   pendingPulseOffMs.load(std::memory_order_acquire),
                   pendingPulseCycles.load(std::memory_order_acquire));
       break;
-    case 3:
+    case MODE_REQ_STEP:
       step_execute(pendingStepAngle.load(std::memory_order_acquire));
       break;
-    case 4:
+    case MODE_REQ_JOG_CW:
       jog_start(DIR_CW);
       break;
-    case 5:
+    case MODE_REQ_JOG_CCW:
       jog_start(DIR_CCW);
       break;
   }

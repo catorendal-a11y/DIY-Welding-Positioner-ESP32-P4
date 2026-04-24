@@ -16,7 +16,7 @@
 
 <br>
 
-Open-source welding positioner controller with a glove-safe industrial touch UI built on dual-core FreeRTOS.
+Open-source controller for a stepper-driven welding positioner / pipe rotator, with a glove-safe touch UI, real-time motor tasking, persistent presets, foot pedal support, and hardwired E-STOP behavior.
 
 <br>
 
@@ -40,25 +40,39 @@ Open-source welding positioner controller with a glove-safe industrial touch UI 
 ## Table of Contents
 
 - [Quick Start](#quick-start)
+- [What This Project Controls](#what-this-project-controls)
 - [Demo](#demo)
 - [Features](#features)
+- [Operator Workflow](#operator-workflow)
 - [UI Screens](#ui-screens)
 - [Architecture](#industrial-rtos-architecture)
 - [Gear System & Wiring](#gear-system)
+- [Build Commands](#build-commands)
 - [Bill of Materials](#bill-of-materials)
 - [Performance Specifications](#performance-specifications)
+- [Safety-Critical Wiring](#safety-critical-wiring)
 - [Welding Modes](#welding-modes)
 - [Configuration](#configuration)
 - [Persistence (NVS)](#persistence-nvs)
 - [Safety Notice](#safety-notice)
 - [Troubleshooting](#troubleshooting)
 - [Roadmap](#roadmap)
+- [Documentation Map](#documentation-map)
 - [Project Structure](#project-structure)
 - [License](#license)
 
 ---
 
 ## Quick Start
+
+Use this path if you already have PlatformIO installed and only want to build or flash the firmware.
+
+**You need:**
+
+- VS Code + PlatformIO extension, or PlatformIO Core on PATH as `pio`
+- GUITION JC4880P443C ESP32-P4 board connected over USB-C
+- Motor driver wiring verified before applying motor PSU power
+- No LittleFS upload for settings/presets; current firmware uses NVS
 
 1. **Clone the repository:**
 
@@ -67,11 +81,11 @@ Open-source welding positioner controller with a glove-safe industrial touch UI 
    cd DIY-Welding-Positioner-ESP32-P4
    ```
 
-2. **Open in VS Code** with the **PlatformIO** extension installed.
+2. **Open in VS Code** with the **PlatformIO** extension installed. On Windows, run commands from the PlatformIO terminal so `pio` uses PlatformIO's managed Python runtime.
 
 3. **Select board environment:** `esp32p4-release` (GUITION JC4880P443C 4.3")
 
-4. **Build and flash** with PlatformIO:
+4. **Build and flash**:
 
    ```bash
    pio run --target upload
@@ -91,7 +105,25 @@ Open-source welding positioner controller with a glove-safe industrial touch UI 
    pio test -e native
    ```
 
-6. **Connect hardware** per the [wiring diagram](#wiring-diagram) below.
+6. **Connect hardware** per the [wiring diagram](#wiring-diagram) below. Keep the motor supply off until logic power, E-STOP, ENA, STEP, DIR, and driver settings have been verified.
+
+---
+
+## What This Project Controls
+
+This firmware targets a single-axis welding positioner using:
+
+| Area | Current Implementation |
+|:---|:---|
+| Controller | GUITION JC4880P443C ESP32-P4 4.3" MIPI-DSI touch board |
+| Motion | NEMA 23 stepper through PUL/DIR driver or DM542T |
+| Drivetrain | NMRV030 60:1 worm stage plus 72/40 spur stage, total 1:108 |
+| Speed input | Main-screen potentiometer, optional ADS1115 pedal pot, presets |
+| Start input | Touch UI plus optional foot pedal switch |
+| Safety | NC E-STOP on GPIO34; ENA forced disabled immediately in ISR |
+| Storage | NVS JSON blobs for settings and up to 16 presets |
+
+The main screen is deliberately pot-driven: there are no main-screen RPM +/- buttons. Jog has its own touch +/- controls for setup movement.
 
 ---
 
@@ -123,6 +155,18 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 | **System Info** | Live CPU core load, free heap, PSRAM usage, uptime |
 | **Hardware Safety** | NC E-STOP interrupt (<0.5 ms), software watchdog, CAS state transitions, boot-time ESTOP de-floating (3-sample majority vote), `fatal_halt()` with serial-visible reason on unrecoverable init errors; dimmed backlight wakes on ESTOP |
 | **Thread Safety** | FreeRTOS mutex-protected stepper access, `std::atomic` cross-core variables with explicit memory ordering (single source of truth in `src/app_state.h`), pending-flag patterns |
+
+---
+
+## Operator Workflow
+
+1. Power the ESP32-P4/controller logic first. The firmware boots with ENA disabled.
+2. Verify the main screen appears, touch responds, and E-STOP is released.
+3. Set driver current and microstep DIP switches to match **Settings > Motor Config**.
+4. Turn on the motor supply after STEP/DIR/ENA and E-STOP wiring are checked.
+5. Use the main potentiometer to set workpiece RPM, then press **START** for continuous mode.
+6. Use **JOG** for manual positioning, **PULSE** for tack cycles, **STEP** for indexed rotation, or **TIMER** for countdown start.
+7. Use the E-STOP as the first response to unsafe motion. The red overlay only resets after the physical fault is cleared.
 
 ---
 
@@ -222,6 +266,27 @@ controlTask  (pri 3, 4 KB)
 
 ---
 
+## Build Commands
+
+The default PlatformIO environment is `esp32p4-release`. Build output is redirected to `.pio/build-fw` by `platformio.ini` to reduce Windows file-lock problems.
+
+| Task | Command |
+|:---|:---|
+| Release build | `pio run` |
+| Debug build | `pio run -e esp32p4-debug` |
+| Flash release firmware | `pio run --target upload` |
+| Serial monitor | `pio device monitor` |
+| Native tests | `pio test -e native` |
+| On-device tests | `pio test -e esp32p4-test` |
+
+Useful environment notes:
+
+- The configured upload and monitor port is `COM5`; change `upload_port` / `monitor_port` in `platformio.ini` if your board enumerates differently.
+- If Windows serial flashing fails with Unicode output errors, run `set PYTHONUTF8=1` before upload or use a UTF-8 capable terminal.
+- Native tests do not need ESP32-P4 hardware. On-device tests require the board connected and flashable.
+
+---
+
 ## Bill of Materials
 
 <div align="center">
@@ -259,6 +324,23 @@ controlTask  (pri 3, 4 KB)
 | **Display** | 800 x 480, landscape, LVGL 9.5.0, RGB565, 2-lane MIPI-DSI |
 | **Flash partition** | 16 MB total; 2x 4 MB app (OTA-capable); 8 MB storage partition |
 | **RAM Usage** | ~13% &ensp; (41 KB / 320 KB internal SRAM) — LVGL buffers live in PSRAM (`CONFIG_SPIRAM_FETCH_INSTRUCTIONS`) |
+
+---
+
+## Safety-Critical Wiring
+
+Verify these signals with a meter before enabling motor power:
+
+| Signal | Required Safe Behavior |
+|:---|:---|
+| ENA / GPIO52 | HIGH = driver disabled, LOW = driver enabled |
+| E-STOP / GPIO34 | Released = HIGH, pressed/fault = LOW |
+| DM542T ALM / GPIO32 | HIGH = driver OK, LOW = alarm/fault |
+| STEP / GPIO50 | Pulse output only; do not share with other hardware |
+| DIR / GPIO51 | Direction output to driver |
+| Grounds | ESP32 logic ground, driver signal ground, and pedal/ADS1115 ground must be common |
+
+The firmware never intentionally enables the motor while E-STOP is active. If the motor moves at boot or while ENA is HIGH, treat it as a wiring or driver configuration fault before continuing.
 
 ---
 
@@ -401,8 +483,9 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 ## Known Limitations
 
 - Single-axis control only
-- Basic PUL/DIR drivers have no anti-resonance DSP — DM542T recommended for higher RPM
-- GPIO 14–19, 28, 54 may be tied to the on-board ESP32-C6 per PCB — confirm the board pinout before using as GPIO for custom circuits
+- No closed-loop tachometer feedback; RPM is commanded from kinematics, calibration, and step timing
+- Basic PUL/DIR drivers have no anti-resonance DSP; DM542T is recommended for smoother low-speed and higher-RPM work
+- GPIO 14-19, 28, and 54 may be tied to the on-board ESP32-C6 per PCB; confirm the board pinout before using them for custom circuits
 
 ---
 
@@ -424,6 +507,20 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - [x] LVGL async object deletion + widget invalidation pattern
 - [x] E-STOP wakes dimmed display (backlight / dim pipeline, v2.0.3+)
 - [x] v2.0.5: centralised cross-core atomics in `src/app_state.h`, `fatal_halt()` with serial-visible reason, `LOG_E` always compiled in, boot-time ESTOP de-floating, non-blocking ADS1115 pedal ADC, start-request race fix, extended native tests
+
+---
+
+## Documentation Map
+
+| Document | Use It For |
+|:---|:---|
+| [docs/HARDWARE_SETUP.md](docs/HARDWARE_SETUP.md) | Detailed driver wiring, DM542T checklist, ADS1115 wiring, reserved pins |
+| [docs/SAFETY_SYSTEM.md](docs/SAFETY_SYSTEM.md) | E-STOP behavior, watchdog model, safety assumptions |
+| [docs/PROJECT_IMPLEMENTATION.md](docs/PROJECT_IMPLEMENTATION.md) | RTOS architecture, storage, display pipeline, known workarounds |
+| [docs/INSTRUCTABLES.md](docs/INSTRUCTABLES.md) | Builder-friendly article content and assembly flow |
+| [wiki/Getting-Started.md](wiki/Getting-Started.md) | Short build/flash/use walkthrough |
+| [wiki/Troubleshooting.md](wiki/Troubleshooting.md) | Field problems and fixes |
+| [test/README.md](test/README.md) | Native and on-device test entry points |
 
 ---
 

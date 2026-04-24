@@ -60,12 +60,12 @@ static void update_computed_info() {
 
   // Progress bars
   if (onBar) {
-    int pct = (int)((editOnMs - 100) * 100 / 9900);
+    int pct = (int)((editOnMs - 100) * 100 / 4900);
     if (pct < 0) pct = 0; if (pct > 100) pct = 100;
     lv_bar_set_value(onBar, pct, LV_ANIM_OFF);
   }
   if (offBar) {
-    int pct = (int)((editOffMs - 100) * 100 / 9900);
+    int pct = (int)((editOffMs - 100) * 100 / 4900);
     if (pct < 0) pct = 0; if (pct > 100) pct = 100;
     lv_bar_set_value(offBar, pct, LV_ANIM_OFF);
   }
@@ -92,7 +92,7 @@ static void on_time_adj_cb(lv_event_t* e) {
   int delta = (int)(intptr_t)lv_event_get_user_data(e);
   editOnMs += delta;
   if (editOnMs < 100) editOnMs = 100;
-  if (editOnMs > 10000) editOnMs = 10000;
+  if (editOnMs > 5000) editOnMs = 5000;
   lv_label_set_text_fmt(onTimeLabel, "%.1fs", editOnMs / 1000.0f);
   update_computed_info();
 }
@@ -102,7 +102,7 @@ static void off_time_adj_cb(lv_event_t* e) {
   int delta = (int)(intptr_t)lv_event_get_user_data(e);
   editOffMs += delta;
   if (editOffMs < 100) editOffMs = 100;
-  if (editOffMs > 10000) editOffMs = 10000;
+  if (editOffMs > 5000) editOffMs = 5000;
   lv_label_set_text_fmt(offTimeLabel, "%.1fs", editOffMs / 1000.0f);
   update_computed_info();
 }

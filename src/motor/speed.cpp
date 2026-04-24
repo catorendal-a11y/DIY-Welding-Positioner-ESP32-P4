@@ -25,6 +25,12 @@ static_assert(std::atomic<float>::is_always_lock_free,
 static_assert((int)(60.0f * 72.0f / 40.0f + 0.5f) == 108, "GEAR_RATIO must match motor.worm.svg (1:108 = 60*72/40)");
 
 #if ENABLE_ADS1115_PEDAL
+// Full 7-bit address probe on touch I2C: LOG_I is stripped in release; Serial is not.
+// Set to 0 (or -DADS_BOOT_I2C_RAW_SCAN=0) after field verification to shorten boot.
+#ifndef ADS_BOOT_I2C_RAW_SCAN
+#define ADS_BOOT_I2C_RAW_SCAN 1
+#endif
+
 #define ADS_REG_PTR_CONVERT 0x00
 #define ADS_REG_PTR_CONFIG  0x01
 #define ADS_REG_PTR_LOTH    0x02
@@ -186,26 +192,55 @@ void speed_init() {
 
 #if ENABLE_ADS1115_PEDAL
   i2c_master_bus_handle_t bus = display_touch_i2c_bus_handle();
-  if (bus) {
-    esp_err_t probe = i2c_master_probe(bus, ADS1115_ADDR, pdMS_TO_TICKS(80));
-    if (probe != ESP_OK) {
-      LOG_D("ADS1115 probe 0x%02X: %s", ADS1115_ADDR, esp_err_to_name(probe));
-    } else {
+  if (!bus) {
+    LOG_E("ADS1115: touch I2C bus handle is null (display/touch I2C not up)");
+  } else {
+    // I2C bus scan 0x01-0x7E (7-bit; 0x00 not probed). LOG_I = debug only; Serial = all builds when enabled.
+    LOG_I("I2C bus scan:");
+#if ADS_BOOT_I2C_RAW_SCAN
+    Serial.println("[I2C] scan 0x01-0x7E (touch bus, raw Serial):");
+#endif
+    for (uint8_t addr = 1; addr < 127; addr++) {
+      esp_err_t p = i2c_master_probe(bus, addr, pdMS_TO_TICKS(15));
+      if (p == ESP_OK) {
+#if ADS_BOOT_I2C_RAW_SCAN
+        Serial.printf("[I2C] ACK 0x%02X\n", addr);
+#endif
+        LOG_I("  found device at 0x%02X", addr);
+      }
+    }
+#if ADS_BOOT_I2C_RAW_SCAN
+    Serial.println("[I2C] scan end");
+#endif
+    LOG_I("I2C scan done");
+
+    // ADS1115 I2C address = 0x48 + (ADDR pin: GND,SCL,SDA,VDD) -> try all four
+    static const uint8_t kAdsTryAddrs[] = {0x48, 0x49, 0x4A, 0x4B};
+    for (size_t i = 0; i < sizeof(kAdsTryAddrs) && !ads1115Connected; ++i) {
+      const uint8_t a = kAdsTryAddrs[i];
+      if (i2c_master_probe(bus, a, pdMS_TO_TICKS(60)) != ESP_OK) continue;
+
       i2c_device_config_t dev_cfg = {};
       dev_cfg.dev_addr_length = I2C_ADDR_BIT_LEN_7;
-      dev_cfg.device_address = ADS1115_ADDR;
+      dev_cfg.device_address = a;
       dev_cfg.scl_speed_hz = 400000;
-      if (i2c_master_bus_add_device(bus, &dev_cfg, &s_ads_dev) == ESP_OK) {
-        uint16_t cfgProbe = 0;
-        if (ads_i2c_read_reg(ADS_REG_PTR_CONFIG, &cfgProbe)) {
-          ads1115Connected = true;
-          LOG_I("ADS1115 on touch I2C 0x%02X", ADS1115_ADDR);
-        } else {
-          i2c_master_bus_rm_device(s_ads_dev);
-          s_ads_dev = nullptr;
-          LOG_D("ADS1115 config read failed at 0x%02X", ADS1115_ADDR);
+      if (i2c_master_bus_add_device(bus, &dev_cfg, &s_ads_dev) != ESP_OK) continue;
+
+      uint16_t cfgProbe = 0;
+      if (ads_i2c_read_reg(ADS_REG_PTR_CONFIG, &cfgProbe)) {
+        ads1115Connected = true;
+        LOG_I("ADS1115 on touch I2C 0x%02X", a);
+        if (a != ADS1115_ADDR) {
+          LOG_I("ADS1115: ADDR not default (expected 0x48, using 0x%02X)", a);
         }
+        break;
       }
+      i2c_master_bus_rm_device(s_ads_dev);
+      s_ads_dev = nullptr;
+    }
+    if (!ads1115Connected) {
+      LOG_E("ADS1115: no device at 0x48-0x4B on touch I2C - check V,G to 3V3/GND; S,D to GPIO7/8; "
+            "pot wiper to pad 0 (AIN0). Scan showed other devices only.");
     }
   }
 #endif
@@ -385,9 +420,6 @@ void speed_apply() {
   uint32_t mhz = motor_milli_hz_for_rpm_calibrated(
       cachedTargetRpm.load(std::memory_order_relaxed));
   motor_set_target_milli_hz(mhz);
-}
-
-void speed_request_update() {
 }
 
 Direction speed_get_direction() {

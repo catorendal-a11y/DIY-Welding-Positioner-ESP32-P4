@@ -293,20 +293,22 @@ void controlTask(void* pvParameters) {
 
     process_pending_requests();
 
-    if (currentState.load(std::memory_order_acquire) == STATE_ESTOP) {
+    SystemState curState = currentState.load(std::memory_order_acquire);
+
+    if (curState == STATE_ESTOP) {
       if (safety_check_ui_reset()) {
         control_transition_to(STATE_IDLE);
       }
     }
 
-    if (currentState.load(std::memory_order_acquire) == STATE_STOPPING) {
+    if (curState == STATE_STOPPING) {
       if (!motor_is_running()) {
         motor_disable();
         control_transition_to(STATE_IDLE);
       }
     }
 
-    switch (currentState.load(std::memory_order_acquire)) {
+    switch (curState) {
       case STATE_RUNNING:
         continuous_update();
         break;

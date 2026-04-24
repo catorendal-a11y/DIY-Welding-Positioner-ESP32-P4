@@ -64,7 +64,7 @@
   <text x="725" y="38" font-family="sans-serif" font-size="28" fill="#FFFFFF" text-anchor="middle" font-weight="bold" letter-spacing="2">TIG ROTATOR  |  WIRING DIAGRAM</text>
   <text x="725" y="60" font-family="sans-serif" font-size="13" fill="#7AA3A3" text-anchor="middle" letter-spacing="1">ESP32-P4   /   DM542T Stepper Driver   /   NEMA 23   /   24-36 V DC motor supply  (36 V optimal)</text>
   <rect x="30" y="72" width="1260" height="2" fill="url(#title-grad)"/>
-  <text x="30" y="90" font-family="monospace" font-size="10" fill="#4A6A6A">REV 2.1</text>
+  <text x="30" y="90" font-family="monospace" font-size="10" fill="#4A6A6A">REV 2.5</text>
   <text x="1290" y="90" font-family="monospace" font-size="10" fill="#4A6A6A" text-anchor="end">SHEET 1 / 1</text>
 
   <!-- ============================================================= -->
@@ -163,6 +163,10 @@
     <text x="88" y="470" font-family="monospace" font-size="15" fill="#AA77DD">I2C_SCL</text>
     <text x="280" y="470" font-family="monospace" font-size="14" fill="#5599DD" text-anchor="end">C6_CHIP_PU</text>
     <rect x="290" y="456" width="18" height="18" rx="3" fill="#0A1A33" stroke="#5599DD" stroke-width="1"/>
+
+    <!-- Touch I2C: firmware uses GPIO7/8 (same nets as GT911 + ADS1115) -->
+    <text x="190" y="498" font-family="sans-serif" font-size="10" fill="#AA77DD" text-anchor="middle">Touch I2C nets: GPIO7 = SDA, GPIO8 = SCL</text>
+    <text x="190" y="512" font-family="sans-serif" font-size="8" fill="#778899" text-anchor="middle">GT911 @ 0x5D + ADS @ 0x48 | ext I2C = P4 GPIO7/8 nets (see NOTES 9-10)</text>
   </g>
 
   <!-- Active pin function labels (offset from translate(40,104)) -->
@@ -394,7 +398,7 @@
     <rect y="28" width="195" height="12" fill="#CC88FF" fill-opacity="0.10"/>
     <text x="98" y="22" font-family="sans-serif" font-size="16" fill="#CC88FF" text-anchor="middle" font-weight="bold" letter-spacing="1">FOOT PEDAL</text>
     <text x="98" y="36" font-family="sans-serif" font-size="11" fill="#885588" text-anchor="middle">Analog POT + momentary SW</text>
-    <text x="98" y="66" font-family="sans-serif" font-size="12" fill="#CC88FF" text-anchor="middle">POT  -&gt;  ADS1115 AIN0</text>
+    <text x="98" y="66" font-family="sans-serif" font-size="12" fill="#CC88FF" text-anchor="middle">POT  -&gt;  ADS1115 pad 0 (AIN0)</text>
     <text x="98" y="84" font-family="sans-serif" font-size="12" fill="#CC88FF" text-anchor="middle">SW    -&gt;  GPIO33</text>
     <text x="98" y="104" font-family="sans-serif" font-size="11" fill="#885588" text-anchor="middle">Speed (via I2C ADC) + Start</text>
     <circle cx="36" cy="0" r="5" fill="#CC88FF"/>
@@ -535,25 +539,26 @@
   <!--  ADS1115 (I2C ADC)                                             -->
   <!-- ============================================================= -->
   <g transform="translate(1010, 600)" filter="url(#card-shadow)">
-    <rect width="210" height="120" rx="10" fill="#0A0614" stroke="#AA77DD" stroke-width="2"/>
-    <rect width="210" height="36" rx="10" fill="#AA77DD" fill-opacity="0.10"/>
-    <rect y="24" width="210" height="12" fill="#AA77DD" fill-opacity="0.10"/>
-    <text x="105" y="20" font-family="sans-serif" font-size="15" fill="#AA77DD" text-anchor="middle" font-weight="bold" letter-spacing="1">ADS1115</text>
-    <text x="105" y="34" font-family="sans-serif" font-size="10" fill="#775599" text-anchor="middle">16-bit I2C ADC  /  Addr 0x48</text>
+    <rect width="220" height="124" rx="10" fill="#0A0614" stroke="#AA77DD" stroke-width="2"/>
+    <rect width="220" height="38" rx="10" fill="#AA77DD" fill-opacity="0.10"/>
+    <rect y="24" width="220" height="12" fill="#AA77DD" fill-opacity="0.10"/>
+    <text x="110" y="20" font-family="sans-serif" font-size="14" fill="#AA77DD" text-anchor="middle" font-weight="bold" letter-spacing="1">ADS1115 (castellated)</text>
+    <text x="110" y="34" font-family="sans-serif" font-size="9" fill="#775599" text-anchor="middle">V = 2.0-5.5 V supply  |  G = GND  |  S/D = I2C clock / data</text>
+    <text x="110" y="46" font-family="sans-serif" font-size="9" fill="#8899AA" text-anchor="middle">S + D: many boards include 10k pull-ups</text>
 
-    <text x="18" y="58" font-family="monospace" font-size="11" fill="#FF7070">VDD</text>
-    <text x="18" y="76" font-family="monospace" font-size="11" fill="#888">GND</text>
-    <text x="18" y="94" font-family="monospace" font-size="11" fill="#AA77DD">SCL</text>
-    <text x="18" y="112" font-family="monospace" font-size="11" fill="#AA77DD">SDA</text>
-    <text x="192" y="58" font-family="monospace" font-size="11" fill="#DD99FF" text-anchor="end">AIN0</text>
-    <text x="192" y="76" font-family="monospace" font-size="11" fill="#6B8E23" text-anchor="end">ADDR</text>
+    <text x="14" y="62" font-family="monospace" font-size="10" fill="#FF7070">VCC (V)</text>
+    <text x="14" y="78" font-family="monospace" font-size="10" fill="#888">GND (G)</text>
+    <text x="14" y="94" font-family="monospace" font-size="10" fill="#AA77DD">SCL (S)</text>
+    <text x="14" y="110" font-family="monospace" font-size="10" fill="#AA77DD">SDA (D)</text>
+    <text x="206" y="62" font-family="monospace" font-size="10" fill="#DD99FF" text-anchor="end">AIN0 (pad 0)</text>
+    <text x="206" y="78" font-family="monospace" font-size="8" fill="#666666" text-anchor="end">AIN1-3 (1-3) NC</text>
+    <text x="110" y="118" font-family="sans-serif" font-size="8" fill="#8BC34A" text-anchor="middle">I2C 0x48 when ADDR is on PCB to GND (typical)</text>
 
     <circle cx="6" cy="54" r="4" fill="#FF5252"/>
     <circle cx="6" cy="72" r="4" fill="#555"/>
     <circle cx="6" cy="90" r="4" fill="#AA77DD"/>
     <circle cx="6" cy="108" r="4" fill="#AA77DD"/>
     <circle cx="204" cy="54" r="4" fill="#DD99FF"/>
-    <circle cx="204" cy="72" r="4" fill="#6B8E23"/>
   </g>
 
   <!-- ADS1115 VDD -> joins POT 3V3 rail -->
@@ -575,7 +580,7 @@
   <path d="M 1016,708 L 80,708 L 80,539 L 113,539"
         fill="none" stroke="#AA77DD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 3"/>
   <circle cx="113" cy="539" r="3" fill="#AA77DD"/>
-  <text x="550" y="686" font-family="sans-serif" font-size="10" fill="#AA77DD" text-anchor="middle" opacity="0.7" letter-spacing="2">I2C  (shared with touch bus)</text>
+  <text x="550" y="686" font-family="sans-serif" font-size="10" fill="#AA77DD" text-anchor="middle" opacity="0.7" letter-spacing="2">I2C  (GPIO7/8, shared with GT911 + ADS1115)</text>
 
   <!-- ============================================================= -->
   <!--  MOTOR ROTATION INDICATOR                                      -->
@@ -607,7 +612,7 @@
     <text x="18" y="170" font-family="monospace" font-size="14" fill="#DD99FF">GPIO33</text><text x="106" y="170" font-family="monospace" font-size="13" fill="#CCCCCC">-&gt;  Foot pedal SW (active LOW)</text>
     <text x="18" y="192" font-family="monospace" font-size="14" fill="#4DD0E1">GPIO29</text><text x="106" y="192" font-family="monospace" font-size="13" fill="#CCCCCC">-&gt;  DIR switch  (CW / CCW)</text>
     <text x="18" y="214" font-family="monospace" font-size="14" fill="#888">GND</text>   <text x="106" y="214" font-family="monospace" font-size="13" fill="#888">-&gt;  all minus pins (common)</text>
-    <text x="18" y="236" font-family="monospace" font-size="14" fill="#AA77DD">ADS1115</text><text x="106" y="236" font-family="monospace" font-size="13" fill="#CCCCCC">-&gt;  Pedal POT via I2C ADC</text>
+    <text x="18" y="236" font-family="monospace" font-size="14" fill="#AA77DD">ADS1115</text><text x="106" y="236" font-family="monospace" font-size="13" fill="#CCCCCC">-&gt;  V G S D + pedal pot to pad 0 (AIN0)</text>
   </g>
 
   <!-- ============================================================= -->
@@ -636,7 +641,7 @@
   <!--  NOTES                                                         -->
   <!-- ============================================================= -->
   <g transform="translate(900, 980)" filter="url(#card-shadow)">
-    <rect width="400" height="248" rx="12" fill="#060A08" stroke="#1A3322" stroke-width="1.5"/>
+    <rect width="400" height="332" rx="12" fill="#060A08" stroke="#1A3322" stroke-width="1.5"/>
     <rect width="400" height="34" rx="12" fill="#1A3322" fill-opacity="0.35"/>
     <rect y="22" width="400" height="12" fill="#1A3322" fill-opacity="0.35"/>
     <text x="200" y="22" font-family="sans-serif" font-size="15" fill="#55AA77" text-anchor="middle" font-weight="bold" letter-spacing="3">NOTES</text>
@@ -651,7 +656,12 @@
     <text x="18" y="172" font-family="sans-serif" font-size="12" fill="#CCCCCC">5.  Motor current set via SW5-SW8 on driver.</text>
     <text x="18" y="190" font-family="sans-serif" font-size="12" fill="#CCCCCC">6.  E-STOP opens NC contact on trigger  -&gt;  HW</text>
     <text x="32" y="206" font-family="sans-serif" font-size="12" fill="#CCCCCC">disables ENA within 0.5 ms via ISR.</text>
-    <text x="18" y="226" font-family="sans-serif" font-size="12" fill="#CCCCCC">7.  Foot pedal is optional  (build flag).</text>
+    <text x="18" y="226" font-family="sans-serif" font-size="12" fill="#CCCCCC">7.  ADS1115 castellated (V G S D / pads 0-3): pot wiper to pad 0 = AIN0.</text>
+    <text x="18" y="244" font-family="sans-serif" font-size="12" fill="#CCCCCC">8.  I2C 0x48: typical on these boards (ADDR on PCB). Else tie ADDR to GND.</text>
+    <text x="18" y="262" font-family="sans-serif" font-size="12" fill="#CCCCCC">9.  GT911 OK but no 0x48: continuity D to GPIO7, S to GPIO8 (not C6 nets).</text>
+    <text x="18" y="280" font-family="sans-serif" font-size="12" fill="#CCCCCC">10. Still no ACK: swap ADS S and D once (CN3 / silk SDA-SCL swap reports).</text>
+    <text x="18" y="298" font-family="sans-serif" font-size="12" fill="#CCCCCC">11. JP1: ADS D/S to pins 23 (SDA) + 25 (SCL) only - same nets as GPIO7/8.</text>
+    <text x="18" y="316" font-family="sans-serif" font-size="11" fill="#AA8866">    Not pins 24/26 (C6). Firmware uses I2C on GPIO7/8, not a second bus.</text>
   </g>
 
 </g>

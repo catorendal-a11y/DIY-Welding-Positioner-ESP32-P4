@@ -34,9 +34,10 @@
 // Touch: GT911 capacitive, I2C — connected via board's I2C bus
 // Backlight: controlled by dedicated GPIO on the board
 //
-// I2C for touch (directly on ESP32-P4 I2C pins from header)
-#define PIN_TOUCH_SDA    7   // I2C SDA (board internal I2C bus)
-#define PIN_TOUCH_SCL    8   // I2C SCL (board internal I2C bus)
+// I2C for touch + optional ADS1115 (same bus in display.cpp / speed.cpp)
+// JC4880P443 JP1: pin 23 = I2C_SDA, pin 25 = I2C_SCL (odd row) - do not use pins 24/26 (C6 nets)
+#define PIN_TOUCH_SDA    7   // I2C SDA -> GPIO7
+#define PIN_TOUCH_SCL    8   // I2C SCL -> GPIO8
 #define TOUCH_ADDR_GT911 0x5D // GT911 default I2C address
 
 // MIPI-DSI lane configuration — actual hardware settings live in display.cpp

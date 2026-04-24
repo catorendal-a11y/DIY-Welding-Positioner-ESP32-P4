@@ -118,7 +118,7 @@ static void on_time_adj_cb(lv_event_t* e) {
   int delta = (intptr_t)lv_event_get_user_data(e);
   if (delta > 0) pulseOnMs += 100;
   else if (pulseOnMs > 100) pulseOnMs -= 100;
-  if (pulseOnMs > 10000) pulseOnMs = 10000;
+  if (pulseOnMs > 5000) pulseOnMs = 5000;
   lv_label_set_text_fmt(onTimeLabel, "%.1fs", pulseOnMs / 1000.0f);
   update_computed_info();
   update_waveform();
@@ -128,7 +128,7 @@ static void off_time_adj_cb(lv_event_t* e) {
   int delta = (intptr_t)lv_event_get_user_data(e);
   if (delta > 0) pulseOffMs += 100;
   else if (pulseOffMs > 100) pulseOffMs -= 100;
-  if (pulseOffMs > 10000) pulseOffMs = 10000;
+  if (pulseOffMs > 5000) pulseOffMs = 5000;
   lv_label_set_text_fmt(offTimeLabel, "%.1fs", pulseOffMs / 1000.0f);
   update_computed_info();
   update_waveform();

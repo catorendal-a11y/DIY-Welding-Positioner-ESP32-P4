@@ -434,7 +434,7 @@ void storage_format() {
     xSemaphoreGive(g_presets_mutex);
 
     xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-    g_settings = SystemSettings{ 5000, 8, MAX_RPM, 1.0f, 150, 60, false, false, 0, 3, STEPPER_DRIVER_STANDARD, false, 1 };
+    g_settings = SystemSettings{ 7500, 16, MAX_RPM, 1.0f, 150, 60, true, false, 0, 3, STEPPER_DRIVER_DM542T, false, 1 };
     const bool dirSw = g_settings.dir_switch_enabled;
     xSemaphoreGive(g_settings_mutex);
 

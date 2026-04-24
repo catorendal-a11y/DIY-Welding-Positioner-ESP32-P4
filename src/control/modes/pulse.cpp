@@ -31,12 +31,7 @@ void pulse_start(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
 
   LOG_I("Pulse mode: ON=%lu OFF=%lu cycles=%u", pulseOnMs, pulseOffMs, cycles);
 
-  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
-  FastAccelStepper* stepper = motor_get_stepper();
-  if (stepper != nullptr) {
-    motor_apply_speed_for_rpm_locked(speed_get_target_rpm());
-  }
-  xSemaphoreGive(g_stepperMutex);
+  motor_set_target_milli_hz(motor_milli_hz_for_rpm_calibrated(speed_get_target_rpm()));
 
   if (speed_get_direction() == DIR_CW) motor_run_cw();
   else motor_run_ccw();
@@ -65,20 +60,12 @@ void pulse_update() {
         control_transition_to(STATE_STOPPING);
         return;
       }
-      xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
-      FastAccelStepper* s = motor_get_stepper();
-      if (s != nullptr) {
-        motor_apply_speed_for_rpm_locked(speed_get_target_rpm());
-      }
-      xSemaphoreGive(g_stepperMutex);
+      motor_set_target_milli_hz(motor_milli_hz_for_rpm_calibrated(speed_get_target_rpm()));
       if (speed_get_direction() == DIR_CW) motor_run_cw();
       else motor_run_ccw();
       LOG_D("Pulse: ON (%u/%u)", pulseCycleCount, pulseCycleLimit);
     } else {
-      xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
-      FastAccelStepper* s = motor_get_stepper();
-      if (s != nullptr) s->stopMove();
-      xSemaphoreGive(g_stepperMutex);
+      motor_stop();
       LOG_D("Pulse: OFF");
     }
   }

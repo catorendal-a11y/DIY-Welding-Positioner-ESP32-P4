@@ -51,10 +51,9 @@ UI callbacks on Core 1 set `std::atomic` flags with `memory_order_release`. Core
 UI callback (Core 1)                   Core 0 task (every 5ms)
 ─────────────────────                ────────────────────────
 speed_slider_set(rpm)     ──>
-  stores std::atomic sliderRPM
-  speed_request_update()  ──>       speed_apply()
-  sets speedUpdatePending             acquire-loads flag, applies speed
-                                      via motor_set_target_milli_hz()
+  stores atomic target RPM            motorTask polls pot/pedal/input
+                                      speed_apply() computes milli-Hz
+                                      and calls motor_set_target_milli_hz()
                                       (encapsulates g_stepperMutex)
 ```
 
@@ -164,9 +163,9 @@ Rotation formula:
 UI (Core 1)                         Motor (Core 0)
 ─────────────                        ─────────────
 speed_slider_set(rpm)  ──────────>  speed_get_target_rpm() reads atomic
-speed_request_update() ──────────>  speed_apply() checks flag
-control_start_continuous() ──────>  controlTask transitions state (CAS)
-                                        motorTask applies speed
+pot / pedal update     ──────────>  speed_apply() computes and applies speed
+control_start_continuous() ──────>  controlTask queues mode request and clears stale STOP
+                                        motor_set_target_milli_hz() wraps stepper mutex
 ```
 
 ## Flash & Storage Safety

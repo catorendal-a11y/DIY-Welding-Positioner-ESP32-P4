@@ -78,15 +78,13 @@ User presses SAVE on any settings screen
 │ 1. Check savePending && 1s elapsed     │
 │ 2. savePending = false                 │
 │ 3. storage_save_settings_internal()    │
-│    a. LittleFS.open("settings.tmp","w")│
-│    b. serializeJson(doc, file)          │
-│       → FLASH WRITE (~50-200ms)        │
-│       → Flash cache DISABLED on both    │
-│         cores during write              │
-│    c. file.close()                     │
-│    d. LittleFS.remove("settings.json") │
-│    e. LittleFS.rename(".tmp",".json")  │
-│ 4. LOG_I("Successfully saved...")      │
+│    a. copy g_settings under mutex       │
+│    b. serializeJson(doc, RAM buffer)    │
+│    c. Preferences.putBytes("cfg", buf)  │
+│       → NVS FLASH WRITE                 │
+│       → Flash cache may be disabled     │
+│         during commit                   │
+│ 4. g_screenRedraw = true                │
 └─────────────────────────────────────────┘
 ```
 
@@ -377,12 +375,12 @@ Line 25 is a dead reference to a removed variable.
 static bool storage_save_presets_internal() {
   // Copy presets to local buffer
   xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
-  std::vector<Preset> localCopy = g_presets;  // deep copy
+  std::vector<Preset> localCopy = g_presets;
   xSemaphoreGive(g_presets_mutex);
 
-  // Write from local copy (no mutex held during flash write)
-  File file = LittleFS.open(PRESETS_FILE ".tmp", FILE_WRITE);
-  // ... serialize localCopy ...
+  // Serialize localCopy to RAM, then write JSON bytes to NVS.
+  // No presets mutex is held during the flash write.
+  g_prefs.putBytes(NVS_KEY_PRESETS, buf.data(), written);
 }
 ```
 

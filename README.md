@@ -71,17 +71,19 @@ Open-source welding positioner controller with a glove-safe industrial touch UI 
 
 3. **Select board environment:** `esp32p4-release` (GUITION JC4880P443C 4.3")
 
-4. **Build and flash:**
+4. **Build and flash** with PlatformIO:
 
    ```bash
-   pio run -t upload
+   pio run --target upload
    ```
 
    Debug build with verbose serial logging:
 
    ```bash
-   pio run -t upload -e esp32p4-debug
+   pio run --target upload -e esp32p4-debug
    ```
+
+   Build output is written to `.pio/build-fw` to avoid Windows file-lock conflicts.
 
 5. **(Optional) Run native unit tests** — pure logic, no hardware required:
 
@@ -111,7 +113,7 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 |:---|:---|
 | **Welding Modes** | 5 modes — Continuous, Jog, Pulse, Step, and Countdown (configurable 1-10s delay) |
 | **Speed Control** | Live RPM via **potentiometer** on the main screen; touch **+/-** on **Jog** (and presets/settings where applicable) |
-| **Foot Pedal** | Digital start switch (GPIO 33); optional analog speed via ADS1115 I2C ADC (opt-in with `ENABLE_ADS1115_PEDAL=1`, non-blocking I2C reads in `motorTask`) |
+| **Foot Pedal** | Digital start switch (GPIO 33); analog speed via ADS1115 I2C ADC on the touch I2C bus when `ENABLE_ADS1115_PEDAL=1` (enabled in `platformio.ini`; non-blocking reads in `motorTask`) |
 | **Direction Switch** | Physical CW/CCW toggle (GPIO 29) |
 | **Driver Fault** | DM542T `ALM` fault input on GPIO 32 (open-drain, `INPUT_PULLUP`, LOW = alarm) |
 | **Touch UI** | LVGL 9.x glove-safe interface, high-contrast dark theme, 8 accent colors |
@@ -215,7 +217,7 @@ controlTask  (pri 3, 4 KB)
 | **GPIO 34** | E-STOP (Input, ISR) | NC contact, active LOW, `FALLING` edge, 3-sample boot de-floating (no internal pull-up on ESP32-P4 — add external pull-up for long/noisy leads) |
 | **GPIO 33** | PEDAL SW (Input) | Foot pedal switch, `INPUT_PULLUP`, active LOW |
 | **GPIO 32** | DRIVER ALM (Input) | DM542T alarm input, `INPUT_PULLUP`, open-drain active LOW |
-| GPIO 7 / 8 | Touch I2C | GT911 @ 0x5D (always) + ADS1115 @ 0x48 (only when `ENABLE_ADS1115_PEDAL=1`) |
+| GPIO 7 / 8 | Touch I2C | GT911 @ 0x5D + ADS1115 pedal ADC @ 0x48-0x4B when `ENABLE_ADS1115_PEDAL=1` |
 | GPIO 14–19, 28, 54 | Board / C6 routing | On GUITION JC4880P443C some pins route to the on-board ESP32-C6; **application firmware uses only the ESP32-P4 side for control**. Do not repurpose without the vendor schematic. |
 
 ---
@@ -240,7 +242,7 @@ controlTask  (pri 3, 4 KB)
 | **Direction Switch** | SPDT toggle switch | 1 |
 | **E-STOP** | NC mushroom button | 1 |
 | **Foot Pedal** | Analog pot + momentary switch | 1 |
-| **ADS1115** | 16-bit I2C ADC (0x48) for pedal pot | 1 |
+| **ADS1115** | 16-bit I2C ADC (0x48-0x4B) for pedal pot | 1 |
 
 ---
 
@@ -283,7 +285,7 @@ Open `src/config.h` to adjust hardware parameters:
 #define D_EMNE          0.300f  // Reference workpiece diameter (m) — kinematics
 #define D_RULLE         0.080f  // Roller diameter (m) — kinematics
 // Acceleration and microstep are stored in NVS (Motor Config); defaults 7500 steps/s^2, 1/16
-#define START_SPEED     100     // Hz ramp start
+#define START_SPEED     20      // Hz minimum step-frequency floor
 ```
 
 Settings can also be changed from the touchscreen via **Settings > Motor Config** and are persisted to **NVS** (see [Persistence (NVS)](#persistence-nvs)).
@@ -342,6 +344,15 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 ---
 
 ## Troubleshooting
+
+<details>
+<summary><b>Main START does not always start motor</b></summary>
+
+- Current control logic clears stale pending STOP requests whenever a new mode request is queued
+- If this reappears, check for UI callbacks that call `control_stop()` while already idle, then immediately call `control_start_continuous()`
+- JOG release also cancels a pending JOG start so a quick tap/release cannot start motion after the button was released
+
+</details>
 
 <details>
 <summary><b>Motor does not move</b></summary>
@@ -412,7 +423,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - [x] Countdown before start (configurable 1-10s delay with visual countdown)
 - [x] LVGL async object deletion + widget invalidation pattern
 - [x] E-STOP wakes dimmed display (backlight / dim pipeline, v2.0.3+)
-- [x] v2.0.5: centralised cross-core atomics in `src/app_state.h`, `fatal_halt()` with serial-visible reason, `LOG_E` always compiled in, boot-time ESTOP de-floating, non-blocking ADS1115 pedal ADC, extended native tests
+- [x] v2.0.5: centralised cross-core atomics in `src/app_state.h`, `fatal_halt()` with serial-visible reason, `LOG_E` always compiled in, boot-time ESTOP de-floating, non-blocking ADS1115 pedal ADC, start-request race fix, extended native tests
 
 ---
 

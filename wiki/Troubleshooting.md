@@ -11,7 +11,7 @@
 ### Motor stalls under load
 - Basic PUL/DIR drivers have no anti-resonance DSP — stalling at certain RPMs is expected
 - Use 1/8 or finer microstepping to reduce resonance
-- DM542T upgrade planned with built-in anti-resonance
+- If using DM542T, set **Settings > Motor Config > Driver** to DM542T and match DIP microstep to the UI
 
 ### Motor stalls at low RPM with 1/4 microstepping
 - NEMA 23 resonance zone is 100-300 motor RPM
@@ -29,6 +29,11 @@
 
 ### Main screen: missing +/- buttons (v2.0.4+)
 - **By design:** touchscreen **+/-** for workpiece RPM were removed from `SCREEN_MAIN` to simplify pot-only operation. Jog RPM still has **+/-** on `SCREEN_JOG`.
+
+### Main START sometimes does not start
+- Current firmware clears stale pending STOP requests before queuing START, so a STOP tap while idle cannot swallow the next START.
+- If the symptom returns, inspect any UI callback that calls `control_stop()` while already idle, then immediately queues `control_start_continuous()`.
+- Quick JOG tap/release is also protected: release cancels a pending JOG start before `controlTask` can run it.
 
 ### Direction switch not working
 - Enable it in Settings > Motor Config > Direction Switch
@@ -76,15 +81,15 @@
 - Remove this flag; use `CONFIG_RMT_ISR_IRAM_SAFE=1` instead
 
 ### System Python 3.14 incompatible with PlatformIO
-- Always use bundled Python: `C:\Users\Rendalsniken\.platformio\penv\Scripts\pio.exe`
+- Run builds from the PlatformIO/VS Code terminal so `pio` uses PlatformIO's own compatible Python runtime.
 
 ### esptool Unicode crash during flash
 - Windows cp1252 encoding can't handle esptool progress bar characters
 - Solution: `set PYTHONUTF8=1 && pio run --target upload`
 
-### LittleFS.rename() crashes ESP32-P4
-- LittleFS rename is broken on ESP32-P4 — do not use temp file + rename pattern
-- Use direct FILE_WRITE for storage saves
+### Legacy LittleFS settings not found
+- Current firmware stores settings and presets in **NVS** (`wrot/cfg`, `wrot/prs`), not active LittleFS files.
+- On first boot after upgrading, `storage_init()` migrates legacy `/settings.json` and `/presets.json` into NVS if the NVS keys are empty.
 
 ## Speed Control Issues
 
@@ -93,8 +98,8 @@
 - If pot doesn't reach 0 RPM, calibrate ADC reference in `speed.cpp`
 
 ### Buttons don't change RPM during rotation
-- Firmware v2.0.2 uses `speed_request_update()` (thread-safe flag pattern)
-- UI callbacks never call `speed_apply()` directly
+- Main-screen RPM is pot-only by design; Jog and program/edit flows have their own touch controls where applicable.
+- UI callbacks never call `speed_apply()` directly. Core 0 applies live speed via `motor_set_target_milli_hz()`, which wraps stepper speed and acceleration under the motor mutex.
 
 ### RPM gauge doesn't show below 0.1
 - Gauge scaling follows `MIN_RPM` / max RPM from settings; firmware `MIN_RPM` is **0.001** (`config.h`)

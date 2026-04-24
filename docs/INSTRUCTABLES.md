@@ -23,7 +23,7 @@ Commercial welding rotators cost $500-5000. This controller gives you profession
 
 ### Features
 - 5 welding modes: Continuous, Pulse, Step, Jog, Timer
-- **0.001–3.0 RPM** workpiece limits (`MIN_RPM`/`MAX_RPM` in `config.h`) with live pot and button adjustment
+- **0.001–3.0 RPM** workpiece limits (`MIN_RPM`/`MAX_RPM` in `config.h`) with live main-screen pot control and Jog-screen button adjustment
 - 4.3" capacitive touchscreen (800x480, LVGL 9.x UI)
 - 8 selectable accent color themes
 - Foot pedal support (analog speed + digital start)
@@ -51,7 +51,8 @@ IMAGE: docs/images/social_preview.png (or embed YouTube: https://youtu.be/GygLl6
 | 10k potentiometer (LA42DWQ-22 panel mount) | 1 | AliExpress |
 | NC momentary push button (E-STOP) | 1 | Any NC mushroom button |
 | SPDT toggle switch (direction CW/CCW) | 1 | Any toggle switch |
-| Foot pedal with pot + switch | 1 | Optional |
+| Foot pedal with pot + switch | 1 | Optional; analog pot uses ADS1115 on I2C |
+| ADS1115 16-bit I2C ADC | 1 | Optional pedal pot ADC; address 0x48-0x4B |
 | 24–36V DC power supply (5A+; **36V optimal**, **24V** works) | 1 | For motor driver `VM` |
 | USB-C cable (for programming) | 1 | USB-C data cable |
 | Hookup wire (22 AWG) | Various | Any |
@@ -93,11 +94,11 @@ cd DIY-Welding-Positioner-ESP32-P4
 
 Open the project folder in VS Code with the PlatformIO extension installed.
 
-Select the environment: `esp32p4-release`
+Select the environment: `esp32p4-release`. On Windows, run commands from the PlatformIO/VS Code terminal so PlatformIO uses its own Python environment.
 
 Click **Build** (checkmark icon) or run:
 
-```
+```bash
 pio run
 ```
 
@@ -107,7 +108,7 @@ IMAGE: Screenshot of VS Code with PlatformIO build success
 
 Connect the ESP32-P4 board via USB-C. Click **Upload** (arrow icon) or run:
 
-```
+```bash
 pio run --target upload
 ```
 
@@ -129,18 +130,18 @@ IMAGE: docs/images/Wiring_diagram.v2.svg
 | GPIO 51 (DIR) | Driver DIR+ | Direction |
 | GPIO 52 (ENA) | Driver ENA- | LOW = motor ON |
 | GPIO 34 (ESTOP) | E-STOP button | NC contact, pull-up |
+| GPIO 32 (DRIVER ALM) | DM542T ALM | Input pull-up, LOW = alarm |
 | GPIO 29 (DIR SW) | Direction toggle | Pull-up, CW/CCW |
 | GPIO 49 (POT) | 10k pot wiper | ADC input |
-| GPIO 35 (PEDAL) | Foot pedal pot | Digital only (no ADC on P4) |
-| GPIO 33 (PEDAL SW) | Foot pedal switch | Pull-up (optional) |
-| I2C (GPIO 7/8) | ADS1115 | Pedal pot ADC (optional, addr 0x48) |
+| GPIO 33 (PEDAL SW) | Foot pedal switch | Pull-up, active LOW |
+| I2C (GPIO 7/8) | ADS1115 AIN0 | Pedal pot ADC, addr 0x48-0x4B |
 | 5V | Driver PUL-/DIR-/ENA+ | Logic power |
 | Motor PSU+ (24V or 36V) | Driver VCC / VM | Motor power |
 | Motor PSU- | Driver GND | Common ground |
 
 ### Important Notes
 
-- **GPIO 28 / 32 (and other C6 bus pins on the PCB)** — may be routed to the ESP32-C6; **wireless is disabled in firmware** — check the GUITION schematic before repurposing
+- **GPIO 28, 14-19, 54 (and other C6 bus pins on the PCB)** — may be routed to the ESP32-C6; **wireless is disabled in firmware** — check the GUITION schematic before repurposing. GPIO 32 is used by this firmware as the DM542T ALM input.
 - **ENA is active LOW** — HIGH means motor disabled (fail-safe)
 - **E-STOP uses NC contact** — breaks connection when pressed
 - **All grounds must be connected** — ESP32 GND, PSU GND, motor driver GND
@@ -251,7 +252,7 @@ Save up to 16 presets with mode-specific parameters (RPM, pulse times, step angl
 | MAX_RPM | 3.0 | Absolute ceiling / UI cap (`config.h`; Motor Config max ≤ this) |
 | GEAR_RATIO | (60 x 72 / 40) = 108 | Total **1:108** motor:output |
 | ACCELERATION | NVS / Motor Config | Default 7500 steps/s^2 in fresh settings |
-| START_SPEED | 100 Hz | Accel ramp start (`config.h`) |
+| START_SPEED | 20 Hz | Minimum step-frequency floor (`config.h`); default 0.001 RPM maps to ~22 Hz at 1/16 microstep |
 
 ### Upgrading to DM542T
 
@@ -271,7 +272,7 @@ Attach these files to the Instructable:
 3. **docs/images/motor.worm.svg** — Worm gear diagram
 4. **docs/images/main_screen.svg** — Main screen mockup
 5. **docs/images/ui_screens.svg** — All screen mockups
-6. **firmware.bin** — Pre-built firmware (from .pio/build/esp32p4-release/)
+6. **firmware.bin** — Pre-built firmware (from `.pio/build-fw/esp32p4-release/`)
 
 ---
 

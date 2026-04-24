@@ -137,7 +137,7 @@ Firmware: **LOW** on the ENA GPIO line = **motor enabled**, **HIGH** = disabled 
   - **ADS1115 not detected (I2C scan shows 0x5D but never 0x48–0x4B):** firmware uses **GPIO7 = SDA**, **GPIO8 = SCL** (`I2C_NUM_0` in `display.cpp`) — the **same bus** as GT911 and (on JC4880P443) the **ES8311** codec (often **0x18** on scan). On the **JP1** expansion header (odd row), **pin 23 = I2C_SDA** and **pin 25 = I2C_SCL** per Guition pinout — wire ADS **D** and **S** there, **not** to pins **24 / 26** (ESP32-C6 / `C6_IO9` / `C6_CHIP_PU`). Some online notes mention “Wire1 / I2C1”; this project does **not** use a second I2C bus for touch — external ADS must join **GPIO7/8**. Verify continuity, try **swap D and S** once if still no ACK, and **V → 3.3 V**, **G → GND**.
 
 ### D. Reserved Pins (Do Not Use)
-- **GPIO 28** (C6_U0TXD) and **GPIO 32** (C6_U0RXD) are PCB-routed to the ESP32-C6 co-processor. Treat as reserved unless the GUITION schematic confirms safe repurposing for your build.
+- **GPIO 28**, **GPIO 14-19**, and **GPIO 54** may be PCB-routed toward the ESP32-C6 co-processor. Treat as reserved unless the GUITION schematic confirms safe repurposing for your build. **GPIO 32 is intentionally used by this firmware for DM542T ALM**; do not reuse it for other signals.
 
 ## 5. Safety & Thermal Management
 - **Heat Sinking:** Stepper drivers get hot during long welding runs. Mount the driver to the metal enclosure for thermal dissipation or add a 40mm fan.

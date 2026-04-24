@@ -80,7 +80,7 @@ Uses internal INPUT_PULLUP. Enable via Settings > Motor Config > Direction Switc
 
 ### Reserved Pins
 
-GPIO 28 (C6_U0TXD) and GPIO 32 (C6_U0RXD) are PCB-routed to the ESP32-C6 co-processor. Do **not** repurpose without the vendor schematic.
+GPIO 28, GPIO 14-19, and GPIO 54 may be PCB-routed toward the ESP32-C6 co-processor. Do **not** repurpose without the vendor schematic. GPIO 32 is intentionally used by this firmware for DM542T ALM; do not reuse it for other signals.
 
 ## Power Sequencing
 
@@ -106,4 +106,4 @@ GPIO 28 (C6_U0TXD) and GPIO 32 (C6_U0RXD) are PCB-routed to the ESP32-C6 co-proc
 
 - Motor resonance at 100-300 motor RPM causes stalling at coarse microstepping (1/4)
 - Use 1/8 or finer for stable operation
-- DM542T upgrade planned for built-in anti-resonance DSP
+- DM542T is supported; set Motor Config -> Driver to DM542T and match the DIP microstep to the UI

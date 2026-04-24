@@ -83,7 +83,7 @@ All parameters are in `src/config.h`:
 #define MIN_RPM         0.001f    // Minimum workpiece RPM (see src/config.h)
 #define MAX_RPM         3.0f      // Absolute ceiling for max RPM / firmware clamp
 #define GEAR_RATIO      (60.0f * 72.0f / 40.0f)   // = 108, total 1:108
-#define START_SPEED     100       // Hz — accel ramp start (config.h)
+#define START_SPEED     20        // Hz — minimum step-frequency floor (config.h)
 // Default acceleration steps/s² is 7500 from factory SystemSettings (storage.cpp), editable in Motor Config (NVS)
 ```
 
@@ -99,11 +99,11 @@ Settings can also be changed from the touchscreen via **Settings > Motor Config*
 | GPIO 49 | POT (ADC Input) | 10k Pot wiper |
 | GPIO 29 | DIR SW (Input) | CW/CCW toggle |
 | GPIO 34 | E-STOP (Input, ISR) | NC E-STOP button |
-| GPIO 35 | (no ADC) | Digital only |
+| GPIO 32 | DRIVER ALM (Input) | DM542T alarm, LOW = fault |
 | GPIO 33 | PEDAL SW (Input) | Foot pedal switch (optional) |
-| I2C (GPIO 7/8) | ADS1115 | Pedal pot ADC (optional, addr 0x48) |
+| I2C (GPIO 7/8) | ADS1115 | Pedal pot ADC, addr 0x48-0x4B |
 
-**Reserved:** GPIO 28 / 32 are routed to the ESP32-C6 on the PCB — do not use as application GPIO without the GUITION schematic. See `docs/HARDWARE_SETUP.md` §Reserved pins.
+**Reserved:** GPIO 28, 14-19, and 54 may be routed to the ESP32-C6 on the PCB — do not use as application GPIO without the GUITION schematic. GPIO 32 is intentionally used by this firmware for DM542T alarm input. See `docs/HARDWARE_SETUP.md` §Reserved pins.
 
 All driver minus pins (PUL-, DIR-, ENA-) connect to ESP32 GND.
 

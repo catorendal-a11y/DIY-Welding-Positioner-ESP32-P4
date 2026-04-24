@@ -6,22 +6,22 @@ Thank you for considering contributing to this open-source project!
 
 - **PlatformIO** with `pioarduino` platform (ESP-IDF 5.5.x)
 - **Board:** GUITION JC4880P443C (ESP32-P4 + ESP32-C6, 4.3" MIPI-DSI)
-- **Python:** System Python 3.14 is incompatible. Use bundled `pio.exe` which ships Python 3.12
+- **Python:** System Python 3.14 is incompatible with some PlatformIO flows. Run commands from a PlatformIO environment so `pio` uses PlatformIO's managed Python runtime.
 
 ### Build Commands
 
 ```bash
 # Build release (default, silent)
-PYTHONIOENCODING=utf-8 "C:\Users\Rendalsniken\.platformio\penv\Scripts\pio.exe" run
+pio run
 
 # Build debug (verbose serial logging)
-PYTHONIOENCODING=utf-8 "C:\Users\Rendalsniken\.platformio\penv\Scripts\pio.exe" run -e esp32p4-debug
+pio run -e esp32p4-debug
 
 # Flash to device
-PYTHONUTF8=1 PYTHONIOENCODING=utf-8 "C:\Users\Rendalsniken\.platformio\penv\Scripts\pio.exe" run --target upload
+PYTHONUTF8=1 pio run --target upload
 
 # Run native tests (Unity framework)
-"C:\Users\Rendalsniken\.platformio\penv\Scripts\pio.exe" test -e native
+pio test -e native
 ```
 
 > **Windows note:** `PYTHONUTF8=1` is required for flash to prevent esptool Unicode crash in cp1252.
@@ -107,8 +107,8 @@ controlTask (pri 3, 4KB)
 
 - ESP32-P4 uses RISC-V — `-mfix-esp32-psram-cache-issue` will crash
 - `DRIVER_RMT` macro doesn't exist on P4
-- `LittleFS.rename()` crashes on ESP32-P4 — use direct `FILE_WRITE`
-- GPIO 28/32 are PCB-routed to C6 co-processor — cannot use as GPIO
+- Runtime settings/presets are stored in NVS (`Preferences`), with one-time LittleFS legacy migration only
+- GPIO 32 is used for DM542T alarm input; GPIO 28, 14-19, and 54 may be PCB-routed to the C6 co-processor and should not be repurposed without the schematic
 
 ## Documentation
 

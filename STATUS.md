@@ -83,7 +83,7 @@
 
 ## In Progress
 
-- [ ] **DM542T driver integration** (anti-resonance DSP for wider RPM range, up to 5.0 RPM)
+- [ ] **Higher-RPM DM542T tuning** (DM542T driver mode and ALM input exist; wider tested RPM range is still field work)
 - [ ] **Field testing with real weld parameters**
 
 ## Planned
@@ -116,8 +116,8 @@
 | GPIO 49 | POT | 10k speed potentiometer (ADC) |
 | GPIO 29 | DIR SWITCH | CW/CCW toggle, INPUT_PULLUP |
 | GPIO 34 | E-STOP | NC contact, interrupt, active LOW |
-| GPIO 35 | (no ADC) | Digital only |
+| GPIO 32 | DRIVER ALM | DM542T alarm input, active LOW |
 | GPIO 33 | PEDAL SW | Foot pedal switch, active LOW |
-| GPIO 7/8 | Touch I2C | GT911 + ADS1115 (shared bus) |
-| GPIO 28/32 | Reserved | Routed to on-board ESP32-C6 per GUITION — do not repurpose without schematic |
+| GPIO 7/8 | Touch I2C | GT911 + ADS1115 pedal ADC (shared bus) |
+| GPIO 28 | Reserved | Routed to on-board ESP32-C6 per GUITION — do not repurpose without schematic |
 | GPIO 14-19, 54 | Board bus | Routed toward ESP32-C6 per GUITION — do not use as application GPIO without schematic |

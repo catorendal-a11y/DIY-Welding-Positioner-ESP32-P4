@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Main START race** — queued mode requests now clear stale pending STOP requests so a STOP tap while idle cannot swallow the next START; quick JOG release also cancels pending JOG start before motion can begin.
+- **Low-speed floor** — `START_SPEED` is now 20 Hz so default `MIN_RPM` at 1/16 microstep remains reachable.
+
+### Changed
+- **Documentation sync** — README, wiki, test docs, Instructables, status, contributing, implementation, process analysis, and hardware setup now match current NVS storage, DM542T ALM, ADS1115 I2C, `.pio/build-fw`, and generic clone/build commands.
+
 ## [2.0.5] - 2026-04-17
 
 ### Changed

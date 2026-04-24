@@ -187,8 +187,8 @@ void screen_example_invalidate_widgets() {
 |-------|-----------|
 | `lv_display_set_rotation()` crashes ESP32-P4 | Manual rotation in flush callback |
 | `ledc_set_duty_and_update()` crashes backlight | Use separate `ledc_set_duty()` + `ledc_update_duty()` |
-| `LittleFS.rename()` crashes ESP32-P4 | Use direct FILE_WRITE (not atomic) |
-| GPIO 28/32 claimed by C6 co-processor | Do not use for application GPIO without GUITION schematic |
+| Legacy LittleFS data may exist from old firmware | Current firmware imports it once into NVS if NVS keys are empty |
+| GPIO 28 / 14-19 / 54 may be claimed by C6 co-processor | Do not use for application GPIO without GUITION schematic; GPIO 32 is reserved for DM542T ALM in this firmware |
 | High traffic on P4↔C6 bus | Keep unrelated work off that path; follow vendor layout |
 | Companion MCU APIs not thread-safe with UI | Keep any future bus traffic off the LVGL thread |
 | `lv_obj_set_flex_gap` doesn't exist in LVGL 9 | Use `lv_obj_set_style_pad_row/col` |

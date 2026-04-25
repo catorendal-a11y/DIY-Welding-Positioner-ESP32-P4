@@ -20,8 +20,8 @@ void motor_gpio_init();   // Configure GPIO pins — ENA must be HIGH before cal
 void motor_init();        // Initialize FastAccelStepper
 
 // Motor control functions (must be called from Core 0 only)
-void motor_run_cw();      // Run clockwise
-void motor_run_ccw();     // Run counter-clockwise
+bool motor_run_cw();      // Run clockwise; false if safety or hardware state blocks start
+bool motor_run_ccw();     // Run counter-clockwise; false if safety or hardware state blocks start
 void motor_stop();        // Smooth deceleration to stop
 void motor_halt();        // Immediate stop (emergency)
 void motor_disable();     // Disable motor (ENA HIGH) after stopped
@@ -42,6 +42,8 @@ void motor_apply_speed_for_rpm_locked(float rpm_workpiece_command);
 void motor_set_target_milli_hz(uint32_t mhz);
 FastAccelStepper* motor_get_stepper();  // Get stepper instance (caller must hold g_stepperMutex)
 void motor_apply_settings();  // Apply acceleration from g_settings
+void motor_apply_soft_start_acceleration();
+void motor_restore_configured_acceleration();
 
 // FreeRTOS task
 void motorTask(void* pvParameters);    // Motor speed update task (Core 0, priority 4)

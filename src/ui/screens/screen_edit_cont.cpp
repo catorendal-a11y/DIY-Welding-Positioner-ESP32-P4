@@ -145,6 +145,8 @@ void screen_edit_cont_create() {
 
     Preset* p = screen_program_edit_get_preset();
     editRpm = p ? p->rpm : 1.0f;
+    directionCW = p ? (p->direction == 0) : true;
+    softStartEnabled = p ? (p->cont_soft_start != 0) : false;
     float rpm = editRpm;
 
     // ── Header (SVG: 0,0,800,32, fill=#090909) ──
@@ -435,4 +437,6 @@ void screen_edit_cont_update() {
     directionCW = p ? (p->direction == 0) : true;
     softStartEnabled = p ? (p->cont_soft_start != 0) : false;
     update_rpm_display();
+    restyle_direction();
+    restyle_soft_start();
 }

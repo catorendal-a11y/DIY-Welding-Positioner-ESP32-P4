@@ -31,7 +31,7 @@ Commercial welding rotators cost $500-5000. This controller gives you profession
 - E-STOP safety with <0.5ms ISR response
 - 16 program presets saved to flash storage
 - Dual-core FreeRTOS (real-time motor + UI)
-- 19 LVGL root screens + E-STOP overlay (settings, system info, calibration, etc.)
+- 21 active LVGL root screens + E-STOP overlay (settings, diagnostics, pedal settings, system info, calibration, etc.)
 
 ### Demo Video
 

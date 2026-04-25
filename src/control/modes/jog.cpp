@@ -19,10 +19,15 @@ void jog_start(Direction dir) {
 
   motor_set_target_milli_hz(motor_milli_hz_for_rpm_calibrated(jogRPM.load(std::memory_order_relaxed)));
 
-  if (dir == DIR_CW) motor_run_cw();
-  else motor_run_ccw();
+  bool started = (dir == DIR_CW) ? motor_run_cw() : motor_run_ccw();
+  if (!started) {
+    LOG_W("Jog mode: start blocked");
+    return;
+  }
 
-  control_transition_to(STATE_JOG);
+  if (!control_transition_to(STATE_JOG)) {
+    motor_halt();
+  }
 }
 
 void jog_stop() {

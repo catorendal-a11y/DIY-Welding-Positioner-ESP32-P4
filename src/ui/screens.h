@@ -1,5 +1,5 @@
 // TIG Rotator Controller - Screen Management
-// All 12 screens for the TIG rotator controller UI
+// Registered LVGL screen roots for the TIG rotator controller UI
 
 #pragma once
 #include "lvgl.h"
@@ -40,6 +40,8 @@ typedef enum {
   SCREEN_CALIBRATION,   // Motor calibration
   SCREEN_MOTOR_CONFIG,  // Motor configuration
   SCREEN_DISPLAY,        // Display settings
+  SCREEN_PEDAL_SETTINGS, // Foot pedal settings and status
+  SCREEN_DIAGNOSTICS,    // Live GPIO/fault diagnostics
   SCREEN_ABOUT,          // About screen
   SCREEN_COUNT           // MUST be last — total number of screens
 } ScreenId;
@@ -97,6 +99,10 @@ void screen_motor_config_update();
 void screen_display_create();
 void screen_display_update();
 void screen_display_mark_dirty();
+void screen_pedal_settings_create();
+void screen_pedal_settings_update();
+void screen_diagnostics_create();
+void screen_diagnostics_update();
 void screen_about_create();
 void screen_about_update();
 
@@ -124,6 +130,8 @@ void screen_pulse_invalidate_widgets();
 void screen_timer_invalidate_widgets();
 void screen_jog_invalidate_widgets();
 void screen_display_invalidate_widgets();
+void screen_pedal_settings_invalidate_widgets();
+void screen_diagnostics_invalidate_widgets();
 void screen_sysinfo_invalidate_widgets();
 void screen_motor_config_invalidate_widgets();
 void screen_calibration_invalidate_widgets();

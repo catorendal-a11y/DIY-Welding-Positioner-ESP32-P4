@@ -123,11 +123,13 @@ static bool ads_poll_and_start(int16_t* out) {
 #define IIR_ALPHA       0.1f
 #define SLIDER_TIMEOUT_MS 1000
 
-static float adcFiltered = 2047.5f;
+static std::atomic<float> adcFiltered{2047.5f};
 static std::atomic<float> sliderRPM{MIN_RPM};
 static std::atomic<float> rpmMaxUi{MAX_RPM};
 static std::atomic<uint32_t> lastSliderMs{0};
 static std::atomic<uint8_t> currentDir{DIR_CW};
+static std::atomic<uint8_t> programDirectionOverride{DIR_CW};
+static std::atomic<bool> programDirectionOverrideActive{false};
 static std::atomic<bool> buttonsActive{false};
 static std::atomic<float> lastPotAdc{2047.5f};
 static std::atomic<bool> pedalEnabled{false};
@@ -246,7 +248,7 @@ void speed_init() {
 #endif
 
   delay(10);
-  adcFiltered = (float)analogRead(PIN_POT);
+  adcFiltered.store((float)analogRead(PIN_POT), std::memory_order_release);
 #if ENABLE_ADS1115_PEDAL
   if (ads1115Connected) {
     int16_t v = ads_read_channel0_blocking();
@@ -254,7 +256,7 @@ void speed_init() {
   } else
 #endif
   {
-    pedalFiltered = adcFiltered;
+    pedalFiltered = adcFiltered.load(std::memory_order_acquire);
   }
   lastDirSwitchState = digitalRead(PIN_DIR_SWITCH);
   speed_sync_rpm_limits_from_settings();
@@ -263,24 +265,10 @@ void speed_init() {
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   pedalPersist = g_settings.pedal_enabled;
   xSemaphoreGive(g_settings_mutex);
-#if ENABLE_ADS1115_PEDAL
-  if (pedalPersist && ads1115Connected) {
-    pedalEnabled.store(true, std::memory_order_release);
-  } else {
-    pedalEnabled.store(false, std::memory_order_release);
-    if (pedalPersist && !ads1115Connected) {
-      xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-      g_settings.pedal_enabled = false;
-      xSemaphoreGive(g_settings_mutex);
-      storage_save_settings();
-    }
-  }
-#else
-  (void)pedalPersist;
-  pedalEnabled.store(false, std::memory_order_release);
-#endif
+  pedalEnabled.store(pedalPersist, std::memory_order_release);
 
-  LOG_I("Speed control init: pot=%.0f pedal=%.0f ads=%d pedal_on=%d", adcFiltered, pedalFiltered,
+  LOG_I("Speed control init: pot=%.0f pedal=%.0f ads=%d pedal_on=%d",
+        adcFiltered.load(std::memory_order_acquire), pedalFiltered,
         (int)ads1115Connected, (int)pedalEnabled.load(std::memory_order_acquire));
 }
 
@@ -311,9 +299,10 @@ void speed_update_adc() {
   }
 
   float raw = (float)analogRead(PIN_POT);
-  float prev = adcFiltered;
-  adcFiltered = IIR_ALPHA * raw + (1.0f - IIR_ALPHA) * adcFiltered;
-  if (fabsf(adcFiltered - prev) > POT_WAKE_THRESHOLD) {
+  float prev = adcFiltered.load(std::memory_order_acquire);
+  float filtered = IIR_ALPHA * raw + (1.0f - IIR_ALPHA) * prev;
+  adcFiltered.store(filtered, std::memory_order_release);
+  if (fabsf(filtered - prev) > POT_WAKE_THRESHOLD) {
     g_wakePending.store(true, std::memory_order_release);
   }
 
@@ -324,7 +313,7 @@ void speed_update_adc() {
     float pedalAdc = (float)adsVal * ADS1115_TO_ADC_SCALE;
     if (pedalSettingsTick) {
       pedalFiltered = pedalAdc;
-      lastPotAdc.store(adcFiltered, std::memory_order_release);
+      lastPotAdc.store(filtered, std::memory_order_release);
     } else {
       pedalFiltered = IIR_ALPHA * pedalAdc + (1.0f - IIR_ALPHA) * pedalFiltered;
     }
@@ -346,7 +335,7 @@ void speed_slider_set(float rpm) {
   sliderRPM.store(r, std::memory_order_release);
   lastSliderMs.store(millis(), std::memory_order_release);
   buttonsActive.store(true, std::memory_order_release);
-  lastPotAdc.store(adcFiltered, std::memory_order_release);
+  lastPotAdc.store(adcFiltered.load(std::memory_order_acquire), std::memory_order_release);
   // Immediate: controlTask may call step_execute before next speed_apply tick.
   cachedTargetRpm.store(r, std::memory_order_release);
 }
@@ -379,9 +368,8 @@ void speed_apply() {
   // Cache motor_is_running() once — each call takes g_stepperMutex.
   const bool motorRunning = motor_is_running();
 
-  bool pedOn = pedalEnabled.load(std::memory_order_acquire);
-  bool usePedal = pedOn && pedalFiltered > 100.0f && pedalFiltered < 3900.0f;
-  float activeAdc = usePedal ? pedalFiltered : adcFiltered;
+  bool usePedal = speed_pedal_analog_available() && pedalFiltered > 100.0f && pedalFiltered < 3900.0f;
+  float activeAdc = usePedal ? pedalFiltered : adcFiltered.load(std::memory_order_acquire);
   float adc = constrain(activeAdc, 0.0f, 4095.0f);
   float normalized = (3315.0f - adc) / 3315.0f;
   normalized = constrain(normalized, 0.0f, 1.0f);
@@ -424,7 +412,9 @@ void speed_apply() {
 
 Direction speed_get_direction() {
   Direction dir;
-  if (g_dir_switch_cache.load(std::memory_order_acquire)) {
+  if (programDirectionOverrideActive.load(std::memory_order_acquire)) {
+    dir = (Direction)programDirectionOverride.load(std::memory_order_acquire);
+  } else if (g_dir_switch_cache.load(std::memory_order_acquire)) {
     dir = digitalRead(PIN_DIR_SWITCH) ? DIR_CW : DIR_CCW;
   } else {
     dir = (Direction)currentDir.load(std::memory_order_acquire);
@@ -441,14 +431,24 @@ Direction speed_get_direction() {
 
 void speed_set_direction(Direction dir) {
   currentDir.store((uint8_t)dir, std::memory_order_release);
+  programDirectionOverrideActive.store(false, std::memory_order_release);
+}
+
+void speed_set_program_direction_override(Direction dir) {
+  currentDir.store((uint8_t)dir, std::memory_order_release);
+  programDirectionOverride.store((uint8_t)dir, std::memory_order_release);
+  programDirectionOverrideActive.store(true, std::memory_order_release);
+}
+
+void speed_clear_program_direction_override() {
+  programDirectionOverrideActive.store(false, std::memory_order_release);
+}
+
+bool speed_program_direction_override_active() {
+  return programDirectionOverrideActive.load(std::memory_order_acquire);
 }
 
 void speed_set_pedal_enabled(bool enabled) {
-#if ENABLE_ADS1115_PEDAL
-  if (enabled && !ads1115Connected) return;
-#else
-  if (enabled) return;
-#endif
   pedalEnabled.store(enabled, std::memory_order_release);
   pedalApplyPending.store(true, std::memory_order_release);
 }
@@ -457,12 +457,20 @@ bool speed_get_pedal_enabled() {
   return pedalEnabled.load(std::memory_order_acquire);
 }
 
-bool speed_pedal_connected() {
+bool speed_pedal_switch_enabled() {
+  return pedalEnabled.load(std::memory_order_acquire);
+}
+
+bool speed_pedal_analog_available() {
 #if ENABLE_ADS1115_PEDAL
   return ads1115Connected && pedalEnabled.load(std::memory_order_acquire);
 #else
   return false;
 #endif
+}
+
+bool speed_pedal_connected() {
+  return speed_pedal_switch_enabled();
 }
 
 bool speed_ads1115_pedal_present(void) {

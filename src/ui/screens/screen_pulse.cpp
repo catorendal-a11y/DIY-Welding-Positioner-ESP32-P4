@@ -55,16 +55,17 @@ static void update_computed_info() {
     lv_label_set_text_fmt(infoStepsLabel, "STEPS/S %d", (int)(stepsPerSec + 0.5f));
 
   // Update progress bars (range 0-100)
-  // ON bar: 0.1s..10s mapped to 0..100
+  const uint32_t pulseSpan = PULSE_MS_MAX - PULSE_MS_MIN;
+  // ON/OFF bars: shared pulse range mapped to 0..100
   if (onBar) {
-    int onPct = (int)((pulseOnMs - 100) * 100 / 9900);
+    int onPct = (int)((pulseOnMs - PULSE_MS_MIN) * 100 / pulseSpan);
     if (onPct < 0) onPct = 0;
     if (onPct > 100) onPct = 100;
     lv_bar_set_value(onBar, onPct, LV_ANIM_OFF);
   }
   // OFF bar
   if (offBar) {
-    int offPct = (int)((pulseOffMs - 100) * 100 / 9900);
+    int offPct = (int)((pulseOffMs - PULSE_MS_MIN) * 100 / pulseSpan);
     if (offPct < 0) offPct = 0;
     if (offPct > 100) offPct = 100;
     lv_bar_set_value(offBar, offPct, LV_ANIM_OFF);
@@ -117,8 +118,8 @@ static void back_event_cb(lv_event_t* e) { screens_show(SCREEN_MAIN); }
 static void on_time_adj_cb(lv_event_t* e) {
   int delta = (intptr_t)lv_event_get_user_data(e);
   if (delta > 0) pulseOnMs += 100;
-  else if (pulseOnMs > 100) pulseOnMs -= 100;
-  if (pulseOnMs > 5000) pulseOnMs = 5000;
+  else if (pulseOnMs > PULSE_MS_MIN) pulseOnMs -= 100;
+  if (pulseOnMs > PULSE_MS_MAX) pulseOnMs = PULSE_MS_MAX;
   lv_label_set_text_fmt(onTimeLabel, "%.1fs", pulseOnMs / 1000.0f);
   update_computed_info();
   update_waveform();
@@ -127,8 +128,8 @@ static void on_time_adj_cb(lv_event_t* e) {
 static void off_time_adj_cb(lv_event_t* e) {
   int delta = (intptr_t)lv_event_get_user_data(e);
   if (delta > 0) pulseOffMs += 100;
-  else if (pulseOffMs > 100) pulseOffMs -= 100;
-  if (pulseOffMs > 5000) pulseOffMs = 5000;
+  else if (pulseOffMs > PULSE_MS_MIN) pulseOffMs -= 100;
+  if (pulseOffMs > PULSE_MS_MAX) pulseOffMs = PULSE_MS_MAX;
   lv_label_set_text_fmt(offTimeLabel, "%.1fs", pulseOffMs / 1000.0f);
   update_computed_info();
   update_waveform();

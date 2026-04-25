@@ -5,6 +5,7 @@
 #include "display.h"
 #include <Arduino.h>
 #include "../config.h"
+#include "../app_state.h"
 #include "../storage/storage.h"
 
 #include "esp_lcd_panel_ops.h"
@@ -219,7 +220,7 @@ void display_init() {
   LOG_I("       DSI ret = %d (%s)", ret, esp_err_to_name(ret));
   if (ret != ESP_OK) {
     LOG_E("       DSI bus failed: %s", esp_err_to_name(ret));
-    return;
+    fatal_halt("display dsi bus init failed");
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -235,7 +236,7 @@ void display_init() {
   LOG_I("       DBI ret = %d (%s)", ret, esp_err_to_name(ret));
   if (ret != ESP_OK) {
     LOG_E("       DBI failed: %s", esp_err_to_name(ret));
-    return;
+    fatal_halt("display dbi io init failed");
   }
   LOG_I("       DBI OK");
 
@@ -288,13 +289,14 @@ void display_init() {
   LOG_I("       Panel create ret = %d (%s)", ret, esp_err_to_name(ret));
   if (ret != ESP_OK) {
     LOG_E("       panel create failed: %s", esp_err_to_name(ret));
-    return;
+    fatal_halt("display panel create failed");
   }
   LOG_I("       panel create OK");
 
   ret = esp_lcd_panel_reset(display_panel);
   if (ret != ESP_OK) {
     LOG_E("       panel reset failed: %s", esp_err_to_name(ret));
+    fatal_halt("display panel reset failed");
   } else {
     LOG_I("       panel reset OK");
   }
@@ -305,6 +307,7 @@ void display_init() {
   LOG_I(">>> AFTER panel_init: ret=%d (%s)", ret, esp_err_to_name(ret));
   if (ret != ESP_OK) {
     LOG_E("       panel init failed: %s", esp_err_to_name(ret));
+    fatal_halt("display panel init failed");
   } else {
     LOG_I("       panel init OK");
   }
@@ -319,6 +322,7 @@ void display_init() {
   ret = esp_lcd_panel_disp_on_off(display_panel, true);
   if (ret != ESP_OK) {
     LOG_E("       panel display ON failed: %s", esp_err_to_name(ret));
+    fatal_halt("display panel on failed");
   } else {
     LOG_I("       panel display ON OK");
   }

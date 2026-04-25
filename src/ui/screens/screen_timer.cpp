@@ -34,6 +34,13 @@ static lv_obj_t* statusLabel = nullptr;
 static lv_obj_t* rpmLabel = nullptr;
 static lv_obj_t* secLabel = nullptr;
 
+static void save_countdown_setting() {
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  g_settings.countdown_seconds = (uint8_t)countdownSec;
+  xSemaphoreGive(g_settings_mutex);
+  storage_save_settings();
+}
+
 // ───────────────────────────────────────────────────────────────────────────────
 // COLOR HELPERS
 // ───────────────────────────────────────────────────────────────────────────────
@@ -78,6 +85,7 @@ static void start_event_cb(lv_event_t* e) {
   if (safety_inhibit_motion()) return;
   if (control_get_state() != STATE_IDLE) return;
 
+  save_countdown_setting();
   countingDown.store(true, std::memory_order_release);
   countdownRemaining = countdownSec;
   lastDisplayedSec = -1;
@@ -223,10 +231,7 @@ void screen_timer_update() {
     backPending.store(false, std::memory_order_release);
     countingDown.store(false, std::memory_order_release);
     startPending.store(false, std::memory_order_release);
-    xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-    g_settings.countdown_seconds = (uint8_t)countdownSec;
-    xSemaphoreGive(g_settings_mutex);
-    storage_save_settings();
+    save_countdown_setting();
     screens_request_show(SCREEN_MAIN);
     return;
   }
@@ -235,8 +240,19 @@ void screen_timer_update() {
   if (startPending.load(std::memory_order_acquire)) {
     startPending.store(false, std::memory_order_release);
     countingDown.store(false, std::memory_order_release);
-    control_start_continuous();
-    screens_request_show(SCREEN_MAIN);
+    if (safety_inhibit_motion() || control_get_state() != STATE_IDLE) {
+      if (statusLabel) {
+        lv_label_set_text(statusLabel, "START BLOCKED");
+        lv_obj_set_style_text_color(statusLabel, COL_RED, 0);
+      }
+      return;
+    }
+    if (control_start_continuous()) {
+      screens_request_show(SCREEN_MAIN);
+    } else if (statusLabel) {
+      lv_label_set_text(statusLabel, "START BLOCKED");
+      lv_obj_set_style_text_color(statusLabel, COL_RED, 0);
+    }
     return;
   }
 

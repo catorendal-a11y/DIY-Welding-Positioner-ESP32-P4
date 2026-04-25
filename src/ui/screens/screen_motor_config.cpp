@@ -12,12 +12,13 @@
 #include "freertos/semphr.h"
 #include <atomic>
 
-static const MicrostepSetting microOptions[3] = {MICROSTEP_8, MICROSTEP_16, MICROSTEP_32};
+static const MicrostepSetting microOptions[] = {MICROSTEP_4, MICROSTEP_8, MICROSTEP_16, MICROSTEP_32};
 // NEMA 200 full steps/rev x microstep = driver PULSE/REV (match DM542 DIP table)
-static const char* microStrings[3] = {"1600", "3200", "6400"};
+static const char* microStrings[] = {"800", "1600", "3200", "6400"};
+static constexpr int kMicroOptionCount = sizeof(microOptions) / sizeof(microOptions[0]);
 static int selectedMicro = 0;
-static lv_obj_t* microBtns[3] = {nullptr, nullptr, nullptr};
-static lv_obj_t* microLabels[3] = {nullptr, nullptr, nullptr};
+static lv_obj_t* microBtns[kMicroOptionCount] = {nullptr};
+static lv_obj_t* microLabels[kMicroOptionCount] = {nullptr};
 static lv_obj_t* accelSlider = nullptr;
 static lv_obj_t* accelValueLabel = nullptr;
 static lv_obj_t* maxRpmSlider = nullptr;
@@ -89,7 +90,7 @@ static void back_cb(lv_event_t* e) {
 static void micro_btn_cb(lv_event_t* e) {
   int idx = (int)(size_t)lv_event_get_user_data(e);
   selectedMicro = idx;
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < kMicroOptionCount; i++) {
     lv_obj_set_style_bg_color(microBtns[i], i == idx ? COL_BG_ACTIVE : COL_BTN_BG, 0);
     lv_obj_set_style_border_color(microBtns[i], i == idx ? COL_ACCENT : COL_BORDER, 0);
     lv_obj_set_style_border_width(microBtns[i], i == idx ? 2 : 1, 0);
@@ -125,6 +126,15 @@ static void save_nav_timer_cb(lv_timer_t* timer) {
 }
 
 static void save_apply_cb(lv_event_t* e) {
+  (void)e;
+  if (control_get_state() != STATE_IDLE) {
+    if (saveFeedbackLabel) {
+      lv_label_set_text(saveFeedbackLabel, "Stop motor first");
+      lv_obj_set_style_text_color(saveFeedbackLabel, COL_RED, 0);
+    }
+    return;
+  }
+
   int accelVal = lv_slider_get_value(accelSlider);
   if (accelVal < kAccelMin) accelVal = kAccelMin;
   if (accelVal > kAccelMax) accelVal = kAccelMax;
@@ -197,7 +207,7 @@ void screen_motor_config_create() {
 
   MicrostepSetting currentMicro = microstep_get();
   selectedMicro = 0;
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < kMicroOptionCount; i++) {
     if (microOptions[i] == currentMicro) selectedMicro = i;
 
     microBtns[i] = lv_button_create(microRow);
@@ -479,7 +489,7 @@ void screen_motor_config_create() {
 }
 
 void screen_motor_config_invalidate_widgets() {
-  for (int i = 0; i < 3; i++) { microBtns[i] = nullptr; microLabels[i] = nullptr; }
+  for (int i = 0; i < kMicroOptionCount; i++) { microBtns[i] = nullptr; microLabels[i] = nullptr; }
   accelSlider = nullptr;
   accelValueLabel = nullptr;
   maxRpmSlider = nullptr;

@@ -6,6 +6,18 @@
 #include <hal/wdt_hal.h>
 #include "../app_state.h"  // g_estopPending, g_estopTriggerMs, g_uiResetPending
 
+typedef enum {
+  FAULT_NONE = 0,
+  FAULT_ESTOP_PRESSED,
+  FAULT_ESTOP_GLITCH,
+  FAULT_DRIVER_ALARM,
+  FAULT_MOTOR_INIT_FAILED,
+  FAULT_DISPLAY_INIT_FAILED,
+  FAULT_LVGL_INIT_FAILED,
+  FAULT_STORAGE_CORRUPT,
+  FAULT_WATCHDOG_RESET
+} FaultReason;
+
 // ───────────────────────────────────────────────────────────────────────────────
 // SAFETY FUNCTIONS
 // ───────────────────────────────────────────────────────────────────────────────
@@ -19,6 +31,9 @@ bool safety_is_driver_alarm_latched(); // DM542T ALM held low (debounced) — bl
 bool safety_inhibit_motion();          // ESTOP pin OR driver alarm (use before enabling motor)
 bool safety_can_reset_from_overlay();  // ESTOP released and driver alarm clear (for RESET UI)
 bool safety_is_estop_locked();         // Returns true if in ESTOP state
+FaultReason safety_get_fault_reason(); // Last latched fault source for diagnostics/UI
+const char* safety_fault_reason_name(FaultReason reason);
+const char* safety_fault_reason_message(FaultReason reason);
 void safety_reset_estop();             // Reset ESTOP (only when physical button released)
 bool safety_check_ui_reset();          // Check if UI requested reset, process if safe
 

@@ -43,7 +43,7 @@
 - [x] Display/Motor Config UI polish
 
 ### v2.0.0 Features (2026-04-03)
-- [x] 19 LVGL root screens + E-STOP overlay (settings, system info, calibration, motor config, etc.)
+- [x] 21 active LVGL root screens + E-STOP overlay (settings, diagnostics, pedal settings, system info, calibration, motor config, etc.)
 - [x] Direction switch (GPIO29, toggle via settings)
 - [x] Foot pedal support (analog speed + digital start)
 - [x] Thread-safe stepper access (FreeRTOS mutex + atomic variables)
@@ -53,6 +53,8 @@
 - [x] 8 accent color themes with live switching
 - [x] Display settings (brightness slider, dim timeout)
 - [x] System info screen (core load, heap, PSRAM, uptime)
+- [x] Diagnostics screen (live ESTOP/ALM/DIR/pedal/ENA/RPM status)
+- [x] Pedal settings screen (GPIO33 arm/disarm + ADS1115 status)
 - [x] Motor configuration UI (microstepping, acceleration, calibration)
 - [x] Countdown before start (configurable 1-10s delay with visual countdown)
 - [x] All 5 welding modes tested on hardware

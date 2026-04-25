@@ -1,6 +1,6 @@
 # Project Status
 
-**Last Updated:** 2026-04-17
+**Last Updated:** 2026-04-25
 **Firmware:** v2.0.5
 **Build:** SUCCESS (Release & Debug, 0 errors 0 warnings) — re-verify locally after toolchain updates
 
@@ -11,7 +11,7 @@
 ### Core Motor Control
 - [x] **ESP32-P4 MIPI-DSI display** (ST7701S 480x800, RGB565, landscape rotation)
 - [x] **GT911 capacitive touch** (I2C, coordinate mapping)
-- [x] **LVGL 9.5.x UI framework** (800x480 landscape, 19 `ScreenId` roots + E-STOP overlay)
+- [x] **LVGL 9.5.x UI framework** (800x480 landscape, 21 active `ScreenId` roots + E-STOP overlay)
 - [x] **FastAccelStepper motor control** (hardware RMT pulses, v0.33.x)
 - [x] **FreeRTOS dual-core architecture** (Core 0: Motor/Safety, Core 1: UI)
 - [x] **5 welding modes:** Continuous, Jog, Pulse, Step, Timer
@@ -32,11 +32,13 @@
 - [x] **UI reset from ESTOP** (via Core 0 pending flag pattern)
 
 ### UI/UX
-- [x] **19 root screens** with lazy creation pattern + ESTOP overlay
+- [x] **21 active root screens** with lazy creation pattern + ESTOP overlay
 - [x] **8 accent color themes** (switchable from Display Settings)
-- [x] **Settings hub** (Display, System Info, Calibration, Motor Config, About)
+- [x] **Settings hub** (Motor Config, Calibration, Display, Pedal Settings, Diagnostics, System Info, About)
 - [x] **Display Settings** (brightness slider, dim timeout)
 - [x] **System Info** (CPU core load, heap, PSRAM, uptime)
+- [x] **Diagnostics** (live ESTOP, ALM, DIR switch, pedal switch, ENA, direction, RPM, motion-block state)
+- [x] **Pedal Settings** (pedal arm/disarm, GPIO33 switch status, ADS1115 analog status)
 - [x] **Motor Config** (microstepping, acceleration, direction switch, pedal enable)
 - [x] **About screen** (firmware version, hardware info)
 - [x] **Program Edit** (full preset editor with on-screen keyboard)

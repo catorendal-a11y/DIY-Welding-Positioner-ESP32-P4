@@ -176,8 +176,8 @@ static bool storage_parse_presets_buffer(const uint8_t* data, size_t len) {
         if (rpmCap < MIN_RPM) rpmCap = MIN_RPM;
         if (rpmCap > MAX_RPM) rpmCap = MAX_RPM;
         p.rpm = constrain(p.rpm, MIN_RPM, rpmCap);
-        p.pulse_on_ms = constrain(p.pulse_on_ms, (uint32_t)10, (uint32_t)60000);
-        p.pulse_off_ms = constrain(p.pulse_off_ms, (uint32_t)10, (uint32_t)60000);
+        p.pulse_on_ms = constrain(p.pulse_on_ms, (uint32_t)PULSE_MS_MIN, (uint32_t)PULSE_MS_MAX);
+        p.pulse_off_ms = constrain(p.pulse_off_ms, (uint32_t)PULSE_MS_MIN, (uint32_t)PULSE_MS_MAX);
         p.step_angle = constrain(p.step_angle, 0.1f, 360.0f);
         p.timer_ms = constrain(p.timer_ms, (uint32_t)1, (uint32_t)3600000);
 
@@ -297,8 +297,8 @@ static bool storage_apply_settings_doc(JsonObjectConst doc) {
     g_settings.invert_direction = doc["invert_direction"] | false;
     g_settings.accent_color = constrain(doc["accent_color"] | 0, (uint8_t)0, (uint8_t)7);
     g_settings.countdown_seconds = constrain(doc["countdown_seconds"] | 3, (uint8_t)1, (uint8_t)10);
-    // Missing JSON key: default to standard PUL/DIR timing for older NVS blobs (OTA / legacy).
-    g_settings.stepper_driver = constrain(doc["stepper_driver"] | (int)STEPPER_DRIVER_STANDARD, 0, 1);
+    // Missing JSON key: keep project default DM542T timing for older NVS blobs.
+    g_settings.stepper_driver = constrain(doc["stepper_driver"] | (int)STEPPER_DRIVER_DM542T, 0, 1);
     g_settings.pedal_enabled = doc["pedal_enabled"] | false;
     g_settings.settings_version = doc["settings_version"] | 0;
     const bool dirSw = g_settings.dir_switch_enabled;

@@ -59,13 +59,14 @@ static void update_computed_info() {
   }
 
   // Progress bars
+  const uint32_t pulseSpan = PULSE_MS_MAX - PULSE_MS_MIN;
   if (onBar) {
-    int pct = (int)((editOnMs - 100) * 100 / 4900);
+    int pct = (int)((editOnMs - PULSE_MS_MIN) * 100 / pulseSpan);
     if (pct < 0) pct = 0; if (pct > 100) pct = 100;
     lv_bar_set_value(onBar, pct, LV_ANIM_OFF);
   }
   if (offBar) {
-    int pct = (int)((editOffMs - 100) * 100 / 4900);
+    int pct = (int)((editOffMs - PULSE_MS_MIN) * 100 / pulseSpan);
     if (pct < 0) pct = 0; if (pct > 100) pct = 100;
     lv_bar_set_value(offBar, pct, LV_ANIM_OFF);
   }
@@ -90,9 +91,10 @@ static void back_event_cb(lv_event_t* e) {
 static void on_time_adj_cb(lv_event_t* e) {
   if (!onTimeLabel) return;
   int delta = (int)(intptr_t)lv_event_get_user_data(e);
-  editOnMs += delta;
-  if (editOnMs < 100) editOnMs = 100;
-  if (editOnMs > 5000) editOnMs = 5000;
+  if (delta > 0) editOnMs += (uint32_t)delta;
+  else if (editOnMs > PULSE_MS_MIN) editOnMs -= (uint32_t)(-delta);
+  if (editOnMs < PULSE_MS_MIN) editOnMs = PULSE_MS_MIN;
+  if (editOnMs > PULSE_MS_MAX) editOnMs = PULSE_MS_MAX;
   lv_label_set_text_fmt(onTimeLabel, "%.1fs", editOnMs / 1000.0f);
   update_computed_info();
 }
@@ -100,9 +102,10 @@ static void on_time_adj_cb(lv_event_t* e) {
 static void off_time_adj_cb(lv_event_t* e) {
   if (!offTimeLabel) return;
   int delta = (int)(intptr_t)lv_event_get_user_data(e);
-  editOffMs += delta;
-  if (editOffMs < 100) editOffMs = 100;
-  if (editOffMs > 5000) editOffMs = 5000;
+  if (delta > 0) editOffMs += (uint32_t)delta;
+  else if (editOffMs > PULSE_MS_MIN) editOffMs -= (uint32_t)(-delta);
+  if (editOffMs < PULSE_MS_MIN) editOffMs = PULSE_MS_MIN;
+  if (editOffMs > PULSE_MS_MAX) editOffMs = PULSE_MS_MAX;
   lv_label_set_text_fmt(offTimeLabel, "%.1fs", editOffMs / 1000.0f);
   update_computed_info();
 }
@@ -457,6 +460,7 @@ void screen_edit_pulse_update() {
   editOnMs = p->pulse_on_ms;
   editOffMs = p->pulse_off_ms;
   editRpm = p->rpm;
+  editCycles = p->pulse_cycles;
 
   // Update labels
   if (onTimeLabel)
@@ -465,6 +469,12 @@ void screen_edit_pulse_update() {
     lv_label_set_text_fmt(offTimeLabel, "%.1fs", editOffMs / 1000.0f);
   if (rpmLabel)
     lv_label_set_text_fmt(rpmLabel, "%.1f", editRpm);
+  if (cyclesLabel) {
+    if (editCycles == 0)
+      lv_label_set_text(cyclesLabel, "INF");
+    else
+      lv_label_set_text_fmt(cyclesLabel, "%d", editCycles);
+  }
 
   update_computed_info();
 }

@@ -289,7 +289,7 @@ void setup() {
   delay(100);
 
   LOG_I("BOOT OK — ENA=HIGH (motor disabled)");
-  LOG_I("TIG Rotator Controller v2.0");
+  LOG_I("TIG Rotator Controller %s", FW_VERSION);
   LOG_I("Hardware: ESP32-P4 4.3\" Touch Display (Waveshare/Guition)");
 
   // Memory verification

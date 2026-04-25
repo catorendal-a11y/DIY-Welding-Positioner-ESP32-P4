@@ -12,7 +12,7 @@ All core features tested and confirmed working on real hardware:
 - All 5 welding modes (Continuous, Jog, Pulse, Step, Timer)
 - Hardware E-STOP with <0.5ms response + UI reset
 - 16 program preset save/load (NVS JSON blobs; legacy LittleFS migration on first boot if needed)
-- 19 LVGL root screens (`ScreenId`) plus E-STOP overlay; settings, system info, calibration
+- 21 active LVGL root screens (`ScreenId`) plus E-STOP overlay; settings, diagnostics, pedal settings, system info, calibration
 - Direction switch (GPIO29), foot pedal support
 - 8 accent color themes, brightness control, dim timeout
 

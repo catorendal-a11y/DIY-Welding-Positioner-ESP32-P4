@@ -7,11 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Diagnostics screen** - `SCREEN_DIAGNOSTICS` shows live ESTOP, DM542T ALM, DIR switch, pedal switch, ENA, direction, target RPM, actual RPM and motion-block state for field troubleshooting.
+- **Pedal Settings screen** - `SCREEN_PEDAL_SETTINGS` arms/disarms the GPIO33 foot pedal and shows live switch, ADS1115 and analog-source status.
+
 ### Fixed
 - **Main START race** — queued mode requests now clear stale pending STOP requests so a STOP tap while idle cannot swallow the next START; quick JOG release also cancels pending JOG start before motion can begin.
 - **Low-speed floor** — `START_SPEED` is now 20 Hz so default `MIN_RPM` at 1/16 microstep remains reachable.
 
 ### Changed
+- **Settings hub** - now includes Motor Config, Calibration, Display, Pedal Settings, Diagnostics, System Info and About.
 - **Documentation sync** — README, wiki, test docs, Instructables, status, contributing, implementation, process analysis, and hardware setup now match current NVS storage, DM542T ALM, ADS1115 I2C, `.pio/build-fw`, and generic clone/build commands.
 
 ## [2.0.5] - 2026-04-17

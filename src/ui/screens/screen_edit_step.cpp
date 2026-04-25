@@ -55,8 +55,10 @@ static void update_computed() {
     if (durationLabel) lv_label_set_text(durationLabel, "--");
   }
 
-  // Total steps
-  long totalSteps = (long)(editAngle * editRepeats * ((float)microstep_get_steps_per_rev() * GEAR_RATIO / 360.0f));
+  // Total motor steps must use the same calibration path as runtime step mode.
+  long stepCount = angleToSteps(editAngle);
+  if (stepCount < 0) stepCount = -stepCount;
+  long totalSteps = stepCount * editRepeats;
   if (stepsLabel) lv_label_set_text_fmt(stepsLabel, "%ld", totalSteps);
 }
 
@@ -609,11 +611,15 @@ void screen_edit_step_update() {
   // Sync local state from preset
   editAngle = p->step_angle;
   editRpm = p->rpm;
+  editDir = p->direction;
+  editRepeats = p->step_repeats;
+  editDwell = p->step_dwell_sec;
 
   // Update angle display
   if (angleLabel) lv_label_set_text_fmt(angleLabel, "%.0f", editAngle);
   if (rpmLabel) lv_label_set_text_fmt(rpmLabel, "%.1f", editRpm);
   if (repeatsLabel) lv_label_set_text_fmt(repeatsLabel, "%d", editRepeats);
   if (dwellLabel) lv_label_set_text_fmt(dwellLabel, "%.1f sec", editDwell);
+  update_dir_buttons();
   update_computed();
 }

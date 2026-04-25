@@ -39,6 +39,13 @@ static uint16_t motor_dir_delay_us_from_driver(uint8_t stepper_driver) {
 // Re-applying setDirectionPin while stepping corrupts timing / can stall the motor.
 static uint16_t s_applied_dir_delay_us = 0;
 static bool s_dir_timing_applied = false;
+static bool s_temp_accel_applied = false;
+
+static uint32_t motor_clamp_acceleration(uint32_t accel) {
+  if (accel < 1000u) return 1000u;
+  if (accel > 30000u) return 30000u;
+  return accel;
+}
 
 static void motor_apply_stepper_dir_timing(uint16_t want) {
   if (stepper == nullptr) return;
@@ -130,34 +137,42 @@ void motor_init() {
 // ───────────────────────────────────────────────────────────────────────────────
 // MOTOR CONTROL FUNCTIONS
 // ───────────────────────────────────────────────────────────────────────────────
-void motor_run_cw() {
-  if (safety_inhibit_motion()) return;
+bool motor_run_cw() {
+  if (safety_inhibit_motion()) return false;
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
-  if (stepper == nullptr) { xSemaphoreGive(g_stepperMutex); return; }
+  if (stepper == nullptr) {
+    xSemaphoreGive(g_stepperMutex);
+    return false;
+  }
   // Re-check after mutex: ISR may have asserted ESTOP between outer check and here;
   // never pull ENA LOW if ESTOP is active (would override hardware disable path).
   if (safety_inhibit_motion()) {
     xSemaphoreGive(g_stepperMutex);
-    return;
+    return false;
   }
   digitalWrite(PIN_ENA, LOW);
   stepper->runForward();
   xSemaphoreGive(g_stepperMutex);
   LOG_I("Motor: CW");
+  return true;
 }
 
-void motor_run_ccw() {
-  if (safety_inhibit_motion()) return;
+bool motor_run_ccw() {
+  if (safety_inhibit_motion()) return false;
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
-  if (stepper == nullptr) { xSemaphoreGive(g_stepperMutex); return; }
+  if (stepper == nullptr) {
+    xSemaphoreGive(g_stepperMutex);
+    return false;
+  }
   if (safety_inhibit_motion()) {
     xSemaphoreGive(g_stepperMutex);
-    return;
+    return false;
   }
   digitalWrite(PIN_ENA, LOW);
   stepper->runBackward();
   xSemaphoreGive(g_stepperMutex);
   LOG_I("Motor: CCW");
+  return true;
 }
 
 void motor_stop() {
@@ -283,6 +298,48 @@ void motor_apply_settings() {
         accelSteps,
         driverKind == STEPPER_DRIVER_DM542T ? "DM542T" : "Standard",
         (unsigned)dirDelayUs);
+}
+
+void motor_apply_soft_start_acceleration() {
+  uint32_t configured = 7500u;
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  configured = (uint32_t)g_settings.acceleration;
+  xSemaphoreGive(g_settings_mutex);
+
+  uint32_t softAccel = motor_clamp_acceleration(configured / 4u);
+  if (softAccel >= configured) {
+    softAccel = motor_clamp_acceleration(configured);
+  }
+
+  if (g_stepperMutex == nullptr) return;
+  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
+  if (stepper != nullptr) {
+    stepper->setAcceleration(softAccel);
+    s_temp_accel_applied = true;
+  }
+  xSemaphoreGive(g_stepperMutex);
+  LOG_I("Motor: soft start accel=%u (configured=%u)", (unsigned)softAccel, (unsigned)configured);
+}
+
+void motor_restore_configured_acceleration() {
+  if (!s_temp_accel_applied) return;
+
+  uint32_t configured = 7500u;
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  configured = motor_clamp_acceleration((uint32_t)g_settings.acceleration);
+  xSemaphoreGive(g_settings_mutex);
+
+  if (g_stepperMutex == nullptr) {
+    s_temp_accel_applied = false;
+    return;
+  }
+  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
+  if (stepper != nullptr) {
+    stepper->setAcceleration(configured);
+  }
+  s_temp_accel_applied = false;
+  xSemaphoreGive(g_stepperMutex);
+  LOG_I("Motor: restored accel=%u", (unsigned)configured);
 }
 
 FastAccelStepper* motor_get_stepper() {

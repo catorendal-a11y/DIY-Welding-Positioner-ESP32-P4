@@ -304,6 +304,106 @@ void test_control_cancel_jog_request() {
                           control_cancel_jog_request_testable(MODE_REQ_STEP_TESTABLE));
 }
 
+void test_control_mailbox_latest_command_wins() {
+  TEST_ASSERT_EQUAL_UINT8(
+      MOTION_CMD_STOP_TESTABLE,
+      control_mailbox_overwrite_testable(MOTION_CMD_START_CONTINUOUS_TESTABLE,
+                                         MOTION_CMD_STOP_TESTABLE));
+  TEST_ASSERT_EQUAL_UINT8(
+      MOTION_CMD_START_PULSE_TESTABLE,
+      control_mailbox_overwrite_testable(MOTION_CMD_START_CONTINUOUS_TESTABLE,
+                                         MOTION_CMD_START_PULSE_TESTABLE));
+}
+
+void test_control_start_command_waits_for_idle() {
+  TEST_ASSERT_FALSE(control_start_command_waits_for_idle_testable(
+      STATE_IDLE, MOTION_CMD_START_PULSE_TESTABLE));
+  TEST_ASSERT_TRUE(control_start_command_waits_for_idle_testable(
+      STATE_RUNNING, MOTION_CMD_START_PULSE_TESTABLE));
+  TEST_ASSERT_TRUE(control_start_command_waits_for_idle_testable(
+      STATE_STOPPING, MOTION_CMD_START_STEP_TESTABLE));
+  TEST_ASSERT_FALSE(control_start_command_waits_for_idle_testable(
+      STATE_RUNNING, MOTION_CMD_STOP_TESTABLE));
+}
+
+void test_continuous_auto_stop_request_from_preset_timer() {
+  TEST_ASSERT_EQUAL_UINT32(30000, continuous_auto_stop_request_testable(true, 30000));
+  TEST_ASSERT_EQUAL_UINT32(0, continuous_auto_stop_request_testable(false, 30000));
+}
+
+void test_soft_start_acceleration_profile() {
+  TEST_ASSERT_EQUAL_UINT32(1000, soft_start_acceleration_testable(1000));
+  TEST_ASSERT_EQUAL_UINT32(1875, soft_start_acceleration_testable(7500));
+  TEST_ASSERT_EQUAL_UINT32(7500, soft_start_acceleration_testable(30000));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 2b: PENDING REQUEST SAFETY
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// --- ESTOP clears queued motion requests ---
+void test_estop_clears_pending_continuous_start() {
+  ControlPendingSnapshot s = {
+    STATE_IDLE,
+    MODE_REQ_CONTINUOUS_TESTABLE,
+    false,
+    false,
+    0,
+    0,
+    0,
+    0.0f
+  };
+
+  control_enter_estop_testable(s);
+
+  TEST_ASSERT_EQUAL(STATE_ESTOP, s.state);
+  TEST_ASSERT_EQUAL_UINT8(MODE_REQ_NONE_TESTABLE, s.mode_req);
+  TEST_ASSERT_FALSE(s.stop);
+  TEST_ASSERT_FALSE(s.stop_jog);
+}
+
+void test_estop_clears_all_pending_mode_parameters() {
+  ControlPendingSnapshot s = {
+    STATE_RUNNING,
+    MODE_REQ_PULSE_TESTABLE,
+    true,
+    true,
+    1200,
+    800,
+    7,
+    45.0f
+  };
+
+  control_enter_estop_testable(s);
+
+  TEST_ASSERT_EQUAL(STATE_ESTOP, s.state);
+  TEST_ASSERT_EQUAL_UINT8(MODE_REQ_NONE_TESTABLE, s.mode_req);
+  TEST_ASSERT_FALSE(s.stop);
+  TEST_ASSERT_FALSE(s.stop_jog);
+  TEST_ASSERT_EQUAL_UINT32(0, s.pulse_on_ms);
+  TEST_ASSERT_EQUAL_UINT32(0, s.pulse_off_ms);
+  TEST_ASSERT_EQUAL_UINT16(0, s.pulse_cycles);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, s.step_angle);
+}
+
+void test_estop_tick_rejects_late_pending_start() {
+  ControlPendingSnapshot s = {
+    STATE_ESTOP,
+    MODE_REQ_CONTINUOUS_TESTABLE,
+    false,
+    false,
+    0,
+    0,
+    0,
+    0.0f
+  };
+
+  control_process_estop_tick_testable(s);
+  s.state = STATE_IDLE;
+
+  TEST_ASSERT_EQUAL_UINT8(MODE_REQ_NONE_TESTABLE, s.mode_req);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 3: RPM TO STEP FREQUENCY
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -885,6 +985,20 @@ void test_dir_double_invert() {
   TEST_ASSERT_EQUAL(original, twice);
 }
 
+void test_dir_program_override_wins_over_switch() {
+  TEST_ASSERT_EQUAL(1, direction_source_testable(true, 1, true, true, 0, false));
+  TEST_ASSERT_EQUAL(0, direction_source_testable(true, 0, true, false, 1, false));
+}
+
+void test_dir_switch_used_without_program_override() {
+  TEST_ASSERT_EQUAL(0, direction_source_testable(false, 1, true, true, 1, false));
+  TEST_ASSERT_EQUAL(1, direction_source_testable(false, 0, true, false, 0, false));
+}
+
+void test_dir_program_override_still_obeys_invert() {
+  TEST_ASSERT_EQUAL(0, direction_source_testable(true, 1, true, false, 0, true));
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 11: GEAR RATIO VERIFICATION
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1083,15 +1197,15 @@ void test_min_rpm_default_microstep_stays_above_start_floor() {
 void test_pulse_clamp_on_in_range() {
   TEST_ASSERT_EQUAL(500, pulse_clamp_on_ms_testable(500));
   TEST_ASSERT_EQUAL(100, pulse_clamp_on_ms_testable(100));
-  TEST_ASSERT_EQUAL(5000, pulse_clamp_on_ms_testable(5000));
+  TEST_ASSERT_EQUAL(10000, pulse_clamp_on_ms_testable(10000));
 }
 void test_pulse_clamp_on_below() {
   TEST_ASSERT_EQUAL(100, pulse_clamp_on_ms_testable(0));
   TEST_ASSERT_EQUAL(100, pulse_clamp_on_ms_testable(99));
 }
 void test_pulse_clamp_on_above() {
-  TEST_ASSERT_EQUAL(5000, pulse_clamp_on_ms_testable(5001));
-  TEST_ASSERT_EQUAL(5000, pulse_clamp_on_ms_testable(10000));
+  TEST_ASSERT_EQUAL(10000, pulse_clamp_on_ms_testable(10001));
+  TEST_ASSERT_EQUAL(10000, pulse_clamp_on_ms_testable(50000));
 }
 void test_pulse_clamp_off_in_range() {
   TEST_ASSERT_EQUAL(1000, pulse_clamp_off_ms_testable(1000));
@@ -1135,7 +1249,7 @@ void test_screen_rebuild_non_editor() {
   TEST_ASSERT_FALSE(screen_needs_rebuild_testable(3));   // SCREEN_PULSE
   TEST_ASSERT_FALSE(screen_needs_rebuild_testable(9));   // SCREEN_SETTINGS
   TEST_ASSERT_FALSE(screen_needs_rebuild_testable(11));  // SCREEN_BOOT
-  TEST_ASSERT_FALSE(screen_needs_rebuild_testable(21));  // SCREEN_COUNT
+  TEST_ASSERT_FALSE(screen_needs_rebuild_testable(22));  // SCREEN_COUNT
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1207,7 +1321,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_trans_invalid_enum_to_estop);
   RUN_TEST(test_trans_negative_enum);
 
-  // Section 2: State names (11 tests)
+  // Section 2: State names and request safety (18 tests)
   RUN_TEST(test_state_name_idle);
   RUN_TEST(test_state_name_running);
   RUN_TEST(test_state_name_pulse);
@@ -1221,6 +1335,13 @@ int main(int argc, char** argv) {
   RUN_TEST(test_state_name_returns_nonnull);
   RUN_TEST(test_control_request_is_jog);
   RUN_TEST(test_control_cancel_jog_request);
+  RUN_TEST(test_control_mailbox_latest_command_wins);
+  RUN_TEST(test_control_start_command_waits_for_idle);
+  RUN_TEST(test_continuous_auto_stop_request_from_preset_timer);
+  RUN_TEST(test_soft_start_acceleration_profile);
+  RUN_TEST(test_estop_clears_pending_continuous_start);
+  RUN_TEST(test_estop_clears_all_pending_mode_parameters);
+  RUN_TEST(test_estop_tick_rejects_late_pending_start);
 
   // Section 3: RPM to step Hz (16 tests)
   RUN_TEST(test_rpm_zero);
@@ -1314,12 +1435,15 @@ int main(int argc, char** argv) {
   RUN_TEST(test_accel_below_min);
   RUN_TEST(test_accel_above_max);
 
-  // Section 10: Direction inversion (5 tests)
+  // Section 10: Direction selection (8 tests)
   RUN_TEST(test_dir_cw_no_invert);
   RUN_TEST(test_dir_ccw_no_invert);
   RUN_TEST(test_dir_cw_with_invert);
   RUN_TEST(test_dir_ccw_with_invert);
   RUN_TEST(test_dir_double_invert);
+  RUN_TEST(test_dir_program_override_wins_over_switch);
+  RUN_TEST(test_dir_switch_used_without_program_override);
+  RUN_TEST(test_dir_program_override_still_obeys_invert);
 
   // Section 11: Gear ratio verification (3 tests)
   RUN_TEST(test_gear_ratio_value);

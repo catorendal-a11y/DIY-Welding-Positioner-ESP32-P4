@@ -32,17 +32,21 @@ static uint32_t lastOverlayUpdate = 0;
 
 static constexpr int ESTOP_FRAME_PX = 10;
 
+static bool estop_overlay_is_driver_fault(void) {
+  return safety_get_fault_reason() == FAULT_DRIVER_ALARM || safety_is_driver_alarm_latched();
+}
+
 // ───────────────────────────────────────────────────────────────────────────────
 // Accent: E-STOP red vs driver ALM orange (same overlay, stronger presence)
 // ───────────────────────────────────────────────────────────────────────────────
 static lv_color_t estop_overlay_accent_color(void) {
-  return safety_is_driver_alarm_latched() ? COL_WARN : COL_RED;
+  return estop_overlay_is_driver_fault() ? COL_WARN : COL_RED;
 }
 
 static void estop_overlay_apply_accent(void) {
   if (!estopOverlay) return;
   const lv_color_t accent = estop_overlay_accent_color();
-  const lv_opa_t washOpa = safety_is_driver_alarm_latched() ? 52 : 62;
+  const lv_opa_t washOpa = estop_overlay_is_driver_fault() ? 52 : 62;
 
   if (s_redTint) {
     lv_obj_set_style_bg_color(s_redTint, accent, 0);
@@ -397,10 +401,15 @@ void estop_overlay_update() {
   }
 
   if (estopTitleLabel && estopSubtitleLabel && estopBottomHint) {
-    if (safety_is_driver_alarm_latched()) {
+    FaultReason reason = safety_get_fault_reason();
+    if (reason == FAULT_DRIVER_ALARM || safety_is_driver_alarm_latched()) {
       lv_label_set_text(estopTitleLabel, "DRIVER FAULT");
       lv_label_set_text(estopSubtitleLabel, "STEPPER DRIVER ALARM (ALM)");
       lv_label_set_text(estopBottomHint, "Clear fault on driver; ALM high before RESET");
+    } else if (reason == FAULT_ESTOP_GLITCH) {
+      lv_label_set_text(estopTitleLabel, "E-STOP FAULT");
+      lv_label_set_text(estopSubtitleLabel, "UNSTABLE E-STOP SIGNAL");
+      lv_label_set_text(estopBottomHint, "Check E-STOP wiring, then RESET when input is high");
     } else {
       lv_label_set_text(estopTitleLabel, "E-STOP");
       lv_label_set_text(estopSubtitleLabel, "EMERGENCY STOP ACTIVATED");

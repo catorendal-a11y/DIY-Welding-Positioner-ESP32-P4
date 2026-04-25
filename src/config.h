@@ -88,6 +88,10 @@
 // much to take over (else user at pot end stop cannot override a lower slider value).
 #define POT_SLIDER_OVERRIDE_RPM_DELTA  0.04f
 
+// Pulse timing limits used by control, storage and UI.
+#define PULSE_MS_MIN    100u
+#define PULSE_MS_MAX    10000u
+
 // ───────────────────────────────────────────────────────────────────────────────
 // BUILD CONFIGURATION
 // ───────────────────────────────────────────────────────────────────────────────

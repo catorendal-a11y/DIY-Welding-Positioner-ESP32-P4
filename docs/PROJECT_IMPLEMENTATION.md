@@ -67,7 +67,8 @@
 - **Live speed**: `applySpeedAcceleration()` required after `setSpeedInMilliHz()` for changes during running
 - **Cross-core**: Shared RPM variables use `std::atomic<float>` with explicit `.load(memory_order_*)` / `.store(...)`. All cross-core atomic flags are declared in `src/app_state.h` / defined in `src/app_state.cpp` (single source of truth).
 - **Stepper mutex**: `g_stepperMutex` (`SemaphoreHandle_t`, FreeRTOS mutex) protects all stepper calls — uses `xSemaphoreTake`/`xSemaphoreGive`, keeps interrupts enabled during cross-core contention. Non-motor modules should call `motor_set_target_milli_hz()` instead of taking the mutex directly (it wraps `setSpeedInMilliHz` + `applySpeedAcceleration`).
-- **Pending-flag pattern**: UI `.store()`s atomic flags with `memory_order_release`; motorTask `.load()`s them with `memory_order_acquire` and executes within 5 ms cycle.
+- **Control command queue**: START/STOP/JOG/program requests are sent as a single overwrite command to `controlTask`, so the latest operator command wins and parameters cannot be mixed across requests.
+- **Pending-flag pattern**: UI `.store()`s atomic flags with `memory_order_release` for non-motion flags; motorTask/controlTask `.load()`s them with `memory_order_acquire` and executes within the owning task cycle.
 - **Non-blocking pedal ADC**: When `ENABLE_ADS1115_PEDAL=1`, `motorTask` uses a state-machine (`ads_poll_and_start()` in `src/motor/speed.cpp`) that starts a single-shot conversion in one tick and reads the result in a later tick — so the 5 ms loop is never blocked by I2C. Blocking helper (`ads_read_channel0_blocking()`) is reserved for `speed_init()`.
 
 ---
@@ -101,11 +102,13 @@
 
 ## 6. UI Screen System
 
-- **19 `ScreenId` root screens** with lazy creation (only boot, main, confirm created at init) plus separate **E-STOP overlay** (`screen_estop_overlay.cpp`)
+- **21 active `ScreenId` root screens** with lazy creation (only boot, main, confirm created at init) plus separate **E-STOP overlay** (`screen_estop_overlay.cpp`)
 - **Screen management**: `screens_show()` dispatches create/update, tracks `screenCreated[]` array
 - **Reinit**: `screens_reinit()` destroys all screens + ESTOP overlay, restores boot/main/confirm
 - **Keyboard**: Deferred cleanup pattern — set flag in callback, cleanup in next update cycle
 - **Confirm dialog**: Pending-flag pattern — callback sets flag, execution in update loop
+- **Settings diagnostics**: `SCREEN_DIAGNOSTICS` shows live ESTOP, DM542T ALM, DIR switch, pedal switch, ENA, RPM, direction and motion-block state.
+- **Pedal settings**: `SCREEN_PEDAL_SETTINGS` arms/disarms GPIO33 pedal input and shows ADS1115/analog status.
 - **Footer navigation**: BACK button at bottom of all settings screens
 
 ---

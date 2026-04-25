@@ -145,14 +145,14 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 |:---|:---|
 | **Welding Modes** | 5 modes — Continuous, Jog, Pulse, Step, and Countdown (configurable 1-10s delay) |
 | **Speed Control** | Live RPM via **potentiometer** on the main screen; touch **+/-** on **Jog** (and presets/settings where applicable) |
-| **Foot Pedal** | Digital start switch (GPIO 33); analog speed via ADS1115 I2C ADC on the touch I2C bus when `ENABLE_ADS1115_PEDAL=1` (enabled in `platformio.ini`; non-blocking reads in `motorTask`) |
+| **Foot Pedal** | Digital start switch (GPIO 33); analog speed via ADS1115 I2C ADC on the touch I2C bus when `ENABLE_ADS1115_PEDAL=1` (enabled in `platformio.ini`; non-blocking reads in `motorTask`); Pedal Settings shows live switch/ADC status |
 | **Direction Switch** | Physical CW/CCW toggle (GPIO 29) |
 | **Driver Fault** | DM542T `ALM` fault input on GPIO 32 (open-drain, `INPUT_PULLUP`, LOW = alarm) |
 | **Touch UI** | LVGL 9.x glove-safe interface, high-contrast dark theme, 8 accent colors |
-| **Program Presets** | Save/load up to 16 welding parameter sets to **NVS** (flash, JSON blobs) |
+| **Program Presets** | Save/load up to 16 welding parameter sets to **NVS** (flash, JSON blobs); ProgramExecutor applies direction override, pulse cycles, step repeats/dwell, continuous soft-start and auto-stop timer fields |
 | **Motor Config** | Microstepping (1/4 – 1/32), acceleration, calibration, direction invert |
 | **Display Settings** | Brightness slider, dim timeout, theme color selection |
-| **System Info** | Live CPU core load, free heap, PSRAM usage, uptime |
+| **System Info / Diagnostics** | Live CPU core load, free heap, PSRAM usage, uptime, plus Diagnostics for ESTOP, ALM, DIR, pedal, ENA, RPM and motion-block reason |
 | **Hardware Safety** | NC E-STOP interrupt (<0.5 ms), software watchdog, CAS state transitions, boot-time ESTOP de-floating (3-sample majority vote), `fatal_halt()` with serial-visible reason on unrecoverable init errors; dimmed backlight wakes on ESTOP |
 | **Thread Safety** | FreeRTOS mutex-protected stepper access, `std::atomic` cross-core variables with explicit memory ordering (single source of truth in `src/app_state.h`), pending-flag patterns |
 
@@ -172,7 +172,7 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 
 ## UI Screens
 
-The interface is built from many full-screen flows and editors—each purpose-built for industrial use with glove-safe touch targets (see `docs/images/ui_screens.svg` for the full visual map). In firmware, root views are registered as **`ScreenId` values** in `src/ui/screens.h`: there are **19** distinct roots from `SCREEN_MAIN` through `SCREEN_ABOUT` (including boot, confirm, preset editors, settings hub, modes, programs, calibration, motor config, display, about, etc.), plus a separate full-screen **E-STOP overlay** module that is not a `ScreenId` but can appear over any active screen. Older documentation sometimes referred to a larger “screen count” when counting every mockup panel separately; the numbers above match the current C++ registry.
+The interface is built from many full-screen flows and editors—each purpose-built for industrial use with glove-safe touch targets (see `docs/images/ui_screens.svg` for the full visual map). In firmware, root views are registered as **`ScreenId` values** in `src/ui/screens.h`: there are **21** active roots from `SCREEN_MAIN` through `SCREEN_ABOUT` (including boot, confirm, preset editors, settings hub, modes, programs, calibration, motor config, pedal settings, diagnostics, display, about, etc.), plus a separate full-screen **E-STOP overlay** module that is not a `ScreenId` but can appear over any active screen. Older documentation sometimes referred to a larger “screen count” when counting every mockup panel separately; the numbers above match the current C++ registry.
 
 | Screen | `ScreenId` | Description |
 |:---|:---|:---|
@@ -188,11 +188,13 @@ The interface is built from many full-screen flows and editors—each purpose-bu
 | **Edit Pulse** | `SCREEN_EDIT_PULSE` | Quick preset edit for pulse parameters |
 | **Edit Step** | `SCREEN_EDIT_STEP` | Quick preset edit for step parameters |
 | **Edit Continuous** | `SCREEN_EDIT_CONT` | Quick preset edit for continuous / RPM preset fields |
-| **Settings** | `SCREEN_SETTINGS` | Hub for Display, System Info, Calibration, Motor Config, About |
+| **Settings** | `SCREEN_SETTINGS` | Hub for Motor Config, Calibration, Display, Pedal Settings, Diagnostics, System Info and About |
 | **Display** | `SCREEN_DISPLAY` | Brightness slider, dim timeout, accent theme selection |
 | **System Info** | `SCREEN_SYSINFO` | Core load, heap, PSRAM, uptime |
 | **Calibration** | `SCREEN_CALIBRATION` | Motor calibration factor adjustment |
 | **Motor Config** | `SCREEN_MOTOR_CONFIG` | Microstepping, acceleration, direction switch, pedal enable |
+| **Pedal Settings** | `SCREEN_PEDAL_SETTINGS` | Pedal arm/disarm plus live GPIO33 and ADS1115 status |
+| **Diagnostics** | `SCREEN_DIAGNOSTICS` | Live GPIO/fault page for ESTOP, ALM, DIR switch, pedal switch, ENA, direction and RPM state |
 | **About** | `SCREEN_ABOUT` | Firmware version, hardware info |
 | **Confirm** | `SCREEN_CONFIRM` | Shared confirmation dialog (destructive actions, etc.) |
 | **E-STOP Overlay** | _(separate module, not a `ScreenId`)_ | Full-screen red overlay on any active screen |
@@ -430,9 +432,10 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 <details>
 <summary><b>Main START does not always start motor</b></summary>
 
-- Current control logic clears stale pending STOP requests whenever a new mode request is queued
-- If this reappears, check for UI callbacks that call `control_stop()` while already idle, then immediately call `control_start_continuous()`
-- JOG release also cancels a pending JOG start so a quick tap/release cannot start motion after the button was released
+- Current control logic uses a single overwrite command queue, so the latest START/STOP command wins and stale STOP requests cannot block a later START
+- Go to **Settings > Diagnostics** and verify `MOTION BLOCK = NO`, `ESTOP GPIO34 = HIGH OK`, `DM542T ALM GPIO32 = HIGH OK`, and `ENA GPIO52 = HIGH DISABLED` while idle
+- If a foot pedal is connected, use **Settings > Pedal Settings** to confirm `GPIO33 switch` changes between `HIGH OPEN` and `LOW PRESSED`
+- JOG release cancels a pending JOG start so a quick tap/release cannot start motion after the button was released
 
 </details>
 
@@ -501,6 +504,8 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - [x] 8 accent color themes
 - [x] Display settings (brightness, dim timeout)
 - [x] System info screen (core load, heap, PSRAM, uptime)
+- [x] Diagnostics screen (live ESTOP/ALM/DIR/pedal/ENA/RPM status)
+- [x] Pedal settings screen (GPIO33 arm/disarm + ADS1115 status)
 - [x] Motor configuration UI
 - [x] FreeRTOS mutex stepper access + atomic cross-core variables
 - [x] Countdown before start (configurable 1-10s delay with visual countdown)
@@ -552,7 +557,7 @@ src/
     lvgl_hal.cpp              Flush callback (manual 90° rotation), dim, touch polling
     theme.cpp/h               Color themes, font definitions, layout constants
     screens.cpp/h             Screen management, lazy creation, g_lvgl_mutex
-    screens/                  screen_*.cpp (19 ScreenId roots + ESTOP overlay module)
+    screens/                  screen_*.cpp (21 active ScreenId roots + ESTOP overlay module)
 test/
   test_logic/               Native Unity tests (no hardware required)
   test_device_*/            On-device integration tests (require ESP32-P4)

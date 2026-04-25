@@ -6,8 +6,7 @@
 #include "../theme.h"
 #include "../../config.h"
 #include "../../storage/storage.h"
-#include "../../motor/speed.h"
-#include "../../control/control.h"
+#include "../../control/program_executor.h"
 #include <atomic>
 #include <cstdio>
 #include <vector>
@@ -32,22 +31,17 @@ static void load_preset_cb(lv_event_t* e) {
   Preset p;
   if (storage_get_preset(id, &p)) {
     LOG_I("Loading Preset %d: %s", id, p.name);
-    speed_set_direction((Direction)p.direction);
-    speed_slider_set(p.rpm);
-
     if (p.mode == STATE_PULSE) {
       // Main "PULSE" side button uses its own on/off ms — match the program so UI and next tap agree.
       screen_main_set_program_pulse_times(p.pulse_on_ms, p.pulse_off_ms);
-      control_start_pulse(p.pulse_on_ms, p.pulse_off_ms, p.pulse_cycles);
-    } else if (p.mode == STATE_RUNNING) {
-      control_start_continuous();
-    } else if (p.mode == STATE_STEP) {
-      control_start_step(p.step_angle);
-    } else {
-      control_start_continuous();
     }
 
-    screens_show(SCREEN_MAIN);
+    ProgramExecutorResult result = program_executor_start_preset(&p);
+    if (result == PROGRAM_EXEC_OK) {
+      screens_show(SCREEN_MAIN);
+    } else {
+      LOG_W("Program start failed: %s", program_executor_result_name(result));
+    }
   }
 }
 
@@ -262,10 +256,12 @@ void screen_programs_update() {
     lv_obj_set_style_bg_color(newBtn, COL_BTN_BG, 0);
     lv_obj_set_style_border_color(newBtn, COL_BORDER, 0);
     lv_obj_set_style_opa(newBtn, LV_OPA_50, 0);
+    lv_obj_remove_flag(newBtn, LV_OBJ_FLAG_CLICKABLE);
   } else {
     lv_obj_set_style_bg_color(newBtn, COL_BG_ACTIVE, 0);
     lv_obj_set_style_border_color(newBtn, COL_ACCENT, 0);
     lv_obj_set_style_opa(newBtn, LV_OPA_COVER, 0);
+    lv_obj_add_flag(newBtn, LV_OBJ_FLAG_CLICKABLE);
   }
 
   const int cardW = 776;

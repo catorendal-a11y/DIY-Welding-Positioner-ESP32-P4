@@ -147,12 +147,27 @@ inline int direction_with_invert_testable(int dir, bool invert) {
   return dir;
 }
 
+inline int direction_source_testable(bool program_override_active,
+                                     int program_override_dir,
+                                     bool dir_switch_enabled,
+                                     bool dir_switch_high,
+                                     int stored_dir,
+                                     bool invert) {
+  int dir = stored_dir;
+  if (program_override_active) {
+    dir = program_override_dir;
+  } else if (dir_switch_enabled) {
+    dir = dir_switch_high ? 0 : 1;
+  }
+  return direction_with_invert_testable(dir, invert);
+}
+
 // ───────────────────────────────────────────────────────────────────────────────
 // PULSE TIME CLAMPS — mirrors pulse.cpp constrain logic
 // ───────────────────────────────────────────────────────────────────────────────
 inline uint32_t pulse_clamp_on_ms_testable(uint32_t ms) {
   if (ms < 100) return 100;
-  if (ms > 5000) return 5000;
+  if (ms > 10000) return 10000;
   return ms;
 }
 

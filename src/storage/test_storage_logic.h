@@ -60,14 +60,14 @@ inline float preset_constrain_rpm(float val, float min_rpm, float max_rpm) {
 }
 
 inline uint32_t preset_constrain_pulse_on(uint32_t val) {
-  if (val < 10) return 10;
-  if (val > 60000) return 60000;
+  if (val < 100) return 100;
+  if (val > 10000) return 10000;
   return val;
 }
 
 inline uint32_t preset_constrain_pulse_off(uint32_t val) {
-  if (val < 10) return 10;
-  if (val > 60000) return 60000;
+  if (val < 100) return 100;
+  if (val > 10000) return 10000;
   return val;
 }
 

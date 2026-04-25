@@ -10,6 +10,7 @@
 #include "../../config.h"
 #include "../../motor/speed.h"
 #include "../../control/control.h"
+#include "../../safety/safety.h"
 #include "../../storage/storage.h"
 #include "freertos/semphr.h"
 
@@ -22,6 +23,8 @@ static uint32_t mainPulseOffMs = 500;
 
 static lv_obj_t* mainScreenPtr = nullptr;
 static lv_obj_t* stateLabel = nullptr;
+static lv_obj_t* sourceLabel = nullptr;
+static lv_obj_t* statusDetailLabel = nullptr;
 static lv_obj_t* rpmLabel = nullptr;
 static lv_obj_t* rpmUnitLabel = nullptr;
 static lv_obj_t* rpmIndicatorArc = nullptr;
@@ -46,6 +49,8 @@ static Direction prevDir = DIR_CW;
 static float prevRpm = -1.0f;
 static bool prevPedalEnabled = false;
 static bool prevAdsPedalPresent = false;
+static int prevSourceMode = -1;
+static const char* prevStartBlockReason = nullptr;
 static bool mainDirty = true;
 
 static void screen_main_set_dirty() { mainDirty = true; }
@@ -57,11 +62,44 @@ static lv_color_t get_state_color(int state) {
   }
 }
 
+static const char* main_start_block_reason(SystemState state) {
+  if (safety_is_driver_alarm_latched()) return "ALM ACTIVE";
+  if (safety_is_estop_active()) return "E-STOP ACTIVE";
+  if (state != STATE_IDLE) return "NOT IDLE";
+  if (speed_get_target_rpm() < MIN_RPM) return "RPM TOO LOW";
+  return nullptr;
+}
+
+static int main_speed_source_mode(void) {
+  if (speed_pedal_analog_available()) return 2;
+  if (speed_using_slider()) return 1;
+  return 0;
+}
+
+static const char* main_speed_source_label(int sourceMode) {
+  switch (sourceMode) {
+    case 2: return "SRC PEDAL ADC";
+    case 1: return "SRC SLIDER";
+    default: return "SRC POT";
+  }
+}
+
 // ───────────────────────────────────────────────────────────────────────────────
 // EVENT handlers
 // ───────────────────────────────────────────────────────────────────────────────
 static void start_event_cb(lv_event_t*) {
-  if (control_get_state() == STATE_IDLE) { control_start_continuous(); screen_main_set_dirty(); }
+  SystemState state = control_get_state();
+  const char* blockReason = main_start_block_reason(state);
+  if (blockReason != nullptr) {
+    if (statusDetailLabel) {
+      lv_label_set_text(statusDetailLabel, blockReason);
+      lv_obj_set_style_text_color(statusDetailLabel, COL_WARN, 0);
+    }
+    screen_main_set_dirty();
+    return;
+  }
+  control_start_continuous();
+  screen_main_set_dirty();
 }
 static void stop_event_cb(lv_event_t*) {
   control_stop(); screen_main_set_dirty();
@@ -84,24 +122,23 @@ static void pulse_event_cb(lv_event_t*) {
   screen_main_set_dirty();
 }
 static void pulse_on_down_cb(lv_event_t*) {
-  if (mainPulseOnMs >= 200) mainPulseOnMs -= 100;
+  if (mainPulseOnMs > PULSE_MS_MIN) mainPulseOnMs -= 100;
   screen_main_set_dirty();
 }
 static void pulse_on_up_cb(lv_event_t*) {
-  if (mainPulseOnMs <= 4900) mainPulseOnMs += 100;
+  if (mainPulseOnMs < PULSE_MS_MAX) mainPulseOnMs += 100;
   screen_main_set_dirty();
 }
 static void pulse_off_down_cb(lv_event_t*) {
-  if (mainPulseOffMs >= 200) mainPulseOffMs -= 100;
+  if (mainPulseOffMs > PULSE_MS_MIN) mainPulseOffMs -= 100;
   screen_main_set_dirty();
 }
 static void pulse_off_up_cb(lv_event_t*) {
-  if (mainPulseOffMs <= 4900) mainPulseOffMs += 100;
+  if (mainPulseOffMs < PULSE_MS_MAX) mainPulseOffMs += 100;
   screen_main_set_dirty();
 }
 static void pedal_toggle_cb(lv_event_t*) {
   bool wantOn = !speed_get_pedal_enabled();
-  if (wantOn && !speed_ads1115_pedal_present()) return;
   speed_set_pedal_enabled(wantOn);
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   g_settings.pedal_enabled = speed_get_pedal_enabled();
@@ -181,6 +218,21 @@ void screen_main_create() {
   lv_obj_set_style_text_font(stateLabel, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(stateLabel, COL_GREEN, 0);
   lv_obj_set_pos(stateLabel, 160, 8);
+
+  sourceLabel = lv_label_create(header);
+  lv_label_set_text(sourceLabel, "SRC POT");
+  lv_obj_set_style_text_font(sourceLabel, FONT_NORMAL, 0);
+  lv_obj_set_style_text_color(sourceLabel, COL_TEXT_DIM, 0);
+  lv_obj_set_width(sourceLabel, 150);
+  lv_obj_set_pos(sourceLabel, 270, 8);
+
+  statusDetailLabel = lv_label_create(header);
+  lv_label_set_text(statusDetailLabel, "READY");
+  lv_obj_set_style_text_font(statusDetailLabel, FONT_NORMAL, 0);
+  lv_obj_set_style_text_color(statusDetailLabel, COL_TEXT_DIM, 0);
+  lv_obj_set_style_text_align(statusDetailLabel, LV_TEXT_ALIGN_RIGHT, 0);
+  lv_obj_set_width(statusDetailLabel, 220);
+  lv_obj_set_pos(statusDetailLabel, 560, 8);
 
   // ── Gauge semicircle (theme MAIN_GAUGE_*) ──
   const int arcCX = MAIN_GAUGE_CX;
@@ -333,6 +385,8 @@ void screen_main_create() {
 void screen_main_invalidate_widgets() {
   mainScreenPtr = nullptr;
   stateLabel = nullptr;
+  sourceLabel = nullptr;
+  statusDetailLabel = nullptr;
   rpmLabel = nullptr;
   rpmUnitLabel = nullptr;
   rpmIndicatorArc = nullptr;
@@ -351,6 +405,8 @@ void screen_main_update() {
 
   SystemState state = control_get_state();
   Direction dir = speed_get_direction();
+  const char* startBlockReason = main_start_block_reason(state);
+  int sourceMode = main_speed_source_mode();
 
   float rpm;
   bool is_running = (state == STATE_RUNNING || state == STATE_PULSE ||
@@ -369,8 +425,11 @@ void screen_main_update() {
   bool adsPresent = speed_ads1115_pedal_present();
   bool pedalUiChanged =
       (speed_get_pedal_enabled() != prevPedalEnabled) || (adsPresent != prevAdsPedalPresent);
+  bool sourceChanged = (sourceMode != prevSourceMode);
+  bool startBlockChanged = (startBlockReason != prevStartBlockReason);
 
-  if (!mainDirty && !stateChanged && !dirChanged && !rpmChanged && !pedalUiChanged) return;
+  if (!mainDirty && !stateChanged && !dirChanged && !rpmChanged && !pedalUiChanged &&
+      !sourceChanged && !startBlockChanged) return;
 
   mainDirty = false;
   prevState = state;
@@ -378,6 +437,8 @@ void screen_main_update() {
   prevRpm = rpm;
   prevPedalEnabled = speed_get_pedal_enabled();
   prevAdsPedalPresent = adsPresent;
+  prevSourceMode = sourceMode;
+  prevStartBlockReason = startBlockReason;
 
   float mx = speed_get_rpm_max();
   int32_t arcMax = (int32_t)(mx * 100.0f + 0.5f);
@@ -392,6 +453,22 @@ void screen_main_update() {
   if (state < (int)(sizeof(state_strings) / sizeof(state_strings[0]))) {
     lv_label_set_text(stateLabel, state_strings[state]);
     lv_obj_set_style_text_color(stateLabel, get_state_color(state), 0);
+  }
+  if (sourceLabel) {
+    lv_label_set_text(sourceLabel, main_speed_source_label(sourceMode));
+    lv_obj_set_style_text_color(sourceLabel, sourceMode == 2 ? COL_ACCENT : COL_TEXT_DIM, 0);
+  }
+  if (statusDetailLabel) {
+    if (is_running) {
+      lv_label_set_text(statusDetailLabel, "MOTOR ACTIVE");
+      lv_obj_set_style_text_color(statusDetailLabel, COL_ACCENT, 0);
+    } else if (startBlockReason != nullptr) {
+      lv_label_set_text(statusDetailLabel, startBlockReason);
+      lv_obj_set_style_text_color(statusDetailLabel, COL_WARN, 0);
+    } else {
+      lv_label_set_text(statusDetailLabel, "READY");
+      lv_obj_set_style_text_color(statusDetailLabel, COL_GREEN, 0);
+    }
   }
 
   // RPM in gauge (re-center value above "RPM" when width changes)
@@ -408,6 +485,8 @@ void screen_main_update() {
   // START button: gray when idle, accent when running
   if (is_running) {
     set_btn_style(startBtn, COL_BG_ACTIVE, COL_ACCENT, 2, COL_ACCENT);
+  } else if (startBlockReason != nullptr) {
+    set_btn_style(startBtn, COL_BTN_BG, COL_WARN, 2, COL_WARN);
   } else {
     set_btn_style(startBtn, COL_BTN_BG, COL_BORDER, 1, COL_TEXT);
   }
@@ -435,18 +514,23 @@ void screen_main_update() {
     set_btn_style(pulseBtn, COL_BTN_BG, COL_BORDER, 1, COL_TEXT);
   }
 
-  // PEDAL: Wiring v2 needs ADS1115 on touch I2C; GPIO33 SW when mode armed
+  // PEDAL: GPIO33 switch is always supported; ADS1115 only adds analog speed input.
   if (pedalBtn) {
-    if (!adsPresent) {
-      lv_obj_remove_flag(pedalBtn, LV_OBJ_FLAG_CLICKABLE);
-      set_btn_style(pedalBtn, COL_BTN_BG, COL_BORDER, 1, COL_TEXT_VDIM);
-    } else {
-      lv_obj_add_flag(pedalBtn, LV_OBJ_FLAG_CLICKABLE);
-      if (speed_get_pedal_enabled()) {
-        set_btn_style(pedalBtn, COL_BG_ACTIVE, COL_ACCENT, 2, COL_ACCENT);
+    lv_obj_add_flag(pedalBtn, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_t* pedalLbl = lv_obj_get_child(pedalBtn, 0);
+    if (pedalLbl) {
+      if (speed_pedal_analog_available()) {
+        lv_label_set_text(pedalLbl, "PEDAL ADC");
+      } else if (speed_get_pedal_enabled()) {
+        lv_label_set_text(pedalLbl, "PEDAL SW");
       } else {
-        set_btn_style(pedalBtn, COL_BTN_BG, COL_BORDER, 1, COL_TEXT);
+        lv_label_set_text(pedalLbl, "PEDAL");
       }
+    }
+    if (speed_get_pedal_enabled()) {
+      set_btn_style(pedalBtn, COL_BG_ACTIVE, COL_ACCENT, 2, COL_ACCENT);
+    } else {
+      set_btn_style(pedalBtn, COL_BTN_BG, adsPresent ? COL_BORDER : COL_TEXT_VDIM, 1, COL_TEXT);
     }
   }
 
@@ -465,10 +549,10 @@ void screen_main_update() {
 }
 
 void screen_main_set_program_pulse_times(uint32_t on_ms, uint32_t off_ms) {
-  if (on_ms < 100) on_ms = 100;
-  if (on_ms > 10000) on_ms = 10000;
-  if (off_ms < 100) off_ms = 100;
-  if (off_ms > 10000) off_ms = 10000;
+  if (on_ms < PULSE_MS_MIN) on_ms = PULSE_MS_MIN;
+  if (on_ms > PULSE_MS_MAX) on_ms = PULSE_MS_MAX;
+  if (off_ms < PULSE_MS_MIN) off_ms = PULSE_MS_MIN;
+  if (off_ms > PULSE_MS_MAX) off_ms = PULSE_MS_MAX;
   mainPulseOnMs = on_ms;
   mainPulseOffMs = off_ms;
   screen_main_set_dirty();

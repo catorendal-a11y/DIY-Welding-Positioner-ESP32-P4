@@ -39,11 +39,16 @@ void speed_apply();                     // Apply speed to motor (call every 5ms)
 typedef enum { DIR_CW = 0, DIR_CCW = 1 } Direction;
 Direction speed_get_direction();
 void speed_set_direction(Direction dir);
+void speed_set_program_direction_override(Direction dir);
+void speed_clear_program_direction_override();
+bool speed_program_direction_override_active();
 
-// Pedal control (Wiring v2: ADS1115 AIN0 = pedal pot, GPIO33 = pedal SW; requires ADS1115 when enabled)
+// Pedal control (GPIO33 switch works without ADS1115; ADS1115 only adds analog pedal speed)
 void speed_set_pedal_enabled(bool enabled);
 bool speed_get_pedal_enabled();
-// True when pedal mode is armed: ADS1115 detected and user enabled PEDAL (GPIO33 start/stop active).
+bool speed_pedal_switch_enabled();
+bool speed_pedal_analog_available();
+// Compatibility alias: true when GPIO33 pedal start/stop is armed.
 bool speed_pedal_connected();
 // True when ADS1115 responded on touch I2C (build must have ENABLE_ADS1115_PEDAL).
 bool speed_ads1115_pedal_present(void);

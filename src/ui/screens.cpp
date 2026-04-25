@@ -1,5 +1,5 @@
 // TIG Rotator Controller - Screen Management Implementation
-// Handles navigation between all 12 screens
+// Handles navigation between registered LVGL screen roots
 
 #include <Arduino.h>
 #include "screens.h"
@@ -65,6 +65,8 @@ static void create_screen(ScreenId id) {
     case SCREEN_CALIBRATION: screen_calibration_create(); break;
     case SCREEN_MOTOR_CONFIG: screen_motor_config_create(); break;
     case SCREEN_DISPLAY:     screen_display_create(); break;
+    case SCREEN_PEDAL_SETTINGS: screen_pedal_settings_create(); break;
+    case SCREEN_DIAGNOSTICS:  screen_diagnostics_create(); break;
     case SCREEN_ABOUT:       screen_about_create(); break;
     case SCREEN_EDIT_PULSE:  screen_edit_pulse_create(); break;
     case SCREEN_EDIT_STEP:   screen_edit_step_create(); break;
@@ -113,6 +115,8 @@ void screens_reinit() {
   screen_program_edit_invalidate_widgets();
   screen_step_invalidate_widgets();
   screen_display_invalidate_widgets();
+  screen_pedal_settings_invalidate_widgets();
+  screen_diagnostics_invalidate_widgets();
   screen_sysinfo_invalidate_widgets();
   screen_motor_config_invalidate_widgets();
   screen_calibration_invalidate_widgets();
@@ -256,6 +260,12 @@ void screens_update_current() {
       break;
     case SCREEN_DISPLAY:
       screen_display_update();
+      break;
+    case SCREEN_PEDAL_SETTINGS:
+      screen_pedal_settings_update();
+      break;
+    case SCREEN_DIAGNOSTICS:
+      screen_diagnostics_update();
       break;
     case SCREEN_ABOUT:
       screen_about_update();

@@ -7,6 +7,7 @@
 #include <Arduino.h>
 #include <atomic>
 #include "../config.h"
+#include "../app_state.h"
 #include "display.h"
 #include "../storage/storage.h"
 
@@ -203,8 +204,14 @@ void lvgl_touchpad_read_cb(lv_indev_t *indev_drv, lv_indev_data_t *data) {
     uint16_t px = touch_x[0];
     uint16_t py = touch_y[0];
 
-    data->point.x = 799 - py;      // landscape x = 799 - portrait y
-    data->point.y = px;             // landscape y = portrait x
+    int32_t lx = 799 - (int32_t)py;  // landscape x = 799 - portrait y
+    int32_t ly = (int32_t)px;        // landscape y = portrait x
+    if (lx < 0) lx = 0;
+    if (lx > 799) lx = 799;
+    if (ly < 0) ly = 0;
+    if (ly > 479) ly = 479;
+    data->point.x = (lv_coord_t)lx;
+    data->point.y = (lv_coord_t)ly;
     data->state = LV_INDEV_STATE_PRESSED;
     dim_reset_activity();
   } else {
@@ -228,7 +235,7 @@ void lvgl_hal_init() {
 
   if (buf1 == nullptr || buf2 == nullptr || rot_buf == nullptr) {
     LOG_E("LVGL buffer allocation failed - cannot continue");
-    return;
+    fatal_halt("lvgl buffer allocation failed");
   }
 
   // ─────────────────────────────────────────────────────────────────────────

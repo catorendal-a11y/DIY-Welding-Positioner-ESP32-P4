@@ -31,8 +31,9 @@
 - **By design:** touchscreen **+/-** for workpiece RPM were removed from `SCREEN_MAIN` to simplify pot-only operation. Jog RPM still has **+/-** on `SCREEN_JOG`.
 
 ### Main START sometimes does not start
-- Current firmware clears stale pending STOP requests before queuing START, so a STOP tap while idle cannot swallow the next START.
-- If the symptom returns, inspect any UI callback that calls `control_stop()` while already idle, then immediately queues `control_start_continuous()`.
+- Current firmware uses a single overwrite command queue, so the latest START/STOP request wins and stale STOP requests cannot swallow the next START.
+- Open **Settings > Diagnostics** and verify `MOTION BLOCK = NO`, `ESTOP GPIO34 = HIGH OK`, and `DM542T ALM GPIO32 = HIGH OK`.
+- If using a foot pedal, open **Settings > Pedal Settings** and verify GPIO33 changes between `HIGH OPEN` and `LOW PRESSED`.
 - Quick JOG tap/release is also protected: release cancels a pending JOG start before `controlTask` can run it.
 
 ### Direction switch not working

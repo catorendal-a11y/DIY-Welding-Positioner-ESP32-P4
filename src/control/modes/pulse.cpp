@@ -22,8 +22,8 @@ static uint16_t pulseCycleCount = 0;
 void pulse_start(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
   if (control_get_state() != STATE_IDLE) return;
 
-  pulseOnMs = constrain(on_ms, 100, 5000);
-  pulseOffMs = constrain(off_ms, 100, 5000);
+  pulseOnMs = constrain(on_ms, PULSE_MS_MIN, PULSE_MS_MAX);
+  pulseOffMs = constrain(off_ms, PULSE_MS_MIN, PULSE_MS_MAX);
   pulseCycleLimit = cycles;
   pulseCycleCount = 0;
   pulseIsOn = true;
@@ -33,10 +33,17 @@ void pulse_start(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
 
   motor_set_target_milli_hz(motor_milli_hz_for_rpm_calibrated(speed_get_target_rpm()));
 
-  if (speed_get_direction() == DIR_CW) motor_run_cw();
-  else motor_run_ccw();
+  bool started = (speed_get_direction() == DIR_CW) ? motor_run_cw() : motor_run_ccw();
+  if (!started) {
+    pulseIsOn = false;
+    LOG_W("Pulse mode: start blocked");
+    return;
+  }
 
-  control_transition_to(STATE_PULSE);
+  if (!control_transition_to(STATE_PULSE)) {
+    pulseIsOn = false;
+    motor_halt();
+  }
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -61,8 +68,12 @@ void pulse_update() {
         return;
       }
       motor_set_target_milli_hz(motor_milli_hz_for_rpm_calibrated(speed_get_target_rpm()));
-      if (speed_get_direction() == DIR_CW) motor_run_cw();
-      else motor_run_ccw();
+      bool started = (speed_get_direction() == DIR_CW) ? motor_run_cw() : motor_run_ccw();
+      if (!started) {
+        LOG_W("Pulse: restart blocked");
+        control_transition_to(STATE_STOPPING);
+        return;
+      }
       LOG_D("Pulse: ON (%u/%u)", pulseCycleCount, pulseCycleLimit);
     } else {
       motor_stop();

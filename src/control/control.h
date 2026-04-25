@@ -21,7 +21,7 @@ typedef enum {
 // STATE MACHINE FUNCTIONS
 // ───────────────────────────────────────────────────────────────────────────────
 void control_init();                     // Initialize state machine
-void control_transition_to(SystemState s); // State transition with validation
+bool control_transition_to(SystemState s); // State transition with validation
 SystemState control_get_state();         // Get current state
 const char* control_get_state_string(); // Get human-readable state name
 const char* control_state_name(SystemState s); // Internal: state enum to string
@@ -30,22 +30,23 @@ const char* control_state_name(SystemState s); // Internal: state enum to string
 // MODE CONTROL FUNCTIONS
 // ───────────────────────────────────────────────────────────────────────────────
 // Continuous mode
-void control_start_continuous();
-void control_stop();
+bool control_start_continuous(bool soft_start = false, uint32_t auto_stop_ms = 0);
+bool control_stop();
 
 // Pulse mode (cycles=0 means infinite)
-void control_start_pulse(uint32_t on_ms, uint32_t off_ms, uint16_t cycles = 0);
+bool control_start_pulse(uint32_t on_ms, uint32_t off_ms, uint16_t cycles = 0);
 
 // Step mode
-void control_start_step(float angle_deg);
+bool control_start_step(float angle_deg);
+bool control_start_step_sequence(float angle_deg, uint16_t repeats, float dwell_sec);
 void control_reset_step_accumulator();
 float control_get_step_accumulated();   // For UI display
 long control_get_step_count();           // For UI display
 
 // Jog mode
-void control_start_jog_cw();
-void control_start_jog_ccw();
-void control_stop_jog();
+bool control_start_jog_cw();
+bool control_start_jog_ccw();
+bool control_stop_jog();
 void control_set_jog_speed(float rpm);
 float control_get_jog_speed();
 

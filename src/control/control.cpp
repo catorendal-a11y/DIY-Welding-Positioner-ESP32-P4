@@ -1,4 +1,4 @@
-// Control - State machine core with pending request pattern
+// Control - State machine core with motion command mailbox
 #include "control.h"
 #include "modes.h"
 #include "../config.h"
@@ -6,10 +6,9 @@
 #include "../motor/speed.h"
 #include "../safety/safety.h"
 #include "esp_task_wdt.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
 #include <atomic>
-
-static_assert(std::atomic<float>::is_always_lock_free,
-              "std::atomic<float> must be lock-free for inter-core state sharing");
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STATE VARIABLES
@@ -17,39 +16,73 @@ static_assert(std::atomic<float>::is_always_lock_free,
 static std::atomic<SystemState> currentState{STATE_IDLE};
 static std::atomic<SystemState> previousState{STATE_IDLE};
 
-// Pending request pattern — UI callbacks set flags, controlTask executes
-enum ModeRequest : uint8_t {
-  MODE_REQ_NONE = 0,
-  MODE_REQ_CONTINUOUS = 1,
-  MODE_REQ_PULSE = 2,
-  MODE_REQ_STEP = 3,
-  MODE_REQ_JOG_CW = 4,
-  MODE_REQ_JOG_CCW = 5
+// UI/Core 1 producers post one command; controlTask/Core 0 executes it.
+enum MotionCommandType : uint8_t {
+  MOTION_CMD_NONE = 0,
+  MOTION_CMD_START_CONTINUOUS,
+  MOTION_CMD_START_PULSE,
+  MOTION_CMD_START_STEP,
+  MOTION_CMD_START_JOG,
+  MOTION_CMD_STOP,
+  MOTION_CMD_STOP_JOG
 };
 
-static std::atomic<uint8_t> pendingModeRequest{MODE_REQ_NONE};
-static std::atomic<bool> pendingStop{false};
-static std::atomic<uint32_t> pendingPulseOnMs{0};
-static std::atomic<uint32_t> pendingPulseOffMs{0};
-static std::atomic<uint16_t> pendingPulseCycles{0};
-static std::atomic<float> pendingStepAngle{0.0f};
-static std::atomic<bool> pendingStopJog{false};
+struct MotionCommand {
+  MotionCommandType type;
+  Direction direction;
+  bool continuous_soft_start;
+  uint32_t continuous_auto_stop_ms;
+  uint32_t pulse_on_ms;
+  uint32_t pulse_off_ms;
+  uint16_t pulse_cycles;
+  float step_angle;
+  uint16_t step_repeats;
+  float step_dwell_sec;
+};
 
-static bool is_jog_request(uint8_t req) {
-  return req == MODE_REQ_JOG_CW || req == MODE_REQ_JOG_CCW;
+static QueueHandle_t controlQueue = nullptr;
+
+static bool is_start_command(MotionCommandType type) {
+  return type == MOTION_CMD_START_CONTINUOUS || type == MOTION_CMD_START_PULSE ||
+         type == MOTION_CMD_START_STEP || type == MOTION_CMD_START_JOG;
 }
 
-static void cancel_pending_jog_request() {
-  uint8_t req = pendingModeRequest.load(std::memory_order_acquire);
-  if (is_jog_request(req)) {
-    pendingModeRequest.compare_exchange_strong(req, MODE_REQ_NONE, std::memory_order_acq_rel,
-                                               std::memory_order_acquire);
+static bool is_active_motion_state(SystemState state) {
+  return state == STATE_RUNNING || state == STATE_PULSE || state == STATE_STEP ||
+         state == STATE_JOG;
+}
+
+static void control_queue_init() {
+  if (controlQueue == nullptr) {
+    controlQueue = xQueueCreate(1, sizeof(MotionCommand));
+  }
+  if (controlQueue != nullptr) {
+    xQueueReset(controlQueue);
+  } else {
+    LOG_E("Control queue allocation failed");
   }
 }
 
-static void queue_mode_request(uint8_t req) {
-  pendingStop.store(false, std::memory_order_release);
-  pendingModeRequest.store(req, std::memory_order_release);
+static bool queue_motion_command(const MotionCommand& cmd) {
+  if (controlQueue == nullptr) {
+    LOG_W("Control queue not ready");
+    return false;
+  }
+  return xQueueOverwrite(controlQueue, &cmd) == pdPASS;
+}
+
+static void cancel_pending_jog_request() {
+  if (controlQueue == nullptr) return;
+  MotionCommand cmd{};
+  if (xQueuePeek(controlQueue, &cmd, 0) == pdTRUE && cmd.type == MOTION_CMD_START_JOG) {
+    xQueueReset(controlQueue);
+  }
+}
+
+static void clear_pending_motion_requests() {
+  if (controlQueue != nullptr) {
+    xQueueReset(controlQueue);
+  }
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -86,25 +119,27 @@ bool control_is_valid_transition(SystemState from, SystemState to) {
 // STATE MACHINE CORE
 // ───────────────────────────────────────────────────────────────────────────────
 void control_init() {
+  control_queue_init();
+  clear_pending_motion_requests();
   currentState.store(STATE_IDLE, std::memory_order_release);
   previousState.store(STATE_IDLE, std::memory_order_release);
   LOG_I("Control init: state=IDLE");
 }
 
-void control_transition_to(SystemState newState) {
+bool control_transition_to(SystemState newState) {
   SystemState expected = currentState.load(std::memory_order_acquire);
   if (!control_is_valid_transition(expected, newState)) {
     LOG_W("Invalid transition: %s -> %s",
           control_state_name(expected),
           control_state_name(newState));
-    return;
+    return false;
   }
   if (!currentState.compare_exchange_strong(expected, newState, std::memory_order_acq_rel,
                                             std::memory_order_acquire)) {
     LOG_W("Race in transition: %s -> %s (state changed to %s)", control_state_name(expected),
           control_state_name(newState),
           control_state_name(currentState.load(std::memory_order_acquire)));
-    return;
+    return false;
   }
 
   previousState.store(expected, std::memory_order_release);
@@ -115,6 +150,8 @@ void control_transition_to(SystemState newState) {
 
   switch (newState) {
     case STATE_IDLE:
+      speed_clear_program_direction_override();
+      motor_restore_configured_acceleration();
       break;
     case STATE_RUNNING:
       break;
@@ -122,11 +159,16 @@ void control_transition_to(SystemState newState) {
       motor_stop();
       break;
     case STATE_ESTOP:
+      clear_pending_motion_requests();
+      speed_clear_program_direction_override();
+      motor_restore_configured_acceleration();
       motor_halt();
       break;
     default:
       break;
   }
+
+  return true;
 }
 
 SystemState control_get_state() {
@@ -153,42 +195,66 @@ const char* control_state_name(SystemState s) {
 // ───────────────────────────────────────────────────────────────────────────────
 // MODE CONTROL FUNCTIONS (non-blocking — set flags for controlTask)
 // ───────────────────────────────────────────────────────────────────────────────
-void control_start_continuous() {
-  if (safety_inhibit_motion()) return;
-  queue_mode_request(MODE_REQ_CONTINUOUS);
+bool control_start_continuous(bool soft_start, uint32_t auto_stop_ms) {
+  if (safety_inhibit_motion()) return false;
+  MotionCommand cmd{};
+  cmd.type = MOTION_CMD_START_CONTINUOUS;
+  cmd.continuous_soft_start = soft_start;
+  cmd.continuous_auto_stop_ms = auto_stop_ms;
+  return queue_motion_command(cmd);
 }
 
-void control_stop() {
-  pendingStop.store(true, std::memory_order_release);
+bool control_stop() {
+  MotionCommand cmd{};
+  cmd.type = MOTION_CMD_STOP;
+  return queue_motion_command(cmd);
 }
 
-void control_start_pulse(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
-  if (safety_inhibit_motion()) return;
-  pendingPulseOnMs.store(on_ms, std::memory_order_release);
-  pendingPulseOffMs.store(off_ms, std::memory_order_release);
-  pendingPulseCycles.store(cycles, std::memory_order_release);
-  queue_mode_request(MODE_REQ_PULSE);
+bool control_start_pulse(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
+  if (safety_inhibit_motion()) return false;
+  MotionCommand cmd{};
+  cmd.type = MOTION_CMD_START_PULSE;
+  cmd.pulse_on_ms = on_ms;
+  cmd.pulse_off_ms = off_ms;
+  cmd.pulse_cycles = cycles;
+  return queue_motion_command(cmd);
 }
 
-void control_start_step(float angle_deg) {
-  if (safety_inhibit_motion()) return;
-  pendingStepAngle.store(angle_deg, std::memory_order_release);
-  queue_mode_request(MODE_REQ_STEP);
+bool control_start_step(float angle_deg) {
+  return control_start_step_sequence(angle_deg, 1, 0.0f);
 }
 
-void control_start_jog_cw() {
-  if (safety_inhibit_motion()) return;
-  queue_mode_request(MODE_REQ_JOG_CW);
+bool control_start_step_sequence(float angle_deg, uint16_t repeats, float dwell_sec) {
+  if (safety_inhibit_motion()) return false;
+  MotionCommand cmd{};
+  cmd.type = MOTION_CMD_START_STEP;
+  cmd.step_angle = angle_deg;
+  cmd.step_repeats = repeats;
+  cmd.step_dwell_sec = dwell_sec;
+  return queue_motion_command(cmd);
 }
 
-void control_start_jog_ccw() {
-  if (safety_inhibit_motion()) return;
-  queue_mode_request(MODE_REQ_JOG_CCW);
+bool control_start_jog_cw() {
+  if (safety_inhibit_motion()) return false;
+  MotionCommand cmd{};
+  cmd.type = MOTION_CMD_START_JOG;
+  cmd.direction = DIR_CW;
+  return queue_motion_command(cmd);
 }
 
-void control_stop_jog() {
+bool control_start_jog_ccw() {
+  if (safety_inhibit_motion()) return false;
+  MotionCommand cmd{};
+  cmd.type = MOTION_CMD_START_JOG;
+  cmd.direction = DIR_CCW;
+  return queue_motion_command(cmd);
+}
+
+bool control_stop_jog() {
   cancel_pending_jog_request();
-  pendingStopJog.store(true, std::memory_order_release);
+  MotionCommand cmd{};
+  cmd.type = MOTION_CMD_STOP_JOG;
+  return queue_motion_command(cmd);
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -215,7 +281,7 @@ void control_reset_step_accumulator() {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// PENDING REQUEST PROCESSOR (runs in controlTask on Core 0)
+// MOTION COMMAND PROCESSOR (runs in controlTask on Core 0)
 // ───────────────────────────────────────────────────────────────────────────────
 static void stop_active_mode(SystemState cur) {
   if (cur == STATE_RUNNING) {
@@ -232,50 +298,60 @@ static void stop_active_mode(SystemState cur) {
 static void process_pending_requests() {
   SystemState cur = currentState.load(std::memory_order_acquire);
 
-  if (pendingStopJog.exchange(false, std::memory_order_acq_rel)) {
+  if (cur == STATE_ESTOP) {
+    clear_pending_motion_requests();
+    return;
+  }
+
+  if (controlQueue == nullptr) return;
+
+  MotionCommand cmd{};
+  if (xQueuePeek(controlQueue, &cmd, 0) != pdTRUE) return;
+
+  if (cmd.type == MOTION_CMD_STOP) {
+    xQueueReceive(controlQueue, &cmd, 0);
+    if (is_active_motion_state(cur)) {
+      stop_active_mode(cur);
+    }
+    return;
+  }
+
+  if (cmd.type == MOTION_CMD_STOP_JOG) {
+    xQueueReceive(controlQueue, &cmd, 0);
     if (cur == STATE_JOG) {
       jog_stop();
-    } else {
-      cancel_pending_jog_request();
-    }
-  }
-
-  if (pendingStop.exchange(false, std::memory_order_acq_rel)) {
-    pendingModeRequest.store(MODE_REQ_NONE, std::memory_order_release);
-    if (cur != STATE_IDLE && cur != STATE_STOPPING && cur != STATE_ESTOP) {
-      stop_active_mode(cur);
     }
     return;
   }
 
-  if (pendingModeRequest.load(std::memory_order_acquire) == MODE_REQ_NONE) return;
+  if (!is_start_command(cmd.type)) {
+    xQueueReceive(controlQueue, &cmd, 0);
+    return;
+  }
 
   if (cur != STATE_IDLE) {
-    if (cur != STATE_STOPPING && cur != STATE_ESTOP) {
+    if (is_active_motion_state(cur)) {
       stop_active_mode(cur);
     }
     return;
   }
 
-  uint8_t req = pendingModeRequest.exchange(MODE_REQ_NONE, std::memory_order_acq_rel);
+  xQueueReceive(controlQueue, &cmd, 0);
 
-  switch (req) {
-    case MODE_REQ_CONTINUOUS:
-      continuous_start();
+  switch (cmd.type) {
+    case MOTION_CMD_START_CONTINUOUS:
+      continuous_start(cmd.continuous_soft_start, cmd.continuous_auto_stop_ms);
       break;
-    case MODE_REQ_PULSE:
-      pulse_start(pendingPulseOnMs.load(std::memory_order_acquire),
-                  pendingPulseOffMs.load(std::memory_order_acquire),
-                  pendingPulseCycles.load(std::memory_order_acquire));
+    case MOTION_CMD_START_PULSE:
+      pulse_start(cmd.pulse_on_ms, cmd.pulse_off_ms, cmd.pulse_cycles);
       break;
-    case MODE_REQ_STEP:
-      step_execute(pendingStepAngle.load(std::memory_order_acquire));
+    case MOTION_CMD_START_STEP:
+      step_execute_sequence(cmd.step_angle, cmd.step_repeats, cmd.step_dwell_sec);
       break;
-    case MODE_REQ_JOG_CW:
-      jog_start(DIR_CW);
+    case MOTION_CMD_START_JOG:
+      jog_start(cmd.direction);
       break;
-    case MODE_REQ_JOG_CCW:
-      jog_start(DIR_CCW);
+    default:
       break;
   }
 }

@@ -4,7 +4,7 @@
 #include "../motor/motor.h"
 #include "../motor/speed.h"
 
-void continuous_start();
+void continuous_start(bool soft_start, uint32_t auto_stop_ms);
 void continuous_stop();
 void continuous_update();
 
@@ -18,6 +18,7 @@ uint16_t pulse_get_cycle_count();
 uint16_t pulse_get_cycle_limit();
 
 void step_execute(float angle_deg);
+void step_execute_sequence(float angle_deg, uint16_t repeats, float dwell_sec);
 void step_update();
 void step_reset_accumulator();
 float step_get_accumulated();

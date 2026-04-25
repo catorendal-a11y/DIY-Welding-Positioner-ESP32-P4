@@ -174,12 +174,12 @@ void test_preset_pulse_on_in_range() {
 }
 
 void test_preset_pulse_on_below() {
-  TEST_ASSERT_EQUAL(10, preset_constrain_pulse_on(0));
-  TEST_ASSERT_EQUAL(10, preset_constrain_pulse_on(9));
+  TEST_ASSERT_EQUAL(100, preset_constrain_pulse_on(0));
+  TEST_ASSERT_EQUAL(100, preset_constrain_pulse_on(99));
 }
 
 void test_preset_pulse_on_above() {
-  TEST_ASSERT_EQUAL(60000, preset_constrain_pulse_on(70000));
+  TEST_ASSERT_EQUAL(10000, preset_constrain_pulse_on(70000));
 }
 
 void test_preset_pulse_off_in_range() {
@@ -187,11 +187,11 @@ void test_preset_pulse_off_in_range() {
 }
 
 void test_preset_pulse_off_below() {
-  TEST_ASSERT_EQUAL(10, preset_constrain_pulse_off(0));
+  TEST_ASSERT_EQUAL(100, preset_constrain_pulse_off(0));
 }
 
 void test_preset_pulse_off_above() {
-  TEST_ASSERT_EQUAL(60000, preset_constrain_pulse_off(100000));
+  TEST_ASSERT_EQUAL(10000, preset_constrain_pulse_off(100000));
 }
 
 void test_preset_step_angle_in_range() {

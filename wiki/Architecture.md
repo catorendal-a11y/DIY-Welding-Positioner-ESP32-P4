@@ -139,7 +139,7 @@ All shared flags (`g_estopPending`, `g_estopTriggerMs`, `g_uiResetPending`, `g_w
 | `lvgl_hal.cpp` | LVGL display driver, flush callback, dim control |
 | `screens.cpp` | Screen registry, lazy creation, show/hide management |
 | `theme.h` | Color palette, font definitions, layout constants (**`MAIN_GAUGE_*`**, **`MAIN_RPM_*`**, **`JOG_RPM_*`**, settings `SET_*`, etc.) |
-| `screens/` | `screen_*.cpp` — 19 `ScreenId` roots + ESTOP overlay module |
+| `screens/` | `screen_*.cpp` — 21 active `ScreenId` roots + ESTOP overlay module |
 
 **v2.0.4 layout notes:** Main screen semicircular RPM gauge and stacked RPM labels are driven from `theme.h` constants; jog RPM row and right-aligned +/- use **`JOG_RPM_*`**. Main screen has **no** RPM +/- buttons (pot-only on that screen).
 
@@ -164,7 +164,7 @@ UI (Core 1)                         Motor (Core 0)
 ─────────────                        ─────────────
 speed_slider_set(rpm)  ──────────>  speed_get_target_rpm() reads atomic
 pot / pedal update     ──────────>  speed_apply() computes and applies speed
-control_start_continuous() ──────>  controlTask queues mode request and clears stale STOP
+control_start_continuous() ──────>  controlTask receives overwrite MotionCommand
                                         motor_set_target_milli_hz() wraps stepper mutex
 ```
 

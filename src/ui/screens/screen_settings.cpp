@@ -1,5 +1,5 @@
 // TIG Rotator Controller - Settings Menu Screen
-// Navigation to motor config, display, calibration, about
+// Navigation to motor config, display, pedal, diagnostics, calibration, about
 #include "../screens.h"
 #include "../theme.h"
 #include "../../config.h"
@@ -45,14 +45,16 @@ void screen_settings_create() {
   ui_create_settings_header(screen, "SETTINGS");
 
   const int itemH = SET_ROW_H;
-  const int gap = 5;
+  const int gap = 2;
   const int startY = SET_HEADER_H + 8;
 
   create_nav_item(screen, startY, "Motor Configuration", SCREEN_MOTOR_CONFIG);
   create_nav_item(screen, startY + (itemH + gap) * 1, "Calibration", SCREEN_CALIBRATION);
   create_nav_item(screen, startY + (itemH + gap) * 2, "Display Settings", SCREEN_DISPLAY);
-  create_nav_item(screen, startY + (itemH + gap) * 3, "System Info", SCREEN_SYSINFO);
-  create_nav_item(screen, startY + (itemH + gap) * 4, "About", SCREEN_ABOUT);
+  create_nav_item(screen, startY + (itemH + gap) * 3, "Pedal Settings", SCREEN_PEDAL_SETTINGS);
+  create_nav_item(screen, startY + (itemH + gap) * 4, "Diagnostics", SCREEN_DIAGNOSTICS);
+  create_nav_item(screen, startY + (itemH + gap) * 5, "System Info", SCREEN_SYSINFO);
+  create_nav_item(screen, startY + (itemH + gap) * 6, "About", SCREEN_ABOUT);
 
   int footerY = SET_FOOTER_Y;
   int footerH = SET_FOOTER_H;

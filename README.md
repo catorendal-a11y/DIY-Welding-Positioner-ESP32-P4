@@ -8,6 +8,7 @@
 
 [![PlatformIO CI](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml/badge.svg)](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml)
 [![Latest Release](https://img.shields.io/github/v/release/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4)](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/latest)
+[![Wiki](https://img.shields.io/badge/Wiki-Builder_Guide-blue)](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/wiki)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PlatformIO](https://img.shields.io/badge/PlatformIO-ESP32--P4-orange)](platformio.ini)
 
@@ -22,6 +23,8 @@
 <br>
 
 Open-source controller for a stepper-driven welding positioner / pipe rotator, with a glove-safe touch UI, real-time motor tasking, persistent presets, foot pedal support, and hardwired E-STOP behavior.
+
+Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/wiki) for getting started, hardware setup, troubleshooting, architecture, and roadmap.
 
 <br>
 
@@ -530,6 +533,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 | [docs/SAFETY_SYSTEM.md](docs/SAFETY_SYSTEM.md) | E-STOP behavior, watchdog model, safety assumptions |
 | [docs/PROJECT_IMPLEMENTATION.md](docs/PROJECT_IMPLEMENTATION.md) | RTOS architecture, storage, display pipeline, known workarounds |
 | [docs/INSTRUCTABLES.md](docs/INSTRUCTABLES.md) | Builder-friendly article content and assembly flow |
+| [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/wiki) | Public builder guide with clone/build, hardware setup, troubleshooting, architecture, and roadmap |
 | [wiki/Getting-Started.md](wiki/Getting-Started.md) | Short build/flash/use walkthrough |
 | [wiki/Troubleshooting.md](wiki/Troubleshooting.md) | Field problems and fixes |
 | [test/README.md](test/README.md) | Native and on-device test entry points |

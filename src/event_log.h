@@ -16,4 +16,5 @@ void event_log_init();
 void event_log_add(const char* text);
 void event_log_addf(const char* fmt, ...);
 size_t event_log_snapshot(EventLogEntry* out, size_t max_entries);
+uint32_t event_log_version();
 void event_log_clear();

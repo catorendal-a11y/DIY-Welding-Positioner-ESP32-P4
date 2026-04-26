@@ -79,6 +79,7 @@ static bool dirSwitchEnabled = false;
 static lv_obj_t* idleToggle = nullptr;
 static lv_obj_t* idleToggleLbl = nullptr;
 static lv_obj_t* statusLabel = nullptr;
+static SystemState lastStatusState = (SystemState)-1;
 
 // motorConfigApplyPending is defined in src/app_state.cpp.
 
@@ -503,11 +504,15 @@ void screen_motor_config_invalidate_widgets() {
   idleToggleLbl = nullptr;
   statusLabel = nullptr;
   saveNavTimer = nullptr;
+  lastStatusState = (SystemState)-1;
 }
 
 void screen_motor_config_update() {
   if (!statusLabel) return;
+  SystemState state = control_get_state();
+  if (state == lastStatusState) return;
+  lastStatusState = state;
   char buf[48];
-  snprintf(buf, sizeof(buf), "MOTOR: %s", control_get_state_string());
+  snprintf(buf, sizeof(buf), "MOTOR: %s", control_state_name(state));
   lv_label_set_text(statusLabel, buf);
 }

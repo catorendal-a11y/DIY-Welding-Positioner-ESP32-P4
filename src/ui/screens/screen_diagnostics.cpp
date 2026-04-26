@@ -8,6 +8,7 @@
 #include "../../motor/speed.h"
 #include "../../safety/safety.h"
 #include <Arduino.h>
+#include <cstring>
 
 static lv_obj_t* stateVal = nullptr;
 static lv_obj_t* faultVal = nullptr;
@@ -26,6 +27,7 @@ static lv_obj_t* pedalArmVal = nullptr;
 static lv_obj_t* adsVal = nullptr;
 static lv_obj_t* analogVal = nullptr;
 static lv_obj_t* eventLabels[5] = {nullptr};
+static uint32_t lastEventLogVersion = UINT32_MAX;
 
 static void back_cb(lv_event_t* e) {
   (void)e;
@@ -73,7 +75,10 @@ static lv_obj_t* create_status_row(lv_obj_t* parent, int y, const char* key) {
 
 static void set_value(lv_obj_t* obj, const char* text, lv_color_t color) {
   if (!obj) return;
-  lv_label_set_text(obj, text);
+  const char* current = lv_label_get_text(obj);
+  if (current == nullptr || strcmp(current, text) != 0) {
+    lv_label_set_text(obj, text);
+  }
   lv_obj_set_style_text_color(obj, color, 0);
 }
 
@@ -150,16 +155,24 @@ void screen_diagnostics_invalidate_widgets() {
   for (int i = 0; i < 5; i++) {
     eventLabels[i] = nullptr;
   }
+  lastEventLogVersion = UINT32_MAX;
 }
 
 void screen_diagnostics_update() {
   if (!stateVal) return;
 
-  set_value(stateVal, control_get_state_string(), control_get_state() == STATE_IDLE ? COL_GREEN : COL_ACCENT);
+  SystemState state = control_get_state();
+  bool inhibited = safety_inhibit_motion();
+  bool adsPresent = speed_ads1115_pedal_present();
+  bool pedalAnalog = speed_pedal_analog_available();
+  bool programOverride = speed_program_direction_override_active();
+  bool pedalEnabled = speed_get_pedal_enabled();
+
+  set_value(stateVal, control_state_name(state), state == STATE_IDLE ? COL_GREEN : COL_ACCENT);
 
   FaultReason reason = safety_get_fault_reason();
   set_value(faultVal, safety_fault_reason_name(reason), reason == FAULT_NONE ? COL_GREEN : COL_RED);
-  set_value(inhibitVal, safety_inhibit_motion() ? "YES" : "NO", safety_inhibit_motion() ? COL_RED : COL_GREEN);
+  set_value(inhibitVal, inhibited ? "YES" : "NO", inhibited ? COL_RED : COL_GREEN);
 
   set_pin_value(estopVal, digitalRead(PIN_ESTOP), "HIGH OK", "LOW PRESSED", true);
   set_pin_value(almVal, digitalRead(PIN_DRIVER_ALM), "HIGH OK", "LOW FAULT", true);
@@ -168,15 +181,15 @@ void screen_diagnostics_update() {
   set_pin_value(enaVal, digitalRead(PIN_ENA), "HIGH DISABLED", "LOW ENABLED", false);
   set_pin_value(dirPinVal, digitalRead(PIN_DIR), "HIGH CW", "LOW CCW", false);
 
-  set_value(adsVal, speed_ads1115_pedal_present() ? "PRESENT" : "NOT FOUND",
-            speed_ads1115_pedal_present() ? COL_GREEN : COL_TEXT_DIM);
-  set_value(analogVal, speed_pedal_analog_available() ? "ACTIVE" : "OFF",
-            speed_pedal_analog_available() ? COL_GREEN : COL_TEXT_DIM);
+  set_value(adsVal, adsPresent ? "PRESENT" : "NOT FOUND",
+            adsPresent ? COL_GREEN : COL_TEXT_DIM);
+  set_value(analogVal, pedalAnalog ? "ACTIVE" : "OFF",
+            pedalAnalog ? COL_GREEN : COL_TEXT_DIM);
   set_value(directionVal, speed_get_direction() == DIR_CW ? "CW" : "CCW", COL_ACCENT);
-  set_value(overrideVal, speed_program_direction_override_active() ? "ACTIVE" : "OFF",
-            speed_program_direction_override_active() ? COL_ACCENT : COL_TEXT_DIM);
-  set_value(pedalArmVal, speed_get_pedal_enabled() ? "YES" : "NO",
-            speed_get_pedal_enabled() ? COL_GREEN : COL_TEXT_DIM);
+  set_value(overrideVal, programOverride ? "ACTIVE" : "OFF",
+            programOverride ? COL_ACCENT : COL_TEXT_DIM);
+  set_value(pedalArmVal, pedalEnabled ? "YES" : "NO",
+            pedalEnabled ? COL_GREEN : COL_TEXT_DIM);
 
   char buf[24];
   snprintf(buf, sizeof(buf), "%.3f", (double)speed_get_target_rpm());
@@ -184,22 +197,24 @@ void screen_diagnostics_update() {
   snprintf(buf, sizeof(buf), "%.3f", (double)speed_get_actual_rpm());
   set_value(actualRpmVal, buf, COL_TEXT);
 
-  EventLogEntry events[5];
-  size_t eventCount = event_log_snapshot(events, 5);
-  for (int i = 0; i < 5; i++) {
-    if (!eventLabels[i]) continue;
-    if ((size_t)i >= eventCount) {
-      lv_label_set_text(eventLabels[i], "-");
-      lv_obj_set_style_text_color(eventLabels[i], COL_TEXT_DIM, 0);
-      continue;
+  uint32_t eventVersion = event_log_version();
+  if (eventVersion != lastEventLogVersion) {
+    lastEventLogVersion = eventVersion;
+    EventLogEntry events[5];
+    size_t eventCount = event_log_snapshot(events, 5);
+    for (int i = 0; i < 5; i++) {
+      if (!eventLabels[i]) continue;
+      if ((size_t)i >= eventCount) {
+        set_value(eventLabels[i], "-", COL_TEXT_DIM);
+        continue;
+      }
+      uint32_t sec = events[i].ms / 1000u;
+      char line[80];
+      snprintf(line, sizeof(line), "%02lu:%02lu  %s",
+               (unsigned long)((sec / 60u) % 100u),
+               (unsigned long)(sec % 60u),
+               events[i].text);
+      set_value(eventLabels[i], line, i == 0 ? COL_TEXT : COL_TEXT_DIM);
     }
-    uint32_t sec = events[i].ms / 1000u;
-    char line[80];
-    snprintf(line, sizeof(line), "%02lu:%02lu  %s",
-             (unsigned long)((sec / 60u) % 100u),
-             (unsigned long)(sec % 60u),
-             events[i].text);
-    lv_label_set_text(eventLabels[i], line);
-    lv_obj_set_style_text_color(eventLabels[i], i == 0 ? COL_TEXT : COL_TEXT_DIM, 0);
   }
 }

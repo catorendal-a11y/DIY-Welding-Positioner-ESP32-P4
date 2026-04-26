@@ -374,8 +374,9 @@ bool speed_using_slider() {
 }
 
 void speed_apply() {
-  // Cache motor_is_running() once — each call takes g_stepperMutex.
-  const bool motorRunning = motor_is_running();
+  const SystemState state = control_get_state();
+  const bool liveSpeedState = (state == STATE_RUNNING || state == STATE_PULSE);
+  const bool motorRunning = liveSpeedState && motor_is_running();
 
   bool usePedal = speed_pedal_analog_available() && pedalFiltered > 100.0f && pedalFiltered < 3900.0f;
   float activeAdc = usePedal ? pedalFiltered : adcFiltered.load(std::memory_order_acquire);
@@ -411,8 +412,6 @@ void speed_apply() {
   }
 
   if (!motorRunning) return;
-  SystemState state = control_get_state();
-  if (state == STATE_JOG || state == STATE_STEP || state == STATE_STOPPING || state == STATE_ESTOP) return;
 
   uint32_t mhz = motor_milli_hz_for_rpm_calibrated(
       cachedTargetRpm.load(std::memory_order_relaxed));

@@ -25,6 +25,9 @@ static std::atomic<bool> startPending{false};
 static uint32_t countdownStartMs = 0;
 static int countdownRemaining = 0;
 static int lastDisplayedSec = -1;
+static int lastIdleCountdownSec = -1;
+static int lastArcEndAngle = -1;
+static float lastRpmShown = -1.0f;
 static uint32_t pulseStartMs = 0;
 static std::atomic<bool> backPending{false};
 
@@ -33,6 +36,25 @@ static lv_obj_t* bigNumberLabel = nullptr;
 static lv_obj_t* statusLabel = nullptr;
 static lv_obj_t* rpmLabel = nullptr;
 static lv_obj_t* secLabel = nullptr;
+
+static void set_countdown_arc_angle(int endAngle, lv_color_t color) {
+  if (!arcRing) return;
+  if (endAngle < 0) endAngle = 0;
+  if (endAngle > 360) endAngle = 360;
+  if (endAngle != lastArcEndAngle) {
+    lv_arc_set_angles(arcRing, 0, endAngle);
+    lastArcEndAngle = endAngle;
+  }
+  lv_obj_set_style_arc_color(arcRing, color, LV_PART_INDICATOR);
+}
+
+static void update_rpm_label_if_changed() {
+  if (!rpmLabel) return;
+  const float rpm = speed_get_target_rpm();
+  if (fabsf(rpm - lastRpmShown) <= 0.049f) return;
+  lastRpmShown = rpm;
+  lv_label_set_text_fmt(rpmLabel, "%.1f", rpm);
+}
 
 static void save_countdown_setting() {
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
@@ -117,6 +139,9 @@ void screen_timer_create() {
   startPending.store(false, std::memory_order_release);
   backPending.store(false, std::memory_order_release);
   lastDisplayedSec = -1;
+  lastIdleCountdownSec = -1;
+  lastArcEndAngle = -1;
+  lastRpmShown = -1.0f;
 
   ui_create_header(screen, "COUNTDOWN");
 
@@ -128,10 +153,9 @@ void screen_timer_create() {
   arcRing = lv_arc_create(screen);
   lv_obj_set_size(arcRing, ringSize, ringSize);
   lv_obj_set_pos(arcRing, ringX, ringY);
-  lv_arc_set_range(arcRing, 0, 100);
-  lv_arc_set_value(arcRing, 100);
   lv_arc_set_bg_angles(arcRing, 0, 360);
   lv_arc_set_angles(arcRing, 0, 360);
+  lastArcEndAngle = 360;
   lv_obj_set_style_arc_color(arcRing, COL_GAUGE_BG, LV_PART_MAIN);
   lv_obj_set_style_arc_width(arcRing, 8, LV_PART_MAIN);
   lv_obj_set_style_arc_color(arcRing, COL_GREEN, LV_PART_INDICATOR);
@@ -222,6 +246,10 @@ void screen_timer_invalidate_widgets() {
   countingDown.store(false, std::memory_order_release);
   startPending.store(false, std::memory_order_release);
   backPending.store(false, std::memory_order_release);
+  lastDisplayedSec = -1;
+  lastIdleCountdownSec = -1;
+  lastArcEndAngle = -1;
+  lastRpmShown = -1.0f;
 }
 
 void screen_timer_update() {
@@ -274,9 +302,7 @@ void screen_timer_update() {
         lv_obj_set_style_text_color(statusLabel, COL_GREEN, 0);
       }
       if (arcRing) {
-        lv_arc_set_value(arcRing, 100);
-        lv_arc_set_angles(arcRing, 0, 360);
-        lv_obj_set_style_arc_color(arcRing, COL_GREEN, LV_PART_INDICATOR);
+        set_countdown_arc_angle(360, COL_GREEN);
       }
       startPending.store(true, std::memory_order_release);
       return;
@@ -310,33 +336,28 @@ void screen_timer_update() {
 
     if (arcRing) {
       int pct = remaining * 100 / countdownSec;
-      lv_arc_set_value(arcRing, pct);
-      lv_arc_set_angles(arcRing, 0, pct * 360 / 100);
-      lv_obj_set_style_arc_color(arcRing, col, LV_PART_INDICATOR);
+      set_countdown_arc_angle(pct * 360 / 100, col);
     }
   } else {
     // Idle — show countdown value with green ring
-    if (lastDisplayedSec != -1) {
+    if (lastDisplayedSec != -1 || lastIdleCountdownSec != countdownSec) {
       lastDisplayedSec = -1;
-    }
+      lastIdleCountdownSec = countdownSec;
 
-    if (bigNumberLabel) {
-      char buf[4];
-      snprintf(buf, sizeof(buf), "%d", countdownSec);
-      lv_label_set_text(bigNumberLabel, buf);
-      lv_obj_set_style_text_color(bigNumberLabel, COL_GREEN, 0);
-      lv_obj_set_style_transform_zoom(bigNumberLabel, 256, 0);
-    }
-    if (statusLabel) {
-      lv_label_set_text(statusLabel, "READY");
-      lv_obj_set_style_text_color(statusLabel, COL_TEXT_DIM, 0);
-    }
-    if (arcRing) {
-      lv_arc_set_value(arcRing, 100);
-      lv_arc_set_angles(arcRing, 0, 360);
-      lv_obj_set_style_arc_color(arcRing, COL_GREEN, LV_PART_INDICATOR);
+      if (bigNumberLabel) {
+        char buf[4];
+        snprintf(buf, sizeof(buf), "%d", countdownSec);
+        lv_label_set_text(bigNumberLabel, buf);
+        lv_obj_set_style_text_color(bigNumberLabel, COL_GREEN, 0);
+        lv_obj_set_style_transform_zoom(bigNumberLabel, 256, 0);
+      }
+      if (statusLabel) {
+        lv_label_set_text(statusLabel, "READY");
+        lv_obj_set_style_text_color(statusLabel, COL_TEXT_DIM, 0);
+      }
+      set_countdown_arc_angle(360, COL_GREEN);
     }
   }
 
-  if (rpmLabel) lv_label_set_text_fmt(rpmLabel, "%.1f", speed_get_target_rpm());
+  update_rpm_label_if_changed();
 }

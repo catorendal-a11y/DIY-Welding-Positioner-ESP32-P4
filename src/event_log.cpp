@@ -2,6 +2,7 @@
 #include "event_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include <atomic>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -10,6 +11,7 @@ static EventLogEntry s_entries[EVENT_LOG_CAPACITY] = {};
 static size_t s_next = 0;
 static size_t s_count = 0;
 static SemaphoreHandle_t s_mutex = nullptr;
+static std::atomic<uint32_t> s_version{0};
 
 static bool event_log_lock() {
   if (s_mutex == nullptr) {
@@ -44,6 +46,7 @@ void event_log_add(const char* text) {
   if (s_count < EVENT_LOG_CAPACITY) {
     s_count++;
   }
+  s_version.fetch_add(1, std::memory_order_release);
 
   event_log_unlock();
 }
@@ -73,12 +76,17 @@ size_t event_log_snapshot(EventLogEntry* out, size_t max_entries) {
   return n;
 }
 
+uint32_t event_log_version() {
+  return s_version.load(std::memory_order_acquire);
+}
+
 void event_log_clear() {
   if (!event_log_lock()) return;
 
   memset(s_entries, 0, sizeof(s_entries));
   s_next = 0;
   s_count = 0;
+  s_version.fetch_add(1, std::memory_order_release);
 
   event_log_unlock();
 }

@@ -28,6 +28,9 @@ static lv_obj_t* tempLabel = nullptr;
 static uint32_t bootMs = 0;
 static uint32_t lastTempRead = 0;
 static float cachedTemp = 0.0f;
+static uint32_t lastUptimeSec = UINT32_MAX;
+static uint32_t lastMemoryRead = 0;
+static int cachedFlashPct = 0;
 static uint32_t lastCoreRead = 0;
 static int cachedCore0Pct = 0;
 static int cachedCore1Pct = 0;
@@ -120,6 +123,10 @@ void screen_sysinfo_create() {
   const int PX = 16;
   const int CW = SCREEN_W - 2 * PX;
   bootMs = millis();
+  lastUptimeSec = UINT32_MAX;
+  lastMemoryRead = 0;
+  lastTempRead = 0;
+  lastCoreRead = 0;
 
   ui_create_settings_header(screen, "SYSTEM INFO");
 
@@ -175,6 +182,7 @@ void screen_sysinfo_create() {
   size_t storageTotal = spiffs ? spiffs->size : 0;
   size_t flashTotal = appTotal + storageTotal;
   int flashPct = appTotal > 0 ? (int)((uint64_t)appUsed * 100 / appTotal) : 0;
+  cachedFlashPct = flashPct;
   snprintf(buf, sizeof(buf), "%.1f MB", (double)flashTotal / (1024.0 * 1024.0));
   flashValueLabel = make_val_label(screen, valX, y, buf);
   flashBar = make_bar(screen, barX, y + 3, barW, SET_BAR_H, COL_WARN);
@@ -224,50 +232,55 @@ void screen_sysinfo_invalidate_widgets() {
   core1Bar = nullptr;
   core1Label = nullptr;
   tempLabel = nullptr;
+  lastUptimeSec = UINT32_MAX;
+  lastMemoryRead = 0;
+  lastTempRead = 0;
+  lastCoreRead = 0;
 }
 
 void screen_sysinfo_update() {
   if (!uptimeLabel) return;
   char buf[24];
+  uint32_t now = millis();
 
   // Uptime
-  uint32_t elapsed = (millis() - bootMs) / 1000;
-  uint32_t h = elapsed / 3600;
-  uint32_t m = (elapsed % 3600) / 60;
-  uint32_t s = elapsed % 60;
-  snprintf(buf, sizeof(buf), "%02lu:%02lu:%02lu", (unsigned long)h, (unsigned long)m, (unsigned long)s);
-  lv_label_set_text(uptimeLabel, buf);
-
-  // Heap
-  size_t freeHeap = esp_get_free_heap_size();
-  size_t totalHeap = heap_caps_get_total_size(MALLOC_CAP_INTERNAL);
-  int heapPct = totalHeap > 0 ? (int)((uint64_t)freeHeap * 100 / totalHeap) : 0;
-  if (heapBar) lv_bar_set_value(heapBar, heapPct, LV_ANIM_OFF);
-  if (heapValueLabel) {
-    snprintf(buf, sizeof(buf), "%u KB", (unsigned)(freeHeap / 1024));
-    lv_label_set_text(heapValueLabel, buf);
+  uint32_t elapsed = (now - bootMs) / 1000;
+  if (elapsed != lastUptimeSec) {
+    lastUptimeSec = elapsed;
+    uint32_t h = elapsed / 3600;
+    uint32_t m = (elapsed % 3600) / 60;
+    uint32_t s = elapsed % 60;
+    snprintf(buf, sizeof(buf), "%02lu:%02lu:%02lu", (unsigned long)h, (unsigned long)m, (unsigned long)s);
+    lv_label_set_text(uptimeLabel, buf);
   }
 
-  // PSRAM
-  size_t psramTotal = heap_caps_get_total_size(MALLOC_CAP_SPIRAM);
-  size_t freePsram = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
-  int psramPct = psramTotal > 0 ? (int)((uint64_t)freePsram * 100 / psramTotal) : 0;
-  if (psramBar) lv_bar_set_value(psramBar, psramPct, LV_ANIM_OFF);
-  if (psramValueLabel) {
-    snprintf(buf, sizeof(buf), "%.1f MB", (double)freePsram / (1024.0 * 1024.0));
-    lv_label_set_text(psramValueLabel, buf);
-  }
+  if (now - lastMemoryRead >= 1000) {
+    lastMemoryRead = now;
 
-  // Flash
-  const esp_partition_t* ota0 = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_OTA_0, NULL);
-  const esp_partition_t* ota1 = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_OTA_1, NULL);
-  size_t appUsed = ota0 ? ota0->size : 0;
-  size_t appTotal = appUsed + (ota1 ? ota1->size : 0);
-  int flashPct = appTotal > 0 ? (int)((uint64_t)appUsed * 100 / appTotal) : 0;
-  if (flashBar) lv_bar_set_value(flashBar, flashPct, LV_ANIM_OFF);
+    // Heap
+    size_t freeHeap = esp_get_free_heap_size();
+    size_t totalHeap = heap_caps_get_total_size(MALLOC_CAP_INTERNAL);
+    int heapPct = totalHeap > 0 ? (int)((uint64_t)freeHeap * 100 / totalHeap) : 0;
+    if (heapBar) lv_bar_set_value(heapBar, heapPct, LV_ANIM_OFF);
+    if (heapValueLabel) {
+      snprintf(buf, sizeof(buf), "%u KB", (unsigned)(freeHeap / 1024));
+      lv_label_set_text(heapValueLabel, buf);
+    }
+
+    // PSRAM
+    size_t psramTotal = heap_caps_get_total_size(MALLOC_CAP_SPIRAM);
+    size_t freePsram = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+    int psramPct = psramTotal > 0 ? (int)((uint64_t)freePsram * 100 / psramTotal) : 0;
+    if (psramBar) lv_bar_set_value(psramBar, psramPct, LV_ANIM_OFF);
+    if (psramValueLabel) {
+      snprintf(buf, sizeof(buf), "%.1f MB", (double)freePsram / (1024.0 * 1024.0));
+      lv_label_set_text(psramValueLabel, buf);
+    }
+
+    if (flashBar) lv_bar_set_value(flashBar, cachedFlashPct, LV_ANIM_OFF);
+  }
 
   // Core load (update every 2 seconds, delta-based)
-  uint32_t now = millis();
   if (now - lastCoreRead >= 2000) {
     lastCoreRead = now;
     TaskStatus_t* taskArray = nullptr;

@@ -150,7 +150,12 @@ static std::atomic<float> g_workpiece_od_mm{0.0f};
 
 static float effective_emne_d_m(void) {
   float mm = g_workpiece_od_mm.load(std::memory_order_relaxed);
-  if (mm < 1.0f) return D_EMNE;
+  if (mm < 1.0f || mm > 20000.0f) return D_EMNE;
+  return mm / 1000.0f;
+}
+
+static float diameter_mm_to_m(float mm) {
+  if (mm < 1.0f || mm > 20000.0f) return D_EMNE;
   return mm / 1000.0f;
 }
 
@@ -181,7 +186,11 @@ float rpmToStepHzCalibrated(float rpm_command) {
 }
 
 long angleToSteps(float degrees) {
-  const float d_m = effective_emne_d_m();
+  return angleToStepsForDiameter(degrees, speed_get_workpiece_diameter_mm());
+}
+
+long angleToStepsForDiameter(float degrees, float mm_od) {
+  const float d_m = diameter_mm_to_m(mm_od);
   float motor_deg = degrees * GEAR_RATIO * (d_m / D_RULLE);
   long steps = (long)(motor_deg / 360.0f * microstep_get_steps_per_rev());
   return calibration_apply_steps(steps);

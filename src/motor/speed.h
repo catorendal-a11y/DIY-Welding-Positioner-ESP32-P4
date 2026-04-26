@@ -14,6 +14,7 @@ float rpmToStepHzCalibrated(float rpm_command);
 
 // Angle in degrees (on workpiece) → motor steps
 long angleToSteps(float degrees);
+long angleToStepsForDiameter(float degrees, float mm_od);
 
 // STEP / job: effective workpiece OD in mm for kinematics (0 = use D_EMNE from config.h)
 void speed_set_workpiece_diameter_mm(float mm_od);

@@ -108,7 +108,12 @@ static void format_details(char* buf, size_t len, const Preset& p) {
     const char* runC = "C";
     if (p.mode == STATE_PULSE) runC = "P";
     else if (p.mode == STATE_STEP) runC = "S";
-    snprintf(buf, len, "[%s] run:%s | %.1f RPM", tags, runC, p.rpm);
+    if (p.workpiece_diameter_mm >= 1.0f) {
+      snprintf(buf, len, "[%s] run:%s | %.1f RPM | OD %.0f mm", tags, runC, p.rpm,
+               p.workpiece_diameter_mm);
+    } else {
+      snprintf(buf, len, "[%s] run:%s | %.1f RPM", tags, runC, p.rpm);
+    }
     return;
   }
 
@@ -125,11 +130,15 @@ static void format_details(char* buf, size_t len, const Preset& p) {
              mName, p.rpm,
              p.pulse_on_ms / 1000.0f, p.pulse_off_ms / 1000.0f);
   } else if (p.mode == STATE_STEP) {
+    char od[18] = "";
+    if (p.workpiece_diameter_mm >= 1.0f) {
+      snprintf(od, sizeof(od), " | OD %.0f", p.workpiece_diameter_mm);
+    }
     if (p.step_repeats > 1) {
-      snprintf(buf, len, "%s | %.1f RPM | %.0f deg x%u", mName, p.rpm, p.step_angle,
-               (unsigned)p.step_repeats);
+      snprintf(buf, len, "%s | %.1f RPM | %.0f deg x%u%s", mName, p.rpm, p.step_angle,
+               (unsigned)p.step_repeats, od);
     } else {
-      snprintf(buf, len, "%s | %.1f RPM | %.0f deg", mName, p.rpm, p.step_angle);
+      snprintf(buf, len, "%s | %.1f RPM | %.0f deg%s", mName, p.rpm, p.step_angle, od);
     }
   } else {
     snprintf(buf, len, "%s | %.1f RPM", mName, p.rpm);

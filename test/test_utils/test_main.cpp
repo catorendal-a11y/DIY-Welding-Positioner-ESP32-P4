@@ -206,6 +206,15 @@ void test_preset_step_angle_above() {
   TEST_ASSERT_FLOAT_WITHIN(0.01f, 360.0f, preset_constrain_step_angle(500.0f));
 }
 
+void test_preset_workpiece_diameter_in_range() {
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 300.0f, preset_constrain_workpiece_diameter_mm(300.0f));
+}
+
+void test_preset_workpiece_diameter_default_for_invalid() {
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, preset_constrain_workpiece_diameter_mm(0.0f));
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, preset_constrain_workpiece_diameter_mm(30000.0f));
+}
+
 void test_preset_timer_ms_in_range() {
   TEST_ASSERT_EQUAL(60000, preset_constrain_timer_ms(60000));
 }
@@ -371,7 +380,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_settings_calibration_below);
   RUN_TEST(test_settings_calibration_above);
 
-  // Section 3: Preset constrain (13 tests)
+  // Section 3: Preset constrain
   RUN_TEST(test_preset_rpm_in_range);
   RUN_TEST(test_preset_rpm_below);
   RUN_TEST(test_preset_rpm_above);
@@ -384,6 +393,8 @@ int main(int argc, char** argv) {
   RUN_TEST(test_preset_step_angle_in_range);
   RUN_TEST(test_preset_step_angle_below);
   RUN_TEST(test_preset_step_angle_above);
+  RUN_TEST(test_preset_workpiece_diameter_in_range);
+  RUN_TEST(test_preset_workpiece_diameter_default_for_invalid);
   RUN_TEST(test_preset_timer_ms_in_range);
   RUN_TEST(test_preset_timer_ms_below);
   RUN_TEST(test_preset_timer_ms_above);

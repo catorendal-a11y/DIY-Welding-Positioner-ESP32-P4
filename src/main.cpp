@@ -13,6 +13,7 @@
 #include "motor/microstep.h"
 #include "motor/calibration.h"
 #include "control/control.h"
+#include "event_log.h"
 
 #include <atomic>
 #include "app_state.h"
@@ -201,8 +202,10 @@ void motorTask(void* pvParameters) {
     if (speed_pedal_connected()) {
       bool swPressed = (digitalRead(PIN_PEDAL_SW) == LOW);
       if (swPressed && !pedalSwWasPressed) {
+        event_log_add("PEDAL DOWN");
         if (control_get_state() == STATE_IDLE) control_start_continuous();
       } else if (!swPressed && pedalSwWasPressed) {
+        event_log_add("PEDAL UP");
         if (control_get_state() == STATE_RUNNING) control_stop();
       }
       pedalSwWasPressed = swPressed;
@@ -291,6 +294,7 @@ void setup() {
   LOG_I("BOOT OK — ENA=HIGH (motor disabled)");
   LOG_I("TIG Rotator Controller %s", FW_VERSION);
   LOG_I("Hardware: ESP32-P4 4.3\" Touch Display (Waveshare/Guition)");
+  event_log_init();
 
   // Memory verification
   LOG_I("Flash: %lu MB", ESP.getFlashChipSize() / (1024*1024));

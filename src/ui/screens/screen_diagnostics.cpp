@@ -4,6 +4,7 @@
 #include "../theme.h"
 #include "../../config.h"
 #include "../../control/control.h"
+#include "../../event_log.h"
 #include "../../motor/speed.h"
 #include "../../safety/safety.h"
 #include <Arduino.h>
@@ -24,6 +25,7 @@ static lv_obj_t* overrideVal = nullptr;
 static lv_obj_t* pedalArmVal = nullptr;
 static lv_obj_t* adsVal = nullptr;
 static lv_obj_t* analogVal = nullptr;
+static lv_obj_t* eventLabels[5] = {nullptr};
 
 static void back_cb(lv_event_t* e) {
   (void)e;
@@ -90,36 +92,39 @@ void screen_diagnostics_create() {
 
   ui_create_settings_header(screen, "DIAGNOSTICS");
 
-  lv_obj_t* gpioPanel = create_panel(screen, 16, 42, 374, 344, "GPIO INPUTS");
-  lv_obj_t* runtimePanel = create_panel(screen, 410, 42, 374, 344, "RUNTIME STATUS");
+  lv_obj_t* gpioPanel = create_panel(screen, 16, 42, 374, 252, "GPIO INPUTS");
+  lv_obj_t* runtimePanel = create_panel(screen, 410, 42, 374, 252, "RUNTIME STATUS");
+  lv_obj_t* eventPanel = create_panel(screen, 16, 302, 768, 118, "EVENT LOG");
 
-  int y = 44;
-  estopVal = create_status_row(gpioPanel, y, "ESTOP GPIO34"); y += 30;
-  almVal = create_status_row(gpioPanel, y, "DM542T ALM GPIO32"); y += 30;
-  dirSwVal = create_status_row(gpioPanel, y, "DIR SW GPIO29"); y += 30;
-  pedalSwVal = create_status_row(gpioPanel, y, "PEDAL SW GPIO33"); y += 30;
-  enaVal = create_status_row(gpioPanel, y, "ENA GPIO52"); y += 30;
-  dirPinVal = create_status_row(gpioPanel, y, "DIR GPIO51"); y += 30;
-  adsVal = create_status_row(gpioPanel, y, "ADS1115 0x48"); y += 30;
+  int y = 38;
+  estopVal = create_status_row(gpioPanel, y, "ESTOP GPIO34"); y += 26;
+  almVal = create_status_row(gpioPanel, y, "DM542T ALM GPIO32"); y += 26;
+  dirSwVal = create_status_row(gpioPanel, y, "DIR SW GPIO29"); y += 26;
+  pedalSwVal = create_status_row(gpioPanel, y, "PEDAL SW GPIO33"); y += 26;
+  enaVal = create_status_row(gpioPanel, y, "ENA GPIO52"); y += 26;
+  dirPinVal = create_status_row(gpioPanel, y, "DIR GPIO51"); y += 26;
+  adsVal = create_status_row(gpioPanel, y, "ADS1115 0x48"); y += 26;
   analogVal = create_status_row(gpioPanel, y, "PEDAL ANALOG");
 
-  y = 44;
-  stateVal = create_status_row(runtimePanel, y, "STATE"); y += 30;
-  faultVal = create_status_row(runtimePanel, y, "FAULT"); y += 30;
-  inhibitVal = create_status_row(runtimePanel, y, "MOTION BLOCK"); y += 30;
-  targetRpmVal = create_status_row(runtimePanel, y, "TARGET RPM"); y += 30;
-  actualRpmVal = create_status_row(runtimePanel, y, "ACTUAL RPM"); y += 30;
-  directionVal = create_status_row(runtimePanel, y, "DIRECTION"); y += 30;
-  overrideVal = create_status_row(runtimePanel, y, "PROGRAM DIR"); y += 30;
+  y = 38;
+  stateVal = create_status_row(runtimePanel, y, "STATE"); y += 26;
+  faultVal = create_status_row(runtimePanel, y, "FAULT"); y += 26;
+  inhibitVal = create_status_row(runtimePanel, y, "MOTION BLOCK"); y += 26;
+  targetRpmVal = create_status_row(runtimePanel, y, "TARGET RPM"); y += 26;
+  actualRpmVal = create_status_row(runtimePanel, y, "ACTUAL RPM"); y += 26;
+  directionVal = create_status_row(runtimePanel, y, "DIRECTION"); y += 26;
+  overrideVal = create_status_row(runtimePanel, y, "PROGRAM DIR"); y += 26;
   pedalArmVal = create_status_row(runtimePanel, y, "PEDAL ARMED");
 
-  lv_obj_t* hint = lv_label_create(screen);
-  lv_label_set_text(hint, "Use this page when START is blocked: ESTOP/ALM must be OK and MOTION BLOCK must be NO.");
-  lv_obj_set_style_text_font(hint, FONT_BODY, 0);
-  lv_obj_set_style_text_color(hint, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(hint, 18, 397);
-  lv_obj_set_width(hint, 764);
-  lv_label_set_long_mode(hint, LV_LABEL_LONG_MODE_CLIP);
+  for (int i = 0; i < 5; i++) {
+    eventLabels[i] = lv_label_create(eventPanel);
+    lv_label_set_text(eventLabels[i], "-");
+    lv_obj_set_style_text_font(eventLabels[i], FONT_SMALL, 0);
+    lv_obj_set_style_text_color(eventLabels[i], COL_TEXT_DIM, 0);
+    lv_obj_set_pos(eventLabels[i], 12, 34 + i * 16);
+    lv_obj_set_width(eventLabels[i], 744);
+    lv_label_set_long_mode(eventLabels[i], LV_LABEL_LONG_MODE_CLIP);
+  }
 
   ui_create_btn(screen, 16, SET_FOOTER_Y, 170, SET_FOOTER_H, "BACK", FONT_SUBTITLE, UI_BTN_NORMAL, back_cb, nullptr);
   screen_diagnostics_update();
@@ -142,6 +147,9 @@ void screen_diagnostics_invalidate_widgets() {
   pedalArmVal = nullptr;
   adsVal = nullptr;
   analogVal = nullptr;
+  for (int i = 0; i < 5; i++) {
+    eventLabels[i] = nullptr;
+  }
 }
 
 void screen_diagnostics_update() {
@@ -175,4 +183,23 @@ void screen_diagnostics_update() {
   set_value(targetRpmVal, buf, COL_TEXT);
   snprintf(buf, sizeof(buf), "%.3f", (double)speed_get_actual_rpm());
   set_value(actualRpmVal, buf, COL_TEXT);
+
+  EventLogEntry events[5];
+  size_t eventCount = event_log_snapshot(events, 5);
+  for (int i = 0; i < 5; i++) {
+    if (!eventLabels[i]) continue;
+    if ((size_t)i >= eventCount) {
+      lv_label_set_text(eventLabels[i], "-");
+      lv_obj_set_style_text_color(eventLabels[i], COL_TEXT_DIM, 0);
+      continue;
+    }
+    uint32_t sec = events[i].ms / 1000u;
+    char line[80];
+    snprintf(line, sizeof(line), "%02lu:%02lu  %s",
+             (unsigned long)((sec / 60u) % 100u),
+             (unsigned long)(sec % 60u),
+             events[i].text);
+    lv_label_set_text(eventLabels[i], line);
+    lv_obj_set_style_text_color(eventLabels[i], i == 0 ? COL_TEXT : COL_TEXT_DIM, 0);
+  }
 }

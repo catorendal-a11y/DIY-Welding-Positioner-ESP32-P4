@@ -521,7 +521,7 @@
       <rect x="0" y="270" width="800" height="1" fill="#2E2E2E"/>
       <!-- Mode settings button -->
       <rect x="20" y="280" width="760" height="52" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-      <text x="36" y="312" font-family="sans-serif" font-size="14" fill="#AAAAAA">CONTINUOUS SETTINGS  &gt;  No additional settings</text>
+      <text x="36" y="312" font-family="sans-serif" font-size="14" fill="#AAAAAA">STEP SETTINGS  &gt;  90 deg / step | OD 300 mm</text>
       <!-- Separator y=342 -->
       <rect x="0" y="342" width="800" height="1" fill="#2E2E2E"/>
       <!-- CANCEL + SAVE -->
@@ -690,6 +690,14 @@
       <text x="97" y="154" font-family="sans-serif" font-size="18" fill="#FF9500" text-anchor="middle">CW</text>
       <rect x="192" y="128" width="170" height="40" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
       <text x="277" y="154" font-family="sans-serif" font-size="18" fill="#AAAAAA" text-anchor="middle">CCW</text>
+      <!-- PART OD (right side) -->
+      <text x="400" y="118" font-family="sans-serif" font-size="14" fill="#4A4A4A">PART OD</text>
+      <rect x="400" y="128" width="48" height="40" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+      <text x="424" y="154" font-family="sans-serif" font-size="18" fill="#AAAAAA" text-anchor="middle">-</text>
+      <rect x="456" y="128" width="220" height="40" rx="4" fill="#0A0A0A" stroke="#2E2E2E" stroke-width="1"/>
+      <text x="566" y="154" font-family="sans-serif" font-size="22" fill="#AAAAAA" text-anchor="middle">300 mm</text>
+      <rect x="684" y="128" width="48" height="40" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
+      <text x="708" y="154" font-family="sans-serif" font-size="18" fill="#AAAAAA" text-anchor="middle">+</text>
       <!-- Separator -->
       <rect x="12" y="176" width="776" height="1" fill="#2E2E2E"/>
       <!-- REPEATS (left) -->
@@ -904,8 +912,9 @@
       <rect width="800" height="480" fill="#050505"/>
       <rect width="800" height="28" fill="#090909"/>
       <text x="16" y="20" font-family="sans-serif" font-size="14" fill="#FF9500">DIAGNOSTICS</text>
-      <rect x="16" y="42" width="374" height="344" rx="4" fill="#0E0E0E" stroke="#2E2E2E" stroke-width="1"/>
-      <rect x="410" y="42" width="374" height="344" rx="4" fill="#0E0E0E" stroke="#2E2E2E" stroke-width="1"/>
+      <rect x="16" y="42" width="374" height="252" rx="4" fill="#0E0E0E" stroke="#2E2E2E" stroke-width="1"/>
+      <rect x="410" y="42" width="374" height="252" rx="4" fill="#0E0E0E" stroke="#2E2E2E" stroke-width="1"/>
+      <rect x="16" y="302" width="768" height="118" rx="4" fill="#0E0E0E" stroke="#2E2E2E" stroke-width="1"/>
       <text x="28" y="68" font-family="sans-serif" font-size="16" fill="#FF9500">GPIO INPUTS</text>
       <text x="422" y="68" font-family="sans-serif" font-size="16" fill="#FF9500">RUNTIME STATUS</text>
       <text x="28" y="108" font-family="sans-serif" font-size="13" fill="#4A4A4A">ESTOP GPIO34</text>
@@ -928,7 +937,12 @@
       <text x="586" y="198" font-family="sans-serif" font-size="13" fill="#AAAAAA">0.500</text>
       <text x="422" y="228" font-family="sans-serif" font-size="13" fill="#4A4A4A">ACTUAL RPM</text>
       <text x="586" y="228" font-family="sans-serif" font-size="13" fill="#AAAAAA">0.000</text>
-      <text x="18" y="414" font-family="sans-serif" font-size="13" fill="#666666">Use when START is blocked: ESTOP/ALM OK and MOTION BLOCK = NO.</text>
+      <text x="28" y="328" font-family="sans-serif" font-size="16" fill="#FF9500">EVENT LOG</text>
+      <text x="28" y="356" font-family="monospace" font-size="12" fill="#AAAAAA">00:12  START CONT</text>
+      <text x="28" y="374" font-family="monospace" font-size="12" fill="#666666">00:10  REQ STOP</text>
+      <text x="28" y="392" font-family="monospace" font-size="12" fill="#666666">00:08  PEDAL DOWN</text>
+      <text x="310" y="356" font-family="monospace" font-size="12" fill="#666666">00:05  FAULT DRIVER ALM</text>
+      <text x="310" y="374" font-family="monospace" font-size="12" fill="#666666">00:02  CONTROL INIT</text>
       <rect x="16" y="440" width="170" height="36" rx="4" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
       <text x="101" y="463" font-family="sans-serif" font-size="14" fill="#AAAAAA" text-anchor="middle">BACK</text>
     </g>

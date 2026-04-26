@@ -160,6 +160,7 @@ static bool storage_parse_presets_buffer(const uint8_t* data, size_t len) {
         p.pulse_on_ms = obj["pulse_on"] | 500;
         p.pulse_off_ms = obj["pulse_off"] | 500;
         p.step_angle = obj["step_angle"] | 90.0f;
+        p.workpiece_diameter_mm = obj["workpiece_diameter_mm"] | 0.0f;
         p.timer_ms = obj["timer_ms"] | 5000;
 
         p.direction = obj["direction"] | 0;
@@ -179,6 +180,9 @@ static bool storage_parse_presets_buffer(const uint8_t* data, size_t len) {
         p.pulse_on_ms = constrain(p.pulse_on_ms, (uint32_t)PULSE_MS_MIN, (uint32_t)PULSE_MS_MAX);
         p.pulse_off_ms = constrain(p.pulse_off_ms, (uint32_t)PULSE_MS_MIN, (uint32_t)PULSE_MS_MAX);
         p.step_angle = constrain(p.step_angle, 0.1f, 360.0f);
+        if (p.workpiece_diameter_mm < 1.0f || p.workpiece_diameter_mm > 20000.0f) {
+          p.workpiece_diameter_mm = 0.0f;
+        }
         p.timer_ms = constrain(p.timer_ms, (uint32_t)1, (uint32_t)3600000);
 
         loaded.push_back(p);
@@ -212,6 +216,7 @@ static bool storage_save_presets_internal() {
         obj["pulse_on"] = p.pulse_on_ms;
         obj["pulse_off"] = p.pulse_off_ms;
         obj["step_angle"] = p.step_angle;
+        obj["workpiece_diameter_mm"] = p.workpiece_diameter_mm;
         obj["timer_ms"] = p.timer_ms;
         obj["direction"] = p.direction;
         obj["pulse_cycles"] = p.pulse_cycles;

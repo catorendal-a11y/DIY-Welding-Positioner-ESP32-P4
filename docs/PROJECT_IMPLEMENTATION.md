@@ -89,7 +89,7 @@
 ## 5. Storage & Presets
 
 - **Backend**: **NVS** using Arduino `Preferences`, namespace `wrot`
-- **Keys**: `cfg` — JSON object for `SystemSettings` (acceleration, microstep, calibration, brightness, themes, countdown, etc.); `prs` — JSON array for up to **16** presets
+- **Keys**: `cfg` — JSON object for `SystemSettings` (acceleration, microstep, calibration, brightness, themes, countdown, etc.); `prs` — JSON array for up to **16** presets, including per-program `workpiece_diameter_mm` (`0` = default reference diameter)
 - **Serialization**: ArduinoJson → buffer → `putBytes` / `getBytes` (plaintext JSON on flash)
 - **Legacy**: One-time import from LittleFS `/settings.json` and `/presets.json` if NVS keys are empty and those files exist
 - **Thread safety**: `g_nvs_mutex` around Preferences I/O; `g_presets_mutex` / `g_settings_mutex` for in-RAM structures
@@ -108,6 +108,7 @@
 - **Keyboard**: Deferred cleanup pattern — set flag in callback, cleanup in next update cycle
 - **Confirm dialog**: Pending-flag pattern — callback sets flag, execution in update loop
 - **Settings diagnostics**: `SCREEN_DIAGNOSTICS` shows live ESTOP, DM542T ALM, DIR switch, pedal switch, ENA, RPM, direction and motion-block state.
+- **Event log**: `src/event_log.cpp` keeps a small mutex-protected RAM ring buffer of recent operator, program, state and fault events. Diagnostics renders the newest entries so blocked starts can be checked on the panel without serial output.
 - **Pedal settings**: `SCREEN_PEDAL_SETTINGS` arms/disarms GPIO33 pedal input and shows ADS1115/analog status.
 - **Footer navigation**: BACK button at bottom of all settings screens
 

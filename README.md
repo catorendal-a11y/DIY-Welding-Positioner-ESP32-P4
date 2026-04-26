@@ -149,10 +149,10 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 | **Direction Switch** | Physical CW/CCW toggle (GPIO 29) |
 | **Driver Fault** | DM542T `ALM` fault input on GPIO 32 (open-drain, `INPUT_PULLUP`, LOW = alarm) |
 | **Touch UI** | LVGL 9.x glove-safe interface, high-contrast dark theme, 8 accent colors |
-| **Program Presets** | Save/load up to 16 welding parameter sets to **NVS** (flash, JSON blobs); ProgramExecutor applies direction override, pulse cycles, step repeats/dwell, continuous soft-start and auto-stop timer fields |
+| **Program Presets** | Save/load up to 16 welding parameter sets to **NVS** (flash, JSON blobs); ProgramExecutor applies direction override, workpiece diameter, pulse cycles, step repeats/dwell, continuous soft-start and auto-stop timer fields |
 | **Motor Config** | Microstepping (1/4 – 1/32), acceleration, calibration, direction invert |
 | **Display Settings** | Brightness slider, dim timeout, theme color selection |
-| **System Info / Diagnostics** | Live CPU core load, free heap, PSRAM usage, uptime, plus Diagnostics for ESTOP, ALM, DIR, pedal, ENA, RPM and motion-block reason |
+| **System Info / Diagnostics** | Live CPU core load, free heap, PSRAM usage, uptime, plus Diagnostics for ESTOP, ALM, DIR, pedal, ENA, RPM, motion-block reason and the latest operator/fault events |
 | **Hardware Safety** | NC E-STOP interrupt (<0.5 ms), software watchdog, CAS state transitions, boot-time ESTOP de-floating (3-sample majority vote), `fatal_halt()` with serial-visible reason on unrecoverable init errors; dimmed backlight wakes on ESTOP |
 | **Thread Safety** | FreeRTOS mutex-protected stepper access, `std::atomic` cross-core variables with explicit memory ordering (single source of truth in `src/app_state.h`), pending-flag patterns |
 
@@ -194,7 +194,7 @@ The interface is built from many full-screen flows and editors—each purpose-bu
 | **Calibration** | `SCREEN_CALIBRATION` | Motor calibration factor adjustment |
 | **Motor Config** | `SCREEN_MOTOR_CONFIG` | Microstepping, acceleration, direction switch, pedal enable |
 | **Pedal Settings** | `SCREEN_PEDAL_SETTINGS` | Pedal arm/disarm plus live GPIO33 and ADS1115 status |
-| **Diagnostics** | `SCREEN_DIAGNOSTICS` | Live GPIO/fault page for ESTOP, ALM, DIR switch, pedal switch, ENA, direction and RPM state |
+| **Diagnostics** | `SCREEN_DIAGNOSTICS` | Live GPIO/fault page for ESTOP, ALM, DIR switch, pedal switch, ENA, direction, RPM state and recent event log |
 | **About** | `SCREEN_ABOUT` | Firmware version, hardware info |
 | **Confirm** | `SCREEN_CONFIRM` | Shared confirmation dialog (destructive actions, etc.) |
 | **E-STOP Overlay** | _(separate module, not a `ScreenId`)_ | Full-screen red overlay on any active screen |
@@ -434,6 +434,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 
 - Current control logic uses a single overwrite command queue, so the latest START/STOP command wins and stale STOP requests cannot block a later START
 - Go to **Settings > Diagnostics** and verify `MOTION BLOCK = NO`, `ESTOP GPIO34 = HIGH OK`, `DM542T ALM GPIO32 = HIGH OK`, and `ENA GPIO52 = HIGH DISABLED` while idle
+- The Diagnostics event log shows the last START/STOP, pedal, program and fault events, so you can see whether the UI requested motion or safety blocked it
 - If a foot pedal is connected, use **Settings > Pedal Settings** to confirm `GPIO33 switch` changes between `HIGH OPEN` and `LOW PRESSED`
 - JOG release cancels a pending JOG start so a quick tap/release cannot start motion after the button was released
 
@@ -504,7 +505,8 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - [x] 8 accent color themes
 - [x] Display settings (brightness, dim timeout)
 - [x] System info screen (core load, heap, PSRAM, uptime)
-- [x] Diagnostics screen (live ESTOP/ALM/DIR/pedal/ENA/RPM status)
+- [x] Diagnostics screen (live ESTOP/ALM/DIR/pedal/ENA/RPM status + recent event log)
+- [x] Workpiece diameter per preset (stored as `workpiece_diameter_mm`, applied by ProgramExecutor)
 - [x] Pedal settings screen (GPIO33 arm/disarm + ADS1115 status)
 - [x] Motor configuration UI
 - [x] FreeRTOS mutex stepper access + atomic cross-core variables
@@ -539,8 +541,10 @@ src/
                               (g_estopPending, g_uiResetPending, g_wakePending,
                                g_flashWriting, g_screenRedraw, g_dir_switch_cache,
                                motorConfigApplyPending) + fatal_halt()
+  event_log.h/cpp           Small RAM ring buffer for Diagnostics runtime events
   control/                  State machine + welding modes
     control.cpp               Core state machine with CAS transitions
+    program_executor.cpp      Applies saved presets through the control command queue
     modes/                    continuous, jog, pulse, step_mode, timer
   motor/                    Stepper driver
     motor.cpp                 FastAccelStepper init, run, stop, motor_set_target_milli_hz()

@@ -33,6 +33,7 @@
 ### Main START sometimes does not start
 - Current firmware uses a single overwrite command queue, so the latest START/STOP request wins and stale STOP requests cannot swallow the next START.
 - Open **Settings > Diagnostics** and verify `MOTION BLOCK = NO`, `ESTOP GPIO34 = HIGH OK`, and `DM542T ALM GPIO32 = HIGH OK`.
+- Check the Diagnostics event log for the latest START/STOP, pedal, program and fault entries; it shows whether motion was requested or blocked.
 - If using a foot pedal, open **Settings > Pedal Settings** and verify GPIO33 changes between `HIGH OPEN` and `LOW PRESSED`.
 - Quick JOG tap/release is also protected: release cancels a pending JOG start before `controlTask` can run it.
 

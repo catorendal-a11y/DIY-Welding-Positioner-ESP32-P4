@@ -976,10 +976,10 @@ Passer hvis du vil at det skal se mer kommersielt ut.
 
 ## Fase 4 — Ekstra funksjoner
 
-- [ ] Workpiece diameter per preset
+- [x] Workpiece diameter per preset
 - [ ] Dry run
 - [ ] Weld trigger output
-- [ ] Event log
+- [x] Event log
 - [ ] Import/export
 - [ ] Encoder/tacho support
 

@@ -2,6 +2,7 @@
 #include "control.h"
 #include "modes.h"
 #include "../config.h"
+#include "../event_log.h"
 #include "../motor/motor.h"
 #include "../motor/speed.h"
 #include "../safety/safety.h"
@@ -71,6 +72,18 @@ static bool queue_motion_command(const MotionCommand& cmd) {
   return xQueueOverwrite(controlQueue, &cmd) == pdPASS;
 }
 
+static const char* motion_command_name(MotionCommandType type) {
+  switch (type) {
+    case MOTION_CMD_START_CONTINUOUS: return "START CONT";
+    case MOTION_CMD_START_PULSE: return "START PULSE";
+    case MOTION_CMD_START_STEP: return "START STEP";
+    case MOTION_CMD_START_JOG: return "START JOG";
+    case MOTION_CMD_STOP: return "STOP";
+    case MOTION_CMD_STOP_JOG: return "STOP JOG";
+    default: return "UNKNOWN";
+  }
+}
+
 static void cancel_pending_jog_request() {
   if (controlQueue == nullptr) return;
   MotionCommand cmd{};
@@ -123,6 +136,7 @@ void control_init() {
   clear_pending_motion_requests();
   currentState.store(STATE_IDLE, std::memory_order_release);
   previousState.store(STATE_IDLE, std::memory_order_release);
+  event_log_add("CONTROL INIT");
   LOG_I("Control init: state=IDLE");
 }
 
@@ -147,6 +161,7 @@ bool control_transition_to(SystemState newState) {
   LOG_I("State: %s -> %s",
         control_state_name(expected),
         control_state_name(newState));
+  event_log_addf("STATE %s>%s", control_state_name(expected), control_state_name(newState));
 
   switch (newState) {
     case STATE_IDLE:
@@ -310,6 +325,7 @@ static void process_pending_requests() {
 
   if (cmd.type == MOTION_CMD_STOP) {
     xQueueReceive(controlQueue, &cmd, 0);
+    event_log_add("REQ STOP");
     if (is_active_motion_state(cur)) {
       stop_active_mode(cur);
     }
@@ -318,6 +334,7 @@ static void process_pending_requests() {
 
   if (cmd.type == MOTION_CMD_STOP_JOG) {
     xQueueReceive(controlQueue, &cmd, 0);
+    event_log_add("REQ STOP JOG");
     if (cur == STATE_JOG) {
       jog_stop();
     }
@@ -337,6 +354,7 @@ static void process_pending_requests() {
   }
 
   xQueueReceive(controlQueue, &cmd, 0);
+  event_log_add(motion_command_name(cmd.type));
 
   switch (cmd.type) {
     case MOTION_CMD_START_CONTINUOUS:

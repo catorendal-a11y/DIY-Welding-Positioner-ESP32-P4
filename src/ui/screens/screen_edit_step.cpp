@@ -14,6 +14,7 @@
 // ───────────────────────────────────────────────────────────────────────────────
 static lv_obj_t* angleLabel = nullptr;
 static lv_obj_t* rpmLabel = nullptr;
+static lv_obj_t* diameterLabel = nullptr;
 static lv_obj_t* dirBtns[2] = {nullptr};
 static lv_obj_t* repeatsLabel = nullptr;
 static lv_obj_t* dwellLabel = nullptr;
@@ -24,6 +25,7 @@ static lv_obj_t* stepsLabel = nullptr;
 // Local edit state (not committed to preset until SAVE)
 static float editAngle = 90.0f;
 static float editRpm = 2.0f;
+static float editDiameterMm = 0.0f;
 static int editDir = 0;       // 0=CW, 1=CCW
 static int editRepeats = 1;
 static float editDwell = 0.0f; // seconds
@@ -56,10 +58,19 @@ static void update_computed() {
   }
 
   // Total motor steps must use the same calibration path as runtime step mode.
-  long stepCount = angleToSteps(editAngle);
+  long stepCount = angleToStepsForDiameter(editAngle, editDiameterMm);
   if (stepCount < 0) stepCount = -stepCount;
   long totalSteps = stepCount * editRepeats;
   if (stepsLabel) lv_label_set_text_fmt(stepsLabel, "%ld", totalSteps);
+}
+
+static void update_diameter_label() {
+  if (!diameterLabel) return;
+  if (editDiameterMm < 1.0f) {
+    lv_label_set_text(diameterLabel, "DEFAULT");
+  } else {
+    lv_label_set_text_fmt(diameterLabel, "%.0f mm", editDiameterMm);
+  }
 }
 
 static void update_dir_buttons() {
@@ -106,6 +117,19 @@ static void dir_cb(lv_event_t* e) {
   update_dir_buttons();
 }
 
+static void diameter_adj_cb(lv_event_t* e) {
+  int delta = (int)(intptr_t)lv_event_get_user_data(e) * 10;
+  if (editDiameterMm < 1.0f && delta > 0) {
+    editDiameterMm = D_EMNE * 1000.0f;
+  } else {
+    editDiameterMm += delta;
+  }
+  if (editDiameterMm < 1.0f) editDiameterMm = 0.0f;
+  if (editDiameterMm > 20000.0f) editDiameterMm = 20000.0f;
+  update_diameter_label();
+  update_computed();
+}
+
 static void repeats_adj_cb(lv_event_t* e) {
   int delta = (int)(intptr_t)lv_event_get_user_data(e);
   editRepeats += delta;
@@ -134,6 +158,7 @@ static void save_cb(lv_event_t* e) {
   if (p) {
     p->step_angle = editAngle;
     p->rpm = editRpm;
+    p->workpiece_diameter_mm = editDiameterMm;
     p->direction = (uint8_t)editDir;
     p->step_repeats = (uint16_t)editRepeats;
     p->step_dwell_sec = editDwell;
@@ -254,6 +279,7 @@ void screen_edit_step_create() {
   Preset* p = screen_program_edit_get_preset();
   editAngle = p ? p->step_angle : 90.0f;
   editRpm = p ? p->rpm : 2.0f;
+  editDiameterMm = p ? p->workpiece_diameter_mm : 0.0f;
   editDir = p ? p->direction : 0;
   editRepeats = p ? p->step_repeats : 1;
   editDwell = p ? p->step_dwell_sec : 0.0f;
@@ -422,6 +448,16 @@ void screen_edit_step_create() {
   y += 6;
 
   // ── REPEATS ──
+  create_adj_row(content, y, "PART OD", &diameterLabel,
+                 diameter_adj_cb, diameter_adj_cb,
+                 (void*)(intptr_t)(-1), (void*)(intptr_t)1,
+                 FONT_LARGE, COL_TEXT, 220);
+  update_diameter_label();
+  y += 58;
+
+  create_separator(content, y);
+  y += 6;
+
   lv_obj_t* repeatsTitle = lv_label_create(content);
   lv_label_set_text(repeatsTitle, "REPEATS");
   lv_obj_set_style_text_font(repeatsTitle, FONT_SMALL, 0);
@@ -593,6 +629,7 @@ void screen_edit_step_create() {
 void screen_edit_step_invalidate_widgets() {
   angleLabel = nullptr;
   rpmLabel = nullptr;
+  diameterLabel = nullptr;
   dirBtns[0] = nullptr;
   dirBtns[1] = nullptr;
   repeatsLabel = nullptr;
@@ -605,19 +642,9 @@ void screen_edit_step_invalidate_widgets() {
 void screen_edit_step_update() {
   if (!screens_is_active(SCREEN_EDIT_STEP)) return;
 
-  Preset* p = screen_program_edit_get_preset();
-  if (!p) return;
-
-  // Sync local state from preset
-  editAngle = p->step_angle;
-  editRpm = p->rpm;
-  editDir = p->direction;
-  editRepeats = p->step_repeats;
-  editDwell = p->step_dwell_sec;
-
-  // Update angle display
   if (angleLabel) lv_label_set_text_fmt(angleLabel, "%.0f", editAngle);
   if (rpmLabel) lv_label_set_text_fmt(rpmLabel, "%.1f", editRpm);
+  update_diameter_label();
   if (repeatsLabel) lv_label_set_text_fmt(repeatsLabel, "%d", editRepeats);
   if (dwellLabel) lv_label_set_text_fmt(dwellLabel, "%.1f sec", editDwell);
   update_dir_buttons();

@@ -150,7 +150,12 @@ static void update_mode_settings_text() {
                editPreset.pulse_on_ms / 1000.0f, editPreset.pulse_off_ms / 1000.0f);
       break;
     case STATE_STEP:
-      snprintf(detail, sizeof(detail), "%.0f deg / step", editPreset.step_angle);
+      if (editPreset.workpiece_diameter_mm >= 1.0f) {
+        snprintf(detail, sizeof(detail), "%.0f deg / step | OD %.0f mm",
+                 editPreset.step_angle, editPreset.workpiece_diameter_mm);
+      } else {
+        snprintf(detail, sizeof(detail), "%.0f deg / step | default OD", editPreset.step_angle);
+      }
       break;
     default:
       snprintf(detail, sizeof(detail), "CONT - direction & soft start");
@@ -343,6 +348,7 @@ void screen_program_edit_create(int slot) {
     editPreset.pulse_on_ms = 500;
     editPreset.pulse_off_ms = 500;
     editPreset.step_angle = 90.0f;
+    editPreset.workpiece_diameter_mm = speed_get_workpiece_diameter_mm();
     editPreset.timer_ms = 30000;
     editPreset.direction = (uint8_t)speed_get_direction();
     editPreset.pulse_cycles = 0;     // infinite

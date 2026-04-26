@@ -77,6 +77,11 @@ inline float preset_constrain_step_angle(float val) {
   return val;
 }
 
+inline float preset_constrain_workpiece_diameter_mm(float val) {
+  if (val < 1.0f || val > 20000.0f) return 0.0f;
+  return val;
+}
+
 inline uint32_t preset_constrain_timer_ms(uint32_t val) {
   if (val < 1) return 1;
   if (val > 3600000) return 3600000;

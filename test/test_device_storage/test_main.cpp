@@ -384,6 +384,7 @@ void test_preset_step_mode_roundtrip(void) {
   p.mode = STATE_STEP;
   p.rpm = 0.4f;
   p.step_angle = 45.0f;
+  p.workpiece_diameter_mm = 355.0f;
   p.step_repeats = 5;
   p.step_dwell_sec = 2.5f;
   g_presets.push_back(p);
@@ -404,6 +405,7 @@ void test_preset_step_mode_roundtrip(void) {
   TEST_ASSERT_TRUE(found);
   TEST_ASSERT_EQUAL(STATE_STEP, out.mode);
   TEST_ASSERT_FLOAT_WITHIN(0.1f, 45.0f, out.step_angle);
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, 355.0f, out.workpiece_diameter_mm);
   TEST_ASSERT_EQUAL(5, out.step_repeats);
   TEST_ASSERT_FLOAT_WITHIN(0.1f, 2.5f, out.step_dwell_sec);
 

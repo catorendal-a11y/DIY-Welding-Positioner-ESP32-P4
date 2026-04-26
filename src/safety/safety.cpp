@@ -3,6 +3,7 @@
 
 #include "safety.h"
 #include "../config.h"
+#include "../event_log.h"
 #include "../motor/motor.h"
 #include "../control/control.h"
 #include <esp_task_wdt.h>
@@ -22,7 +23,10 @@ static uint16_t s_almLowMs = 0;
 static uint16_t s_almHighMs = 0;
 
 static void safety_set_fault_reason(FaultReason reason) {
-  s_faultReason.store((uint8_t)reason, std::memory_order_release);
+  uint8_t prev = s_faultReason.exchange((uint8_t)reason, std::memory_order_acq_rel);
+  if (prev != (uint8_t)reason && reason != FAULT_NONE) {
+    event_log_addf("FAULT %s", safety_fault_reason_name(reason));
+  }
 }
 
 #if DEBUG_BUILD
@@ -166,6 +170,7 @@ static void safety_handle_reset() {
     estopLocked.store(false, std::memory_order_release);
     g_estopPending.store(false, std::memory_order_release);
     safety_set_fault_reason(FAULT_NONE);
+    event_log_add("FAULT RESET");
     LOG_I("ESTOP reset");
   } else {
     LOG_W("ESTOP reset failed - input still unsafe");
@@ -178,6 +183,7 @@ bool safety_check_ui_reset() {
     estopLocked.store(false, std::memory_order_release);
     g_estopPending.store(false, std::memory_order_release);
     safety_set_fault_reason(FAULT_NONE);
+    event_log_add("FAULT RESET");
     return true;
   }
   g_uiResetPending.store(false, std::memory_order_release);

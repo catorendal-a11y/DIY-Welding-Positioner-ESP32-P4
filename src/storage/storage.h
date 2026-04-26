@@ -49,6 +49,7 @@ struct Preset {
 
     // Step settings
     float step_angle; // e.g., 90.0 degrees
+    float workpiece_diameter_mm; // 0 = use default D_EMNE from config.h
     
     // Timer settings
     uint32_t timer_ms;

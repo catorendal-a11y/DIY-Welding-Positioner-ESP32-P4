@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Diagnostics screen** - `SCREEN_DIAGNOSTICS` shows live ESTOP, DM542T ALM, DIR switch, pedal switch, ENA, direction, target RPM, actual RPM and motion-block state for field troubleshooting.
 - **Pedal Settings screen** - `SCREEN_PEDAL_SETTINGS` arms/disarms the GPIO33 foot pedal and shows live switch, ADS1115 and analog-source status.
+- **RAM event log** - Diagnostics now shows the latest START/STOP, pedal, program, state and fault events so blocked starts can be debugged without serial output.
+- **Workpiece diameter per preset** - STEP programs now store `workpiece_diameter_mm`, show it on program cards/edit summaries and apply it through ProgramExecutor before motion starts.
 
 ### Fixed
 - **Main START race** — queued mode requests now clear stale pending STOP requests so a STOP tap while idle cannot swallow the next START; quick JOG release also cancels pending JOG start before motion can begin.

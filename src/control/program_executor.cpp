@@ -3,6 +3,7 @@
 #include "program_executor.h"
 #include "control.h"
 #include "../config.h"
+#include "../event_log.h"
 #include "../motor/motor.h"
 #include "../motor/speed.h"
 #include "../safety/safety.h"
@@ -28,14 +29,17 @@ static ProgramExecutorResult program_executor_request_result(bool queued) {
 
 ProgramExecutorResult program_executor_start_preset(const Preset* preset) {
   if (preset == nullptr) {
+    event_log_add("PROGRAM INVALID");
     return PROGRAM_EXEC_INVALID_PRESET;
   }
   if (safety_inhibit_motion()) {
     LOG_W("ProgramExecutor: start blocked by safety");
+    event_log_add("PROGRAM BLOCK SAFETY");
     return PROGRAM_EXEC_BLOCKED_SAFETY;
   }
   if (control_get_state() != STATE_IDLE) {
     LOG_W("ProgramExecutor: start blocked, state=%s", control_get_state_string());
+    event_log_addf("PROGRAM BLOCK %s", control_get_state_string());
     return PROGRAM_EXEC_BLOCKED_STATE;
   }
 
@@ -44,6 +48,7 @@ ProgramExecutorResult program_executor_start_preset(const Preset* preset) {
 
   Direction dir = (run.direction == DIR_CCW) ? DIR_CCW : DIR_CW;
   speed_set_program_direction_override(dir);
+  speed_set_workpiece_diameter_mm(run.workpiece_diameter_mm);
   speed_slider_set(run.rpm);
 
   switch (run.mode) {
@@ -51,6 +56,7 @@ ProgramExecutorResult program_executor_start_preset(const Preset* preset) {
       LOG_I("ProgramExecutor: CONT '%s' rpm=%.3f dir=%s soft=%u auto_stop=%lu",
             run.name, run.rpm, dir == DIR_CW ? "CW" : "CCW",
             (unsigned)run.cont_soft_start, (unsigned long)run.timer_ms);
+      event_log_addf("PROGRAM CONT %s", dir == DIR_CW ? "CW" : "CCW");
       return program_executor_request_result(control_start_continuous(
           run.cont_soft_start != 0, run.timer_auto_stop ? run.timer_ms : 0u));
 
@@ -59,6 +65,7 @@ ProgramExecutorResult program_executor_start_preset(const Preset* preset) {
             run.name, run.rpm, (unsigned long)run.pulse_on_ms,
             (unsigned long)run.pulse_off_ms, (unsigned)run.pulse_cycles,
             dir == DIR_CW ? "CW" : "CCW");
+      event_log_addf("PROGRAM PULSE %s", dir == DIR_CW ? "CW" : "CCW");
       return program_executor_request_result(
           control_start_pulse(run.pulse_on_ms, run.pulse_off_ms, run.pulse_cycles));
 
@@ -66,12 +73,14 @@ ProgramExecutorResult program_executor_start_preset(const Preset* preset) {
       LOG_I("ProgramExecutor: STEP '%s' rpm=%.3f angle=%.1f repeats=%u dwell=%.1f dir=%s",
             run.name, run.rpm, run.step_angle, (unsigned)run.step_repeats,
             run.step_dwell_sec, dir == DIR_CW ? "CW" : "CCW");
+      event_log_addf("PROGRAM STEP %s", dir == DIR_CW ? "CW" : "CCW");
       return program_executor_request_result(
           control_start_step_sequence(run.step_angle, run.step_repeats, run.step_dwell_sec));
 
     default:
       LOG_W("ProgramExecutor: invalid mode %d", (int)run.mode);
       speed_clear_program_direction_override();
+      event_log_add("PROGRAM BAD MODE");
       return PROGRAM_EXEC_INVALID_MODE;
   }
 }

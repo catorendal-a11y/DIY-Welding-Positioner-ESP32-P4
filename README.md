@@ -6,6 +6,11 @@
 
 **ESP32-P4 &nbsp;&middot;&nbsp; Firmware v2.0.6**
 
+[![PlatformIO CI](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml/badge.svg)](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml)
+[![Latest Release](https://img.shields.io/github/v/release/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4)](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![PlatformIO](https://img.shields.io/badge/PlatformIO-ESP32--P4-orange)](platformio.ini)
+
 <sub>GUITION JC4880P443C 4.3" touch display board.</sub>
 
 <br>

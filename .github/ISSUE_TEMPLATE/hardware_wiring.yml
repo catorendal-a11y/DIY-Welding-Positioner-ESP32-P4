@@ -1,0 +1,46 @@
+name: Hardware wiring problem
+description: Get help with ESP32-P4, DM542T, E-STOP, pedal, or wiring issues.
+title: "[Hardware]: "
+labels: ["hardware"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - STEP/DIR/ENA
+        - E-STOP
+        - DM542T ALM
+        - Foot pedal / ADS1115
+        - Display / touch
+        - Power / grounding / EMI
+    validations:
+      required: true
+  - type: textarea
+    id: wiring
+    attributes:
+      label: Wiring description
+      description: Describe exact pins and driver terminals used.
+      placeholder: ESP GPIO50 -> PUL-, ESP GND -> PUL+...
+    validations:
+      required: true
+  - type: textarea
+    id: symptoms
+    attributes:
+      label: Symptoms
+      description: What do you see on screen, serial, driver LEDs, or motor?
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics screen values
+      description: Paste ESTOP, ALM, DIR, pedal, ENA, RPM, and event log values.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety checks
+      options:
+        - label: Motor supply was off while changing wiring.
+        - label: E-STOP disables ENA / motor power path before testing motion.
+        - label: Logic GND and driver signal GND are wired as documented.

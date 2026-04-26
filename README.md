@@ -4,7 +4,7 @@
 
 ### Precision Multi-Mode Welding Rotator for TIG, MIG, and Pipe Welding
 
-**ESP32-P4 &nbsp;&middot;&nbsp; Firmware v2.0.5**
+**ESP32-P4 &nbsp;&middot;&nbsp; Firmware v2.0.6**
 
 <sub>GUITION JC4880P443C 4.3" touch display board.</sub>
 

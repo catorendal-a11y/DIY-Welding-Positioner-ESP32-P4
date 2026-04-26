@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.6] - 2026-04-26
+
 ### Added
 - **Diagnostics screen** - `SCREEN_DIAGNOSTICS` shows live ESTOP, DM542T ALM, DIR switch, pedal switch, ENA, direction, target RPM, actual RPM and motion-block state for field troubleshooting.
 - **Pedal Settings screen** - `SCREEN_PEDAL_SETTINGS` arms/disarms the GPIO33 foot pedal and shows live switch, ADS1115 and analog-source status.

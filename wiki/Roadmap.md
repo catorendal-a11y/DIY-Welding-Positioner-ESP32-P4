@@ -1,6 +1,17 @@
 # Roadmap
 
-## v2.0.5 — Current Release (cross-core & error-handling cleanup)
+## v2.0.6 — Current Release (diagnostics and preset polish)
+
+### v2.0.6 (2026-04-26)
+- [x] Diagnostics screen with live GPIO/fault/motion-block state
+- [x] RAM event log for START/STOP, pedal, program, state and fault events
+- [x] Pedal Settings screen for GPIO33 arm/disarm and ADS1115 status
+- [x] ProgramExecutor applies direction, workpiece diameter, pulse cycles, step repeats/dwell, soft start and auto-stop timer fields
+- [x] Main START race fix with overwrite command queue and stale STOP cleanup
+- [x] Workpiece diameter stored per STEP preset
+- [x] README, wiki, status and UI SVG documentation sync
+
+## v2.0.5 — cross-core & error-handling cleanup
 
 ### v2.0.5 (2026-04-17)
 - [x] All cross-core `std::atomic` flags centralised in `src/app_state.h` / `app_state.cpp` (single source of truth)

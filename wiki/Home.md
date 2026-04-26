@@ -2,9 +2,9 @@
 
 **ESP32-P4 / C6 GUITION JC4880P443C** | Open-source firmware for TIG/MIG welding rotators
 
-## Current Status: v2.0.5 — Cross-core & error-handling cleanup
+## Current Status: v2.0.6 — diagnostics and preset polish
 
-Release **v2.0.5** centralises all cross-core `std::atomic` flags in `src/app_state.h`, introduces `fatal_halt()` for diagnosable init failures, makes `LOG_E` visible in release builds, adds a non-blocking ADS1115 pedal ADC path and boot-time ESTOP de-floating, and extends native tests. Release **v2.0.4** previously updated the main RPM UI (pot-only gauge), jog RPM row, and SMP-related mutex/atomics. See `CHANGELOG.md` for the full list.
+Release **v2.0.6** adds the Diagnostics event log, per-preset workpiece diameter for STEP programs, Pedal Settings, Diagnostics, ProgramExecutor polish, start-request race fixes and documentation sync. Release **v2.0.5** previously centralised cross-core atomics, added `fatal_halt()`, release-visible `LOG_E`, non-blocking ADS1115 reads and boot-time ESTOP de-floating. See `CHANGELOG.md` for the full list.
 
 All core features tested and confirmed working on real hardware:
 

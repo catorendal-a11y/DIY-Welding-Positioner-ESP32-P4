@@ -13,11 +13,7 @@ static lv_obj_t* make_info_row(lv_obj_t* parent, int x, int y, int w, int h,
   lv_obj_t* row = lv_obj_create(parent);
   lv_obj_set_size(row, w, h);
   lv_obj_set_pos(row, x, y);
-  lv_obj_set_style_bg_color(row, COL_BG, 0);
-  lv_obj_set_style_border_width(row, 0, 0);
-  lv_obj_set_style_radius(row, 0, 0);
-  lv_obj_set_style_pad_all(row, 0, 0);
-  lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+  ui_style_post_row(row);
   lv_obj_remove_flag(row, LV_OBJ_FLAG_CLICKABLE);
 
   lv_obj_t* keyLbl = lv_label_create(row);
@@ -43,9 +39,10 @@ void screen_about_create() {
   const int PX = 16;
   const int CW = SCREEN_W - 2 * PX;
 
-  ui_create_settings_header(screen, "ABOUT");
+  ui_create_settings_header(screen, "ABOUT", "", COL_TEXT_DIM);
+  ui_create_post_card(screen, PX, 46, CW, 66);
 
-  int y = 44;
+  int y = 50;
 
   lv_obj_t* nameLbl = lv_label_create(screen);
   lv_label_set_text(nameLbl, "TIG Rotator Controller");

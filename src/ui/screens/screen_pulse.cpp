@@ -168,7 +168,7 @@ void screen_pulse_create() {
   lv_obj_t* screen = screenRoots[SCREEN_PULSE];
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
-  ui_create_header(screen, "PULSE MODE");
+  ui_create_header(screen, "PULSE MODE", "CYCLE SETUP", nullptr);
 
   // ── Parameter row layout constants ──
   const int secLabelX = 20;
@@ -178,6 +178,19 @@ void screen_pulse_create() {
   const int barH = 3;
   const int btnMinusX = 600;
   const int btnPlusX = 652;
+
+  int rowCardY[] = {50, 130, 210};
+  for (int i = 0; i < 3; i++) {
+    lv_obj_t* rowCard = lv_obj_create(screen);
+    lv_obj_set_size(rowCard, 768, 66);
+    lv_obj_set_pos(rowCard, 16, rowCardY[i]);
+    lv_obj_set_style_bg_color(rowCard, COL_BG_CARD, 0);
+    lv_obj_set_style_border_color(rowCard, COL_BORDER_ROW, 0);
+    lv_obj_set_style_border_width(rowCard, 1, 0);
+    lv_obj_set_style_radius(rowCard, RADIUS_CARD, 0);
+    lv_obj_set_style_pad_all(rowCard, 0, 0);
+    lv_obj_remove_flag(rowCard, LV_OBJ_FLAG_SCROLLABLE);
+  }
 
   // ════════════════════════════════════════════════════════════════════════════════
   // ON TIME section (y=56)
@@ -209,8 +222,10 @@ void screen_pulse_create() {
   lv_obj_set_style_bg_color(onBar, COL_ACCENT, LV_PART_INDICATOR);
   lv_obj_set_style_radius(onBar, 1, LV_PART_INDICATOR);
 
-  ui_create_pm_btn(screen, btnMinusX, onY - 2, "-", FONT_XL, on_time_adj_cb, (void*)(intptr_t)-1);
-  ui_create_pm_btn(screen, btnPlusX, onY - 2, "+", FONT_XL, on_time_adj_cb, (void*)(intptr_t)1);
+  ui_create_pm_btn(screen, btnMinusX, onY - 2, "-", FONT_XL, UI_BTN_NORMAL, on_time_adj_cb,
+                    (void*)(intptr_t)-1);
+  ui_create_pm_btn(screen, btnPlusX, onY - 2, "+", FONT_XL, UI_BTN_ACCENT, on_time_adj_cb,
+                    (void*)(intptr_t)1);
 
   // Range hint
   lv_obj_t* onHint = lv_label_create(screen);
@@ -249,8 +264,10 @@ void screen_pulse_create() {
   lv_obj_set_style_radius(offBar, 1, LV_PART_INDICATOR);
 
   // -/+ buttons
-  ui_create_pm_btn(screen, btnMinusX, offY - 2, "-", FONT_XL, off_time_adj_cb, (void*)(intptr_t)-1);
-  ui_create_pm_btn(screen, btnPlusX, offY - 2, "+", FONT_XL, off_time_adj_cb, (void*)(intptr_t)1);
+  ui_create_pm_btn(screen, btnMinusX, offY - 2, "-", FONT_XL, UI_BTN_NORMAL, off_time_adj_cb,
+                    (void*)(intptr_t)-1);
+  ui_create_pm_btn(screen, btnPlusX, offY - 2, "+", FONT_XL, UI_BTN_ACCENT, off_time_adj_cb,
+                    (void*)(intptr_t)1);
 
   // Range hint
   lv_obj_t* offHint = lv_label_create(screen);
@@ -289,8 +306,10 @@ void screen_pulse_create() {
   lv_obj_set_style_radius(rpmBar, 1, LV_PART_INDICATOR);
 
   // -/+ buttons
-  ui_create_pm_btn(screen, btnMinusX, rpmY - 2, "-", FONT_XL, rpm_adj_cb, (void*)(intptr_t)-1);
-  ui_create_pm_btn(screen, btnPlusX, rpmY - 2, "+", FONT_XL, rpm_adj_cb, (void*)(intptr_t)1);
+  ui_create_pm_btn(screen, btnMinusX, rpmY - 2, "-", FONT_XL, UI_BTN_NORMAL, rpm_adj_cb,
+                    (void*)(intptr_t)-1);
+  ui_create_pm_btn(screen, btnPlusX, rpmY - 2, "+", FONT_XL, UI_BTN_ACCENT, rpm_adj_cb,
+                    (void*)(intptr_t)1);
 
   // Range hint
   lv_obj_t* rpmHint = lv_label_create(screen);
@@ -338,7 +357,7 @@ void screen_pulse_create() {
   lv_obj_t* waveBox = lv_obj_create(screen);
   lv_obj_set_size(waveBox, waveW, waveH);
   lv_obj_set_pos(waveBox, 10, waveY);
-  lv_obj_set_style_bg_color(waveBox, COL_PROTRACTOR_BG, 0);
+  lv_obj_set_style_bg_color(waveBox, COL_BG_CARD, 0);
   lv_obj_set_style_border_width(waveBox, 1, 0);
   lv_obj_set_style_border_color(waveBox, COL_BORDER_ROW, 0);
   lv_obj_set_style_radius(waveBox, RADIUS_CARD, 0);
@@ -358,6 +377,17 @@ void screen_pulse_create() {
   const int onW = (int)(cycleW * duty);
   const int highY = 25;
   const int lowY = waveH - 25;
+
+  // POST proposal (ui_screens.svg): dim baseline under waveform polyline
+  lv_obj_t* waveBaseline = lv_obj_create(waveBox);
+  lv_obj_set_size(waveBaseline, usableW, 1);
+  lv_obj_set_pos(waveBaseline, margin, lowY);
+  lv_obj_set_style_bg_color(waveBaseline, COL_BORDER, 0);
+  lv_obj_set_style_bg_opa(waveBaseline, LV_OPA_50, 0);
+  lv_obj_set_style_border_width(waveBaseline, 0, 0);
+  lv_obj_set_style_radius(waveBaseline, 0, 0);
+  lv_obj_set_style_pad_all(waveBaseline, 0, 0);
+  lv_obj_remove_flag(waveBaseline, LV_OBJ_FLAG_SCROLLABLE);
 
   for (int i = 0; i < WAVE_CYCLES; i++) {
     int cx = margin + i * cycleW;

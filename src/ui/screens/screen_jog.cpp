@@ -1,5 +1,4 @@
-// TIG Rotator Controller - Jog Mode Screen
-// Brutalist v2.0 design — RPM row, two large CW/CCW hold buttons
+// Jog Mode Screen - POST-style hold-to-run control
 
 #include <Arduino.h>
 #include "../screens.h"
@@ -8,20 +7,35 @@
 #include "../../motor/speed.h"
 #include "../../config.h"
 
-// ───────────────────────────────────────────────────────────────────────────────
-// WIDGETS
-// ───────────────────────────────────────────────────────────────────────────────
 static lv_obj_t* cwHoldBtn = nullptr;
 static lv_obj_t* ccwHoldBtn = nullptr;
 static lv_obj_t* rpmLabel = nullptr;
 static lv_obj_t* rpmBar = nullptr;
+static lv_obj_t* jogHdrRight = nullptr;
 
-// ───────────────────────────────────────────────────────────────────────────────
-// EVENT HANDLERS
-// ───────────────────────────────────────────────────────────────────────────────
 static void back_event_cb(lv_event_t* e) {
   control_stop_jog();
   screens_show(SCREEN_MAIN);
+}
+
+static void stop_event_cb(lv_event_t* e) {
+  control_stop_jog();
+  control_stop();
+}
+
+static int rpm_to_pct(float rpm) {
+  float mx = speed_get_rpm_max();
+  float span = mx - MIN_RPM;
+  if (span < 1e-6f) span = 1e-6f;
+  int pct = (int)((rpm - MIN_RPM) * 100.0f / span + 0.5f);
+  if (pct < 0) pct = 0;
+  if (pct > 100) pct = 100;
+  return pct;
+}
+
+static void set_jog_rpm(float rpm) {
+  if (rpmLabel) lv_label_set_text_fmt(rpmLabel, "%.1f", rpm);
+  if (rpmBar) lv_bar_set_value(rpmBar, rpm_to_pct(rpm), LV_ANIM_OFF);
 }
 
 static void rpm_adj_cb(lv_event_t* e) {
@@ -33,15 +47,15 @@ static void rpm_adj_cb(lv_event_t* e) {
   if (currentRpm < MIN_RPM) currentRpm = MIN_RPM;
   if (currentRpm > mx) currentRpm = mx;
   control_set_jog_speed(currentRpm);
-  lv_label_set_text_fmt(rpmLabel, "%.1f", currentRpm);
-  if (rpmBar) {
-    float span = mx - MIN_RPM;
-    if (span < 1e-6f) span = 1e-6f;
-    int pct = (int)((currentRpm - MIN_RPM) * 100.0f / span + 0.5f);
-    if (pct < 0) pct = 0;
-    if (pct > 100) pct = 100;
-    lv_bar_set_value(rpmBar, pct, LV_ANIM_OFF);
-  }
+  set_jog_rpm(currentRpm);
+}
+
+static void style_hold_btn(lv_obj_t* btn, bool active) {
+  if (!btn) return;
+  ui_btn_style_post(btn, active ? UI_BTN_ACCENT : UI_BTN_NORMAL);
+  lv_obj_set_style_radius(btn, RADIUS_CARD, 0);
+  lv_obj_t* title = lv_obj_get_child(btn, 0);
+  if (title) lv_obj_set_style_text_color(title, ui_btn_label_color_post(active ? UI_BTN_ACCENT : UI_BTN_NORMAL), 0);
 }
 
 static void cw_hold_event_cb(lv_event_t* e) {
@@ -49,14 +63,11 @@ static void cw_hold_event_cb(lv_event_t* e) {
   if (code == LV_EVENT_PRESSED) {
     speed_set_direction(DIR_CW);
     control_start_jog_cw();
-    lv_obj_set_style_bg_color(cwHoldBtn, COL_BG_ACTIVE, 0);
-    lv_obj_set_style_border_color(cwHoldBtn, COL_ACCENT, 0);
-    lv_obj_set_style_border_width(cwHoldBtn, 3, 0);
+    style_hold_btn(cwHoldBtn, true);
+    style_hold_btn(ccwHoldBtn, false);
   } else if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) {
     control_stop_jog();
-    lv_obj_set_style_bg_color(cwHoldBtn, COL_BTN_BG, 0);
-    lv_obj_set_style_border_color(cwHoldBtn, COL_BORDER, 0);
-    lv_obj_set_style_border_width(cwHoldBtn, 1, 0);
+    style_hold_btn(cwHoldBtn, true);
   }
 }
 
@@ -65,187 +76,150 @@ static void ccw_hold_event_cb(lv_event_t* e) {
   if (code == LV_EVENT_PRESSED) {
     speed_set_direction(DIR_CCW);
     control_start_jog_ccw();
-    lv_obj_set_style_bg_color(ccwHoldBtn, COL_BG_ACTIVE, 0);
-    lv_obj_set_style_border_color(ccwHoldBtn, COL_ACCENT, 0);
-    lv_obj_set_style_border_width(ccwHoldBtn, 3, 0);
+    style_hold_btn(cwHoldBtn, false);
+    style_hold_btn(ccwHoldBtn, true);
   } else if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) {
     control_stop_jog();
-    lv_obj_set_style_bg_color(ccwHoldBtn, COL_BTN_BG, 0);
-    lv_obj_set_style_border_color(ccwHoldBtn, COL_BORDER, 0);
-    lv_obj_set_style_border_width(ccwHoldBtn, 1, 0);
+    style_hold_btn(cwHoldBtn, true);
+    style_hold_btn(ccwHoldBtn, false);
   }
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// SCREEN CREATE
-// ───────────────────────────────────────────────────────────────────────────────
+static lv_obj_t* create_hold_btn(lv_obj_t* parent, int x, int y, int w, int h,
+                                 const char* title, bool active, lv_event_cb_t cb) {
+  lv_obj_t* btn = lv_button_create(parent);
+  lv_obj_set_size(btn, w, h);
+  lv_obj_set_pos(btn, x, y);
+  ui_btn_style_post(btn, active ? UI_BTN_ACCENT : UI_BTN_NORMAL);
+  lv_obj_set_style_radius(btn, RADIUS_CARD, 0);
+  lv_obj_add_event_cb(btn, cb, LV_EVENT_PRESSED, nullptr);
+  lv_obj_add_event_cb(btn, cb, LV_EVENT_RELEASED, nullptr);
+  lv_obj_add_event_cb(btn, cb, LV_EVENT_PRESS_LOST, nullptr);
+
+  lv_obj_t* titleLbl = lv_label_create(btn);
+  lv_label_set_text(titleLbl, title);
+  lv_obj_set_style_text_font(titleLbl, FONT_XXL, 0);
+  lv_obj_set_style_text_color(titleLbl, ui_btn_label_color_post(active ? UI_BTN_ACCENT : UI_BTN_NORMAL), 0);
+  lv_obj_align(titleLbl, LV_ALIGN_CENTER, 0, -18);
+
+  lv_obj_t* hintLbl = lv_label_create(btn);
+  lv_label_set_text(hintLbl, "Hold to run");
+  lv_obj_set_style_text_font(hintLbl, FONT_NORMAL, 0);
+  lv_obj_set_style_text_color(hintLbl, COL_TEXT_VDIM, 0);
+  lv_obj_align(hintLbl, LV_ALIGN_CENTER, 0, 28);
+  return btn;
+}
+
 void screen_jog_create() {
   lv_obj_t* screen = screenRoots[SCREEN_JOG];
+  lv_obj_clean(screen);
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
-  lv_obj_t* header = ui_create_header(screen, "JOG MODE");
-  lv_obj_remove_flag(header, LV_OBJ_FLAG_CLICKABLE);
+  jogHdrRight = nullptr;
+  ui_create_header(screen, "JOG MODE", "IDLE", &jogHdrRight);
+  if (jogHdrRight) lv_obj_set_style_text_color(jogHdrRight, COL_GREEN, 0);
 
-  // ── RPM row (theme JOG_RPM_*) ──
-  lv_obj_t* rpmTitle = lv_label_create(screen);
-  lv_label_set_text(rpmTitle, "RPM");
+  lv_obj_t* speedCard = lv_obj_create(screen);
+  lv_obj_set_size(speedCard, 760, 74);
+  lv_obj_set_pos(speedCard, 20, HEADER_H + 14);
+  lv_obj_set_style_bg_color(speedCard, COL_BG_CARD, 0);
+  lv_obj_set_style_border_color(speedCard, COL_BORDER, 0);
+  lv_obj_set_style_border_width(speedCard, 1, 0);
+  lv_obj_set_style_radius(speedCard, RADIUS_CARD, 0);
+  lv_obj_set_style_pad_all(speedCard, 0, 0);
+  lv_obj_remove_flag(speedCard, LV_OBJ_FLAG_SCROLLABLE);
+
+  lv_obj_t* rpmTitle = lv_label_create(speedCard);
+  lv_label_set_text(rpmTitle, "JOG SPEED");
   lv_obj_set_style_text_font(rpmTitle, FONT_SMALL, 0);
   lv_obj_set_style_text_color(rpmTitle, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(rpmTitle, JOG_RPM_TITLE_X, JOG_RPM_ROW_Y);
+  lv_obj_set_pos(rpmTitle, 22, 12);
 
-  rpmLabel = lv_label_create(screen);
-  lv_label_set_text_fmt(rpmLabel, "%.1f", control_get_jog_speed());
-  lv_obj_set_style_text_font(rpmLabel, FONT_LARGE, 0);
+  rpmLabel = lv_label_create(speedCard);
+  lv_obj_set_style_text_font(rpmLabel, FONT_XXL, 0);
   lv_obj_set_style_text_color(rpmLabel, COL_ACCENT, 0);
-  lv_obj_set_pos(rpmLabel, JOG_RPM_VAL_X, JOG_RPM_ROW_Y);
+  lv_obj_set_pos(rpmLabel, 150, 18);
 
-  rpmBar = lv_bar_create(screen);
-  lv_obj_set_size(rpmBar, JOG_RPM_BAR_W, JOG_RPM_BAR_H);
-  lv_obj_set_pos(rpmBar, JOG_RPM_BAR_X, JOG_RPM_ROW_Y + JOG_RPM_BAR_Y_OFF);
-  lv_obj_set_style_bg_color(rpmBar, COL_GAUGE_BG, 0);
+  lv_obj_t* unit = lv_label_create(speedCard);
+  lv_label_set_text(unit, "RPM");
+  lv_obj_set_style_text_font(unit, FONT_NORMAL, 0);
+  lv_obj_set_style_text_color(unit, COL_TEXT_DIM, 0);
+  lv_obj_set_pos(unit, 232, 32);
+
+  rpmBar = lv_bar_create(speedCard);
+  lv_obj_set_size(rpmBar, 320, 6);
+  lv_obj_set_pos(rpmBar, 310, 38);
+  lv_obj_set_style_bg_color(rpmBar, COL_GAUGE_BG, LV_PART_MAIN);
+  lv_obj_set_style_radius(rpmBar, 0, LV_PART_MAIN);
   lv_obj_set_style_bg_color(rpmBar, COL_ACCENT, LV_PART_INDICATOR);
+  lv_obj_set_style_radius(rpmBar, 0, LV_PART_INDICATOR);
   lv_bar_set_range(rpmBar, 0, 100);
-  {
-    float mx = speed_get_rpm_max();
-    float span = mx - MIN_RPM;
-    if (span < 1e-6f) span = 1e-6f;
-    int rpmPct = (int)((control_get_jog_speed() - MIN_RPM) * 100.0f / span + 0.5f);
-    if (rpmPct < 0) rpmPct = 0;
-    if (rpmPct > 100) rpmPct = 100;
-    lv_bar_set_value(rpmBar, rpmPct, LV_ANIM_OFF);
-  }
+  set_jog_rpm(control_get_jog_speed());
 
-  ui_create_btn(screen, JOG_RPM_BTN_MINUS_X, JOG_RPM_BTN_Y, JOG_RPM_BTN_W, JOG_RPM_BTN_H, "-",
-                 FONT_BTN, UI_BTN_NORMAL, rpm_adj_cb, (void*)(intptr_t)-1);
-  ui_create_btn(screen, JOG_RPM_BTN_PLUS_X, JOG_RPM_BTN_Y, JOG_RPM_BTN_W, JOG_RPM_BTN_H, "+",
-                 FONT_BTN, UI_BTN_NORMAL, rpm_adj_cb, (void*)(intptr_t)1);
+  ui_create_btn(speedCard, 530, 11, 82, 40, "-", FONT_NORMAL, UI_BTN_NORMAL, rpm_adj_cb, (void*)(intptr_t)-1);
+  ui_create_btn(speedCard, 628, 11, 82, 40, "+", FONT_NORMAL, UI_BTN_ACCENT, rpm_adj_cb, (void*)(intptr_t)1);
 
-  // ── Direction label (y=120) ──
-  lv_obj_t* dirHint = lv_label_create(screen);
-  lv_label_set_text(dirHint, "DIRECTION");
-  lv_obj_set_style_text_font(dirHint, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(dirHint, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(dirHint, JOG_RPM_TITLE_X, 120);
-
-  lv_obj_t* dirVal = lv_label_create(screen);
-  lv_label_set_text(dirVal, "Hold button to rotate");
-  lv_obj_set_style_text_font(dirVal, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(dirVal, COL_TEXT_VDIM, 0);
-  lv_obj_set_pos(dirVal, JOG_RPM_VAL_X, 120);
-
-  // ── Two large CW / CCW hold buttons ──
-  const int holdY = 160;
-  const int holdH = 220;
+  const int holdY = HEADER_H + 110;
+  const int holdH = 92;
   const int holdGap = 16;
   const int holdW = (SCREEN_W - PAD_X * 2 - holdGap) / 2;
+  cwHoldBtn = create_hold_btn(screen, PAD_X, holdY, holdW, holdH, "HOLD CW", true, cw_hold_event_cb);
+  ccwHoldBtn = create_hold_btn(screen, PAD_X + holdW + holdGap, holdY, holdW, holdH, "HOLD CCW", false,
+                               ccw_hold_event_cb);
 
-  // CW button (left)
-  cwHoldBtn = lv_button_create(screen);
-  lv_obj_set_size(cwHoldBtn, holdW, holdH);
-  lv_obj_set_pos(cwHoldBtn, PAD_X, holdY);
-  lv_obj_set_style_bg_color(cwHoldBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(cwHoldBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(cwHoldBtn, 1, 0);
-  lv_obj_set_style_border_color(cwHoldBtn, COL_BORDER, 0);
-  lv_obj_set_style_shadow_width(cwHoldBtn, 0, 0);
-  lv_obj_set_style_pad_all(cwHoldBtn, 0, 0);
-  lv_obj_add_event_cb(cwHoldBtn, cw_hold_event_cb, LV_EVENT_PRESSED, nullptr);
-  lv_obj_add_event_cb(cwHoldBtn, cw_hold_event_cb, LV_EVENT_RELEASED, nullptr);
-  lv_obj_add_event_cb(cwHoldBtn, cw_hold_event_cb, LV_EVENT_PRESS_LOST, nullptr);
+  lv_obj_t* liveCard = lv_obj_create(screen);
+  lv_obj_set_size(liveCard, 760, 92);
+  lv_obj_set_pos(liveCard, 20, holdY + holdH + 16);
+  lv_obj_set_style_bg_color(liveCard, COL_BG_CARD, 0);
+  lv_obj_set_style_border_color(liveCard, COL_BORDER, 0);
+  lv_obj_set_style_border_width(liveCard, 1, 0);
+  lv_obj_set_style_radius(liveCard, RADIUS_CARD, 0);
+  lv_obj_set_style_pad_all(liveCard, 0, 0);
+  lv_obj_remove_flag(liveCard, LV_OBJ_FLAG_SCROLLABLE);
 
-  lv_obj_t* cwArrow = lv_label_create(cwHoldBtn);
-  lv_label_set_text(cwArrow, "<  CW");
-  lv_obj_set_style_text_font(cwArrow, FONT_XXL, 0);
-  lv_obj_set_style_text_color(cwArrow, COL_TEXT_DIM, 0);
-  lv_obj_align(cwArrow, LV_ALIGN_CENTER, 0, -20);
+  lv_obj_t* liveTitle = lv_label_create(liveCard);
+  lv_label_set_text(liveTitle, "LIVE");
+  lv_obj_set_style_text_font(liveTitle, FONT_SMALL, 0);
+  lv_obj_set_style_text_color(liveTitle, COL_TEXT_DIM, 0);
+  lv_obj_set_pos(liveTitle, 22, 16);
 
-  lv_obj_t* cwHint = lv_label_create(cwHoldBtn);
-  lv_label_set_text(cwHint, "Hold to run");
-  lv_obj_set_style_text_font(cwHint, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(cwHint, COL_TEXT_VDIM, 0);
-  lv_obj_align(cwHint, LV_ALIGN_CENTER, 0, 30);
+  lv_obj_t* liveVals = lv_label_create(liveCard);
+  lv_label_set_text(liveVals, "DIR CW     ENA HIGH     ESTOP CLEAR");
+  lv_obj_set_style_text_font(liveVals, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_color(liveVals, COL_TEXT, 0);
+  lv_obj_set_pos(liveVals, 120, 36);
 
-  // CCW button (right)
-  ccwHoldBtn = lv_button_create(screen);
-  lv_obj_set_size(ccwHoldBtn, holdW, holdH);
-  lv_obj_set_pos(ccwHoldBtn, PAD_X + holdW + holdGap, holdY);
-  lv_obj_set_style_bg_color(ccwHoldBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(ccwHoldBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(ccwHoldBtn, 1, 0);
-  lv_obj_set_style_border_color(ccwHoldBtn, COL_BORDER, 0);
-  lv_obj_set_style_shadow_width(ccwHoldBtn, 0, 0);
-  lv_obj_set_style_pad_all(ccwHoldBtn, 0, 0);
-  lv_obj_add_event_cb(ccwHoldBtn, ccw_hold_event_cb, LV_EVENT_PRESSED, nullptr);
-  lv_obj_add_event_cb(ccwHoldBtn, ccw_hold_event_cb, LV_EVENT_RELEASED, nullptr);
-  lv_obj_add_event_cb(ccwHoldBtn, ccw_hold_event_cb, LV_EVENT_PRESS_LOST, nullptr);
+  ui_create_btn(screen, PAD_X, 414, 376, 50, "<  BACK", FONT_SUBTITLE, UI_BTN_NORMAL, back_event_cb, nullptr);
+  ui_create_btn(screen, 408, 414, 376, 50, "X STOP", FONT_SUBTITLE, UI_BTN_DANGER, stop_event_cb, nullptr);
 
-  lv_obj_t* ccwArrow = lv_label_create(ccwHoldBtn);
-  lv_label_set_text(ccwArrow, "CCW  >");
-  lv_obj_set_style_text_font(ccwArrow, FONT_XXL, 0);
-  lv_obj_set_style_text_color(ccwArrow, COL_TEXT_DIM, 0);
-  lv_obj_align(ccwArrow, LV_ALIGN_CENTER, 0, -20);
-
-  lv_obj_t* ccwHint = lv_label_create(ccwHoldBtn);
-  lv_label_set_text(ccwHint, "Hold to run");
-  lv_obj_set_style_text_font(ccwHint, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(ccwHint, COL_TEXT_VDIM, 0);
-  lv_obj_align(ccwHint, LV_ALIGN_CENTER, 0, 30);
-
-  // ── Bottom bar: BACK button (same position as other screens) ──
-  lv_obj_t* backBtn = lv_button_create(screen);
-  lv_obj_set_size(backBtn, 376, 48);
-  lv_obj_set_pos(backBtn, PAD_X, 428);
-  lv_obj_set_style_bg_color(backBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(backBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(backBtn, 1, 0);
-  lv_obj_set_style_border_color(backBtn, COL_BORDER, 0);
-  lv_obj_set_style_shadow_width(backBtn, 0, 0);
-  lv_obj_set_style_pad_all(backBtn, 0, 0);
-  lv_obj_add_event_cb(backBtn, back_event_cb, LV_EVENT_CLICKED, nullptr);
-
-  lv_obj_t* backLabel = lv_label_create(backBtn);
-  lv_label_set_text(backLabel, "<  BACK");
-  lv_obj_set_style_text_font(backLabel, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(backLabel, COL_TEXT, 0);
-  lv_obj_center(backLabel);
-
-  LOG_I("Screen jog: v2.0 layout created");
+  LOG_I("Screen jog: POST-style layout created");
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// SCREEN UPDATE
-// ───────────────────────────────────────────────────────────────────────────────
 void screen_jog_invalidate_widgets() {
   cwHoldBtn = nullptr;
   ccwHoldBtn = nullptr;
   rpmLabel = nullptr;
   rpmBar = nullptr;
+  jogHdrRight = nullptr;
 }
 
 void screen_jog_update() {
   if (!screens_is_active(SCREEN_JOG)) return;
 
   SystemState state = control_get_state();
-  float mx = speed_get_rpm_max();
-  float span = mx - MIN_RPM;
-  if (span < 1e-6f) span = 1e-6f;
+  if (jogHdrRight) {
+    if (state == STATE_JOG) {
+      lv_label_set_text(jogHdrRight, "RUN");
+      lv_obj_set_style_text_color(jogHdrRight, COL_ACCENT, 0);
+    } else {
+      lv_label_set_text(jogHdrRight, "IDLE");
+      lv_obj_set_style_text_color(jogHdrRight, COL_GREEN, 0);
+    }
+  }
   if (state == STATE_JOG) {
-    float actual_rpm = speed_get_actual_rpm();
-    lv_label_set_text_fmt(rpmLabel, "%.1f", actual_rpm);
-    if (rpmBar) {
-      int pct = (int)((actual_rpm - MIN_RPM) * 100.0f / span + 0.5f);
-      if (pct < 0) pct = 0;
-      if (pct > 100) pct = 100;
-      lv_bar_set_value(rpmBar, pct, LV_ANIM_OFF);
-    }
+    float actualRpm = speed_get_actual_rpm();
+    set_jog_rpm(actualRpm);
   } else {
-    float jogRpm = control_get_jog_speed();
-    lv_label_set_text_fmt(rpmLabel, "%.1f", jogRpm);
-    if (rpmBar) {
-      int pct = (int)((jogRpm - MIN_RPM) * 100.0f / span + 0.5f);
-      if (pct < 0) pct = 0;
-      if (pct > 100) pct = 100;
-      lv_bar_set_value(rpmBar, pct, LV_ANIM_OFF);
-    }
+    set_jog_rpm(control_get_jog_speed());
   }
 }

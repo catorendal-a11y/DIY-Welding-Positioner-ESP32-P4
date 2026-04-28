@@ -3,6 +3,9 @@ skills-lock.json
 
 # Claude / AI settings
 .claude/
+
+# Cursor: local ECC / profile junction (personal machine paths; do not commit)
+.cursor/
 .kilocode/
 .agents/
 CLAUDE.md

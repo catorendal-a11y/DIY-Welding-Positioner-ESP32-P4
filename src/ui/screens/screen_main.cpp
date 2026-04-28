@@ -149,6 +149,14 @@ static void pedal_toggle_cb(lv_event_t*) {
 static void menu_event_cb(lv_event_t*) {
   screens_show(SCREEN_MENU);
 }
+static void step_screen_cb(lv_event_t* e) {
+  (void)e;
+  screens_show(SCREEN_STEP);
+}
+static void timer_screen_cb(lv_event_t* e) {
+  (void)e;
+  screens_show(SCREEN_TIMER);
+}
 
 // ───────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -158,24 +166,12 @@ static lv_obj_t* make_btn(lv_obj_t* parent, int x, int y, int w, int h,
   lv_obj_t* btn = lv_button_create(parent);
   lv_obj_set_size(btn, w, h);
   lv_obj_set_pos(btn, x, y);
-  lv_obj_set_style_radius(btn, RADIUS_BTN, 0);
-  lv_obj_set_style_shadow_width(btn, 0, 0);
-  lv_obj_set_style_pad_all(btn, 0, 0);
-
-  if (accent) {
-    lv_obj_set_style_bg_color(btn, COL_BG_ACTIVE, 0);
-    lv_obj_set_style_border_color(btn, COL_ACCENT, 0);
-    lv_obj_set_style_border_width(btn, 2, 0);
-  } else {
-    lv_obj_set_style_bg_color(btn, COL_BTN_BG, 0);
-    lv_obj_set_style_border_color(btn, COL_BORDER, 0);
-    lv_obj_set_style_border_width(btn, 1, 0);
-  }
+  ui_btn_style_post(btn, accent ? UI_BTN_ACCENT : UI_BTN_NORMAL);
 
   lv_obj_t* lbl = lv_label_create(btn);
   lv_label_set_text(lbl, text);
   lv_obj_set_style_text_font(lbl, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(lbl, accent ? COL_ACCENT : COL_TEXT, 0);
+  lv_obj_set_style_text_color(lbl, ui_btn_label_color_post(accent ? UI_BTN_ACCENT : UI_BTN_NORMAL), 0);
   lv_obj_center(lbl);
   return btn;
 }
@@ -191,13 +187,13 @@ static void set_btn_style(lv_obj_t* btn, lv_color_t bg, lv_color_t border,
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN CREATE
-// Layout: Header 30 | Side buttons | Gauge center | Bottom bar
+// Layout: HEADER_H (38) | Side buttons | Gauge center | Bottom bar
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_main_create() {
   mainScreenPtr = screenRoots[SCREEN_MAIN];
   lv_obj_set_style_bg_color(mainScreenPtr, COL_BG, 0);
 
-  // ── Header (30px) ──
+  // ── Header (POST 38px) ──
   lv_obj_t* header = lv_obj_create(mainScreenPtr);
   lv_obj_set_size(header, SCREEN_W, HEADER_H);
   lv_obj_set_pos(header, 0, 0);
@@ -211,28 +207,30 @@ void screen_main_create() {
   lv_label_set_text(title, "TIG-ROTATOR");
   lv_obj_set_style_text_font(title, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(title, COL_ACCENT, 0);
-  lv_obj_set_pos(title, PAD_X, 8);
+  lv_obj_set_pos(title, PAD_X, 11);
 
   stateLabel = lv_label_create(header);
   lv_label_set_text(stateLabel, "IDLE");
   lv_obj_set_style_text_font(stateLabel, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(stateLabel, COL_GREEN, 0);
-  lv_obj_set_pos(stateLabel, 160, 8);
+  lv_obj_set_pos(stateLabel, 164, 12);
 
   sourceLabel = lv_label_create(header);
   lv_label_set_text(sourceLabel, "SRC POT");
   lv_obj_set_style_text_font(sourceLabel, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(sourceLabel, COL_TEXT_DIM, 0);
-  lv_obj_set_width(sourceLabel, 150);
-  lv_obj_set_pos(sourceLabel, 270, 8);
+  lv_obj_set_width(sourceLabel, 160);
+  lv_obj_set_pos(sourceLabel, 302, 12);
 
   statusDetailLabel = lv_label_create(header);
   lv_label_set_text(statusDetailLabel, "READY");
   lv_obj_set_style_text_font(statusDetailLabel, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(statusDetailLabel, COL_TEXT_DIM, 0);
   lv_obj_set_style_text_align(statusDetailLabel, LV_TEXT_ALIGN_RIGHT, 0);
-  lv_obj_set_width(statusDetailLabel, 220);
-  lv_obj_set_pos(statusDetailLabel, 560, 8);
+  lv_obj_set_width(statusDetailLabel, 240);
+  lv_obj_align(statusDetailLabel, LV_ALIGN_TOP_RIGHT, -16, 12);
+
+  ui_add_post_header_accent(mainScreenPtr);
 
   // ── Gauge semicircle (theme MAIN_GAUGE_*) ──
   const int arcCX = MAIN_GAUGE_CX;
@@ -241,7 +239,7 @@ void screen_main_create() {
 
   // Track arc (background)
   lv_obj_t* gaugeTrack = lv_arc_create(mainScreenPtr);
-  int trackSize = arcR * 2 + 20;
+  int trackSize = arcR * 2 + MAIN_GAUGE_TRACK_EXTRA;
   lv_obj_set_size(gaugeTrack, trackSize, trackSize);
   lv_obj_set_pos(gaugeTrack, arcCX - trackSize/2, arcCY - trackSize/2);
   lv_obj_remove_flag(gaugeTrack, LV_OBJ_FLAG_SCROLLABLE);
@@ -277,7 +275,7 @@ void screen_main_create() {
   lv_label_set_text(rpmUnitLabel, "RPM");
   lv_obj_set_style_text_font(rpmUnitLabel, FONT_XL, 0);
   lv_obj_set_style_text_color(rpmUnitLabel, COL_TEXT_DIM, 0);
-  lv_obj_align(rpmUnitLabel, LV_ALIGN_TOP_MID, 0, MAIN_RPM_TAG_Y);
+  lv_obj_align(rpmUnitLabel, LV_ALIGN_TOP_MID, MAIN_RPM_CENTER_OFS_X, MAIN_RPM_TAG_Y);
 
   rpmLabel = lv_label_create(mainScreenPtr);
   lv_label_set_text(rpmLabel, "0.00");
@@ -287,93 +285,108 @@ void screen_main_create() {
   lv_obj_set_style_transform_pivot_x(rpmLabel, lv_obj_get_width(rpmLabel) / 2, 0);
   lv_obj_set_style_transform_pivot_y(rpmLabel, lv_obj_get_height(rpmLabel) / 2, 0);
   lv_obj_set_style_transform_zoom(rpmLabel, MAIN_RPM_VALUE_ZOOM, 0);
-  lv_obj_align(rpmLabel, LV_ALIGN_TOP_MID, 0,
+  lv_obj_align(rpmLabel, LV_ALIGN_TOP_MID, MAIN_RPM_CENTER_OFS_X,
                MAIN_RPM_TAG_Y - MAIN_RPM_VALUE_GAP - lv_obj_get_height(rpmLabel) -
                    MAIN_RPM_VALUE_LIFT);
 
-  // ── Left side buttons: JOG, CW, PULSE (170x72, gray by default) ──
-  const int sideW = 170;
-  const int sideH = 72;
-  const int sideGap = 10;
-  const int leftX = 8;
-  const int rightX = 800 - 8 - sideW;
+  lv_obj_t* potHint = lv_label_create(mainScreenPtr);
+  lv_label_set_text(potHint, "speed follows potentiometer");
+  lv_obj_set_style_text_font(potHint, FONT_SMALL, 0);
+  lv_obj_set_style_text_color(potHint, COL_TEXT_VDIM, 0);
+  lv_obj_set_style_text_align(potHint, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_width(potHint, 520);
+  lv_obj_align(potHint, LV_ALIGN_TOP_MID, MAIN_RPM_CENTER_OFS_X, MAIN_POT_HINT_Y);
 
-  jogBtn = make_btn(mainScreenPtr, leftX, 36, sideW, sideH, "JOG", false);
+  // ── Side mode buttons (slightly taller than POST mockup for touch) ──
+  const int mainTop = HEADER_H + 16;
+  const int sideW = 150;
+  const int sideH = 64;
+  const int sideGap = 12;
+  const int leftX = 16;
+  const int rightX = SCREEN_W - 16 - sideW;
+
+  jogBtn = make_btn(mainScreenPtr, leftX, mainTop, sideW, sideH, "JOG", false);
   lv_obj_add_event_cb(jogBtn, jog_press_cb, LV_EVENT_PRESSED, nullptr);
   lv_obj_add_event_cb(jogBtn, jog_release_cb, LV_EVENT_RELEASED, nullptr);
   lv_obj_add_event_cb(jogBtn, jog_release_cb, LV_EVENT_PRESS_LOST, nullptr);
 
-  cwBtn = make_btn(mainScreenPtr, leftX, 36 + sideH + sideGap, sideW, sideH, "CW", false);
+  cwBtn = make_btn(mainScreenPtr, leftX, mainTop + sideH + sideGap, sideW, sideH, "CW", false);
   lv_obj_add_event_cb(cwBtn, cw_event_cb, LV_EVENT_CLICKED, nullptr);
 
-  pulseBtn = make_btn(mainScreenPtr, leftX, 36 + (sideH + sideGap) * 2, sideW, sideH, "PULSE", false);
+  pulseBtn = make_btn(mainScreenPtr, leftX, mainTop + (sideH + sideGap) * 2, sideW, sideH, "PULSE", false);
   lv_obj_add_event_cb(pulseBtn, pulse_event_cb, LV_EVENT_CLICKED, nullptr);
 
-  // ── Right side buttons: STEP, TIMER, MENU (170x72, gray) ──
-  lv_obj_t* stepBtn = make_btn(mainScreenPtr, rightX, 36, sideW, sideH, "STEP", false);
-  lv_obj_add_event_cb(stepBtn, [](lv_event_t*) { screens_show(SCREEN_STEP); }, LV_EVENT_CLICKED, nullptr);
+  // ── Right: STEP, 3-2-1, MENU, PEDAL ──
+  lv_obj_t* stepBtn = make_btn(mainScreenPtr, rightX, mainTop, sideW, sideH, "STEP", false);
+  lv_obj_add_event_cb(stepBtn, step_screen_cb, LV_EVENT_CLICKED, nullptr);
 
-  lv_obj_t* timerBtn = make_btn(mainScreenPtr, rightX, 36 + sideH + sideGap, sideW, sideH, "3-2-1", false);
-  lv_obj_add_event_cb(timerBtn, [](lv_event_t*) { screens_show(SCREEN_TIMER); }, LV_EVENT_CLICKED, nullptr);
+  lv_obj_t* timerBtn =
+      make_btn(mainScreenPtr, rightX, mainTop + sideH + sideGap, sideW, sideH, "3-2-1", false);
+  lv_obj_add_event_cb(timerBtn, timer_screen_cb, LV_EVENT_CLICKED, nullptr);
 
-  lv_obj_t* menuBtn = make_btn(mainScreenPtr, rightX, 36 + (sideH + sideGap) * 2, sideW, sideH, "MENU", false);
+  lv_obj_t* menuBtn =
+      make_btn(mainScreenPtr, rightX, mainTop + (sideH + sideGap) * 2, sideW, sideH, "MENU", false);
   lv_obj_add_event_cb(menuBtn, menu_event_cb, LV_EVENT_CLICKED, nullptr);
 
-  pedalBtn = make_btn(mainScreenPtr, rightX, 36 + (sideH + sideGap) * 3, sideW, sideH, "PEDAL", false);
+  pedalBtn = make_btn(mainScreenPtr, rightX, mainTop + (sideH + sideGap) * 3, sideW, sideH, "PEDAL", false);
   lv_obj_add_event_cb(pedalBtn, pedal_toggle_cb, LV_EVENT_CLICKED, nullptr);
 
-  // ── Pulse time controls under PULSE button (left column x=8, w=170) ──
-  // Layout: [-]  value  [+] ON  — buttons left, label right towards center
-  const int pCol = 8;
-  const int pW = 170;
+  // ── Pulse time editors (left column, below mode buttons; align X with side buttons) ──
+  const int pCol = leftX;
+  const int pW = sideW;
   const int pH = 44;
-  const int pBtnW = 44;
+  const int pBtnW = 48;
+  const int pBtnGap = 4;
+  // Vertically center FONT_NORMAL tags on the 44px rows (baseline ~= rowCenter - 5)
+  const int pulseTagYOff = (pH / 2) - 5;
+  const int pulseRow1Y = mainTop + (sideH + sideGap) * 3 + 6;
 
-  // Row 1: ON  y=290
-  lv_obj_t* pulseOnDownBtn = make_btn(mainScreenPtr, pCol + 2, 290, pBtnW, pH, "-", false);
+  lv_obj_t* pulseOnDownBtn = make_btn(mainScreenPtr, pCol, pulseRow1Y, pBtnW, pH, "-", false);
   lv_obj_add_event_cb(pulseOnDownBtn, pulse_on_down_cb, LV_EVENT_CLICKED, nullptr);
 
   pulseOnLabel = lv_label_create(mainScreenPtr);
-  lv_obj_set_style_text_font(pulseOnLabel, FONT_XL, 0);
+  lv_obj_set_style_text_font(pulseOnLabel, FONT_LARGE, 0);
   lv_obj_set_style_text_color(pulseOnLabel, COL_TEXT, 0);
-  lv_obj_set_pos(pulseOnLabel, pCol + 50, 296);
+  lv_obj_set_pos(pulseOnLabel, pCol + pBtnW + pBtnGap, pulseRow1Y + 8);
 
-  lv_obj_t* pulseOnUpBtn = make_btn(mainScreenPtr, pCol + 116, 290, pBtnW, pH, "+", false);
+  lv_obj_t* pulseOnUpBtn =
+      make_btn(mainScreenPtr, pCol + 100, pulseRow1Y, pBtnW, pH, "+", false);
   lv_obj_add_event_cb(pulseOnUpBtn, pulse_on_up_cb, LV_EVENT_CLICKED, nullptr);
 
   lv_obj_t* onTag = lv_label_create(mainScreenPtr);
   lv_label_set_text(onTag, "ON");
   lv_obj_set_style_text_font(onTag, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(onTag, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(onTag, pCol + pW + 4, 302);
+  lv_obj_set_pos(onTag, pCol + pW + 14, pulseRow1Y + pulseTagYOff);
 
-  // Row 2: OFF y=340
-  lv_obj_t* pulseOffDownBtn = make_btn(mainScreenPtr, pCol + 2, 340, pBtnW, pH, "-", false);
+  const int pulseRow2Y = pulseRow1Y + pH + 8;
+  lv_obj_t* pulseOffDownBtn = make_btn(mainScreenPtr, pCol, pulseRow2Y, pBtnW, pH, "-", false);
   lv_obj_add_event_cb(pulseOffDownBtn, pulse_off_down_cb, LV_EVENT_CLICKED, nullptr);
 
   pulseOffLabel = lv_label_create(mainScreenPtr);
-  lv_obj_set_style_text_font(pulseOffLabel, FONT_XL, 0);
+  lv_obj_set_style_text_font(pulseOffLabel, FONT_LARGE, 0);
   lv_obj_set_style_text_color(pulseOffLabel, COL_TEXT, 0);
-  lv_obj_set_pos(pulseOffLabel, pCol + 50, 346);
+  lv_obj_set_pos(pulseOffLabel, pCol + pBtnW + pBtnGap, pulseRow2Y + 8);
 
-  lv_obj_t* pulseOffUpBtn = make_btn(mainScreenPtr, pCol + 116, 340, pBtnW, pH, "+", false);
+  lv_obj_t* pulseOffUpBtn =
+      make_btn(mainScreenPtr, pCol + 100, pulseRow2Y, pBtnW, pH, "+", false);
   lv_obj_add_event_cb(pulseOffUpBtn, pulse_off_up_cb, LV_EVENT_CLICKED, nullptr);
 
   lv_obj_t* offTag = lv_label_create(mainScreenPtr);
   lv_label_set_text(offTag, "OFF");
   lv_obj_set_style_text_font(offTag, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(offTag, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(offTag, pCol + pW + 4, 352);
+  lv_obj_set_pos(offTag, pCol + pW + 14, pulseRow2Y + pulseTagYOff);
 
-  // ── Bottom bar: START + STOP (y=420, h=56) ──
-  const int botY = 420;
-  const int botH = 56;
-  const int botBtnW = 392;
-  const int botGap = 8;
+  // ── Bottom bar (376x52, gap 16) ──
+  const int botY = 412;
+  const int botH = 52;
+  const int botBtnW = 376;
+  const int botGap = 16;
 
-  startBtn = ui_create_btn(mainScreenPtr, 4, botY, botBtnW, botH, "> START", FONT_SUBTITLE,
+  startBtn = ui_create_btn(mainScreenPtr, 16, botY, botBtnW, botH, "> START", FONT_SUBTITLE,
                            UI_BTN_NORMAL, start_event_cb, nullptr);
-  stopBtn = ui_create_btn(mainScreenPtr, 4 + botBtnW + botGap, botY, botBtnW, botH, "X STOP",
+  stopBtn = ui_create_btn(mainScreenPtr, 16 + botBtnW + botGap, botY, botBtnW, botH, "X STOP",
                          FONT_SUBTITLE, UI_BTN_DANGER, stop_event_cb, nullptr);
 
   LOG_I("Screen main: centered gauge layout created");
@@ -477,7 +490,7 @@ void screen_main_update() {
   lv_obj_set_style_transform_pivot_x(rpmLabel, lv_obj_get_width(rpmLabel) / 2, 0);
   lv_obj_set_style_transform_pivot_y(rpmLabel, lv_obj_get_height(rpmLabel) / 2, 0);
   lv_obj_set_style_transform_zoom(rpmLabel, MAIN_RPM_VALUE_ZOOM, 0);
-  lv_obj_align(rpmLabel, LV_ALIGN_TOP_MID, 0,
+  lv_obj_align(rpmLabel, LV_ALIGN_TOP_MID, MAIN_RPM_CENTER_OFS_X,
                MAIN_RPM_TAG_Y - MAIN_RPM_VALUE_GAP - lv_obj_get_height(rpmLabel) -
                    MAIN_RPM_VALUE_LIFT);
   lv_arc_set_value(rpmIndicatorArc, val);
@@ -514,7 +527,6 @@ void screen_main_update() {
     set_btn_style(pulseBtn, COL_BTN_BG, COL_BORDER, 1, COL_TEXT);
   }
 
-  // PEDAL: GPIO33 switch is always supported; ADS1115 only adds analog speed input.
   if (pedalBtn) {
     lv_obj_add_flag(pedalBtn, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_t* pedalLbl = lv_obj_get_child(pedalBtn, 0);
@@ -534,7 +546,6 @@ void screen_main_update() {
     }
   }
 
-  // Pulse time labels
   if (pulseOnLabel) {
     char buf[12];
     snprintf(buf, sizeof(buf), "%.1fs", mainPulseOnMs / 1000.0f);
@@ -545,7 +556,6 @@ void screen_main_update() {
     snprintf(buf, sizeof(buf), "%.1fs", mainPulseOffMs / 1000.0f);
     lv_label_set_text(pulseOffLabel, buf);
   }
-
 }
 
 void screen_main_set_program_pulse_times(uint32_t on_ms, uint32_t off_ms) {

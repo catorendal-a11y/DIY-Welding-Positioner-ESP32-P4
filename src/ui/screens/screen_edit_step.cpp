@@ -77,11 +77,10 @@ static void update_dir_buttons() {
   for (int i = 0; i < 2; i++) {
     if (!dirBtns[i]) continue;
     bool isActive = (i == editDir);
-    lv_obj_set_style_bg_color(dirBtns[i], isActive ? COL_BTN_ACTIVE : COL_BTN_BG, 0);
-    lv_obj_set_style_border_color(dirBtns[i], isActive ? COL_ACCENT : COL_BORDER, 0);
-    lv_obj_set_style_border_width(dirBtns[i], isActive ? 2 : 1, 0);
+    const UiBtnStyle ms = isActive ? UI_BTN_ACCENT : UI_BTN_NORMAL;
+    ui_btn_style_post(dirBtns[i], ms);
     lv_obj_t* lbl = lv_obj_get_child(dirBtns[i], 0);
-    if (lbl) lv_obj_set_style_text_color(lbl, isActive ? COL_ACCENT : COL_TEXT, 0);
+    if (lbl) lv_obj_set_style_text_color(lbl, ui_btn_label_color_post(ms), 0);
   }
 }
 
@@ -192,16 +191,13 @@ static void create_adj_row(lv_obj_t* parent, int y,
   lv_obj_t* minusBtn = lv_button_create(parent);
   lv_obj_set_size(minusBtn, btnW, btnH);
   lv_obj_set_pos(minusBtn, startX, y + 14);
-  lv_obj_set_style_bg_color(minusBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(minusBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(minusBtn, 1, 0);
-  lv_obj_set_style_border_color(minusBtn, COL_BORDER, 0);
   lv_obj_add_event_cb(minusBtn, minusCb, LV_EVENT_CLICKED, minusData);
+  ui_btn_style_post(minusBtn, UI_BTN_NORMAL);
 
   lv_obj_t* minusLbl = lv_label_create(minusBtn);
   lv_label_set_text(minusLbl, "-");
   lv_obj_set_style_text_font(minusLbl, FONT_MED, 0);
-  lv_obj_set_style_text_color(minusLbl, COL_TEXT, 0);
+  lv_obj_set_style_text_color(minusLbl, ui_btn_label_color_post(UI_BTN_NORMAL), 0);
   lv_obj_center(minusLbl);
 
   // Value panel
@@ -224,16 +220,13 @@ static void create_adj_row(lv_obj_t* parent, int y,
   lv_obj_t* plusBtn = lv_button_create(parent);
   lv_obj_set_size(plusBtn, btnW, btnH);
   lv_obj_set_pos(plusBtn, startX + btnW + valueGap + valueW + valueGap, y + 14);
-  lv_obj_set_style_bg_color(plusBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(plusBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(plusBtn, 1, 0);
-  lv_obj_set_style_border_color(plusBtn, COL_BORDER, 0);
   lv_obj_add_event_cb(plusBtn, plusCb, LV_EVENT_CLICKED, plusData);
+  ui_btn_style_post(plusBtn, UI_BTN_ACCENT);
 
   lv_obj_t* plusLbl = lv_label_create(plusBtn);
   lv_label_set_text(plusLbl, "+");
   lv_obj_set_style_text_font(plusLbl, FONT_MED, 0);
-  lv_obj_set_style_text_color(plusLbl, COL_TEXT, 0);
+  lv_obj_set_style_text_color(plusLbl, ui_btn_label_color_post(UI_BTN_ACCENT), 0);
   lv_obj_center(plusLbl);
 }
 
@@ -275,6 +268,7 @@ static void create_info_row(lv_obj_t* parent, int y, const char* labelText,
 void screen_edit_step_create() {
   lv_obj_t* screen = screenRoots[SCREEN_EDIT_STEP];
   lv_obj_clean(screen);
+  lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
   Preset* p = screen_program_edit_get_preset();
   editAngle = p ? p->step_angle : 90.0f;
@@ -297,11 +291,8 @@ void screen_edit_step_create() {
   // [ESC] button at right of header
   lv_obj_t* escBtn = lv_button_create(header);
   lv_obj_set_size(escBtn, 60, 24);
-  lv_obj_set_pos(escBtn, SCREEN_W - 60 - PAD_X, 3);
-  lv_obj_set_style_bg_color(escBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(escBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(escBtn, 1, 0);
-  lv_obj_set_style_border_color(escBtn, COL_BORDER, 0);
+  lv_obj_set_pos(escBtn, SCREEN_W - 60 - PAD_X, 7);
+  ui_btn_style_post(escBtn, UI_BTN_NORMAL);
   lv_obj_add_event_cb(escBtn, back_event_cb, LV_EVENT_CLICKED, nullptr);
 
   lv_obj_t* escLbl = lv_label_create(escBtn);
@@ -317,6 +308,8 @@ void screen_edit_step_create() {
   lv_obj_set_style_text_color(title, COL_ACCENT, 0);
   lv_obj_align(title, LV_ALIGN_CENTER, 0, 0);
 
+  ui_add_post_header_accent(screen);
+
   // ── Content area: scrollable for small screens ──
   lv_obj_t* content = lv_obj_create(screen);
   lv_obj_set_size(content, SCREEN_W, SCREEN_H - HEADER_H);
@@ -328,6 +321,10 @@ void screen_edit_step_create() {
   lv_obj_remove_flag(content, LV_OBJ_FLAG_SCROLLABLE);
 
   int y = 6;
+  ui_create_post_card(content, 12, 4, 776, 58);
+  ui_create_post_card(content, 12, 72, 776, 50);
+  ui_create_post_card(content, 12, 132, 776, 118);
+  ui_create_post_row(content, 12, 260, 776, 72);
 
   // ── TARGET ANGLE (left half) ──
   const int leftW = 380;
@@ -353,16 +350,13 @@ void screen_edit_step_create() {
     lv_obj_t* rpmMinus = lv_button_create(content);
     lv_obj_set_size(rpmMinus, btnW, btnH);
     lv_obj_set_pos(rpmMinus, rpmX, y + 14);
-    lv_obj_set_style_bg_color(rpmMinus, COL_BTN_BG, 0);
-    lv_obj_set_style_radius(rpmMinus, RADIUS_BTN, 0);
-    lv_obj_set_style_border_width(rpmMinus, 1, 0);
-    lv_obj_set_style_border_color(rpmMinus, COL_BORDER, 0);
     lv_obj_add_event_cb(rpmMinus, rpm_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)(-1));
+    ui_btn_style_post(rpmMinus, UI_BTN_NORMAL);
 
     lv_obj_t* rpmMinusLbl = lv_label_create(rpmMinus);
     lv_label_set_text(rpmMinusLbl, "-");
     lv_obj_set_style_text_font(rpmMinusLbl, FONT_MED, 0);
-    lv_obj_set_style_text_color(rpmMinusLbl, COL_TEXT, 0);
+    lv_obj_set_style_text_color(rpmMinusLbl, ui_btn_label_color_post(UI_BTN_NORMAL), 0);
     lv_obj_center(rpmMinusLbl);
 
     // Value panel
@@ -386,16 +380,13 @@ void screen_edit_step_create() {
     lv_obj_t* rpmPlus = lv_button_create(content);
     lv_obj_set_size(rpmPlus, btnW, btnH);
     lv_obj_set_pos(rpmPlus, rpmX + btnW + 8 + 200 + 8, y + 14);
-    lv_obj_set_style_bg_color(rpmPlus, COL_BTN_BG, 0);
-    lv_obj_set_style_radius(rpmPlus, RADIUS_BTN, 0);
-    lv_obj_set_style_border_width(rpmPlus, 1, 0);
-    lv_obj_set_style_border_color(rpmPlus, COL_BORDER, 0);
     lv_obj_add_event_cb(rpmPlus, rpm_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)1);
+    ui_btn_style_post(rpmPlus, UI_BTN_ACCENT);
 
     lv_obj_t* rpmPlusLbl = lv_label_create(rpmPlus);
     lv_label_set_text(rpmPlusLbl, "+");
     lv_obj_set_style_text_font(rpmPlusLbl, FONT_MED, 0);
-    lv_obj_set_style_text_color(rpmPlusLbl, COL_TEXT, 0);
+    lv_obj_set_style_text_color(rpmPlusLbl, ui_btn_label_color_post(UI_BTN_ACCENT), 0);
     lv_obj_center(rpmPlusLbl);
   }
 
@@ -427,16 +418,14 @@ void screen_edit_step_create() {
       lv_obj_set_style_radius(dirBtns[i], RADIUS_BTN, 0);
 
       bool isActive = (i == editDir);
-      lv_obj_set_style_bg_color(dirBtns[i], isActive ? COL_BTN_ACTIVE : COL_BTN_BG, 0);
-      lv_obj_set_style_border_color(dirBtns[i], isActive ? COL_ACCENT : COL_BORDER, 0);
-      lv_obj_set_style_border_width(dirBtns[i], isActive ? 2 : 1, 0);
+      ui_btn_style_post(dirBtns[i], isActive ? UI_BTN_ACCENT : UI_BTN_NORMAL);
 
       lv_obj_add_event_cb(dirBtns[i], dir_cb, LV_EVENT_CLICKED, (void*)(intptr_t)i);
 
       lv_obj_t* lbl = lv_label_create(dirBtns[i]);
       lv_label_set_text(lbl, dirTexts[i]);
       lv_obj_set_style_text_font(lbl, FONT_MED, 0);
-      lv_obj_set_style_text_color(lbl, isActive ? COL_ACCENT : COL_TEXT, 0);
+      lv_obj_set_style_text_color(lbl, ui_btn_label_color_post(isActive ? UI_BTN_ACCENT : UI_BTN_NORMAL), 0);
       lv_obj_center(lbl);
     }
   }
@@ -473,16 +462,13 @@ void screen_edit_step_create() {
     lv_obj_t* repMinus = lv_button_create(content);
     lv_obj_set_size(repMinus, btnW, btnH);
     lv_obj_set_pos(repMinus, repX, y - 2);
-    lv_obj_set_style_bg_color(repMinus, COL_BTN_BG, 0);
-    lv_obj_set_style_radius(repMinus, RADIUS_BTN, 0);
-    lv_obj_set_style_border_width(repMinus, 1, 0);
-    lv_obj_set_style_border_color(repMinus, COL_BORDER, 0);
     lv_obj_add_event_cb(repMinus, repeats_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)(-1));
+    ui_btn_style_post(repMinus, UI_BTN_NORMAL);
 
     lv_obj_t* repMinusLbl = lv_label_create(repMinus);
     lv_label_set_text(repMinusLbl, "-");
     lv_obj_set_style_text_font(repMinusLbl, FONT_MED, 0);
-    lv_obj_set_style_text_color(repMinusLbl, COL_TEXT, 0);
+    lv_obj_set_style_text_color(repMinusLbl, ui_btn_label_color_post(UI_BTN_NORMAL), 0);
     lv_obj_center(repMinusLbl);
 
     // Value
@@ -506,16 +492,13 @@ void screen_edit_step_create() {
     lv_obj_t* repPlus = lv_button_create(content);
     lv_obj_set_size(repPlus, btnW, btnH);
     lv_obj_set_pos(repPlus, repX + btnW + 8 + 100 + 8, y - 2);
-    lv_obj_set_style_bg_color(repPlus, COL_BTN_BG, 0);
-    lv_obj_set_style_radius(repPlus, RADIUS_BTN, 0);
-    lv_obj_set_style_border_width(repPlus, 1, 0);
-    lv_obj_set_style_border_color(repPlus, COL_BORDER, 0);
     lv_obj_add_event_cb(repPlus, repeats_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)1);
+    ui_btn_style_post(repPlus, UI_BTN_ACCENT);
 
     lv_obj_t* repPlusLbl = lv_label_create(repPlus);
     lv_label_set_text(repPlusLbl, "+");
     lv_obj_set_style_text_font(repPlusLbl, FONT_MED, 0);
-    lv_obj_set_style_text_color(repPlusLbl, COL_TEXT, 0);
+    lv_obj_set_style_text_color(repPlusLbl, ui_btn_label_color_post(UI_BTN_ACCENT), 0);
     lv_obj_center(repPlusLbl);
   }
 
@@ -535,16 +518,13 @@ void screen_edit_step_create() {
     lv_obj_t* dwellMinus = lv_button_create(content);
     lv_obj_set_size(dwellMinus, btnW, btnH);
     lv_obj_set_pos(dwellMinus, dwellX, y + 14);
-    lv_obj_set_style_bg_color(dwellMinus, COL_BTN_BG, 0);
-    lv_obj_set_style_radius(dwellMinus, RADIUS_BTN, 0);
-    lv_obj_set_style_border_width(dwellMinus, 1, 0);
-    lv_obj_set_style_border_color(dwellMinus, COL_BORDER, 0);
     lv_obj_add_event_cb(dwellMinus, dwell_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)(-1));
+    ui_btn_style_post(dwellMinus, UI_BTN_NORMAL);
 
     lv_obj_t* dwellMinusLbl = lv_label_create(dwellMinus);
     lv_label_set_text(dwellMinusLbl, "-");
     lv_obj_set_style_text_font(dwellMinusLbl, FONT_MED, 0);
-    lv_obj_set_style_text_color(dwellMinusLbl, COL_TEXT, 0);
+    lv_obj_set_style_text_color(dwellMinusLbl, ui_btn_label_color_post(UI_BTN_NORMAL), 0);
     lv_obj_center(dwellMinusLbl);
 
     // Value
@@ -568,16 +548,13 @@ void screen_edit_step_create() {
     lv_obj_t* dwellPlus = lv_button_create(content);
     lv_obj_set_size(dwellPlus, btnW, btnH);
     lv_obj_set_pos(dwellPlus, dwellX + btnW + 8 + 200 + 8, y + 14);
-    lv_obj_set_style_bg_color(dwellPlus, COL_BTN_BG, 0);
-    lv_obj_set_style_radius(dwellPlus, RADIUS_BTN, 0);
-    lv_obj_set_style_border_width(dwellPlus, 1, 0);
-    lv_obj_set_style_border_color(dwellPlus, COL_BORDER, 0);
     lv_obj_add_event_cb(dwellPlus, dwell_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)1);
+    ui_btn_style_post(dwellPlus, UI_BTN_ACCENT);
 
     lv_obj_t* dwellPlusLbl = lv_label_create(dwellPlus);
     lv_label_set_text(dwellPlusLbl, "+");
     lv_obj_set_style_text_font(dwellPlusLbl, FONT_MED, 0);
-    lv_obj_set_style_text_color(dwellPlusLbl, COL_TEXT, 0);
+    lv_obj_set_style_text_color(dwellPlusLbl, ui_btn_label_color_post(UI_BTN_ACCENT), 0);
     lv_obj_center(dwellPlusLbl);
   }
 

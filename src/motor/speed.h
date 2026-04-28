@@ -7,6 +7,9 @@
 // ───────────────────────────────────────────────────────────────────────────────
 // SPEED CONVERSION FUNCTIONS
 // ───────────────────────────────────────────────────────────────────────────────
+// Motor steps for one 360° turn of gearbox output (72T shaft), before (D_emne/D_rulle). Uses current microstep.
+float speed_steps_per_gear_output_rev(void);
+
 // RPM on workpiece -> motor step Hz (geometry only, no calibration)
 float rpmToStepHz(float rpm_workpiece);
 // UI / pot RPM command -> step Hz (applies calibration so actual RPM display matches command)

@@ -152,31 +152,6 @@ static void save_event_cb(lv_event_t* e) {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// Helper: create small -/+ button
-// ───────────────────────────────────────────────────────────────────────────────
-static lv_obj_t* create_pm_btn(lv_obj_t* parent, int16_t x, int16_t y,
-                                int16_t w, int16_t h, const char* text,
-                                lv_event_cb_t cb, void* user_data) {
-  lv_obj_t* btn = lv_button_create(parent);
-  lv_obj_set_size(btn, w, h);
-  lv_obj_set_pos(btn, x, y);
-  lv_obj_set_style_bg_color(btn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(btn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(btn, 1, 0);
-  lv_obj_set_style_border_color(btn, COL_BORDER_SM, 0);
-  lv_obj_set_style_shadow_width(btn, 0, 0);
-  lv_obj_set_style_pad_all(btn, 0, 0);
-  lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, user_data);
-
-  lv_obj_t* lbl = lv_label_create(btn);
-  lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, FONT_XL, 0);
-  lv_obj_set_style_text_color(lbl, COL_TEXT, 0);
-  lv_obj_center(lbl);
-  return btn;
-}
-
-// ───────────────────────────────────────────────────────────────────────────────
 // Helper: create a separator line
 // ───────────────────────────────────────────────────────────────────────────────
 static lv_obj_t* create_separator(lv_obj_t* parent, int16_t y) {
@@ -200,6 +175,7 @@ static lv_obj_t* create_separator(lv_obj_t* parent, int16_t y) {
 void screen_edit_pulse_create() {
   lv_obj_t* screen = screenRoots[SCREEN_EDIT_PULSE];
   lv_obj_clean(screen);
+  lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
   Preset* p = screen_program_edit_get_preset();
   editOnMs = p ? p->pulse_on_ms : 500;
@@ -222,18 +198,13 @@ void screen_edit_pulse_create() {
   lv_label_set_text(title, "EDIT PULSE");
   lv_obj_set_style_text_font(title, FONT_MED, 0);
   lv_obj_set_style_text_color(title, COL_ACCENT, 0);
-  lv_obj_set_pos(title, 12, 8);
+  lv_obj_set_pos(title, 12, 11);
 
   // [ESC] button at right of header
   lv_obj_t* escBtn = lv_button_create(header);
   lv_obj_set_size(escBtn, 60, 24);
-  lv_obj_set_pos(escBtn, SCREEN_W - 60 - PAD_X, 3);
-  lv_obj_set_style_bg_color(escBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(escBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(escBtn, 1, 0);
-  lv_obj_set_style_border_color(escBtn, COL_BORDER, 0);
-  lv_obj_set_style_shadow_width(escBtn, 0, 0);
-  lv_obj_set_style_pad_all(escBtn, 0, 0);
+  lv_obj_set_pos(escBtn, SCREEN_W - 60 - PAD_X, 7);
+  ui_btn_style_post(escBtn, UI_BTN_NORMAL);
   lv_obj_add_event_cb(escBtn, back_event_cb, LV_EVENT_CLICKED, nullptr);
 
   lv_obj_t* escLbl = lv_label_create(escBtn);
@@ -241,6 +212,8 @@ void screen_edit_pulse_create() {
   lv_obj_set_style_text_font(escLbl, FONT_SMALL, 0);
   lv_obj_set_style_text_color(escLbl, COL_TEXT_DIM, 0);
   lv_obj_center(escLbl);
+
+  ui_add_post_header_accent(screen);
 
   // ── Layout constants (must fit 800px wide: old right col + bar + 2×btn ended at x=816) ──
   const int edge = 16;
@@ -258,7 +231,13 @@ void screen_edit_pulse_create() {
   // ════════════════════════════════════════════════════════════════════════════════
   // ON TIME — left column (y=40)
   // ════════════════════════════════════════════════════════════════════════════════
-  const int onY = 40;
+  ui_create_post_card(screen, colLeftX - 4, 46, colW, 104);
+  ui_create_post_card(screen, colRightX - 4, 46, colW, 104);
+  ui_create_post_card(screen, colLeftX - 4, 186, colW, 104);
+  ui_create_post_card(screen, colRightX - 4, 186, colW, 104);
+  ui_create_post_row(screen, 16, 318, 768, 38);
+
+  const int onY = 46;
 
   lv_obj_t* onTitle = lv_label_create(screen);
   lv_label_set_text(onTitle, "ON TIME");
@@ -285,10 +264,10 @@ void screen_edit_pulse_create() {
   lv_obj_set_style_radius(onBar, 1, LV_PART_INDICATOR);
 
   // -/+ buttons
-  create_pm_btn(screen, colLeftX + barW + 20, onY + 24, btnW, btnH,
-                "-", on_time_adj_cb, (void*)(intptr_t)-100);
-  create_pm_btn(screen, colLeftX + barW + 20 + btnW + btnGap, onY + 24, btnW, btnH,
-                "+", on_time_adj_cb, (void*)(intptr_t)100);
+  ui_create_pm_btn(screen, colLeftX + barW + 20, onY + 24, "-", FONT_XL, UI_BTN_NORMAL, on_time_adj_cb,
+                   (void*)(intptr_t)-100);
+  ui_create_pm_btn(screen, colLeftX + barW + 20 + btnW + btnGap, onY + 24, "+", FONT_XL, UI_BTN_ACCENT,
+                     on_time_adj_cb, (void*)(intptr_t)100);
 
   // ════════════════════════════════════════════════════════════════════════════════
   // OFF TIME — right column (y=40)
@@ -318,20 +297,20 @@ void screen_edit_pulse_create() {
   lv_obj_set_style_radius(offBar, 1, LV_PART_INDICATOR);
 
   // -/+ buttons
-  create_pm_btn(screen, colRightX + barW + 20, onY + 24, btnW, btnH,
-                "-", off_time_adj_cb, (void*)(intptr_t)-100);
-  create_pm_btn(screen, colRightX + barW + 20 + btnW + btnGap, onY + 24, btnW, btnH,
-                "+", off_time_adj_cb, (void*)(intptr_t)100);
+  ui_create_pm_btn(screen, colRightX + barW + 20, onY + 24, "-", FONT_XL, UI_BTN_NORMAL, off_time_adj_cb,
+                   (void*)(intptr_t)-100);
+  ui_create_pm_btn(screen, colRightX + barW + 20 + btnW + btnGap, onY + 24, "+", FONT_XL, UI_BTN_ACCENT,
+                     off_time_adj_cb, (void*)(intptr_t)100);
 
   // ════════════════════════════════════════════════════════════════════════════════
   // Separator at y=166
   // ════════════════════════════════════════════════════════════════════════════════
-  create_separator(screen, 166);
+  create_separator(screen, 172);
 
   // ════════════════════════════════════════════════════════════════════════════════
   // RPM — left column (y=180)
   // ════════════════════════════════════════════════════════════════════════════════
-  const int rpmY = 180;
+  const int rpmY = 186;
 
   lv_obj_t* rpmTitle = lv_label_create(screen);
   lv_label_set_text(rpmTitle, "RPM");
@@ -358,10 +337,10 @@ void screen_edit_pulse_create() {
   lv_obj_set_style_radius(rpmBar, 1, LV_PART_INDICATOR);
 
   // -/+ buttons
-  create_pm_btn(screen, colLeftX + barW + 20, rpmY + 24, btnW, btnH,
-                "-", rpm_adj_cb, (void*)(intptr_t)-1);
-  create_pm_btn(screen, colLeftX + barW + 20 + btnW + btnGap, rpmY + 24, btnW, btnH,
-                "+", rpm_adj_cb, (void*)(intptr_t)1);
+  ui_create_pm_btn(screen, colLeftX + barW + 20, rpmY + 24, "-", FONT_XL, UI_BTN_NORMAL, rpm_adj_cb,
+                   (void*)(intptr_t)-1);
+  ui_create_pm_btn(screen, colLeftX + barW + 20 + btnW + btnGap, rpmY + 24, "+", FONT_XL, UI_BTN_ACCENT,
+                     rpm_adj_cb, (void*)(intptr_t)1);
 
   // Range hint
   lv_obj_t* rpmHint = lv_label_create(screen);
@@ -388,20 +367,20 @@ void screen_edit_pulse_create() {
   lv_obj_set_pos(cyclesLabel, colRightX + 70, rpmY);
 
   // -/+ buttons
-  create_pm_btn(screen, colRightX + barW + 20, rpmY + 24, btnW, btnH,
-                "-", cycles_adj_cb, (void*)(intptr_t)-1);
-  create_pm_btn(screen, colRightX + barW + 20 + btnW + btnGap, rpmY + 24, btnW, btnH,
-                "+", cycles_adj_cb, (void*)(intptr_t)1);
+  ui_create_pm_btn(screen, colRightX + barW + 20, rpmY + 24, "-", FONT_XL, UI_BTN_NORMAL, cycles_adj_cb,
+                   (void*)(intptr_t)-1);
+  ui_create_pm_btn(screen, colRightX + barW + 20 + btnW + btnGap, rpmY + 24, "+", FONT_XL, UI_BTN_ACCENT,
+                     cycles_adj_cb, (void*)(intptr_t)1);
 
   // ════════════════════════════════════════════════════════════════════════════════
   // Separator at y=304
   // ════════════════════════════════════════════════════════════════════════════════
-  create_separator(screen, 304);
+  create_separator(screen, 310);
 
   // ════════════════════════════════════════════════════════════════════════════════
   // Computed info line (y=320)
   // ════════════════════════════════════════════════════════════════════════════════
-  const int infoY = 320;
+  const int infoY = 326;
 
   infoDutyLabel = lv_label_create(screen);
   lv_obj_set_style_text_font(infoDutyLabel, FONT_SMALL, 0);
@@ -425,9 +404,9 @@ void screen_edit_pulse_create() {
 
   update_computed_info();
 
-  ui_create_btn(screen, 120, 400, 260, BTN_H_ACTION, "CANCEL", FONT_SUBTITLE, UI_BTN_NORMAL,
+  ui_create_btn(screen, 120, 406, 260, BTN_H_ACTION, "CANCEL", FONT_SUBTITLE, UI_BTN_NORMAL,
                 cancel_event_cb, nullptr);
-  ui_create_btn(screen, 420, 400, 260, BTN_H_ACTION, "SAVE", FONT_SUBTITLE, UI_BTN_ACCENT,
+  ui_create_btn(screen, 420, 406, 260, BTN_H_ACTION, "SAVE", FONT_SUBTITLE, UI_BTN_ACCENT,
                 save_event_cb, nullptr);
 
   LOG_I("Screen edit pulse: v2.0 two-column layout created");

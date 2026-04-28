@@ -173,11 +173,17 @@ float speed_get_workpiece_diameter_mm(void) {
 
 // Workpiece <-> motor (no slip at roller contact):
 //   v = pi * d_emne * f_wp = pi * D_RULLE * f_out  =>  f_out = f_wp * (d_emne / D_RULLE).
-//   f_motor = GEAR_RATIO * f_out  (1:108 total; see motor.worm.svg + config.h GEAR_RATIO).
-// Forward Hz:  rpmToStepHz. Inverse display: speed_get_actual_rpm (same GEAR_RATIO and d/D_RULLE).
+//   steps_per_gear_output_rev = spr * GEAR_RATIO (one 360° on 72T output).
+//   steps per workpiece rev = steps_per_gear_output_rev * (d_emne / D_RULLE).
+// Forward Hz: rpm_workpiece * steps_per_workpiece_rev / 60. Inverse: speed_get_actual_rpm.
+float speed_steps_per_gear_output_rev(void) {
+  return (float)microstep_get_steps_per_rev() * GEAR_RATIO;
+}
+
 float rpmToStepHz(float rpm_workpiece) {
   const float d_m = effective_emne_d_m();
-  return rpm_workpiece * GEAR_RATIO * (d_m / D_RULLE) * microstep_get_steps_per_rev() / 60.0f;
+  const float steps_per_wp_rev = speed_steps_per_gear_output_rev() * (d_m / D_RULLE);
+  return rpm_workpiece * steps_per_wp_rev / 60.0f;
 }
 
 // Command-side calibration (same factor intent as calibration_apply_steps on angleToSteps).
@@ -191,8 +197,8 @@ long angleToSteps(float degrees) {
 
 long angleToStepsForDiameter(float degrees, float mm_od) {
   const float d_m = diameter_mm_to_m(mm_od);
-  float motor_deg = degrees * GEAR_RATIO * (d_m / D_RULLE);
-  long steps = (long)(motor_deg / 360.0f * microstep_get_steps_per_rev());
+  const float steps_per_wp_rev = speed_steps_per_gear_output_rev() * (d_m / D_RULLE);
+  long steps = (long)((degrees / 360.0f) * steps_per_wp_rev);
   return calibration_apply_steps(steps);
 }
 

@@ -4,6 +4,7 @@
 #pragma once
 #include <cmath>
 #include <cctype>
+#include <climits>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -158,6 +159,22 @@ inline float step_parse_first_float(const char* s) {
   return strtof(tmp, nullptr);
 }
 
+// First run of digits in string as unsigned integer; 0 if none / overflow
+inline unsigned long step_parse_first_unsigned_long(const char* s) {
+  if (!s) return 0;
+  const char* p = s;
+  while (*p && !isdigit((unsigned char)*p)) ++p;
+  if (!*p) return 0;
+  unsigned long v = 0;
+  while (*p && isdigit((unsigned char)*p)) {
+    int d = *p - '0';
+    if (v > (ULONG_MAX - (unsigned long)d) / 10UL) return 0;
+    v = v * 10UL + (unsigned long)d;
+    ++p;
+  }
+  return v;
+}
+
 // Arc length along workpiece circumference per STEP (default 1 mm)
 inline float step_angle_degrees_from_diameter_mm(float D_mm, float arc_mm_per_step) {
   if (D_mm < 1.0f) D_mm = 1.0f;
@@ -239,8 +256,10 @@ inline int core_load_percent(uint32_t delta_idle, uint32_t delta_total) {
 // Mirrors screen_calibration.cpp update logic
 // ───────────────────────────────────────────────────────────────────────────────
 
-inline float cal_steps_per_deg(uint32_t spr, float gear_ratio, float factor) {
-  return (float)spr * gear_ratio / 360.0f * factor;
+// Workpiece degrees: (spr * gear_ratio) = steps per gearbox output rev; scale by D_emne/D_rulle.
+inline float cal_steps_per_deg(uint32_t spr, float gear_ratio, float factor, float d_emne_m,
+                               float d_rulle_m) {
+  return (float)spr * gear_ratio / 360.0f * (d_emne_m / d_rulle_m) * factor;
 }
 
 inline float cal_error_degrees(float factor) {
@@ -260,6 +279,24 @@ inline int cal_bar_pct(float factor, float tolerance) {
   int pct = (int)(err / tolerance * 100.0f);
   if (pct > 100) pct = 100;
   return pct;
+}
+
+// 3D-printer e-steps style: commanded vs measured rotation (deg), same as Marlin extrusion cal.
+// new_factor = old_factor * (commanded_deg / measured_deg). Invalid measured returns old_factor.
+inline float cal_factor_from_measured_rotation(float old_factor, float commanded_deg,
+                                               float measured_deg) {
+  if (commanded_deg < 1.0f || measured_deg < 1.0f) return old_factor;
+  return old_factor * (commanded_deg / measured_deg);
+}
+
+// E-steps style using step counts: FW commanded N_cmd steps for one revolution belief; user enters
+// N_true = steps that actually gave one full turn on the part (counted / measured).
+// new_factor = old_factor * (N_true / N_cmd). Wide ratio band so first passes can be rough.
+inline float cal_factor_from_commanded_vs_true_steps(float old_factor, long n_cmd, long n_true) {
+  if (n_cmd <= 0 || n_true <= 0) return old_factor;
+  double r = (double)n_true / (double)n_cmd;
+  if (r < 0.2 || r > 5.0) return old_factor;
+  return old_factor * (float)r;
 }
 
 // ───────────────────────────────────────────────────────────────────────────────

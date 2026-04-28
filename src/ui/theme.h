@@ -1,5 +1,5 @@
 // TIG Rotator Controller - UI Theme
-// Brutalist v2.0 design matching new_ui.svg
+// POST industrial panels (ui_screens_post_style_proposal.svg + boot screen)
 // ESP32-P4 4.3" Touch Display: 800x480 landscape
 
 #pragma once
@@ -10,12 +10,12 @@
 // ───────────────────────────────────────────────────────────────────────────────
 #define COL_BG          lv_color_hex(0x050505)   // SVG: #050505 screen background
 #define COL_BG_HEADER   lv_color_hex(0x090909)   // SVG: #090909 header bar (.hd)
-#define COL_BG_CARD     lv_color_hex(0x0D0D0D)   // SVG: #0D0D0D card background
+#define COL_BG_CARD     lv_color_hex(0x0B0B0B)   // POST card background
 #define COL_BG_CARD_ALT lv_color_hex(0x0B0B0B)   // Alt card (even rows in lists)
 #define COL_BG_DIM      lv_color_hex(0x080808)   // SVG: #080808 dim area (.dim)
-#define COL_BG_ROW      lv_color_hex(0x0E0E0E)   // SVG: #0E0E0E setting rows
+#define COL_BG_ROW      lv_color_hex(0x080808)   // POST data rows
 #define COL_BG_EMPTY    lv_color_hex(0x1A1A1A)   // Empty-slot placeholder rows / neutral dark fill
-#define COL_BTN_BG      lv_color_hex(0x141414)   // SVG: #141414 button fill (.b, .sm)
+#define COL_BTN_BG      lv_color_hex(0x0B0B0B)   // POST button/card fill
 // COL_BG_ACTIVE is now dynamic (see g_accent_dim below)
 #define COL_BG_DANGER   lv_color_hex(0x1A0A0A)   // SVG: #1A0A0A danger/stop (.br)
 #define COL_PANEL_BG    lv_color_hex(0x141414)   // Panel background
@@ -37,6 +37,12 @@ extern lv_color_t g_accent_border;
 #define COL_AMBER       g_accent
 #define COL_GREEN       lv_color_hex(0x00C853)
 #define COL_RED         lv_color_hex(0xFF1744)
+// POST "OK" pill / pass row (proposal .ok)
+#define COL_BG_OK       lv_color_hex(0x062616)
+#define COL_BORDER_OK   lv_color_hex(0x00C853)
+// POST warning panel (proposal .warn) — not the orange accent COL_WARN
+#define COL_BG_WARN_PANEL lv_color_hex(0x241B00)
+#define COL_BORDER_WARN   lv_color_hex(0xFFAA00)
 // Semantic warning colors (NOT tied to accent — kept stable across themes)
 #define COL_WARN        lv_color_hex(0xFF9500)   // Orange: flash usage / driver alarm / active cal step
 #define COL_YELLOW      lv_color_hex(0xFFAA00)   // Amber-yellow: countdown mid-range, transient warnings
@@ -94,10 +100,10 @@ uint8_t theme_get_count();
 // ───────────────────────────────────────────────────────────────────────────────
 // RADIUS CONSTANTS (from new_ui.svg — mostly rx=2 or rx=4)
 // ───────────────────────────────────────────────────────────────────────────────
-#define RADIUS_BTN      2      // Standard button radius (SVG: rx=2)
-#define RADIUS_BTN_SM   2      // Small button radius
-#define RADIUS_CARD     4      // Card/dialog radius (SVG: rx=4)
-#define RADIUS_ROW      0      // Setting rows (no radius)
+#define RADIUS_BTN      3      // Standard POST button radius
+#define RADIUS_BTN_SM   3      // Small button radius
+#define RADIUS_CARD     3      // POST card radius (proposal rx=3)
+#define RADIUS_ROW      3      // POST data row radius
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN DIMENSIONS
@@ -109,8 +115,11 @@ uint8_t theme_get_count();
 // LAYOUT CONSTANTS (from new_ui.svg)
 // ───────────────────────────────────────────────────────────────────────────────
 
-// Header bar (SVG: height=30)
-#define HEADER_H        30
+// Header bar (POST proposal: 38px on all screens)
+#define HEADER_H        38
+// Inset accent hairline below header strip (ui_screens_post_style_proposal.svg y=44; gap under 38px hdr)
+#define HEADER_ACCENT_LINE_Y   (HEADER_H + 6)
+#define HEADER_ACCENT_PAD_X    48
 
 // Standard button sizes (from SVG specs bar)
 // BTN: 152x36 (bottom row on main), CARD: 784x56, GRID: 380x170
@@ -139,21 +148,54 @@ uint8_t theme_get_count();
 #define PAD_X           16     // Standard X padding
 #define PAD_X2          12     // Tight X padding (SVG: 12)
 
+// Boot screen POST layout
+#define BOOT_HEADER_H       HEADER_H
+#define BOOT_PAD           16
+#define BOOT_TITLE_Y       52
+#define BOOT_TITLE_H       58
+#define BOOT_LEFT_X        16
+#define BOOT_LEFT_Y        126
+#define BOOT_LEFT_W        456
+#define BOOT_LEFT_H        250
+#define BOOT_RIGHT_X       488
+#define BOOT_RIGHT_Y       126
+#define BOOT_RIGHT_W       296
+#define BOOT_RIGHT_H       250
+#define BOOT_BOTTOM_X      16
+#define BOOT_BOTTOM_Y      392
+#define BOOT_BOTTOM_W      768
+#define BOOT_BOTTOM_H      72
+#define BOOT_ROW_X         32
+#define BOOT_ROW_Y         178
+#define BOOT_ROW_W         424
+#define BOOT_ROW_H         24
+#define BOOT_ROW_GAP       28
+#define BOOT_PROGRESS_X    32
+#define BOOT_PROGRESS_Y    426
+#define BOOT_PROGRESS_W    736
+#define BOOT_PROGRESS_H    10
+
 // ───────────────────────────────────────────────────────────────────────────────
 // MAIN SCREEN CONSTANTS (SCREEN_MAIN) — pot-only RPM: no +/- buttons, larger gauge
 // ───────────────────────────────────────────────────────────────────────────────
 #define MAIN_GAUGE_CX         400
-// trackSize = 2*R+20; top = CY - trackSize/2 must stay on-screen (>= ~8 below header)
-#define MAIN_GAUGE_CY         205
+// Arc bbox: height = 2*MAIN_GAUGE_R + MAIN_GAUGE_TRACK_EXTRA (screen_main arc lv_arc widget).
+// CY chosen so top clears header + hdr-accent (~44); tighter EXTRA avoids fouling footer @412.
+#define MAIN_GAUGE_CY         228
 #define MAIN_GAUGE_R          178
+#define MAIN_GAUGE_TRACK_EXTRA 8
 #define MAIN_GAUGE_TRACK_PAD  12
 #define MAIN_GAUGE_TRACK_W    14
 #define MAIN_GAUGE_IND_W      10
-// "RPM" unit row: TOP_MID on screen; value label re-aligned above with MAIN_RPM_VALUE_GAP
+// "RPM" unit row: TOP_MID on screen; value label stacked above with MAIN_RPM_VALUE_GAP
 #define MAIN_RPM_TAG_Y        (MAIN_GAUGE_CY + 24)
 #define MAIN_RPM_VALUE_GAP    6
 // Extra upward shift for RPM digits (font already FONT_HUGE / 40pt max on P4)
-#define MAIN_RPM_VALUE_LIFT   16
+#define MAIN_RPM_VALUE_LIFT   12
+// Optical horizontal shift (SCREEN_MAIN): LV_ALIGN_TOP_MID x_ofs for value + unit + pot hint
+#define MAIN_RPM_CENTER_OFS_X (-6)
+// Pot hint below RPM cluster (same absolute row as pre-CY tune when MAIN_GAUGE_CY + 164)
+#define MAIN_POT_HINT_Y       (MAIN_GAUGE_CY + 164)
 // 256 = 100% (lv scale); slight zoom since montserrat_48 is unsafe on ESP32-P4
 #define MAIN_RPM_VALUE_ZOOM   332
 
@@ -186,14 +228,14 @@ uint8_t theme_get_count();
 // ───────────────────────────────────────────────────────────────────────────────
 // SETTINGS SCREEN LAYOUT (shared across all settings sub-screens)
 // ───────────────────────────────────────────────────────────────────────────────
-#define SET_HEADER_H       28
+#define SET_HEADER_H       HEADER_H
 #define SET_HEADER_FONT    FONT_SUBTITLE
-#define SET_ROW_H          48
+#define SET_ROW_H          52
 #define SET_TOGGLE_W       80
 #define SET_TOGGLE_H       40
 #define SET_TOGGLE_R       12
-#define SET_FOOTER_Y       440
-#define SET_FOOTER_H       36
+#define SET_FOOTER_Y       428
+#define SET_FOOTER_H       44
 #define SET_BTN_MIN_W      140
 #define SET_CYCLE_W        110
 #define SET_CYCLE_H        36
@@ -204,6 +246,78 @@ uint8_t theme_get_count();
 #define SET_VAL_FONT       FONT_SUBTITLE
 #define SET_BTN_FONT       FONT_SUBTITLE
 #define SET_CHEVRON_COL    COL_TEXT_VDIM
+
+// ───────────────────────────────────────────────────────────────────────────────
+// SYSTEM INFO (SCREEN_SYSINFO) — layout matches docs/images/ui_screens_post_style_proposal.svg #19
+// ───────────────────────────────────────────────────────────────────────────────
+#define SYSINFO_CARD_X     20
+#define SYSINFO_CARD_W     760
+#define SYSINFO_TEXT_X     42
+#define SYSINFO_VAL_COL    180
+#define SYSINFO_BAR_X      180
+#define SYSINFO_BAR_W      500
+#define SYSINFO_CARD1_Y    62
+#define SYSINFO_CARD1_H    72
+#define SYSINFO_CARD2_Y    158
+#define SYSINFO_CARD2_H    126
+#define SYSINFO_CARD3_Y    306
+#define SYSINFO_CARD3_H    60
+#define SYSINFO_MEM_TITLE_Y   174
+#define SYSINFO_HEAP_KEY_Y    208
+#define SYSINFO_HEAP_BAR_Y    211
+#define SYSINFO_PSRAM_KEY_Y   238
+#define SYSINFO_PSRAM_BAR_Y   241
+#define SYSINFO_SYS_ROW_Y     330
+#define SYSINFO_CORE_KEY_X    330
+#define SYSINFO_CORE_VAL_X    480
+#define SYSINFO_HEAP_VAL_X    688
+#define SYSINFO_FOOTER_Y      414
+#define SYSINFO_FOOTER_H      50
+#define SYSINFO_FOOT_BTN_W    180
+
+// ───────────────────────────────────────────────────────────────────────────────
+// CALIBRATION (SCREEN_CALIBRATION) — readable + touch-friendly (800x480 budget)
+// ───────────────────────────────────────────────────────────────────────────────
+#define CAL_CARD_LEFT      20
+#define CAL_TOP_Y          53
+#define CAL_TOP_H          60
+#define CAL_TOP_W_A        220
+#define CAL_TOP_W_B        220
+#define CAL_TOP_W_C        286
+#define CAL_TOP_GAP        15
+#define CAL_PM_BTN_W       52
+#define CAL_PM_BTN_H       38
+#define CAL_FACTOR_PM_Y    (CAL_TOP_H - CAL_PM_BTN_H - 10)
+#define CAL_FACTOR_PM_MINUS_X 96
+#define CAL_FACTOR_PM_PLUS_X  160
+#define CAL_BLOCK_GAP      6
+#define CAL_WIZ_Y          (CAL_TOP_Y + CAL_TOP_H + CAL_BLOCK_GAP)
+#define CAL_WIZ_W          456
+#define CAL_WIZ_H          138
+#define CAL_WIZ_TRACK_X    28
+#define CAL_WIZ_TRACK_W    400
+#define CAL_RIGHT_X        (CAL_CARD_LEFT + CAL_WIZ_W + 14)
+#define CAL_RIGHT_W        286
+#define CAL_WIZ_PAD        14
+#define CAL_INFO_Y         (CAL_WIZ_Y + CAL_WIZ_H + CAL_BLOCK_GAP)
+#define CAL_INFO_H         56
+#define CAL_MEAS_FIELD_Y   17
+#define CAL_MEAS_FIELD_W   216
+#define CAL_MEAS_FIELD_H   34
+#define CAL_APPLY_MEAS_H   34
+#define CAL_ACTION_GAP     11
+#define CAL_ACTION_Y       (CAL_INFO_Y + CAL_INFO_H + CAL_ACTION_GAP)
+#define CAL_ACTION_BTN_H   40
+#define CAL_ACTION_MOVE_W  204
+#define CAL_ACTION_STOP_W  210
+#define CAL_JOG_BTN_W      144
+#define CAL_JOG_GAP        14
+#define CAL_RESULT_TOPGAP  4
+#define CAL_RESULT_Y       (CAL_ACTION_Y + CAL_ACTION_BTN_H + CAL_RESULT_TOPGAP)
+#define CAL_RESULT_H       56
+#define CAL_RESULT_GAP     2
+#define CAL_FOOT_Y         (CAL_RESULT_Y + CAL_RESULT_H + CAL_RESULT_GAP)
+#define CAL_FOOT_H         38
 
 // ───────────────────────────────────────────────────────────────────────────────
 // FONT SIZES — Montserrat (closest match to Courier New monospace)

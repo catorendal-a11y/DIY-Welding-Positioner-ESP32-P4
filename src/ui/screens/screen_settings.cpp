@@ -1,5 +1,5 @@
 // TIG Rotator Controller - Settings Menu Screen
-// Navigation to motor config, display, pedal, diagnostics, calibration, about
+// Navigation to motor config, display, pedal, diagnostics hub row
 #include "../screens.h"
 #include "../theme.h"
 #include "../../config.h"
@@ -11,14 +11,14 @@ static void nav_click_cb(lv_event_t* e) {
   screens_show(dest);
 }
 
-static void create_nav_item(lv_obj_t* parent, int y, const char* label, ScreenId dest) {
+static void create_nav_item(lv_obj_t* parent, int y, int rowH, const char* label, ScreenId dest, bool accentRow) {
   lv_obj_t* row = lv_obj_create(parent);
-  lv_obj_set_size(row, 776, SET_ROW_H);
+  lv_obj_set_size(row, 776, rowH);
   lv_obj_set_pos(row, 12, y);
-  lv_obj_set_style_bg_color(row, COL_BG_ROW, 0);
-  lv_obj_set_style_border_color(row, COL_BORDER_ROW, 0);
-  lv_obj_set_style_border_width(row, 1, 0);
-  lv_obj_set_style_radius(row, 0, 0);
+  lv_obj_set_style_bg_color(row, accentRow ? COL_BG_ACTIVE : COL_BG_ROW, 0);
+  lv_obj_set_style_border_color(row, accentRow ? COL_ACCENT : COL_BORDER_ROW, 0);
+  lv_obj_set_style_border_width(row, accentRow ? 2 : 1, 0);
+  lv_obj_set_style_radius(row, RADIUS_ROW, 0);
   lv_obj_set_style_pad_all(row, 0, 0);
   lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
@@ -26,14 +26,14 @@ static void create_nav_item(lv_obj_t* parent, int y, const char* label, ScreenId
 
   lv_obj_t* lbl = lv_label_create(row);
   lv_label_set_text(lbl, label);
-  lv_obj_set_style_text_font(lbl, FONT_BTN, 0);
-  lv_obj_set_style_text_color(lbl, COL_TEXT, 0);
+  lv_obj_set_style_text_font(lbl, SET_VAL_FONT, 0);
+  lv_obj_set_style_text_color(lbl, accentRow ? COL_ACCENT : COL_TEXT, 0);
   lv_obj_align(lbl, LV_ALIGN_LEFT_MID, 16, 0);
 
   lv_obj_t* chevron = lv_label_create(row);
   lv_label_set_text(chevron, ">");
   lv_obj_set_style_text_font(chevron, FONT_BTN, 0);
-  lv_obj_set_style_text_color(chevron, SET_CHEVRON_COL, 0);
+  lv_obj_set_style_text_color(chevron, accentRow ? COL_ACCENT : SET_CHEVRON_COL, 0);
   lv_obj_align(chevron, LV_ALIGN_RIGHT_MID, -16, 0);
 }
 
@@ -42,29 +42,28 @@ void screen_settings_create() {
   lv_obj_clean(screen);
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
-  ui_create_settings_header(screen, "SETTINGS");
+  ui_create_settings_header(screen, "SETTINGS", "SYSTEM CONFIG", COL_TEXT_DIM);
 
-  const int itemH = SET_ROW_H;
-  const int gap = 2;
-  const int startY = SET_HEADER_H + 8;
+  const int rowH = 44;
+  const int rowY0 = SET_HEADER_H + 10;
+  const int rowGap = 5;
 
-  create_nav_item(screen, startY, "Motor Configuration", SCREEN_MOTOR_CONFIG);
-  create_nav_item(screen, startY + (itemH + gap) * 1, "Calibration", SCREEN_CALIBRATION);
-  create_nav_item(screen, startY + (itemH + gap) * 2, "Display Settings", SCREEN_DISPLAY);
-  create_nav_item(screen, startY + (itemH + gap) * 3, "Pedal Settings", SCREEN_PEDAL_SETTINGS);
-  create_nav_item(screen, startY + (itemH + gap) * 4, "Diagnostics", SCREEN_DIAGNOSTICS);
-  create_nav_item(screen, startY + (itemH + gap) * 5, "System Info", SCREEN_SYSINFO);
-  create_nav_item(screen, startY + (itemH + gap) * 6, "About", SCREEN_ABOUT);
+  create_nav_item(screen, rowY0 + (rowH + rowGap) * 0, rowH, "Motor Configuration", SCREEN_MOTOR_CONFIG, false);
+  create_nav_item(screen, rowY0 + (rowH + rowGap) * 1, rowH, "Calibration", SCREEN_CALIBRATION, false);
+  create_nav_item(screen, rowY0 + (rowH + rowGap) * 2, rowH, "Display Settings", SCREEN_DISPLAY, true);
+  create_nav_item(screen, rowY0 + (rowH + rowGap) * 3, rowH, "Pedal Settings", SCREEN_PEDAL_SETTINGS, false);
+  create_nav_item(screen, rowY0 + (rowH + rowGap) * 4, rowH, "Diagnostics", SCREEN_DIAGNOSTICS, false);
+  create_nav_item(screen, rowY0 + (rowH + rowGap) * 5, rowH, "System Info", SCREEN_SYSINFO, false);
+  create_nav_item(screen, rowY0 + (rowH + rowGap) * 6, rowH, "About", SCREEN_ABOUT, false);
 
-  int footerY = SET_FOOTER_Y;
-  int footerH = SET_FOOTER_H;
-  int btnW = 160;
-
-  ui_create_btn(screen, 12, footerY, btnW, footerH, "<  BACK", FONT_SUBTITLE, UI_BTN_NORMAL, back_event_cb, nullptr);
+  ui_create_btn(screen, 20, SET_FOOTER_Y, 200, SET_FOOTER_H, "<  BACK", FONT_SUBTITLE, UI_BTN_NORMAL, back_event_cb,
+                nullptr);
 
   lv_obj_t* versionLbl = lv_label_create(screen);
   lv_label_set_text(versionLbl, FW_VERSION);
-  lv_obj_set_style_text_font(versionLbl, FONT_BODY, 0);
+  lv_obj_set_style_text_font(versionLbl, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(versionLbl, COL_TEXT_VDIM, 0);
-  lv_obj_align(versionLbl, LV_ALIGN_BOTTOM_MID, 0, -8);
+  lv_obj_set_style_text_align(versionLbl, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_width(versionLbl, 240);
+  lv_obj_align(versionLbl, LV_ALIGN_BOTTOM_MID, 0, -14);
 }

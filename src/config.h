@@ -72,8 +72,12 @@
 #define GEAR_RATIO      (60.0f * 72.0f / 40.0f)   // = 108
 #define D_EMNE          0.300f    // Workpiece diameter: 300mm
 #define D_RULLE         0.080f    // Roller diameter: 80mm
-// Kinematics note: at 3200 spr and total 1:108 only (no roller), output shaft ~960 full steps per degree.
-// Workpiece RPM uses rpmToStepHz() with (D_EMNE/D_RULLE) in speed.cpp.
+// Kinematics (speed.cpp): base = steps for one full turn of gearbox OUTPUT (72T shaft):
+//   steps_per_gear_output_rev = microstep_steps_per_rev * GEAR_RATIO
+//   e.g. 1/16 (3200 spr): 3200 * 108 = 345600 steps/rev output; 345600/360 = 960 steps/deg on output.
+// Roller contact (no slip): one workpiece revolution scales by (workpiece_diameter / roller_diameter):
+//   steps_workpiece_360 = steps_per_gear_output_rev * (D_emne / D_rulle)
+//   e.g. 300mm on 80mm roller: 345600 * (300/80) = 1296000 steps/rev on part; 3600 steps/deg on part.
 
 // SPEED CHARACTERISTICS
 // Hz — minimum step frequency when RPM maps lower (motor_milli_hz_for_rpm_calibrated).

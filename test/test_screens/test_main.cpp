@@ -387,14 +387,14 @@ void test_core_load_div_zero() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 void test_cal_steps_per_deg_unity() {
-  float spd = cal_steps_per_deg(STEPS_1_8, GEAR_RATIO, 1.0f);
-  float expected = (float)STEPS_1_8 * GEAR_RATIO / 360.0f;
+  float spd = cal_steps_per_deg(STEPS_1_8, GEAR_RATIO, 1.0f, D_EMNE, D_RULLE);
+  float expected = (float)STEPS_1_8 * GEAR_RATIO / 360.0f * (D_EMNE / D_RULLE);
   TEST_ASSERT_FLOAT_WITHIN(0.5f, expected, spd);
 }
 
 void test_cal_steps_per_deg_with_factor() {
-  float spd1 = cal_steps_per_deg(STEPS_1_8, GEAR_RATIO, 1.0f);
-  float spd12 = cal_steps_per_deg(STEPS_1_8, GEAR_RATIO, 1.2f);
+  float spd1 = cal_steps_per_deg(STEPS_1_8, GEAR_RATIO, 1.0f, D_EMNE, D_RULLE);
+  float spd12 = cal_steps_per_deg(STEPS_1_8, GEAR_RATIO, 1.2f, D_EMNE, D_RULLE);
   TEST_ASSERT_FLOAT_WITHIN(0.5f, spd1 * 1.2f, spd12);
 }
 
@@ -436,6 +436,44 @@ void test_cal_bar_pct_full_error() {
 
 void test_cal_bar_pct_over() {
   TEST_ASSERT_EQUAL(100, cal_bar_pct(1.5f, 0.5f));
+}
+
+void test_cal_factor_measured_exact() {
+  float f = cal_factor_from_measured_rotation(1.0f, 360.0f, 360.0f);
+  TEST_ASSERT_FLOAT_WITHIN(1e-4f, 1.0f, f);
+}
+
+void test_cal_factor_measured_under_rotate() {
+  float f = cal_factor_from_measured_rotation(1.0f, 360.0f, 358.0f);
+  TEST_ASSERT_FLOAT_WITHIN(1e-4f, 360.0f / 358.0f, f);
+}
+
+void test_cal_factor_measured_invalid() {
+  TEST_ASSERT_FLOAT_WITHIN(1e-4f, 1.2f, cal_factor_from_measured_rotation(1.2f, 0.0f, 360.0f));
+  TEST_ASSERT_FLOAT_WITHIN(1e-4f, 1.2f, cal_factor_from_measured_rotation(1.2f, 360.0f, 0.0f));
+}
+
+void test_cal_factor_true_steps_exact() {
+  float f = cal_factor_from_commanded_vs_true_steps(1.0f, 10000L, 10000L);
+  TEST_ASSERT_FLOAT_WITHIN(1e-4f, 1.0f, f);
+}
+
+void test_cal_factor_true_steps_under_rotate() {
+  // Part needed more steps for full turn than FW thought
+  float f = cal_factor_from_commanded_vs_true_steps(1.0f, 10000L, 10100L);
+  TEST_ASSERT_FLOAT_WITHIN(1e-4f, 1.01f, f);
+}
+
+void test_cal_factor_true_steps_invalid_ratio() {
+  TEST_ASSERT_FLOAT_WITHIN(1e-4f, 1.1f, cal_factor_from_commanded_vs_true_steps(1.1f, 10000L, 1000L));
+  TEST_ASSERT_FLOAT_WITHIN(1e-4f, 1.1f, cal_factor_from_commanded_vs_true_steps(1.1f, 10000L, 60000L));
+}
+
+void test_step_parse_unsigned_long_basic() {
+  TEST_ASSERT_EQUAL(0UL, step_parse_first_unsigned_long(""));
+  TEST_ASSERT_EQUAL(0UL, step_parse_first_unsigned_long("abc"));
+  TEST_ASSERT_EQUAL(12345UL, step_parse_first_unsigned_long("12345"));
+  TEST_ASSERT_EQUAL(9UL, step_parse_first_unsigned_long("x 9 y"));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -716,7 +754,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_core_load_half);
   RUN_TEST(test_core_load_div_zero);
 
-  // Section 5: Calibration (11 tests)
+  // Section 5: Calibration (14 tests)
   RUN_TEST(test_cal_steps_per_deg_unity);
   RUN_TEST(test_cal_steps_per_deg_with_factor);
   RUN_TEST(test_cal_error_degrees_unity);
@@ -728,6 +766,13 @@ int main(int argc, char** argv) {
   RUN_TEST(test_cal_bar_pct_zero_error);
   RUN_TEST(test_cal_bar_pct_full_error);
   RUN_TEST(test_cal_bar_pct_over);
+  RUN_TEST(test_cal_factor_measured_exact);
+  RUN_TEST(test_cal_factor_measured_under_rotate);
+  RUN_TEST(test_cal_factor_measured_invalid);
+  RUN_TEST(test_cal_factor_true_steps_exact);
+  RUN_TEST(test_cal_factor_true_steps_under_rotate);
+  RUN_TEST(test_cal_factor_true_steps_invalid_ratio);
+  RUN_TEST(test_step_parse_unsigned_long_basic);
 
   // Section 6: Display brightness (7 tests)
   RUN_TEST(test_brightness_raw_to_pct_full);

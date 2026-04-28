@@ -22,7 +22,8 @@ static lv_obj_t* arcWidget = nullptr;
 static lv_obj_t* angleArcLabel = nullptr;
 static lv_obj_t* rpmLabel = nullptr;
 static lv_obj_t* stepsLabel = nullptr;
-static lv_obj_t* presetBtns[5] = {nullptr};
+static lv_obj_t* presetBtns[4] = {nullptr};
+static lv_obj_t* stepDirValLbl = nullptr;
 static int activePreset = 1;  // 90 deg is default (index 1)
 static lv_obj_t* customNumpad = nullptr;
 static lv_obj_t* customTa = nullptr;
@@ -61,7 +62,7 @@ static void step_clamp_target_rpm(void) {
 static void step_push_rpm_to_speed_and_label(void) {
   step_clamp_target_rpm();
   speed_slider_set(targetRpm);
-  if (rpmLabel) lv_label_set_text_fmt(rpmLabel, "%.1f", targetRpm);
+  if (rpmLabel) lv_label_set_text_fmt(rpmLabel, "%.2f", (double)targetRpm);
 }
 
 static void refresh_diameter_summary() {
@@ -77,22 +78,27 @@ static void refresh_diameter_summary() {
 }
 
 static void update_preset_styles() {
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 4; i++) {
     if (!presetBtns[i]) continue;
-    bool isActive = (i < 4 && currentAngle == STEP_PRESET_DEG[i]) || (i == 4 && activePreset == 4);
-    lv_obj_set_style_bg_color(presetBtns[i], isActive ? COL_BTN_ACTIVE : COL_BTN_BG, 0);
-    lv_obj_set_style_border_width(presetBtns[i], isActive ? 2 : 1, 0);
-    lv_obj_set_style_border_color(presetBtns[i], isActive ? COL_ACCENT : COL_BORDER, 0);
+    bool isActive = (activePreset == i);
+    const UiBtnStyle ms = isActive ? UI_BTN_ACCENT : UI_BTN_NORMAL;
+    ui_btn_style_post(presetBtns[i], ms);
     lv_obj_t* lbl = lv_obj_get_child(presetBtns[i], 0);
-    if (lbl) lv_obj_set_style_text_color(lbl, isActive ? COL_ACCENT : COL_TEXT, 0);
+    if (lbl) lv_obj_set_style_text_color(lbl, ui_btn_label_color_post(ms), 0);
   }
 }
 
+static void step_refresh_dir_lbl(void) {
+  if (!stepDirValLbl) return;
+  Direction d = speed_get_direction();
+  lv_label_set_text(stepDirValLbl, (d == DIR_CW) ? "DIR CW" : "DIR CCW");
+}
+
 static void update_info_panel() {
-  // Update angle arc label
+  // Update angle arc label (POST mockup: number + DEG on second line when idle)
   if (angleArcLabel) {
-    char buf[16];
-    snprintf(buf, sizeof(buf), "%.0f deg", currentAngle);
+    char buf[20];
+    snprintf(buf, sizeof(buf), "%.0f\nDEG", currentAngle);
     lv_label_set_text(angleArcLabel, buf);
   }
 
@@ -238,6 +244,7 @@ static void diameter_btn_cb(lv_event_t* e) {
 }
 
 static void custom_btn_cb(lv_event_t* e) {
+  (void)e;
   if (!customNumpad) {
   purge_diameter_overlay_async();
     lv_obj_t* scr = screenRoots[SCREEN_STEP];
@@ -267,6 +274,11 @@ static void custom_btn_cb(lv_event_t* e) {
     lv_obj_add_event_cb(customNumpad, custom_keyboard_cb, LV_EVENT_READY, nullptr);
     lv_obj_add_event_cb(customNumpad, custom_keyboard_cb, LV_EVENT_CANCEL, nullptr);
   }
+}
+
+static void target_card_cb(lv_event_t* e) {
+  (void)e;
+  custom_btn_cb(nullptr);
 }
 
 static void rpm_minus_cb(lv_event_t* e) {
@@ -306,41 +318,32 @@ void screen_step_create() {
   targetRpm = speed_get_target_rpm();
   step_clamp_target_rpm();
 
-  // ── Header bar ──
-  lv_obj_t* header = lv_obj_create(screen);
-  lv_obj_set_size(header, SCREEN_W, HEADER_H);
-  lv_obj_set_pos(header, 0, 0);
-  lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
-  lv_obj_set_style_pad_all(header, 0, 0);
-  lv_obj_set_style_border_width(header, 0, 0);
-  lv_obj_set_style_radius(header, 0, 0);
-  lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
+  ui_create_settings_header(screen, "STEP MODE", "ANGLE MOVE", COL_TEXT_DIM);
 
-  // Title
-  lv_obj_t* title = lv_label_create(header);
-  lv_label_set_text(title, "STEP MODE");
-  lv_obj_set_style_text_font(title, FONT_XL, 0);
-  lv_obj_set_style_text_color(title, COL_ACCENT, 0);
-  lv_obj_set_pos(title, PAD_X, 5);
-
-  // ── Layout (800x480): gauge left, info right, presets full width, action bar bottom ──
-  const int kBarH = 48;
-  const int kBarMargin = 8;
-  const int kBarY = SCREEN_H - kBarMargin - kBarH;
+  // POST mockup #6: gauge left, stack right; keep x+w <= SCREEN_W (800) for presets + aux row + footer
+  const int kProSz = 276;
+  const int kGaugeX = 20;
+  const int kGaugeY = HEADER_H + 20;
+  const int kTargetX = kGaugeX + kProSz + 16;
+  const int kTargetW = SCREEN_W - kTargetX - 20;
+  const int kTargetY = kGaugeY;
+  const int kTargetH = 70;
+  const int kRpmY = kTargetY + kTargetH + 20;
   const int kPresetH = 44;
-  const int kPresetGapAboveBar = 8;
-  const int kPresetY = kBarY - kPresetGapAboveBar - kPresetH;
-  const int kContentTop = HEADER_H + 6;
-  const int kProSz = 264;
-  const int kProX = 36;
-  const int kProY = kContentTop;
-  const int kRightX = kProX + kProSz + 16;
-  const int kRightMaxBottom = kPresetY - 10;
+  const int kPresetW = 86;
+  const int kPresetGap = 10;
+  const int kPresetY = kRpmY + kTargetH + 22;
+  const int kAuxY = kPresetY + kPresetH + 10;
+  const int kFooterY = 414;
+  const int kFooterH = 50;
+  const int kFooterW = 246;
 
-  // ── Left: protractor gauge (compact — leaves room for right column + presets) ──
-  lv_obj_t* protractor = lv_obj_create(screen);
+  lv_obj_t* leftCard = ui_create_post_card(screen, kGaugeX, kGaugeY, kProSz, kProSz);
+  lv_obj_remove_flag(leftCard, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+
+  lv_obj_t* protractor = lv_obj_create(leftCard);
   lv_obj_set_size(protractor, kProSz, kProSz);
-  lv_obj_set_pos(protractor, kProX, kProY);
+  lv_obj_set_pos(protractor, 0, 0);
   lv_obj_set_style_bg_color(protractor, COL_PROTRACTOR_BG, 0);
   lv_obj_set_style_radius(protractor, kProSz / 2, 0);
   lv_obj_set_style_border_width(protractor, 1, 0);
@@ -348,333 +351,186 @@ void screen_step_create() {
   lv_obj_set_style_pad_all(protractor, 0, 0);
   lv_obj_remove_flag(protractor, LV_OBJ_FLAG_SCROLLABLE);
 
-  // Tick marks (kProSz=264 -> center 132; rOuter 120, rInner 106)
   {
     lv_obj_t* tick0 = lv_line_create(protractor);
-    static const lv_point_precise_t pts0[] = {{252, 132}, {238, 132}};
+    static const lv_point_precise_t pts0[] = {{258, 138}, {244, 138}};
     lv_line_set_points(tick0, pts0, 2);
     lv_obj_set_style_line_color(tick0, COL_GAUGE_TICK, 0);
     lv_obj_set_style_line_width(tick0, 2, 0);
 
-    // 90 deg (bottom)
     lv_obj_t* tick90 = lv_line_create(protractor);
-    static const lv_point_precise_t pts90[] = {{132, 252}, {132, 238}};
+    static const lv_point_precise_t pts90[] = {{138, 258}, {138, 244}};
     lv_line_set_points(tick90, pts90, 2);
     lv_obj_set_style_line_color(tick90, COL_GAUGE_TICK, 0);
     lv_obj_set_style_line_width(tick90, 2, 0);
 
-    // 180 deg (left)
     lv_obj_t* tick180 = lv_line_create(protractor);
-    static const lv_point_precise_t pts180[] = {{12, 132}, {26, 132}};
+    static const lv_point_precise_t pts180[] = {{18, 138}, {32, 138}};
     lv_line_set_points(tick180, pts180, 2);
     lv_obj_set_style_line_color(tick180, COL_GAUGE_TICK, 0);
     lv_obj_set_style_line_width(tick180, 2, 0);
 
-    // 270 deg (top)
     lv_obj_t* tick270 = lv_line_create(protractor);
-    static const lv_point_precise_t pts270[] = {{132, 12}, {132, 26}};
+    static const lv_point_precise_t pts270[] = {{138, 18}, {138, 32}};
     lv_line_set_points(tick270, pts270, 2);
     lv_obj_set_style_line_color(tick270, COL_GAUGE_TICK, 0);
     lv_obj_set_style_line_width(tick270, 2, 0);
   }
 
-  // Arc showing current angle (0 to current value) in COL_ACCENT
   arcWidget = lv_arc_create(protractor);
   lv_obj_set_size(arcWidget, kProSz - 36, kProSz - 36);
   lv_obj_align(arcWidget, LV_ALIGN_CENTER, 0, 0);
   lv_arc_set_range(arcWidget, 0, 360);
   lv_arc_set_value(arcWidget, (int32_t)currentAngle);
   lv_arc_set_bg_angles(arcWidget, 0, 360);
-  // Indicator color
   lv_obj_set_style_arc_color(arcWidget, COL_ACCENT, LV_PART_INDICATOR);
-  lv_obj_set_style_arc_width(arcWidget, 5, LV_PART_INDICATOR);
-  // Background arc
+  lv_obj_set_style_arc_width(arcWidget, 8, LV_PART_INDICATOR);
   lv_obj_set_style_arc_color(arcWidget, COL_GAUGE_BG, LV_PART_MAIN);
-  lv_obj_set_style_arc_width(arcWidget, 2, LV_PART_MAIN);
-  // Knob (hide it)
+  lv_obj_set_style_arc_width(arcWidget, 12, LV_PART_MAIN);
   lv_obj_set_style_opa(arcWidget, 0, LV_PART_KNOB);
-  // Remove clickable
   lv_obj_remove_flag(arcWidget, LV_OBJ_FLAG_CLICKABLE);
   lv_obj_remove_flag(arcWidget, LV_OBJ_FLAG_SCROLLABLE);
 
-  // Angle label centered in protractor
   angleArcLabel = lv_label_create(protractor);
-  char angleBuf[16];
-  snprintf(angleBuf, sizeof(angleBuf), "%.0f deg", currentAngle);
-  lv_label_set_text(angleArcLabel, angleBuf);
-  lv_obj_set_style_text_font(angleArcLabel, FONT_LARGE, 0);
+  {
+    char angleBuf[24];
+    snprintf(angleBuf, sizeof(angleBuf), "%.0f\nDEG", currentAngle);
+    lv_label_set_text(angleArcLabel, angleBuf);
+  }
+  lv_obj_set_style_text_font(angleArcLabel, FONT_XXL, 0);
   lv_obj_set_style_text_color(angleArcLabel, COL_ACCENT, 0);
+  lv_obj_set_style_text_align(angleArcLabel, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_center(angleArcLabel);
 
-  // ── Right panel (stack from top; ends above preset row — kRightMaxBottom) ──
-  const int rightX = kRightX;
-  int rightY = kProY;
+  lv_obj_t* targetCard = ui_create_post_card(screen, kTargetX, kTargetY, kTargetW, kTargetH);
+  lv_obj_remove_flag(targetCard, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_add_flag(targetCard, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_add_event_cb(targetCard, target_card_cb, LV_EVENT_CLICKED, nullptr);
 
-  // TARGET label
-  lv_obj_t* targetLbl = lv_label_create(screen);
+  lv_obj_t* targetLbl = lv_label_create(targetCard);
   lv_label_set_text(targetLbl, "TARGET");
-  lv_obj_set_style_text_font(targetLbl, FONT_NORMAL, 0);
+  lv_obj_set_style_text_font(targetLbl, FONT_SMALL, 0);
   lv_obj_set_style_text_color(targetLbl, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(targetLbl, rightX, rightY);
+  lv_obj_set_pos(targetLbl, 24, 14);
 
-  // Target angle value
-  angleLabel = lv_label_create(screen);
-  char targetBuf[16];
-  snprintf(targetBuf, sizeof(targetBuf), "%.0f deg", currentAngle);
-  lv_label_set_text(angleLabel, targetBuf);
+  angleLabel = lv_label_create(targetCard);
+  {
+    char targetBuf[20];
+    snprintf(targetBuf, sizeof(targetBuf), "%.0f deg", currentAngle);
+    lv_label_set_text(angleLabel, targetBuf);
+  }
   lv_obj_set_style_text_font(angleLabel, FONT_XXL, 0);
   lv_obj_set_style_text_color(angleLabel, COL_ACCENT, 0);
-  lv_obj_set_pos(angleLabel, rightX, rightY + 16);
-  rightY += 58;
+  lv_obj_set_pos(angleLabel, 144, 18);
 
-  // Separator
-  const int sepW = SCREEN_W - rightX - 8;
-  lv_obj_t* sep1 = lv_obj_create(screen);
-  lv_obj_set_size(sep1, sepW, 1);
-  lv_obj_set_pos(sep1, rightX, rightY);
-  lv_obj_set_style_bg_color(sep1, COL_BORDER_ROW, 0);
-  lv_obj_set_style_border_width(sep1, 0, 0);
-  lv_obj_set_style_pad_all(sep1, 0, 0);
-  lv_obj_set_style_radius(sep1, 0, 0);
-  lv_obj_remove_flag(sep1, LV_OBJ_FLAG_SCROLLABLE);
-  rightY += 6;
+  lv_obj_t* rpmCard = ui_create_post_card(screen, kTargetX, kRpmY, kTargetW, kTargetH);
+  lv_obj_remove_flag(rpmCard, LV_OBJ_FLAG_CLICKABLE);
 
-  // SPEED label + value
-  lv_obj_t* speedLbl = lv_label_create(screen);
-  lv_label_set_text(speedLbl, "SPEED:");
-  lv_obj_set_style_text_font(speedLbl, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(speedLbl, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(speedLbl, rightX, rightY);
+  lv_obj_t* rpmTitle = lv_label_create(rpmCard);
+  lv_label_set_text(rpmTitle, "RPM");
+  lv_obj_set_style_text_font(rpmTitle, FONT_SMALL, 0);
+  lv_obj_set_style_text_color(rpmTitle, COL_TEXT_DIM, 0);
+  lv_obj_set_pos(rpmTitle, 24, 14);
 
-  rpmLabel = lv_label_create(screen);
-  lv_label_set_text_fmt(rpmLabel, "%.1f", targetRpm);
-  lv_obj_set_style_text_font(rpmLabel, FONT_XL, 0);
+  rpmLabel = lv_label_create(rpmCard);
+  lv_label_set_text_fmt(rpmLabel, "%.2f", (double)targetRpm);
+  lv_obj_set_style_text_font(rpmLabel, FONT_XXL, 0);
   lv_obj_set_style_text_color(rpmLabel, COL_TEXT, 0);
-  lv_obj_set_pos(rpmLabel, rightX + 72, rightY - 2);
+  lv_obj_set_pos(rpmLabel, 144, 18);
 
-  lv_obj_t* rpmUnit = lv_label_create(screen);
-  lv_label_set_text(rpmUnit, "RPM");
-  lv_obj_set_style_text_font(rpmUnit, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(rpmUnit, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(rpmUnit, rightX + 132, rightY + 2);
-  rightY += 30;
+  stepDirValLbl = lv_label_create(rpmCard);
+  lv_obj_set_style_text_font(stepDirValLbl, FONT_SMALL, 0);
+  lv_obj_set_style_text_color(stepDirValLbl, COL_GREEN, 0);
+  lv_obj_set_pos(stepDirValLbl, 304, 24);
+  step_refresh_dir_lbl();
 
-  // DIR label + value
-  lv_obj_t* dirLbl = lv_label_create(screen);
-  lv_label_set_text(dirLbl, "DIR:");
-  lv_obj_set_style_text_font(dirLbl, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(dirLbl, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(dirLbl, rightX, rightY);
+  stepsLabel = nullptr;
 
-  Direction dir = speed_get_direction();
-  lv_obj_t* dirVal = lv_label_create(screen);
-  lv_label_set_text(dirVal, (dir == DIR_CW) ? "CW" : "CCW");
-  lv_obj_set_style_text_font(dirVal, FONT_XL, 0);
-  lv_obj_set_style_text_color(dirVal, COL_TEXT, 0);
-  lv_obj_set_pos(dirVal, rightX + 50, rightY - 2);
-  rightY += 30;
-
-  // STEPS label + value
-  lv_obj_t* stepsLbl = lv_label_create(screen);
-  lv_label_set_text(stepsLbl, "STEPS:");
-  lv_obj_set_style_text_font(stepsLbl, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(stepsLbl, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(stepsLbl, rightX, rightY);
-
-  stepsLabel = lv_label_create(screen);
-  long steps = angleToSteps(currentAngle);
-  lv_label_set_text_fmt(stepsLabel, "%ld", steps);
-  lv_obj_set_style_text_font(stepsLabel, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(stepsLabel, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(stepsLabel, rightX + 58, rightY);
-  rightY += 30;
-
-  // RPM row (above dia); horizontal gap between RPM- block and dia on the row below
-  const int kRpmDiaHGap = 16;
-  const int kRpmBetween = 10;
-  const int rpmBtnW = 104;
-  const int rpmBtnH = 48;
-  const int diaBtnW = 132;
-  const int diaBtnH = 46;
-  const int diaX = SCREEN_W - 8 - diaBtnW;
-  const int rpmPlusX = SCREEN_W - 8 - rpmBtnW;
-  const int rpmMinusX = rpmPlusX - kRpmBetween - rpmBtnW;
-
-  lv_obj_t* rpmMinusBtn = lv_button_create(screen);
-  lv_obj_set_size(rpmMinusBtn, rpmBtnW, rpmBtnH);
-  lv_obj_set_pos(rpmMinusBtn, rpmMinusX, rightY);
-  lv_obj_set_style_bg_color(rpmMinusBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(rpmMinusBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(rpmMinusBtn, 1, 0);
-  lv_obj_set_style_border_color(rpmMinusBtn, COL_BORDER, 0);
-  lv_obj_add_event_cb(rpmMinusBtn, rpm_minus_cb, LV_EVENT_CLICKED, nullptr);
-  lv_obj_t* rpmMinusLbl = lv_label_create(rpmMinusBtn);
-  lv_label_set_text(rpmMinusLbl, "RPM -");
-  lv_obj_set_style_text_font(rpmMinusLbl, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(rpmMinusLbl, COL_TEXT, 0);
-  lv_obj_center(rpmMinusLbl);
-
-  lv_obj_t* rpmPlusBtn = lv_button_create(screen);
-  lv_obj_set_size(rpmPlusBtn, rpmBtnW, rpmBtnH);
-  lv_obj_set_pos(rpmPlusBtn, rpmPlusX, rightY);
-  lv_obj_set_style_bg_color(rpmPlusBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(rpmPlusBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(rpmPlusBtn, 1, 0);
-  lv_obj_set_style_border_color(rpmPlusBtn, COL_BORDER, 0);
-  lv_obj_add_event_cb(rpmPlusBtn, rpm_plus_cb, LV_EVENT_CLICKED, nullptr);
-  lv_obj_t* rpmPlusLbl = lv_label_create(rpmPlusBtn);
-  lv_label_set_text(rpmPlusLbl, "RPM +");
-  lv_obj_set_style_text_font(rpmPlusLbl, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(rpmPlusLbl, COL_TEXT, 0);
-  lv_obj_center(rpmPlusLbl);
-
-  rightY += rpmBtnH + kRpmDiaHGap;
+  const int kPmW = BTN_W_PM * 2 + 8;
+  ui_create_pm_btn(screen, kTargetX, kAuxY, "-", FONT_NORMAL, UI_BTN_NORMAL, rpm_minus_cb, nullptr);
+  ui_create_pm_btn(screen, kTargetX + BTN_W_PM + 8, kAuxY, "+", FONT_NORMAL, UI_BTN_ACCENT, rpm_plus_cb,
+                   nullptr);
 
   diameterSummaryLabel = lv_label_create(screen);
-  lv_label_set_long_mode(diameterSummaryLabel, LV_LABEL_LONG_MODE_DOTS);
-  lv_obj_set_width(diameterSummaryLabel, (lv_coord_t)(diaX - rightX - 12));
-  lv_obj_set_style_text_font(diameterSummaryLabel, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(diameterSummaryLabel, COL_TEXT, 0);
-  lv_obj_set_pos(diameterSummaryLabel, rightX, rightY + 2);
+  lv_label_set_long_mode(diameterSummaryLabel, LV_LABEL_LONG_MODE_CLIP);
+  lv_obj_set_width(diameterSummaryLabel, 128);
+  lv_obj_set_style_text_font(diameterSummaryLabel, FONT_SMALL, 0);
+  lv_obj_set_style_text_color(diameterSummaryLabel, COL_TEXT_DIM, 0);
+  lv_obj_set_pos(diameterSummaryLabel, kTargetX + kPmW + 6, kAuxY + 10);
 
   lv_obj_t* diaTapBtn = lv_button_create(screen);
-  lv_obj_set_size(diaTapBtn, diaBtnW, diaBtnH);
-  lv_obj_set_pos(diaTapBtn, diaX, rightY);
-  lv_obj_set_style_bg_color(diaTapBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(diaTapBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(diaTapBtn, 1, 0);
-  lv_obj_set_style_border_color(diaTapBtn, COL_BORDER, 0);
+  lv_obj_set_size(diaTapBtn, 72, 40);
+  lv_obj_set_pos(diaTapBtn, kTargetX + kPmW + 6 + 128 + 6, kAuxY);
+  ui_btn_style_post(diaTapBtn, UI_BTN_NORMAL);
   lv_obj_add_event_cb(diaTapBtn, diameter_btn_cb, LV_EVENT_CLICKED, nullptr);
   lv_obj_t* diaTapLbl = lv_label_create(diaTapBtn);
-  lv_label_set_text(diaTapLbl, "dia mm");
-  lv_obj_set_style_text_font(diaTapLbl, FONT_BTN, 0);
-  lv_obj_set_style_text_color(diaTapLbl, COL_TEXT, 0);
+  lv_label_set_text(diaTapLbl, "DIA");
+  lv_obj_set_style_text_font(diaTapLbl, FONT_NORMAL, 0);
+  lv_obj_set_style_text_color(diaTapLbl, ui_btn_label_color_post(UI_BTN_NORMAL), 0);
   lv_obj_center(diaTapLbl);
 
-  rightY += diaBtnH + 8;
-
-  const int resetW = 168;
-  const int resetH = 36;
   lv_obj_t* resetBtn = lv_button_create(screen);
-  lv_obj_set_size(resetBtn, resetW, resetH);
-  lv_obj_set_pos(resetBtn, rightX, rightY);
-  lv_obj_set_style_bg_color(resetBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(resetBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(resetBtn, 1, 0);
-  lv_obj_set_style_border_color(resetBtn, COL_BORDER, 0);
+  lv_obj_set_size(resetBtn, 72, 40);
+  lv_obj_set_pos(resetBtn, kTargetX + kPmW + 6 + 128 + 6 + 72 + 6, kAuxY);
+  ui_btn_style_post(resetBtn, UI_BTN_NORMAL);
   lv_obj_add_event_cb(resetBtn, step_reset_btn_cb, LV_EVENT_CLICKED, nullptr);
   lv_obj_t* resetLbl = lv_label_create(resetBtn);
-  lv_label_set_text(resetLbl, "RESET");
+  lv_label_set_text(resetLbl, "RST");
   lv_obj_set_style_text_font(resetLbl, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(resetLbl, COL_TEXT, 0);
+  lv_obj_set_style_text_color(resetLbl, ui_btn_label_color_post(UI_BTN_NORMAL), 0);
   lv_obj_center(resetLbl);
-  rightY += resetH + 8;
-#if DEBUG_BUILD
-  if (rightY > kRightMaxBottom) {
-    LOG_W("Step UI: right stack y=%d exceeds band %d", rightY, kRightMaxBottom);
-  }
-#endif
 
-  // ── Presets row (full width; Y derived from bar — never overlaps reset column) ──
-  const int presetY = kPresetY;
-  const int presetStartX = 8;
-  const int presetEndX = SCREEN_W - 8;
-  const int presetGap = 6;
-  const int presetH = kPresetH;
-  const int presetW = (presetEndX - presetStartX - 4 * presetGap) / 5;
-
-  const char* presetTexts[] = {"45", "90", "180", "360", "CUSTOM"};
-
-  // 4 angle presets
+  const char* presetTexts[] = {"45", "90", "180", "360"};
+  const int presetX0 = kTargetX;
   for (int i = 0; i < 4; i++) {
     presetBtns[i] = lv_button_create(screen);
-    lv_obj_set_size(presetBtns[i], presetW, presetH);
-    lv_obj_set_pos(presetBtns[i], presetStartX + i * (presetW + presetGap), presetY);
+    lv_obj_set_size(presetBtns[i], kPresetW, kPresetH);
+    lv_obj_set_pos(presetBtns[i], presetX0 + i * (kPresetW + kPresetGap), kPresetY);
     lv_obj_set_style_radius(presetBtns[i], RADIUS_BTN, 0);
     lv_obj_add_event_cb(presetBtns[i], preset_cb, LV_EVENT_CLICKED, (void*)(intptr_t)i);
 
     bool isActive = (i == activePreset);
-    lv_obj_set_style_bg_color(presetBtns[i], isActive ? COL_BTN_ACTIVE : COL_BTN_BG, 0);
-    lv_obj_set_style_border_width(presetBtns[i], isActive ? 2 : 1, 0);
-    lv_obj_set_style_border_color(presetBtns[i], isActive ? COL_ACCENT : COL_BORDER, 0);
+    ui_btn_style_post(presetBtns[i], isActive ? UI_BTN_ACCENT : UI_BTN_NORMAL);
 
     lv_obj_t* lbl = lv_label_create(presetBtns[i]);
     lv_label_set_text(lbl, presetTexts[i]);
-    lv_obj_set_style_text_font(lbl, FONT_SUBTITLE, 0);
-    lv_obj_set_style_text_color(lbl, isActive ? COL_ACCENT : COL_TEXT, 0);
+    lv_obj_set_style_text_font(lbl, FONT_NORMAL, 0);
+    lv_obj_set_style_text_color(lbl, ui_btn_label_color_post(isActive ? UI_BTN_ACCENT : UI_BTN_NORMAL), 0);
     lv_obj_center(lbl);
   }
 
-  // CUSTOM button (5th)
-  presetBtns[4] = lv_button_create(screen);
-  lv_obj_set_size(presetBtns[4], presetW, presetH);
-  lv_obj_set_pos(presetBtns[4], presetStartX + 4 * (presetW + presetGap), presetY);
-  lv_obj_set_style_bg_color(presetBtns[4], COL_BTN_BG, 0);
-  lv_obj_set_style_radius(presetBtns[4], RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(presetBtns[4], 1, 0);
-  lv_obj_set_style_border_color(presetBtns[4], COL_BORDER, 0);
-  lv_obj_add_event_cb(presetBtns[4], custom_btn_cb, LV_EVENT_CLICKED, nullptr);
-
-  lv_obj_t* customLabel = lv_label_create(presetBtns[4]);
-  lv_label_set_text(customLabel, "CUSTOM");
-  lv_obj_set_style_text_font(customLabel, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(customLabel, COL_TEXT, 0);
-  lv_obj_center(customLabel);
-
-  // ── Bottom bar: BACK + STEP + STOP ──
-  const int barY = kBarY;
-  const int barH = kBarH;
-  const int barBtnW = 256;
-  const int barGap = 8;
-  const int barStartX = 8;
-
-  // < BACK button (left)
   lv_obj_t* backBtn = lv_button_create(screen);
-  lv_obj_set_size(backBtn, barBtnW, barH);
-  lv_obj_set_pos(backBtn, barStartX, barY);
-  lv_obj_set_style_bg_color(backBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(backBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(backBtn, 1, 0);
-  lv_obj_set_style_border_color(backBtn, COL_BORDER, 0);
+  lv_obj_set_size(backBtn, kFooterW, kFooterH);
+  lv_obj_set_pos(backBtn, 20, kFooterY);
+  ui_btn_style_post(backBtn, UI_BTN_NORMAL);
   lv_obj_add_event_cb(backBtn, back_event_cb, LV_EVENT_CLICKED, nullptr);
-
   lv_obj_t* backLabel = lv_label_create(backBtn);
-  lv_label_set_text(backLabel, "<  BACK");
-  lv_obj_set_style_text_font(backLabel, FONT_BTN, 0);
-  lv_obj_set_style_text_color(backLabel, COL_TEXT, 0);
+  lv_label_set_text(backLabel, "< BACK");
+  lv_obj_set_style_text_font(backLabel, FONT_NORMAL, 0);
+  lv_obj_set_style_text_color(backLabel, ui_btn_label_color_post(UI_BTN_NORMAL), 0);
   lv_obj_center(backLabel);
 
-  // > STEP button (center)
   lv_obj_t* stepBtn = lv_button_create(screen);
-  lv_obj_set_size(stepBtn, barBtnW, barH);
-  lv_obj_set_pos(stepBtn, barStartX + barBtnW + barGap, barY);
-  lv_obj_set_style_bg_color(stepBtn, COL_BTN_ACTIVE, 0);
-  lv_obj_set_style_radius(stepBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(stepBtn, 2, 0);
-  lv_obj_set_style_border_color(stepBtn, COL_ACCENT, 0);
+  lv_obj_set_size(stepBtn, kFooterW, kFooterH);
+  lv_obj_set_pos(stepBtn, 277, kFooterY);
+  ui_btn_style_post(stepBtn, UI_BTN_ACCENT);
   lv_obj_add_event_cb(stepBtn, step_event_cb, LV_EVENT_CLICKED, nullptr);
   stepActionBtn = stepBtn;
-
   lv_obj_t* stepLabel = lv_label_create(stepBtn);
   lv_label_set_text(stepLabel, "> STEP");
-  lv_obj_set_style_text_font(stepLabel, FONT_BTN, 0);
-  lv_obj_set_style_text_color(stepLabel, COL_ACCENT, 0);
+  lv_obj_set_style_text_font(stepLabel, FONT_NORMAL, 0);
+  lv_obj_set_style_text_color(stepLabel, ui_btn_label_color_post(UI_BTN_ACCENT), 0);
   lv_obj_center(stepLabel);
 
-  // [] STOP button (right)
   lv_obj_t* stopBtn = lv_button_create(screen);
-  lv_obj_set_size(stopBtn, barBtnW, barH);
-  lv_obj_set_pos(stopBtn, barStartX + (barBtnW + barGap) * 2, barY);
-  lv_obj_set_style_bg_color(stopBtn, COL_BTN_DANGER, 0);
-  lv_obj_set_style_radius(stopBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(stopBtn, 2, 0);
-  lv_obj_set_style_border_color(stopBtn, COL_RED, 0);
+  lv_obj_set_size(stopBtn, kFooterW, kFooterH);
+  lv_obj_set_pos(stopBtn, 534, kFooterY);
+  ui_btn_style_post(stopBtn, UI_BTN_DANGER);
   lv_obj_add_event_cb(stopBtn, stop_event_cb, LV_EVENT_CLICKED, nullptr);
-
   lv_obj_t* stopLabel = lv_label_create(stopBtn);
-  lv_label_set_text(stopLabel, "[] STOP");
-  lv_obj_set_style_text_font(stopLabel, FONT_BTN, 0);
-  lv_obj_set_style_text_color(stopLabel, COL_RED, 0);
+  lv_label_set_text(stopLabel, "X STOP");
+  lv_obj_set_style_text_font(stopLabel, FONT_NORMAL, 0);
+  lv_obj_set_style_text_color(stopLabel, ui_btn_label_color_post(UI_BTN_DANGER), 0);
   lv_obj_center(stopLabel);
 
   refresh_diameter_summary();
@@ -688,8 +544,9 @@ void screen_step_invalidate_widgets() {
   angleArcLabel = nullptr;
   rpmLabel = nullptr;
   stepsLabel = nullptr;
+  stepDirValLbl = nullptr;
   diameterSummaryLabel = nullptr;
-  for (int i = 0; i < 5; i++) presetBtns[i] = nullptr;
+  for (int i = 0; i < 4; i++) presetBtns[i] = nullptr;
   customNumpad = nullptr;
   customTa = nullptr;
   customHint = nullptr;
@@ -752,4 +609,5 @@ void screen_step_update() {
       lv_label_set_text(angleLabel, buf);
     }
   }
+  step_refresh_dir_lbl();
 }

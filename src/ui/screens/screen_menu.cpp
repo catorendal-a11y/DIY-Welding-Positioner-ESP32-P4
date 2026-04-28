@@ -1,98 +1,73 @@
-// TIG Rotator Controller - Menu Screen
-// Brutalist v2.0 design matching new_ui.svg: 2x2 mode grid + programs + bottom buttons
+// Menu Screen - POST-style navigation hub (no duplicate PROGRAMS / SETTINGS actions)
 
 #include <Arduino.h>
 #include "../screens.h"
 #include "../theme.h"
 #include "../../config.h"
 
-// ───────────────────────────────────────────────────────────────────────────────
-// EVENT HANDLERS
-// ───────────────────────────────────────────────────────────────────────────────
 static void back_event_cb(lv_event_t* e) { screens_show(SCREEN_MAIN); }
-static void pulse_event_cb(lv_event_t* e) { screens_show(SCREEN_PULSE); }
-static void step_event_cb(lv_event_t* e) { screens_show(SCREEN_STEP); }
-static void jog_event_cb(lv_event_t* e) { screens_show(SCREEN_JOG); }
-static void timer_event_cb(lv_event_t* e) { screens_show(SCREEN_TIMER); }
-static void settings_event_cb(lv_event_t* e) { screens_show(SCREEN_SETTINGS); }
+static void run_modes_event_cb(lv_event_t* e) { screens_show(SCREEN_RUN_MODES); }
+static void setup_event_cb(lv_event_t* e) { screens_show(SCREEN_SETTINGS); }
 static void programs_event_cb(lv_event_t* e) { screens_show(SCREEN_PROGRAMS); }
+static void diagnostics_event_cb(lv_event_t* e) { screens_show(SCREEN_DIAGNOSTICS); }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// HELPER: create a menu grid button (glove-friendly)
-// ───────────────────────────────────────────────────────────────────────────────
-static lv_obj_t* create_grid_btn(lv_obj_t* parent, int16_t x, int16_t y,
-                                  int16_t w, int16_t h, const char* text,
-                                  lv_event_cb_t cb, bool active) {
-  lv_obj_t* btn = lv_button_create(parent);
-  lv_obj_set_size(btn, w, h);
-  lv_obj_set_pos(btn, x, y);
-  lv_obj_set_style_bg_color(btn, active ? COL_BG_ACTIVE : COL_BTN_BG, 0);
-  lv_obj_set_style_radius(btn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(btn, active ? 2 : 1, 0);
-  lv_obj_set_style_border_color(btn, active ? COL_ACCENT : COL_BORDER, 0);
-  lv_obj_set_style_shadow_width(btn, 0, 0);
-  lv_obj_set_style_pad_all(btn, 0, 0);
-  lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, nullptr);
+static lv_obj_t* make_nav_card(lv_obj_t* parent, int16_t x, int16_t y, int16_t w, int16_t h,
+                               const char* title, const char* detail,
+                               lv_event_cb_t cb, bool active) {
+  lv_obj_t* card = lv_button_create(parent);
+  lv_obj_set_size(card, w, h);
+  lv_obj_set_pos(card, x, y);
+  ui_nav_card_btn_style(card, active);
+  lv_obj_add_event_cb(card, cb, LV_EVENT_CLICKED, nullptr);
 
-  lv_obj_t* lbl = lv_label_create(btn);
-  lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, FONT_XL, 0);
-  lv_obj_set_style_text_color(lbl, active ? COL_ACCENT : COL_TEXT, 0);
-  lv_obj_center(lbl);
-  return btn;
+  lv_obj_t* titleLbl = lv_label_create(card);
+  lv_label_set_text(titleLbl, title);
+  lv_obj_set_style_text_font(titleLbl, FONT_LARGE, 0);
+  lv_obj_set_style_text_color(titleLbl, active ? COL_ACCENT : COL_TEXT, 0);
+  lv_obj_set_pos(titleLbl, 24, 24);
+
+  lv_obj_t* detailLbl = lv_label_create(card);
+  lv_label_set_text(detailLbl, detail);
+  lv_obj_set_style_text_font(detailLbl, FONT_NORMAL, 0);
+  lv_obj_set_style_text_color(detailLbl, COL_TEXT_DIM, 0);
+  lv_obj_set_width(detailLbl, w - 64);
+  lv_label_set_long_mode(detailLbl, LV_LABEL_LONG_MODE_DOTS);
+  lv_obj_set_pos(detailLbl, 24, 64);
+
+  lv_obj_t* chevron = lv_label_create(card);
+  lv_label_set_text(chevron, ">");
+  lv_obj_set_style_text_font(chevron, FONT_BTN, 0);
+  lv_obj_set_style_text_color(chevron, active ? COL_ACCENT : COL_TEXT_DIM, 0);
+  lv_obj_align(chevron, LV_ALIGN_RIGHT_MID, -20, 0);
+  return card;
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// SCREEN CREATE — v2.0: Header + 2x2 grid + PROGRAMS + BACK/SETTINGS
-// ───────────────────────────────────────────────────────────────────────────────
 void screen_menu_create() {
   lv_obj_t* screen = screenRoots[SCREEN_MENU];
   lv_obj_clean(screen);
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
-  ui_create_header(screen, "MENU");
-  ui_create_separator(screen, HEADER_H);
+  ui_create_header(screen, "MENU", "NAVIGATION HUB", nullptr);
 
-  // ── 2x2 Mode Grid (glove-friendly, min 48x48) ──
-  // Grid area: y=40 to y=280, buttons 380x110 each with 16px gap
-  const int gridStartY = 40;
-  const int gridBtnW = 380;
-  const int gridBtnH = 110;
-  const int gridGapX = 16;
-  const int gridGapY = 16;
-  const int gridStartX = (SCREEN_W - gridBtnW * 2 - gridGapX) / 2;  // = 12
+  const int cardW = 374;
+  const int cardH = 142;
+  const int padX = 18;
+  const int midGap = 16;
+  const int row1Y = HEADER_H + 10;
+  const int rowGap = 20;
+  const int row2Y = row1Y + cardH + rowGap;
+  const int leftX = padX;
+  const int rightX = padX + cardW + midGap;
+  const int footerY = 402;
+  const int footerH = 62;
 
-  // Top-left: PULSE
-  create_grid_btn(screen, gridStartX, gridStartY,
-                  gridBtnW, gridBtnH, "PULSE", pulse_event_cb, false);
+  make_nav_card(screen, leftX, row1Y, cardW, cardH, "RUN MODES", "Pulse / Step / Jog / Timer", run_modes_event_cb, false);
+  make_nav_card(screen, rightX, row1Y, cardW, cardH, "SETUP", "Motor / display / pedal / calibration", setup_event_cb, false);
+  make_nav_card(screen, leftX, row2Y, cardW, cardH, "PROGRAMS", "16 saved welding sequences", programs_event_cb, true);
+  make_nav_card(screen, rightX, row2Y, cardW, cardH, "DIAGNOSTICS", "GPIO / faults / runtime state", diagnostics_event_cb, false);
 
-  // Top-right: STEP
-  create_grid_btn(screen, gridStartX + gridBtnW + gridGapX, gridStartY,
-                  gridBtnW, gridBtnH, "STEP", step_event_cb, false);
+  ui_create_btn(screen, padX, footerY, SCREEN_W - 2 * padX, footerH, "<  BACK", FONT_SUBTITLE, UI_BTN_NORMAL, back_event_cb,
+                nullptr);
 
-  // Bottom-left: JOG
-  create_grid_btn(screen, gridStartX, gridStartY + gridBtnH + gridGapY,
-                  gridBtnW, gridBtnH, "JOG", jog_event_cb, false);
-
-  // Bottom-right: TIMER
-  create_grid_btn(screen, gridStartX + gridBtnW + gridGapX, gridStartY + gridBtnH + gridGapY,
-                  gridBtnW, gridBtnH, "TIMER", timer_event_cb, false);
-
-  const int progY = gridStartY + (gridBtnH + gridGapY) * 2 + 8;
-  ui_create_btn(screen, PAD_X, progY, SCREEN_W - 2 * PAD_X, 52, "PROGRAMS", FONT_SUBTITLE, UI_BTN_ACCENT,
-                programs_event_cb, nullptr);
-
-  const int sepY = progY + 60;
-  ui_create_separator(screen, sepY);
-
-  const int bottomY = sepY + 10;
-  const int bottomBtnW = (SCREEN_W - PAD_X * 2 - gridGapX) / 2;
-  const int bottomBtnH = 56;
-
-  ui_create_btn(screen, PAD_X, bottomY, bottomBtnW, bottomBtnH, "<  BACK", FONT_SUBTITLE, UI_BTN_NORMAL,
-                back_event_cb, nullptr);
-  ui_create_btn(screen, PAD_X + bottomBtnW + gridGapX, bottomY, bottomBtnW, bottomBtnH, "SETTINGS",
-                FONT_SUBTITLE, UI_BTN_ACCENT, settings_event_cb, nullptr);
-
-  LOG_I("Screen menu: v2.0 layout created");
+  LOG_I("Screen menu: POST-style navigation hub created");
 }

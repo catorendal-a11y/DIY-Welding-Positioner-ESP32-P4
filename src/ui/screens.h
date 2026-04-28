@@ -43,6 +43,7 @@ typedef enum {
   SCREEN_PEDAL_SETTINGS, // Foot pedal settings and status
   SCREEN_DIAGNOSTICS,    // Live GPIO/fault diagnostics
   SCREEN_ABOUT,          // About screen
+  SCREEN_RUN_MODES,      // Pulse / Step / Jog / Timer picker (from menu)
   SCREEN_COUNT           // MUST be last — total number of screens
 } ScreenId;
 
@@ -64,6 +65,7 @@ void screens_update_current();          // Update current screen (call from lvgl
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_main_create();
 void screen_menu_create();
+void screen_run_modes_create();
 void screen_pulse_create();
 void screen_step_create();
 void screen_jog_create();
@@ -73,8 +75,10 @@ void screen_program_edit_create(int slot);
 void screen_settings_create();
 void screen_boot_create();
 void screen_confirm_create_static();  // Static init
+// If confirm_success_screen is not SCREEN_NONE, that screen is shown after confirm (cancel still uses prior screen).
 void screen_confirm_create(const char* title, const char* message,
-                           void (*on_confirm)(), void (*on_cancel)());
+                           void (*on_confirm)(), void (*on_cancel)(),
+                           ScreenId confirm_success_screen = SCREEN_NONE);
 void screen_confirm_update();
 
 // Boot screen
@@ -158,15 +162,33 @@ typedef enum {
   UI_BTN_DANGER
 } UiBtnStyle;
 
-lv_obj_t* ui_create_header(lv_obj_t* parent, const char* title);
-lv_obj_t* ui_create_settings_header(lv_obj_t* parent, const char* title);
+// POST proposal (.card / .run / .danger): apply same chrome as ui_create_btn to an existing button.
+void ui_btn_style_post(lv_obj_t* btn, UiBtnStyle style);
+lv_color_t ui_btn_label_color_post(UiBtnStyle style);
+
+// MENU / RUN MODES large cards: same POST colors as ui_btn but RADIUS_CARD (not RADIUS_BTN).
+void ui_nav_card_btn_style(lv_obj_t* btn, bool accent);
+
+lv_obj_t* ui_create_header(lv_obj_t* parent, const char* title, const char* right_caption,
+                           lv_obj_t** opt_right_lbl);
+lv_obj_t* ui_create_settings_header(lv_obj_t* parent, const char* title, const char* right_caption,
+                                    lv_color_t right_text_color);
+// POST proposal: thin inset accent line under header (HEADER_ACCENT_* in theme.h).
+void ui_add_post_header_accent(lv_obj_t* parent);
+void ui_style_post_warn(lv_obj_t* obj);
+void ui_style_post_ok(lv_obj_t* obj);
 lv_obj_t* ui_create_separator(lv_obj_t* parent, lv_coord_t y);
 lv_obj_t* ui_create_separator_line(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_color_t color);
+void ui_style_post_card(lv_obj_t* obj);
+void ui_style_post_row(lv_obj_t* obj);
+lv_obj_t* ui_create_post_card(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h);
+lv_obj_t* ui_create_post_row(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h);
 lv_obj_t* ui_create_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h,
                         const char* text, const lv_font_t* label_font, UiBtnStyle style,
                         lv_event_cb_t cb, void* user_data);
+// Compact +/- button: short tap and hold-to-repeat (LV long press + repeat; not LV_EVENT_CLICKED).
 lv_obj_t* ui_create_pm_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, const char* text,
-                           const lv_font_t* label_font, lv_event_cb_t cb, void* user_data);
+                           const lv_font_t* label_font, UiBtnStyle style, lv_event_cb_t cb, void* user_data);
 // Shared slider styling (used by settings sub-screens). Applies accent indicator/knob on a
 // dark track. Caller still sets size/position/range/value.
 void ui_style_slider(lv_obj_t* slider);

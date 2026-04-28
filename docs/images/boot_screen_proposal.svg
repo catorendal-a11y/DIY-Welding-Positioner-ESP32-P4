@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480">
+  <!-- ECC: frontend-design + design-system | Override: .claude/SKILL.md (800x480 ASCII), theme.h COL_* -->
+  <defs>
+    <linearGradient id="bootBgGrad" x1="0" y1="0" x2="800" y2="480" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0A0A0A"/>
+      <stop offset="0.55" stop-color="#050505"/>
+      <stop offset="1" stop-color="#030303"/>
+    </linearGradient>
+    <linearGradient id="bootHdrLine" x1="0" y1="0" x2="800" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF9500" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#FF9500" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#FF9500" stop-opacity="0"/>
+    </linearGradient>
+    <!-- Hero strip: left accent wash (industrial HMI / theme COL_BG_ACTIVE family) -->
+    <linearGradient id="heroGrad" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#1A1600"/>
+      <stop offset="0.12" stop-color="#0D0C08"/>
+      <stop offset="1" stop-color="#0B0B0B"/>
+    </linearGradient>
+    <linearGradient id="headerGrad" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#0E0E0E"/>
+      <stop offset="1" stop-color="#090909"/>
+    </linearGradient>
+    <pattern id="fineNoise" width="100" height="100" patternUnits="userSpaceOnUse">
+      <rect width="100" height="100" fill="#000000" opacity="0"/>
+      <circle cx="17" cy="22" r="0.6" fill="#FFFFFF" opacity="0.03"/>
+      <circle cx="73" cy="61" r="0.5" fill="#FFFFFF" opacity="0.025"/>
+      <circle cx="44" cy="88" r="0.4" fill="#FFFFFF" opacity="0.02"/>
+    </pattern>
+    <style>
+      .bg { fill: url(#bootBgGrad); }
+      .panel { fill: #0B0B0B; stroke: #2E2E2E; stroke-width: 1; }
+      .panel-dim { fill: #080808; stroke: #1A1A1A; stroke-width: 1; }
+      .header { fill: #090909; }
+      .accent { fill: #FF9500; }
+      .green { fill: #00C853; }
+      .red { fill: #FF1744; }
+      .yellow { fill: #FFAA00; }
+      .text { fill: #AAAAAA; }
+      .dim { fill: #666666; }
+      .vdim { fill: #333333; }
+      .line { stroke: #2E2E2E; stroke-width: 1; }
+      .bar-bg { fill: #111111; }
+      .bar-fill { fill: #FF9500; }
+      .ok-pill { fill: #062616; stroke: #00C853; stroke-width: 1; }
+      .warn-pill { fill: #241B00; stroke: #FFAA00; stroke-width: 1; }
+      .font { font-family: Montserrat, Arial, Helvetica, sans-serif; }
+      .mono { font-family: Consolas, "Courier New", monospace; }
+    </style>
+  </defs>
+
+  <rect width="800" height="480" class="bg"/>
+  <rect width="800" height="480" fill="url(#fineNoise)" opacity="1"/>
+
+  <!-- Header -->
+  <rect x="0" y="0" width="800" height="38" fill="url(#headerGrad)"/>
+  <line x1="0" y1="38" x2="800" y2="38" class="line"/>
+  <line x1="48" y1="44" x2="752" y2="44" stroke="url(#bootHdrLine)" stroke-width="1.5"/>
+  <text x="16" y="25" class="font accent" font-size="18" font-weight="700" letter-spacing="1.4">TIG-ROTATOR</text>
+  <circle cx="164" cy="18" r="3.5" fill="#00C853" opacity="0.95"/>
+  <text x="178" y="25" class="font green" font-size="14" font-weight="600">BOOT POST</text>
+  <text x="646" y="16" class="font dim" font-size="11">FW</text>
+  <text x="670" y="16" class="font text" font-size="11">v2.0.6</text>
+  <text x="646" y="31" class="font dim" font-size="11">MODE</text>
+  <text x="690" y="31" class="font green" font-size="11">SAFE INIT</text>
+
+  <!-- Main title/status strip (accent wash + stroke per theme.h card/run) -->
+  <rect x="16" y="52" width="768" height="58" rx="4" fill="url(#heroGrad)" stroke="#2E2E2E" stroke-width="1"/>
+  <text x="32" y="77" class="font text" font-size="13" letter-spacing="1.2">SYSTEM STARTUP</text>
+  <text x="32" y="99" class="font green" font-size="22" font-weight="700">RUNNING HARDWARE CHECKS</text>
+  <rect x="612" y="66" width="144" height="28" rx="14" class="ok-pill"/>
+  <text x="684" y="85" class="font green" font-size="13" font-weight="700" text-anchor="middle">MOTOR DISABLED</text>
+
+  <!-- Left POST panel -->
+  <rect x="16" y="126" width="456" height="250" rx="4" class="panel"/>
+  <text x="32" y="151" class="font accent" font-size="14" font-weight="700" letter-spacing="1.2">POWER-ON SELF TEST</text>
+  <line x1="32" y1="162" x2="456" y2="162" class="line"/>
+
+  <!-- POST rows -->
+  <g class="font" font-size="13">
+    <rect x="32" y="178" width="424" height="24" rx="2" class="panel-dim"/>
+    <text x="44" y="195" class="green" font-weight="700">OK</text>
+    <text x="84" y="195" class="text">ESP32-P4 core init</text>
+    <text x="344" y="195" class="dim">core0/core1</text>
+
+    <rect x="32" y="206" width="424" height="24" rx="2" class="panel-dim"/>
+    <text x="44" y="223" class="green" font-weight="700">OK</text>
+    <text x="84" y="223" class="text">Display + LVGL</text>
+    <text x="344" y="223" class="dim">800x480</text>
+
+    <rect x="32" y="234" width="424" height="24" rx="2" class="panel-dim"/>
+    <text x="44" y="251" class="green" font-weight="700">OK</text>
+    <text x="84" y="251" class="text">Touch + storage</text>
+    <text x="344" y="251" class="dim">config loaded</text>
+
+    <rect x="32" y="262" width="424" height="24" rx="2" fill="#171100" stroke="#FF9500" stroke-width="1"/>
+    <text x="44" y="279" class="accent" font-weight="700">RUN</text>
+    <text x="84" y="279" class="text">DM542T driver check</text>
+    <text x="344" y="279" class="dim">ENA high</text>
+
+    <rect x="32" y="290" width="424" height="24" rx="2" class="panel-dim"/>
+    <text x="44" y="307" class="vdim" font-weight="700">WAIT</text>
+    <text x="84" y="307" class="text">Safety inputs</text>
+    <text x="344" y="307" class="vdim">ESTOP/ALM</text>
+
+    <rect x="32" y="318" width="424" height="24" rx="2" class="panel-dim"/>
+    <text x="44" y="335" class="vdim" font-weight="700">WAIT</text>
+    <text x="84" y="335" class="dim">Pedal + speed input</text>
+    <text x="344" y="335" class="vdim">ADC/GPIO</text>
+
+    <rect x="32" y="346" width="424" height="24" rx="2" class="panel-dim"/>
+    <text x="44" y="363" class="vdim" font-weight="700">WAIT</text>
+    <text x="84" y="363" class="dim">Ready handoff</text>
+    <text x="344" y="363" class="vdim">main screen</text>
+  </g>
+
+  <!-- Column spine: ties POST + live blocks (design-system grouping) -->
+  <line x1="480" y1="118" x2="480" y2="384" stroke="#FF9500" stroke-opacity="0.22" stroke-width="1"/>
+
+  <!-- Right status panel -->
+  <rect x="488" y="126" width="296" height="250" rx="4" class="panel"/>
+  <text x="504" y="151" class="font accent" font-size="14" font-weight="700" letter-spacing="1.2">LIVE MACHINE STATUS</text>
+  <line x1="504" y1="162" x2="768" y2="162" class="line"/>
+
+  <g class="font" font-size="13">
+    <text x="504" y="192" class="dim">ESTOP</text>
+    <rect x="650" y="176" width="92" height="24" rx="12" class="ok-pill"/>
+    <text x="696" y="193" class="green" font-weight="700" text-anchor="middle">CLEAR</text>
+
+    <text x="504" y="224" class="dim">DRIVER ALM</text>
+    <rect x="650" y="208" width="92" height="24" rx="12" class="ok-pill"/>
+    <text x="696" y="225" class="green" font-weight="700" text-anchor="middle">OK</text>
+
+    <text x="504" y="256" class="dim">ENABLE PIN</text>
+    <rect x="650" y="240" width="92" height="24" rx="12" class="warn-pill"/>
+    <text x="696" y="257" class="yellow" font-weight="700" text-anchor="middle">HIGH</text>
+
+    <text x="504" y="288" class="dim">MOTOR STATE</text>
+    <text x="650" y="288" class="text" font-weight="700">DISABLED</text>
+
+    <text x="504" y="320" class="dim">RPM RANGE</text>
+    <text x="650" y="320" class="text" font-weight="700">0.001 - 3.000</text>
+
+    <text x="504" y="352" class="dim">GEAR RATIO</text>
+    <text x="650" y="352" class="text" font-weight="700">108:1</text>
+  </g>
+
+  <!-- Bottom progress/log area -->
+  <rect x="16" y="392" width="768" height="72" rx="4" class="panel"/>
+  <text x="32" y="415" class="font dim" font-size="12">STEP 4/7</text>
+  <text x="104" y="415" class="font accent" font-size="12" font-weight="700">DM542T DRIVER CHECK</text>
+  <text x="700" y="415" class="font dim" font-size="12" text-anchor="end">50%</text>
+  <rect x="32" y="426" width="736" height="10" rx="3" class="bar-bg"/>
+  <rect x="32" y="426" width="368" height="10" rx="3" class="bar-fill"/>
+  <text x="32" y="456" class="mono text" font-size="13">&gt; MOTOR DRIVER CHECK</text>
+
+  <!-- Subtle scanlines / industrial grid -->
+  <g opacity="0.06">
+    <line x1="0" y1="80" x2="800" y2="80" stroke="#FFFFFF" stroke-width="1"/>
+    <line x1="0" y1="160" x2="800" y2="160" stroke="#FFFFFF" stroke-width="1"/>
+    <line x1="0" y1="240" x2="800" y2="240" stroke="#FFFFFF" stroke-width="1"/>
+    <line x1="0" y1="320" x2="800" y2="320" stroke="#FFFFFF" stroke-width="1"/>
+    <line x1="200" y1="38" x2="200" y2="480" stroke="#FFFFFF" stroke-width="1"/>
+    <line x1="400" y1="38" x2="400" y2="480" stroke="#FFFFFF" stroke-width="1"/>
+    <line x1="600" y1="38" x2="600" y2="480" stroke="#FFFFFF" stroke-width="1"/>
+  </g>
+  <text x="400" y="472" class="font vdim" font-size="11" text-anchor="middle" letter-spacing="0.04em">Industrial POST mockup · theme.h tokens · device labels ASCII only</text>
+</svg>

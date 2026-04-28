@@ -102,17 +102,17 @@ static void restyle_mode_buttons() {
     bool isRun = (editPreset.mode == modes[i].mode);
 
     if (isRun && inProg) {
-      lv_obj_set_style_bg_color(modeBtns[i], COL_BG_ACTIVE, 0);
-      lv_obj_set_style_border_width(modeBtns[i], 2, 0);
-      lv_obj_set_style_border_color(modeBtns[i], COL_ACCENT, 0);
+      ui_btn_style_post(modeBtns[i], UI_BTN_ACCENT);
     } else if (inProg) {
       lv_obj_set_style_bg_color(modeBtns[i], COL_BTN_BG, 0);
       lv_obj_set_style_border_width(modeBtns[i], 2, 0);
       lv_obj_set_style_border_color(modeBtns[i], COL_ACCENT, 0);
+      lv_obj_set_style_radius(modeBtns[i], RADIUS_BTN, 0);
+      lv_obj_set_style_shadow_width(modeBtns[i], 0, 0);
+      lv_obj_set_style_pad_all(modeBtns[i], 0, 0);
+      lv_obj_set_style_bg_opa(modeBtns[i], LV_OPA_COVER, 0);
     } else {
-      lv_obj_set_style_bg_color(modeBtns[i], COL_BTN_BG, 0);
-      lv_obj_set_style_border_width(modeBtns[i], 1, 0);
-      lv_obj_set_style_border_color(modeBtns[i], COL_BORDER, 0);
+      ui_btn_style_post(modeBtns[i], UI_BTN_NORMAL);
     }
 
     lv_obj_t* lbl = lv_obj_get_child(modeBtns[i], 0);
@@ -261,8 +261,34 @@ static void mode_settings_cb(lv_event_t* e) {
 }
 
 static void cancel_cb(lv_event_t* e) {
+  (void)e;
   do_cleanup_kb();
   screens_show(SCREEN_PROGRAMS);
+}
+
+static void delete_preset_from_edit_do() {
+  int slot = editSlot;
+  if (slot < 0) return;
+  xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
+  if (slot >= 0 && slot < (int)g_presets.size()) {
+    g_presets.erase(g_presets.begin() + slot);
+    for (size_t i = 0; i < g_presets.size(); i++) {
+      g_presets[i].id = i + 1;
+    }
+    xSemaphoreGive(g_presets_mutex);
+    storage_save_presets();
+  } else {
+    xSemaphoreGive(g_presets_mutex);
+  }
+  screen_programs_mark_dirty();
+}
+
+static void delete_preset_prompt_cb(lv_event_t* e) {
+  (void)e;
+  char buf[64];
+  snprintf(buf, sizeof(buf), "Delete \"%s\"?", editPreset.name);
+  screen_confirm_create(buf, "This action cannot be undone.", delete_preset_from_edit_do, nullptr,
+                        SCREEN_PROGRAMS);
 }
 
 static void save_preset_cb(lv_event_t* e) {
@@ -287,8 +313,7 @@ static void save_preset_cb(lv_event_t* e) {
     if (g_presets.size() >= MAX_PRESETS) {
       xSemaphoreGive(g_presets_mutex);
       LOG_W("Preset list full (%d/%d)", (int)g_presets.size(), MAX_PRESETS);
-      screen_confirm_create("FULL", "Maximum 16 programs reached.", nullptr, nullptr);
-      screens_show(SCREEN_CONFIRM);
+      screen_confirm_create("FULL", "Maximum 16 programs reached.", nullptr, nullptr, SCREEN_NONE);
       return;
     }
     editPreset.id = g_presets.size() + 1;
@@ -315,6 +340,7 @@ void screen_program_edit_create(int slot) {
   lv_obj_t* screen = screenRoots[SCREEN_PROGRAM_EDIT];
   rpmBarObj = nullptr;
   lv_obj_clean(screen);
+  lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
   for (int j = 0; j < 4; j++) {
     modeBtns[j] = nullptr;
@@ -362,7 +388,7 @@ void screen_program_edit_create(int slot) {
   xSemaphoreGive(g_presets_mutex);
 
   lv_obj_t* header = lv_obj_create(screen);
-  lv_obj_set_size(header, SCREEN_W, 32);
+  lv_obj_set_size(header, SCREEN_W, HEADER_H);
   lv_obj_set_pos(header, 0, 0);
   lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
   lv_obj_set_style_pad_all(header, 0, 0);
@@ -379,31 +405,45 @@ void screen_program_edit_create(int slot) {
   } else {
     lv_label_set_text(title, "NEW PROGRAM");
   }
-  lv_obj_set_style_text_font(title, FONT_NORMAL, 0);
+  lv_obj_set_style_text_font(title, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(title, COL_ACCENT, 0);
-  lv_obj_set_pos(title, 12, 7);
+  lv_obj_set_pos(title, 12, 11);
 
-  // ── Separator line at y=32 ──
+  lv_obj_t* subHdr = lv_label_create(header);
+  lv_label_set_text(subHdr, "PRESET EDIT");
+  lv_obj_set_style_text_font(subHdr, FONT_NORMAL, 0);
+  lv_obj_set_style_text_color(subHdr, COL_TEXT_DIM, 0);
+  lv_obj_set_width(subHdr, 200);
+  lv_obj_set_style_text_align(subHdr, LV_TEXT_ALIGN_RIGHT, 0);
+  lv_obj_set_pos(subHdr, SCREEN_W - 12 - 200, 12);
+
+  // ── Separator line under header ──
   lv_obj_t* line1 = lv_obj_create(screen);
   lv_obj_set_size(line1, SCREEN_W, 1);
-  lv_obj_set_pos(line1, 0, 32);
+  lv_obj_set_pos(line1, 0, HEADER_H);
   lv_obj_set_style_bg_color(line1, COL_BORDER, 0);
   lv_obj_set_style_pad_all(line1, 0, 0);
   lv_obj_set_style_border_width(line1, 0, 0);
   lv_obj_set_style_radius(line1, 0, 0);
   lv_obj_remove_flag(line1, LV_OBJ_FLAG_SCROLLABLE);
 
+  ui_add_post_header_accent(screen);
+
   // ── NAME label (SVG: y=48, "NAME" in #4A4A4A) ──
+  ui_create_post_card(screen, 16, 48, 768, 66);
+  ui_create_post_card(screen, 16, 118, 768, 74);
+  ui_create_post_card(screen, 16, 198, 768, 82);
+
   lv_obj_t* nameLabel = lv_label_create(screen);
   lv_label_set_text(nameLabel, "NAME");
   lv_obj_set_style_text_font(nameLabel, FONT_TINY, 0);
   lv_obj_set_style_text_color(nameLabel, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(nameLabel, 20, 44);
+  lv_obj_set_pos(nameLabel, 20, 50);
 
   // ── NAME input (SVG: 20,64,760,36, fill=#0A0A0A, stroke=#333) ──
   nameInput = lv_textarea_create(screen);
   lv_obj_set_size(nameInput, 760, 36);
-  lv_obj_set_pos(nameInput, 20, 64);
+  lv_obj_set_pos(nameInput, 20, 70);
   lv_textarea_set_placeholder_text(nameInput, "Enter name...");
   lv_textarea_set_max_length(nameInput, 31);
   lv_textarea_set_one_line(nameInput, true);
@@ -422,7 +462,7 @@ void screen_program_edit_create(int slot) {
   lv_label_set_text(modeLabel, "MODE - tap to add/remove | thick border = RUN");
   lv_obj_set_style_text_font(modeLabel, FONT_TINY, 0);
   lv_obj_set_style_text_color(modeLabel, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(modeLabel, 20, 112);
+  lv_obj_set_pos(modeLabel, 20, 118);
   lv_obj_set_width(modeLabel, 760);
   lv_label_set_long_mode(modeLabel, LV_LABEL_LONG_MODE_WRAP);
 
@@ -437,7 +477,7 @@ void screen_program_edit_create(int slot) {
   };
   const int modeCount = (int)(sizeof(modes) / sizeof(modes[0]));
 
-  const int modeY = 142;
+  const int modeY = 148;
   const int modeBtnH = 38;
   const int modeGap = 6;
   const int modeStartX = 20;
@@ -469,7 +509,7 @@ void screen_program_edit_create(int slot) {
   lv_label_set_text(rpmSectionLabel, "RPM");
   lv_obj_set_style_text_font(rpmSectionLabel, FONT_TINY, 0);
   lv_obj_set_style_text_color(rpmSectionLabel, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(rpmSectionLabel, 20, 192);
+  lv_obj_set_pos(rpmSectionLabel, 20, 198);
 
   // ── RPM row (SVG: y=204, large value + progress bar + -/+ buttons) ──
   // RPM value display (SVG: large "2.0" in #FF9500 bold)
@@ -477,12 +517,12 @@ void screen_program_edit_create(int slot) {
   lv_label_set_text_fmt(rpmLabel, "%.1f", editPreset.rpm);
   lv_obj_set_style_text_font(rpmLabel, FONT_HUGE, 0);
   lv_obj_set_style_text_color(rpmLabel, COL_ACCENT, 0);
-  lv_obj_set_pos(rpmLabel, 20, 210);
+  lv_obj_set_pos(rpmLabel, 20, 216);
 
   // RPM progress bar (SVG: 20,252,760,3, track #111, fill #FF9500)
   rpmBarObj = lv_bar_create(screen);
   lv_obj_set_size(rpmBarObj, 560, 3);
-  lv_obj_set_pos(rpmBarObj, 20, 258);
+  lv_obj_set_pos(rpmBarObj, 20, 264);
   lv_obj_set_style_bg_color(rpmBarObj, COL_GAUGE_BG, 0);
   lv_obj_set_style_border_width(rpmBarObj, 0, 0);
   lv_obj_set_style_radius(rpmBarObj, 1, 0);
@@ -510,7 +550,7 @@ void screen_program_edit_create(int slot) {
     lv_label_set_text(tick, rpmTicks[i]);
     lv_obj_set_style_text_font(tick, FONT_TINY, 0);
     lv_obj_set_style_text_color(tick, COL_TEXT_VDIM, 0);
-    lv_obj_set_pos(tick, tickX[i], 262);
+    lv_obj_set_pos(tick, tickX[i], 268);
     lv_label_set_long_mode(tick, LV_LABEL_LONG_MODE_CLIP);
     lv_obj_set_size(tick, tickW, 16);
     lv_obj_set_style_text_align(tick, (i == 3) ? LV_TEXT_ALIGN_RIGHT : LV_TEXT_ALIGN_LEFT, 0);
@@ -519,42 +559,32 @@ void screen_program_edit_create(int slot) {
   // RPM -/+ buttons (SVG: right side of RPM section)
   lv_obj_t* rpmMinusBtn = lv_button_create(screen);
   lv_obj_set_size(rpmMinusBtn, 80, 42);
-  lv_obj_set_pos(rpmMinusBtn, 620, 210);
-  lv_obj_set_style_bg_color(rpmMinusBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(rpmMinusBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(rpmMinusBtn, 1, 0);
-  lv_obj_set_style_border_color(rpmMinusBtn, COL_BORDER, 0);
-  lv_obj_set_style_shadow_width(rpmMinusBtn, 0, 0);
-  lv_obj_set_style_pad_all(rpmMinusBtn, 0, 0);
+  lv_obj_set_pos(rpmMinusBtn, 620, 216);
+  ui_btn_style_post(rpmMinusBtn, UI_BTN_NORMAL);
   lv_obj_add_event_cb(rpmMinusBtn, rpm_minus_cb, LV_EVENT_CLICKED, (void*)(intptr_t)-1);
 
   lv_obj_t* minusLabel = lv_label_create(rpmMinusBtn);
   lv_label_set_text(minusLabel, "- 0.1");
   lv_obj_set_style_text_font(minusLabel, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(minusLabel, COL_TEXT, 0);
+  lv_obj_set_style_text_color(minusLabel, ui_btn_label_color_post(UI_BTN_NORMAL), 0);
   lv_obj_center(minusLabel);
 
   lv_obj_t* rpmPlusBtn = lv_button_create(screen);
   lv_obj_set_size(rpmPlusBtn, 80, 42);
-  lv_obj_set_pos(rpmPlusBtn, 704, 210);
-  lv_obj_set_style_bg_color(rpmPlusBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(rpmPlusBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(rpmPlusBtn, 1, 0);
-  lv_obj_set_style_border_color(rpmPlusBtn, COL_BORDER, 0);
-  lv_obj_set_style_shadow_width(rpmPlusBtn, 0, 0);
-  lv_obj_set_style_pad_all(rpmPlusBtn, 0, 0);
+  lv_obj_set_pos(rpmPlusBtn, 704, 216);
+  ui_btn_style_post(rpmPlusBtn, UI_BTN_ACCENT);
   lv_obj_add_event_cb(rpmPlusBtn, rpm_minus_cb, LV_EVENT_CLICKED, (void*)(intptr_t)1);
 
   lv_obj_t* plusLabel = lv_label_create(rpmPlusBtn);
   lv_label_set_text(plusLabel, "+ 0.1");
   lv_obj_set_style_text_font(plusLabel, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(plusLabel, COL_TEXT, 0);
+  lv_obj_set_style_text_color(plusLabel, ui_btn_label_color_post(UI_BTN_ACCENT), 0);
   lv_obj_center(plusLabel);
 
   // ── Separator at y=270 ──
   lv_obj_t* line2 = lv_obj_create(screen);
   lv_obj_set_size(line2, SCREEN_W, 1);
-  lv_obj_set_pos(line2, 0, 276);
+  lv_obj_set_pos(line2, 0, 282);
   lv_obj_set_style_bg_color(line2, COL_SEPARATOR, 0);
   lv_obj_set_style_pad_all(line2, 0, 0);
   lv_obj_set_style_border_width(line2, 0, 0);
@@ -564,18 +594,13 @@ void screen_program_edit_create(int slot) {
   // ── Mode-specific settings link button (SVG: y=280, 760x52) ──
   modeSettingsBtn = lv_button_create(screen);
   lv_obj_set_size(modeSettingsBtn, 760, 52);
-  lv_obj_set_pos(modeSettingsBtn, 20, 286);
-  lv_obj_set_style_bg_color(modeSettingsBtn, COL_BTN_BG, 0);
-  lv_obj_set_style_radius(modeSettingsBtn, RADIUS_BTN, 0);
-  lv_obj_set_style_border_width(modeSettingsBtn, 1, 0);
-  lv_obj_set_style_border_color(modeSettingsBtn, COL_BORDER, 0);
-  lv_obj_set_style_shadow_width(modeSettingsBtn, 0, 0);
-  lv_obj_set_style_pad_all(modeSettingsBtn, 0, 0);
+  lv_obj_set_pos(modeSettingsBtn, 20, 292);
+  ui_btn_style_post(modeSettingsBtn, UI_BTN_NORMAL);
   lv_obj_add_event_cb(modeSettingsBtn, mode_settings_cb, LV_EVENT_CLICKED, nullptr);
 
   lv_obj_t* settingsLabel = lv_label_create(modeSettingsBtn);
   lv_obj_set_style_text_font(settingsLabel, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(settingsLabel, COL_TEXT, 0);
+  lv_obj_set_style_text_color(settingsLabel, ui_btn_label_color_post(UI_BTN_NORMAL), 0);
   lv_obj_set_pos(settingsLabel, 12, 8);
   lv_label_set_long_mode(settingsLabel, LV_LABEL_LONG_MODE_DOTS);
   lv_obj_set_size(settingsLabel, 736, 36);
@@ -583,10 +608,17 @@ void screen_program_edit_create(int slot) {
   // Set initial text
   update_mode_settings_text();
 
-  ui_create_separator_line(screen, 0, 348, SCREEN_W, COL_SEPARATOR);
+  ui_create_separator_line(screen, 0, 354, SCREEN_W, COL_SEPARATOR);
 
-  ui_create_btn(screen, 120, 400, 260, 52, "CANCEL", FONT_NORMAL, UI_BTN_NORMAL, cancel_cb, nullptr);
-  ui_create_btn(screen, 420, 400, 260, 52, "SAVE", FONT_NORMAL, UI_BTN_ACCENT, save_preset_cb, nullptr);
+  if (slot >= 0) {
+    ui_create_btn(screen, 20, 406, 168, 52, "DELETE", FONT_NORMAL, UI_BTN_DANGER, delete_preset_prompt_cb,
+                  nullptr);
+    ui_create_btn(screen, 204, 406, 186, 52, "CANCEL", FONT_NORMAL, UI_BTN_NORMAL, cancel_cb, nullptr);
+    ui_create_btn(screen, 406, 406, 374, 52, "SAVE", FONT_NORMAL, UI_BTN_ACCENT, save_preset_cb, nullptr);
+  } else {
+    ui_create_btn(screen, 120, 406, 260, 52, "CANCEL", FONT_NORMAL, UI_BTN_NORMAL, cancel_cb, nullptr);
+    ui_create_btn(screen, 420, 406, 260, 52, "SAVE", FONT_NORMAL, UI_BTN_ACCENT, save_preset_cb, nullptr);
+  }
 
   LOG_I("Screen program edit: v2.0 layout created slot %d", slot);
 }

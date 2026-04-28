@@ -1249,7 +1249,8 @@ void test_screen_rebuild_non_editor() {
   TEST_ASSERT_FALSE(screen_needs_rebuild_testable(3));   // SCREEN_PULSE
   TEST_ASSERT_FALSE(screen_needs_rebuild_testable(9));   // SCREEN_SETTINGS
   TEST_ASSERT_FALSE(screen_needs_rebuild_testable(11));  // SCREEN_BOOT
-  TEST_ASSERT_FALSE(screen_needs_rebuild_testable(22));  // SCREEN_COUNT
+  TEST_ASSERT_FALSE(screen_needs_rebuild_testable(22));  // SCREEN_RUN_MODES
+  TEST_ASSERT_FALSE(screen_needs_rebuild_testable(23));  // SCREEN_COUNT
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

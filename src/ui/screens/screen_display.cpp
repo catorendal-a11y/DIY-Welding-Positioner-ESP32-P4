@@ -128,9 +128,10 @@ void screen_display_create() {
     }
   }
 
-  ui_create_settings_header(screen, "DISPLAY SETTINGS");
+  ui_create_settings_header(screen, "DISPLAY SETTINGS", "", COL_TEXT_DIM);
 
-  int y = 40;
+  int y = 48;
+  ui_create_post_row(screen, PX, y, CONTENT_W, SET_ROW_H);
 
   lv_obj_t* brightTitleLbl = lv_label_create(screen);
   lv_label_set_text(brightTitleLbl, "BRIGHTNESS");
@@ -180,13 +181,7 @@ void screen_display_create() {
   lv_obj_t* dimRow = lv_obj_create(screen);
   lv_obj_set_size(dimRow, CONTENT_W, SET_ROW_H);
   lv_obj_set_pos(dimRow, PX, y);
-  lv_obj_set_style_bg_color(dimRow, COL_BG_ROW, 0);
-  lv_obj_set_style_border_color(dimRow, COL_BORDER_ROW, 0);
-  lv_obj_set_style_border_width(dimRow, 1, 0);
-  lv_obj_set_style_radius(dimRow, RADIUS_ROW, 0);
-  lv_obj_set_style_shadow_width(dimRow, 0, 0);
-  lv_obj_set_style_pad_all(dimRow, 0, 0);
-  lv_obj_remove_flag(dimRow, LV_OBJ_FLAG_SCROLLABLE);
+  ui_style_post_row(dimRow);
   lv_obj_remove_flag(dimRow, LV_OBJ_FLAG_CLICKABLE);
 
   lv_obj_t* dimTitleLbl = lv_label_create(dimRow);
@@ -204,11 +199,7 @@ void screen_display_create() {
   lv_obj_t* themeRow = lv_obj_create(screen);
   lv_obj_set_size(themeRow, CONTENT_W, SET_ROW_H);
   lv_obj_set_pos(themeRow, PX, y);
-  lv_obj_set_style_bg_color(themeRow, COL_BG, 0);
-  lv_obj_set_style_border_width(themeRow, 0, 0);
-  lv_obj_set_style_radius(themeRow, 0, 0);
-  lv_obj_set_style_pad_all(themeRow, 0, 0);
-  lv_obj_remove_flag(themeRow, LV_OBJ_FLAG_SCROLLABLE);
+  ui_style_post_row(themeRow);
   lv_obj_remove_flag(themeRow, LV_OBJ_FLAG_CLICKABLE);
 
   lv_obj_t* themeTitleLbl = lv_label_create(themeRow);
@@ -230,11 +221,7 @@ void screen_display_create() {
   lv_obj_t* infoBar = lv_obj_create(screen);
   lv_obj_set_size(infoBar, CONTENT_W, 36);
   lv_obj_set_pos(infoBar, PX, y);
-  lv_obj_set_style_bg_color(infoBar, COL_BG_DIM, 0);
-  lv_obj_set_style_border_width(infoBar, 0, 0);
-  lv_obj_set_style_radius(infoBar, 0, 0);
-  lv_obj_set_style_pad_all(infoBar, 0, 0);
-  lv_obj_remove_flag(infoBar, LV_OBJ_FLAG_SCROLLABLE);
+  ui_style_post_row(infoBar);
   lv_obj_remove_flag(infoBar, LV_OBJ_FLAG_CLICKABLE);
 
   infoLabel = lv_label_create(infoBar);

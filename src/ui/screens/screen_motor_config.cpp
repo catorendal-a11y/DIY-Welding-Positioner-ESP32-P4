@@ -13,17 +13,20 @@
 #include <atomic>
 
 static const MicrostepSetting microOptions[] = {MICROSTEP_4, MICROSTEP_8, MICROSTEP_16, MICROSTEP_32};
-// NEMA 200 full steps/rev x microstep = driver PULSE/REV (match DM542 DIP table)
-static const char* microStrings[] = {"800", "1600", "3200", "6400"};
+// UI: steps per motor revolution (200 full steps * microstep factor); matches microstep_get_steps_per_rev()
+static const char* microSprLabels[] = {"800", "1600", "3200", "6400"};
 static constexpr int kMicroOptionCount = sizeof(microOptions) / sizeof(microOptions[0]);
 static int selectedMicro = 0;
 static lv_obj_t* microBtns[kMicroOptionCount] = {nullptr};
 static lv_obj_t* microLabels[kMicroOptionCount] = {nullptr};
-static lv_obj_t* accelSlider = nullptr;
+static lv_obj_t* microSummaryLbl = nullptr;
 static lv_obj_t* accelValueLabel = nullptr;
-static lv_obj_t* maxRpmSlider = nullptr;
+static lv_obj_t* accelSlider = nullptr;
 static lv_obj_t* maxRpmValueLabel = nullptr;
+static lv_obj_t* maxRpmSlider = nullptr;
 static lv_obj_t* rpmRangeVal = nullptr;
+static int motorAccelUi = 10000;
+static int motorMaxRpmMilliUi = 3000;
 
 // Max RPM UI: 1..3000 = 0.001 .. 3.000 RPM (matches MIN_RPM / MAX_RPM)
 static constexpr int kMaxRpmMilliMin = 1;
@@ -33,29 +36,42 @@ static constexpr int kMaxRpmMilliMax = 3000;
 static constexpr int kAccelMin = 1000;
 static constexpr int kAccelMax = 30000;
 
+static const char* accel_bucket_name(int val) {
+  if (val < kAccelMin) val = kAccelMin;
+  if (val > kAccelMax) val = kAccelMax;
+  const int span = kAccelMax - kAccelMin;
+  const int t1 = kAccelMin + span / 3;
+  const int t2 = kAccelMin + (span * 2) / 3;
+  if (val < t1) return "LOW";
+  if (val < t2) return "NORMAL";
+  return "HIGH";
+}
+
 static void motor_config_accel_sync_ui(int val) {
   if (val < kAccelMin) val = kAccelMin;
   if (val > kAccelMax) val = kAccelMax;
-  if (accelSlider && lv_slider_get_value(accelSlider) != val) {
-    lv_slider_set_value(accelSlider, val, LV_ANIM_OFF);
-  }
+  motorAccelUi = val;
   if (accelValueLabel) {
-    char buf[16];
-    snprintf(buf, sizeof(buf), "%d", val);
+    char buf[40];
+    snprintf(buf, sizeof(buf), "%s  %d", accel_bucket_name(val), val);
     lv_label_set_text(accelValueLabel, buf);
+  }
+  if (accelSlider && (int)lv_slider_get_value(accelSlider) != val) {
+    lv_slider_set_value(accelSlider, val, LV_ANIM_OFF);
   }
 }
 
 static void motor_config_max_rpm_sync_ui(int milli) {
   if (milli < kMaxRpmMilliMin) milli = kMaxRpmMilliMin;
   if (milli > kMaxRpmMilliMax) milli = kMaxRpmMilliMax;
-  if (maxRpmSlider && lv_slider_get_value(maxRpmSlider) != milli) {
-    lv_slider_set_value(maxRpmSlider, milli, LV_ANIM_OFF);
-  }
+  motorMaxRpmMilliUi = milli;
   if (maxRpmValueLabel) {
     char buf[20];
     snprintf(buf, sizeof(buf), "%.3f", milli / 1000.0f);
     lv_label_set_text(maxRpmValueLabel, buf);
+  }
+  if (maxRpmSlider && (int)lv_slider_get_value(maxRpmSlider) != milli) {
+    lv_slider_set_value(maxRpmSlider, milli, LV_ANIM_OFF);
   }
   if (rpmRangeVal) {
     char buf[28];
@@ -64,13 +80,6 @@ static void motor_config_max_rpm_sync_ui(int milli) {
   }
 }
 
-static void max_rpm_slider_cb(lv_event_t* e) {
-  (void)e;
-  if (!maxRpmSlider) return;
-  motor_config_max_rpm_sync_ui(lv_slider_get_value(maxRpmSlider));
-}
-
-static lv_obj_t* gearLabel = nullptr;
 static lv_obj_t* saveFeedbackLabel = nullptr;
 static bool invertDir = false;
 static lv_obj_t* invertToggle = nullptr;
@@ -83,6 +92,16 @@ static SystemState lastStatusState = (SystemState)-1;
 
 // motorConfigApplyPending is defined in src/app_state.cpp.
 
+static lv_obj_t* motor_cfg_post_row(lv_obj_t* screen, int x, int y, int w, int h) {
+  lv_obj_t* row = lv_obj_create(screen);
+  lv_obj_set_size(row, w, h);
+  lv_obj_set_pos(row, x, y);
+  ui_style_post_row(row);
+  lv_obj_remove_flag(row, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_remove_flag(row, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+  return row;
+}
+
 static void back_cb(lv_event_t* e) {
   (void)e;
   screens_show(SCREEN_SETTINGS);
@@ -92,31 +111,93 @@ static void micro_btn_cb(lv_event_t* e) {
   int idx = (int)(size_t)lv_event_get_user_data(e);
   selectedMicro = idx;
   for (int i = 0; i < kMicroOptionCount; i++) {
-    lv_obj_set_style_bg_color(microBtns[i], i == idx ? COL_BG_ACTIVE : COL_BTN_BG, 0);
-    lv_obj_set_style_border_color(microBtns[i], i == idx ? COL_ACCENT : COL_BORDER, 0);
-    lv_obj_set_style_border_width(microBtns[i], i == idx ? 2 : 1, 0);
-    lv_obj_set_style_text_color(microLabels[i], i == idx ? COL_ACCENT : COL_TEXT, 0);
+    const UiBtnStyle ms = (i == idx) ? UI_BTN_ACCENT : UI_BTN_NORMAL;
+    ui_btn_style_post(microBtns[i], ms);
+    lv_obj_set_style_text_color(microLabels[i], ui_btn_label_color_post(ms), 0);
   }
+  if (microSummaryLbl) {
+    lv_label_set_text(microSummaryLbl, microSprLabels[idx]);
+  }
+}
+
+static void accel_pm_cb(lv_event_t* e) {
+  const int delta = (int)(intptr_t)lv_event_get_user_data(e);
+  motor_config_accel_sync_ui(motorAccelUi + delta * 500);
+}
+
+static void max_rpm_pm_cb(lv_event_t* e) {
+  const int delta = (int)(intptr_t)lv_event_get_user_data(e);
+  motor_config_max_rpm_sync_ui(motorMaxRpmMilliUi + delta);
+}
+
+static void max_rpm_slider_cb(lv_event_t* e) {
+  (void)e;
+  if (!maxRpmSlider) return;
+  int v = (int)lv_slider_get_value(maxRpmSlider);
+  motor_config_max_rpm_sync_ui(v);
 }
 
 static void accel_slider_cb(lv_event_t* e) {
   (void)e;
-  if (!accelSlider || !accelValueLabel) return;
-  motor_config_accel_sync_ui(lv_slider_get_value(accelSlider));
+  if (!accelSlider) return;
+  int v = (int)lv_slider_get_value(accelSlider);
+  motor_config_accel_sync_ui(v);
+}
+
+// INVERT pill — poster .card when OFF, .run when ON (same semantics as ui_btn NORMAL / ACCENT)
+static void motor_config_apply_invert_pill(bool invertOn) {
+  if (!invertToggle || !invertToggleLbl) return;
+  if (invertOn) {
+    lv_obj_set_style_bg_color(invertToggle, COL_BG_ACTIVE, 0);
+    lv_obj_set_style_border_color(invertToggle, COL_ACCENT, 0);
+    lv_obj_set_style_border_width(invertToggle, 2, 0);
+    lv_obj_set_style_radius(invertToggle, SET_TOGGLE_R, 0);
+    lv_label_set_text(invertToggleLbl, "ON");
+    lv_obj_set_style_text_color(invertToggleLbl, COL_ACCENT, 0);
+  } else {
+    lv_obj_set_style_bg_color(invertToggle, COL_BTN_BG, 0);
+    lv_obj_set_style_border_color(invertToggle, COL_BORDER, 0);
+    lv_obj_set_style_border_width(invertToggle, 1, 0);
+    lv_obj_set_style_radius(invertToggle, SET_TOGGLE_R, 0);
+    lv_label_set_text(invertToggleLbl, "OFF");
+    lv_obj_set_style_text_color(invertToggleLbl, COL_TEXT, 0);
+  }
+  lv_obj_set_style_text_font(invertToggleLbl, FONT_BTN, 0);
+  lv_obj_center(invertToggleLbl);
 }
 
 static void invert_toggle_cb(lv_event_t* e) {
   (void)e;
   invertDir = !invertDir;
-  lv_obj_set_style_bg_color(invertToggle, invertDir ? COL_ACCENT : COL_TOGGLE_OFF, 0);
-  lv_label_set_text(invertToggleLbl, invertDir ? "ON" : "OFF");
+  motor_config_apply_invert_pill(invertDir);
+}
+
+// DIR SW pill — poster ui_screens (.ok when ON: COL_BG_OK + green border; OFF: neutral card)
+static void motor_config_apply_dir_sw_pill(bool on) {
+  if (!idleToggle || !idleToggleLbl) return;
+  if (on) {
+    lv_obj_set_style_bg_color(idleToggle, COL_BG_OK, 0);
+    lv_obj_set_style_border_color(idleToggle, COL_BORDER_OK, 0);
+    lv_obj_set_style_border_width(idleToggle, 1, 0);
+    lv_obj_set_style_radius(idleToggle, SET_TOGGLE_R, 0);
+    lv_label_set_text(idleToggleLbl, "ON");
+    lv_obj_set_style_text_color(idleToggleLbl, COL_GREEN, 0);
+  } else {
+    lv_obj_set_style_bg_color(idleToggle, COL_BTN_BG, 0);
+    lv_obj_set_style_border_color(idleToggle, COL_BORDER, 0);
+    lv_obj_set_style_border_width(idleToggle, 1, 0);
+    lv_obj_set_style_radius(idleToggle, SET_TOGGLE_R, 0);
+    lv_label_set_text(idleToggleLbl, "OFF");
+    lv_obj_set_style_text_color(idleToggleLbl, COL_TEXT, 0);
+  }
+  lv_obj_set_style_text_font(idleToggleLbl, FONT_BTN, 0);
+  lv_obj_center(idleToggleLbl);
 }
 
 static void idle_toggle_cb(lv_event_t* e) {
   (void)e;
   dirSwitchEnabled = !dirSwitchEnabled;
-  lv_obj_set_style_bg_color(idleToggle, dirSwitchEnabled ? COL_GREEN : COL_TOGGLE_OFF, 0);
-  lv_label_set_text(idleToggleLbl, dirSwitchEnabled ? "ON" : "OFF");
+  motor_config_apply_dir_sw_pill(dirSwitchEnabled);
 }
 
 static lv_timer_t* saveNavTimer = nullptr;
@@ -136,16 +217,13 @@ static void save_apply_cb(lv_event_t* e) {
     return;
   }
 
-  int accelVal = lv_slider_get_value(accelSlider);
+  int accelVal = motorAccelUi;
   if (accelVal < kAccelMin) accelVal = kAccelMin;
   if (accelVal > kAccelMax) accelVal = kAccelMax;
-  float maxRpmVal = (float)MAX_RPM;
-  if (maxRpmSlider) {
-    int mi = lv_slider_get_value(maxRpmSlider);
-    if (mi < kMaxRpmMilliMin) mi = kMaxRpmMilliMin;
-    if (mi > kMaxRpmMilliMax) mi = kMaxRpmMilliMax;
-    maxRpmVal = mi / 1000.0f;
-  }
+  int mi = motorMaxRpmMilliUi;
+  if (mi < kMaxRpmMilliMin) mi = kMaxRpmMilliMin;
+  if (mi > kMaxRpmMilliMax) mi = kMaxRpmMilliMax;
+  float maxRpmVal = mi / 1000.0f;
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   g_settings.microstep = microOptions[selectedMicro];
   g_settings.acceleration = (uint32_t)accelVal;
@@ -165,8 +243,6 @@ static void save_apply_cb(lv_event_t* e) {
   lv_timer_set_repeat_count(saveNavTimer, 1);
 }
 
-// Uses shared ui_style_slider() from screens.cpp.
-
 void screen_motor_config_create() {
   lv_obj_t* screen = screenRoots[SCREEN_MOTOR_CONFIG];
   lv_obj_clean(screen);
@@ -176,218 +252,157 @@ void screen_motor_config_create() {
     xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
     dirSwitchEnabled = g_settings.dir_switch_enabled;
     invertDir = g_settings.invert_direction;
+    motorAccelUi = (int)g_settings.acceleration;
+    motorMaxRpmMilliUi = (int)(g_settings.max_rpm * 1000.0f + 0.5f);
     xSemaphoreGive(g_settings_mutex);
   }
+  if (motorAccelUi < kAccelMin) motorAccelUi = kAccelMin;
+  if (motorAccelUi > kAccelMax) motorAccelUi = kAccelMax;
+  if (motorMaxRpmMilliUi < kMaxRpmMilliMin) motorMaxRpmMilliUi = kMaxRpmMilliMin;
+  if (motorMaxRpmMilliUi > kMaxRpmMilliMax) motorMaxRpmMilliUi = kMaxRpmMilliMax;
 
-  const int PX = 16;
-  const int CONTENT_W = SCREEN_W - 2 * PX;
+  ui_create_settings_header(screen, "MOTOR CONFIG", "DM542T", COL_TEXT_DIM);
 
-  ui_create_settings_header(screen, "MOTOR CONFIG");
+  const int ROW_X = 20;
+  const int ROW_W = 760;
+  const int ROW_H = 54;
+  const int ROW_GAP = 8;
+  int y = HEADER_H + 22;
 
-  constexpr int GAP_Y = 5;
-  int y = SET_HEADER_H + GAP_Y;
-
-  lv_obj_t* microRow = lv_obj_create(screen);
-  lv_obj_set_size(microRow, CONTENT_W, 46);
-  lv_obj_set_pos(microRow, PX, y);
-  lv_obj_set_style_bg_color(microRow, COL_BG, 0);
-  lv_obj_set_style_border_width(microRow, 0, 0);
-  lv_obj_set_style_radius(microRow, 0, 0);
-  lv_obj_set_style_pad_all(microRow, 0, 0);
-  lv_obj_remove_flag(microRow, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_remove_flag(microRow, LV_OBJ_FLAG_CLICKABLE);
-
+  lv_obj_t* microRow = motor_cfg_post_row(screen, ROW_X, y, ROW_W, ROW_H);
   lv_obj_t* microTitleLbl = lv_label_create(microRow);
-  lv_label_set_text(microTitleLbl, "PULSE/REV");
-  lv_obj_set_style_text_font(microTitleLbl, FONT_NORMAL, 0);
+  lv_label_set_text(microTitleLbl, "MICROSTEP");
+  lv_obj_set_style_text_font(microTitleLbl, FONT_SMALL, 0);
   lv_obj_set_style_text_color(microTitleLbl, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(microTitleLbl, 0, 0);
-  lv_obj_set_width(microTitleLbl, 118);
-  lv_label_set_long_mode(microTitleLbl, LV_LABEL_LONG_MODE_CLIP);
-  lv_obj_align(microTitleLbl, LV_ALIGN_LEFT_MID, 0, 0);
+  lv_obj_set_pos(microTitleLbl, 22, 18);
+
+  microSummaryLbl = lv_label_create(microRow);
+  lv_obj_set_style_text_font(microSummaryLbl, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_color(microSummaryLbl, COL_TEXT, 0);
+  // Keep left of micro buttons (they start ~344px) so value does not paint under 800/1600
+  lv_obj_set_pos(microSummaryLbl, 200, 16);
+  lv_obj_set_width(microSummaryLbl, 130);
+  lv_label_set_long_mode(microSummaryLbl, LV_LABEL_LONG_MODE_CLIP);
 
   MicrostepSetting currentMicro = microstep_get();
   selectedMicro = 0;
+  const int microBtnW = 96;
+  const int microBtnH = 36;
+  const int microBtnY = (ROW_H - microBtnH) / 2;
+  const int microBtnGap = 8;
+  const int microBtn0X =
+      ROW_W - 8 - kMicroOptionCount * microBtnW - (kMicroOptionCount - 1) * microBtnGap;
   for (int i = 0; i < kMicroOptionCount; i++) {
     if (microOptions[i] == currentMicro) selectedMicro = i;
 
     microBtns[i] = lv_button_create(microRow);
-    lv_obj_set_size(microBtns[i], 108, 36);
-    lv_obj_set_pos(microBtns[i], 124 + i * 116, 5);
-    lv_obj_set_style_radius(microBtns[i], RADIUS_BTN, 0);
-    lv_obj_set_style_shadow_width(microBtns[i], 0, 0);
-    lv_obj_set_style_pad_all(microBtns[i], 0, 0);
+    lv_obj_set_size(microBtns[i], microBtnW, microBtnH);
+    lv_obj_set_pos(microBtns[i], microBtn0X + i * (microBtnW + microBtnGap), microBtnY);
     lv_obj_add_event_cb(microBtns[i], micro_btn_cb, LV_EVENT_CLICKED, (void*)(size_t)i);
 
-    if (i == selectedMicro) {
-      lv_obj_set_style_bg_color(microBtns[i], COL_BG_ACTIVE, 0);
-      lv_obj_set_style_border_color(microBtns[i], COL_ACCENT, 0);
-      lv_obj_set_style_border_width(microBtns[i], 2, 0);
-    } else {
-      lv_obj_set_style_bg_color(microBtns[i], COL_BTN_BG, 0);
-      lv_obj_set_style_border_color(microBtns[i], COL_BORDER, 0);
-      lv_obj_set_style_border_width(microBtns[i], 1, 0);
-    }
+    const UiBtnStyle ms = (i == selectedMicro) ? UI_BTN_ACCENT : UI_BTN_NORMAL;
+    ui_btn_style_post(microBtns[i], ms);
 
     microLabels[i] = lv_label_create(microBtns[i]);
-    lv_label_set_text(microLabels[i], microStrings[i]);
-    lv_obj_set_style_text_font(microLabels[i], FONT_SUBTITLE, 0);
-    lv_obj_set_style_text_color(microLabels[i], i == selectedMicro ? COL_ACCENT : COL_TEXT, 0);
+    lv_label_set_text(microLabels[i], microSprLabels[i]);
+    lv_obj_set_style_text_font(microLabels[i], FONT_NORMAL, 0);
+    lv_obj_set_style_text_color(microLabels[i], ui_btn_label_color_post(ms), 0);
     lv_obj_center(microLabels[i]);
   }
+  lv_label_set_text(microSummaryLbl, microSprLabels[selectedMicro]);
 
-  y += 46 + GAP_Y;
+  y += ROW_H + ROW_GAP;
 
-  lv_obj_t* accelRow = lv_obj_create(screen);
-  lv_obj_set_size(accelRow, CONTENT_W, 72);
-  lv_obj_set_pos(accelRow, PX, y);
-  lv_obj_set_style_bg_color(accelRow, COL_BG, 0);
-  lv_obj_set_style_border_width(accelRow, 0, 0);
-  lv_obj_set_style_radius(accelRow, 0, 0);
-  lv_obj_set_style_pad_all(accelRow, 0, 0);
-  lv_obj_remove_flag(accelRow, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_remove_flag(accelRow, LV_OBJ_FLAG_CLICKABLE);
-
-  lv_obj_t* accelTitleLbl = lv_label_create(accelRow);
-  lv_label_set_text(accelTitleLbl, "ACCELERATION");
-  lv_obj_set_style_text_font(accelTitleLbl, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(accelTitleLbl, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(accelTitleLbl, 8, 4);
-
-  lv_obj_t* accelUnitLbl = lv_label_create(accelRow);
-  lv_label_set_text(accelUnitLbl, "steps/s2");
-  lv_obj_set_style_text_font(accelUnitLbl, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(accelUnitLbl, COL_TEXT_VDIM, 0);
-  lv_obj_set_pos(accelUnitLbl, 8, 22);
-
-  accelValueLabel = lv_label_create(accelRow);
-  lv_obj_set_style_text_font(accelValueLabel, FONT_LARGE, 0);
-  lv_obj_set_style_text_color(accelValueLabel, COL_TEXT_WHITE, 0);
-  lv_obj_align(accelValueLabel, LV_ALIGN_TOP_RIGHT, -8, 8);
-
-  accelSlider = lv_slider_create(accelRow);
-  lv_obj_set_size(accelSlider, CONTENT_W - 16, 26);
-  lv_obj_set_pos(accelSlider, 8, 40);
-  lv_slider_set_range(accelSlider, kAccelMin, kAccelMax);
-  lv_slider_set_value(accelSlider, (int)acceleration_get(), LV_ANIM_OFF);
-  motor_config_accel_sync_ui((int)acceleration_get());
-  ui_style_slider(accelSlider);
-  lv_obj_add_event_cb(accelSlider, accel_slider_cb, LV_EVENT_VALUE_CHANGED, nullptr);
-
-  y += 72 + GAP_Y;
-
-  lv_obj_t* maxRpmRow = lv_obj_create(screen);
-  lv_obj_set_size(maxRpmRow, CONTENT_W, 72);
-  lv_obj_set_pos(maxRpmRow, PX, y);
-  lv_obj_set_style_bg_color(maxRpmRow, COL_BG, 0);
-  lv_obj_set_style_border_width(maxRpmRow, 0, 0);
-  lv_obj_set_style_radius(maxRpmRow, 0, 0);
-  lv_obj_set_style_pad_all(maxRpmRow, 0, 0);
-  lv_obj_remove_flag(maxRpmRow, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_remove_flag(maxRpmRow, LV_OBJ_FLAG_CLICKABLE);
-
+  const int rpmPmColW = BTN_W_PM * 2 + 8 + 8 + 8;
+  const int maxRpmRowH = 72;
+  lv_obj_t* maxRpmRow = motor_cfg_post_row(screen, ROW_X, y, ROW_W, maxRpmRowH);
   lv_obj_t* maxRpmTitleLbl = lv_label_create(maxRpmRow);
   lv_label_set_text(maxRpmTitleLbl, "MAX RPM");
-  lv_obj_set_style_text_font(maxRpmTitleLbl, FONT_NORMAL, 0);
+  lv_obj_set_style_text_font(maxRpmTitleLbl, FONT_SMALL, 0);
   lv_obj_set_style_text_color(maxRpmTitleLbl, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(maxRpmTitleLbl, 8, 4);
-
-  lv_obj_t* maxRpmUnitLbl = lv_label_create(maxRpmRow);
-  lv_label_set_text(maxRpmUnitLbl, "0.001 - 3.0");
-  lv_obj_set_style_text_font(maxRpmUnitLbl, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(maxRpmUnitLbl, COL_TEXT_VDIM, 0);
-  lv_obj_set_pos(maxRpmUnitLbl, 8, 22);
+  lv_obj_set_pos(maxRpmTitleLbl, 22, 12);
 
   maxRpmValueLabel = lv_label_create(maxRpmRow);
-  lv_obj_set_style_text_font(maxRpmValueLabel, FONT_LARGE, 0);
-  lv_obj_set_style_text_color(maxRpmValueLabel, COL_TEXT_WHITE, 0);
-  lv_obj_align(maxRpmValueLabel, LV_ALIGN_TOP_RIGHT, -8, 8);
+  lv_obj_set_style_text_font(maxRpmValueLabel, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_color(maxRpmValueLabel, COL_TEXT, 0);
+  lv_obj_set_pos(maxRpmValueLabel, 500, 10);
 
   maxRpmSlider = lv_slider_create(maxRpmRow);
-  {
-    const int sliderW = CONTENT_W - 16;
-    const int sliderH = 26;
-    lv_obj_set_size(maxRpmSlider, sliderW, sliderH);
-    lv_obj_set_pos(maxRpmSlider, 8, 40);
-    lv_slider_set_range(maxRpmSlider, kMaxRpmMilliMin, kMaxRpmMilliMax);
-    int mi = 1000;
-    {
-      float mx = MAX_RPM;
-      xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-      mx = g_settings.max_rpm;
-      xSemaphoreGive(g_settings_mutex);
-      mi = (int)(mx * 1000.0f + 0.5f);
-    }
-    if (mi < kMaxRpmMilliMin) mi = kMaxRpmMilliMin;
-    if (mi > kMaxRpmMilliMax) mi = kMaxRpmMilliMax;
-    lv_slider_set_value(maxRpmSlider, mi, LV_ANIM_OFF);
-  }
-  ui_style_slider(maxRpmSlider);
+  lv_slider_set_range(maxRpmSlider, kMaxRpmMilliMin, kMaxRpmMilliMax);
+  lv_obj_set_size(maxRpmSlider, ROW_W - 22 - rpmPmColW, SET_SLIDER_H);
+  lv_obj_set_pos(maxRpmSlider, 22, 42);
   lv_obj_add_event_cb(maxRpmSlider, max_rpm_slider_cb, LV_EVENT_VALUE_CHANGED, nullptr);
-  motor_config_max_rpm_sync_ui(lv_slider_get_value(maxRpmSlider));
+  motor_config_max_rpm_sync_ui(motorMaxRpmMilliUi);
 
-  y += 72 + GAP_Y;
+  lv_obj_t* maxRpmMinus = ui_create_pm_btn(maxRpmRow, ROW_W - BTN_W_PM - 8 - BTN_W_PM - 8, 8, "-", FONT_NORMAL,
+                                           UI_BTN_NORMAL, max_rpm_pm_cb, (void*)(intptr_t)-1);
+  lv_obj_t* maxRpmPlus =
+      ui_create_pm_btn(maxRpmRow, ROW_W - BTN_W_PM - 8, 8, "+", FONT_NORMAL, UI_BTN_ACCENT, max_rpm_pm_cb,
+                       (void*)(intptr_t)1);
+  lv_obj_move_foreground(maxRpmMinus);
+  lv_obj_move_foreground(maxRpmPlus);
 
-  lv_obj_t* infoRow = lv_obj_create(screen);
-  lv_obj_set_size(infoRow, CONTENT_W, 40);
-  lv_obj_set_pos(infoRow, PX, y);
-  lv_obj_set_style_bg_color(infoRow, COL_BG_ROW, 0);
-  lv_obj_set_style_border_color(infoRow, COL_BORDER_ROW, 0);
-  lv_obj_set_style_border_width(infoRow, 1, 0);
-  lv_obj_set_style_radius(infoRow, RADIUS_ROW, 0);
-  lv_obj_set_style_shadow_width(infoRow, 0, 0);
-  lv_obj_set_style_pad_all(infoRow, 0, 0);
-  lv_obj_remove_flag(infoRow, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_remove_flag(infoRow, LV_OBJ_FLAG_CLICKABLE);
+  y += maxRpmRowH + ROW_GAP;
 
-  lv_obj_t* gearTitleLbl = lv_label_create(infoRow);
-  lv_label_set_text(gearTitleLbl, "GEAR");
-  lv_obj_set_style_text_font(gearTitleLbl, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(gearTitleLbl, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(gearTitleLbl, 10, 10);
+  const int accelRowH = 72;
+  lv_obj_t* accelRow = motor_cfg_post_row(screen, ROW_X, y, ROW_W, accelRowH);
+  lv_obj_t* accelTitleLbl = lv_label_create(accelRow);
+  lv_label_set_text(accelTitleLbl, "ACCELERATION");
+  lv_obj_set_style_text_font(accelTitleLbl, FONT_SMALL, 0);
+  lv_obj_set_style_text_color(accelTitleLbl, COL_TEXT_DIM, 0);
+  lv_obj_set_pos(accelTitleLbl, 22, 12);
 
-  gearLabel = lv_label_create(infoRow);
-  char gearBuf[20];
-  snprintf(gearBuf, sizeof(gearBuf), "1:%.0f", (double)GEAR_RATIO);
-  lv_label_set_text(gearLabel, gearBuf);
-  lv_obj_set_style_text_font(gearLabel, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(gearLabel, COL_TEXT, 0);
-  lv_obj_set_pos(gearLabel, 64, 8);
+  accelValueLabel = lv_label_create(accelRow);
+  lv_obj_set_style_text_font(accelValueLabel, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_color(accelValueLabel, COL_TEXT, 0);
+  lv_obj_set_pos(accelValueLabel, 360, 10);
+  lv_obj_set_width(accelValueLabel, 260);
+  lv_label_set_long_mode(accelValueLabel, LV_LABEL_LONG_MODE_CLIP);
 
-  lv_obj_t* rpmRangeTitleLbl = lv_label_create(infoRow);
-  lv_label_set_text(rpmRangeTitleLbl, "RPM");
-  lv_obj_set_style_text_font(rpmRangeTitleLbl, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(rpmRangeTitleLbl, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(rpmRangeTitleLbl, 210, 10);
+  accelSlider = lv_slider_create(accelRow);
+  lv_slider_set_range(accelSlider, kAccelMin, kAccelMax);
+  lv_obj_set_size(accelSlider, ROW_W - 22 - rpmPmColW, SET_SLIDER_H);
+  lv_obj_set_pos(accelSlider, 22, 42);
+  lv_obj_add_event_cb(accelSlider, accel_slider_cb, LV_EVENT_VALUE_CHANGED, nullptr);
+  motor_config_accel_sync_ui(motorAccelUi);
 
-  rpmRangeVal = lv_label_create(infoRow);
-  char rpmBuf[28];
-  {
-    float mx = MAX_RPM;
-    xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-    mx = g_settings.max_rpm;
-    xSemaphoreGive(g_settings_mutex);
-    snprintf(rpmBuf, sizeof(rpmBuf), "%.3f - %.3f", (double)MIN_RPM, (double)mx);
-  }
-  lv_label_set_text(rpmRangeVal, rpmBuf);
-  lv_obj_set_style_text_font(rpmRangeVal, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(rpmRangeVal, COL_TEXT, 0);
-  lv_obj_set_pos(rpmRangeVal, 268, 8);
-  lv_obj_set_width(rpmRangeVal, CONTENT_W - 276);
-  lv_label_set_long_mode(rpmRangeVal, LV_LABEL_LONG_MODE_CLIP);
+  lv_obj_t* accelMinus = ui_create_pm_btn(accelRow, ROW_W - BTN_W_PM - 8 - BTN_W_PM - 8, 8, "-", FONT_NORMAL,
+                                          UI_BTN_NORMAL, accel_pm_cb, (void*)(intptr_t)-1);
+  lv_obj_t* accelPlus =
+      ui_create_pm_btn(accelRow, ROW_W - BTN_W_PM - 8, 8, "+", FONT_NORMAL, UI_BTN_ACCENT, accel_pm_cb,
+                       (void*)(intptr_t)1);
+  lv_obj_move_foreground(accelMinus);
+  lv_obj_move_foreground(accelPlus);
 
-  if (maxRpmSlider) motor_config_max_rpm_sync_ui(lv_slider_get_value(maxRpmSlider));
+  y += accelRowH + ROW_GAP;
 
-  y += 40 + GAP_Y;
+  lv_obj_t* warnBar = lv_obj_create(screen);
+  lv_obj_set_size(warnBar, ROW_W, ROW_H);
+  lv_obj_set_pos(warnBar, ROW_X, y);
+  ui_style_post_warn(warnBar);
+  lv_obj_remove_flag(warnBar, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_remove_flag(warnBar, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+
+  lv_obj_t* warnKey = lv_label_create(warnBar);
+  lv_label_set_text(warnKey, "APPLY SAFELY");
+  lv_obj_set_style_text_font(warnKey, FONT_SMALL, 0);
+  lv_obj_set_style_text_color(warnKey, COL_YELLOW, 0);
+  lv_obj_set_pos(warnKey, 22, 18);
+
+  lv_obj_t* warnDetail = lv_label_create(warnBar);
+  lv_label_set_text(warnDetail, "Changes queued for motor task");
+  lv_obj_set_style_text_font(warnDetail, FONT_SMALL, 0);
+  lv_obj_set_style_text_color(warnDetail, COL_TEXT, 0);
+  lv_obj_set_pos(warnDetail, 200, 18);
+  lv_obj_set_width(warnDetail, 540);
+  lv_label_set_long_mode(warnDetail, LV_LABEL_LONG_MODE_CLIP);
+
+  y += ROW_H + ROW_GAP;
 
   lv_obj_t* toggleRow = lv_obj_create(screen);
-  lv_obj_set_size(toggleRow, CONTENT_W, 50);
-  lv_obj_set_pos(toggleRow, PX, y);
-  lv_obj_set_style_bg_color(toggleRow, COL_BG, 0);
-  lv_obj_set_style_border_width(toggleRow, 0, 0);
-  lv_obj_set_style_radius(toggleRow, 0, 0);
-  lv_obj_set_style_pad_all(toggleRow, 0, 0);
-  lv_obj_remove_flag(toggleRow, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_size(toggleRow, ROW_W, 50);
+  lv_obj_set_pos(toggleRow, ROW_X, y);
+  ui_style_post_row(toggleRow);
   lv_obj_remove_flag(toggleRow, LV_OBJ_FLAG_CLICKABLE);
 
   lv_obj_t* invertTitleLbl = lv_label_create(toggleRow);
@@ -400,18 +415,13 @@ void screen_motor_config_create() {
   lv_obj_set_size(invertToggle, SET_TOGGLE_W, SET_TOGGLE_H);
   lv_obj_set_pos(invertToggle, 96, 5);
   lv_obj_set_style_radius(invertToggle, SET_TOGGLE_R, 0);
-  lv_obj_set_style_border_width(invertToggle, 0, 0);
   lv_obj_set_style_pad_all(invertToggle, 0, 0);
   lv_obj_remove_flag(invertToggle, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_add_flag(invertToggle, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_set_style_bg_color(invertToggle, invertDir ? COL_ACCENT : COL_TOGGLE_OFF, 0);
   lv_obj_add_event_cb(invertToggle, invert_toggle_cb, LV_EVENT_CLICKED, nullptr);
 
   invertToggleLbl = lv_label_create(invertToggle);
-  lv_label_set_text(invertToggleLbl, invertDir ? "ON" : "OFF");
-  lv_obj_set_style_text_font(invertToggleLbl, FONT_BTN, 0);
-  lv_obj_set_style_text_color(invertToggleLbl, COL_TEXT_WHITE, 0);
-  lv_obj_center(invertToggleLbl);
+  motor_config_apply_invert_pill(invertDir);
 
   lv_obj_t* idleTitleLbl = lv_label_create(toggleRow);
   lv_label_set_text(idleTitleLbl, "DIR SW");
@@ -427,76 +437,51 @@ void screen_motor_config_create() {
   lv_obj_set_style_pad_all(idleToggle, 0, 0);
   lv_obj_remove_flag(idleToggle, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_add_flag(idleToggle, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_set_style_bg_color(idleToggle, dirSwitchEnabled ? COL_GREEN : COL_TOGGLE_OFF, 0);
   lv_obj_add_event_cb(idleToggle, idle_toggle_cb, LV_EVENT_CLICKED, nullptr);
 
   idleToggleLbl = lv_label_create(idleToggle);
-  lv_label_set_text(idleToggleLbl, dirSwitchEnabled ? "ON" : "OFF");
-  lv_obj_set_style_text_font(idleToggleLbl, FONT_BTN, 0);
-  lv_obj_set_style_text_color(idleToggleLbl, COL_TEXT_WHITE, 0);
-  lv_obj_center(idleToggleLbl);
+  motor_config_apply_dir_sw_pill(dirSwitchEnabled);
 
-  y += 50 + GAP_Y;
-
-  lv_obj_t* warnBar = lv_obj_create(screen);
-  lv_obj_set_size(warnBar, CONTENT_W, 32);
-  lv_obj_set_pos(warnBar, PX, y);
-  lv_obj_set_style_bg_color(warnBar, COL_BG_DANGER, 0);
-  lv_obj_set_style_border_color(warnBar, COL_BORDER_DNG, 0);
-  lv_obj_set_style_border_width(warnBar, 1, 0);
-  lv_obj_set_style_radius(warnBar, RADIUS_BTN, 0);
-  lv_obj_set_style_shadow_width(warnBar, 0, 0);
-  lv_obj_set_style_pad_all(warnBar, 0, 0);
-  lv_obj_remove_flag(warnBar, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_remove_flag(warnBar, LV_OBJ_FLAG_CLICKABLE);
-
-  lv_obj_t* warnLbl = lv_label_create(warnBar);
-  lv_label_set_text(warnLbl, "! Stop motor before microstep change");
-  lv_obj_set_style_text_font(warnLbl, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(warnLbl, COL_RED, 0);
-  lv_obj_align(warnLbl, LV_ALIGN_LEFT_MID, 8, 0);
-
-  y += 32 + GAP_Y;
+  y += 50 + 4;
 
   lv_obj_t* statusRow = lv_obj_create(screen);
-  lv_obj_set_size(statusRow, CONTENT_W, 32);
-  lv_obj_set_pos(statusRow, PX, y);
-  lv_obj_set_style_bg_color(statusRow, COL_BG_DIM, 0);
-  lv_obj_set_style_border_width(statusRow, 0, 0);
-  lv_obj_set_style_radius(statusRow, 0, 0);
-  lv_obj_set_style_pad_all(statusRow, 0, 0);
-  lv_obj_remove_flag(statusRow, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_size(statusRow, ROW_W, 28);
+  lv_obj_set_pos(statusRow, ROW_X, y);
+  ui_style_post_row(statusRow);
   lv_obj_remove_flag(statusRow, LV_OBJ_FLAG_CLICKABLE);
+
+  rpmRangeVal = lv_label_create(statusRow);
+  lv_obj_set_style_text_font(rpmRangeVal, FONT_SMALL, 0);
+  lv_obj_set_style_text_color(rpmRangeVal, COL_TEXT_DIM, 0);
+  lv_obj_set_pos(rpmRangeVal, 8, 6);
+  motor_config_max_rpm_sync_ui(motorMaxRpmMilliUi);
 
   statusLabel = lv_label_create(statusRow);
   lv_label_set_text(statusLabel, "MOTOR: IDLE");
-  lv_obj_set_style_text_font(statusLabel, FONT_NORMAL, 0);
+  lv_obj_set_style_text_font(statusLabel, FONT_SMALL, 0);
   lv_obj_set_style_text_color(statusLabel, COL_TEXT_DIM, 0);
-  lv_obj_align(statusLabel, LV_ALIGN_LEFT_MID, 8, 0);
+  lv_obj_set_pos(statusLabel, 380, 6);
 
   saveFeedbackLabel = lv_label_create(statusRow);
   lv_label_set_text(saveFeedbackLabel, "");
-  lv_obj_set_style_text_font(saveFeedbackLabel, FONT_NORMAL, 0);
+  lv_obj_set_style_text_font(saveFeedbackLabel, FONT_SMALL, 0);
   lv_obj_set_style_text_color(saveFeedbackLabel, COL_GREEN, 0);
   lv_obj_align(saveFeedbackLabel, LV_ALIGN_RIGHT_MID, -8, 0);
 
-  int footerY = SET_FOOTER_Y;
-  int footerH = SET_FOOTER_H;
-  int btnW = 170;
-  int gap = 8;
-
-  ui_create_action_bar(screen, PX, footerY, footerH, gap, btnW, btnW + 80,
-                        "BACK", back_cb, "SAVE & APPLY", UI_BTN_ACCENT, save_apply_cb);
+  const int footerY = 428;
+  const int footerH = 46;
+  ui_create_btn(screen, 20, footerY, 246, footerH, "< BACK", FONT_NORMAL, UI_BTN_NORMAL, back_cb, nullptr);
+  ui_create_btn(screen, 534, footerY, 246, footerH, "SAVE & APPLY", FONT_NORMAL, UI_BTN_ACCENT, save_apply_cb, nullptr);
 }
 
 void screen_motor_config_invalidate_widgets() {
   for (int i = 0; i < kMicroOptionCount; i++) { microBtns[i] = nullptr; microLabels[i] = nullptr; }
-  accelSlider = nullptr;
+  microSummaryLbl = nullptr;
   accelValueLabel = nullptr;
-  maxRpmSlider = nullptr;
   maxRpmValueLabel = nullptr;
+  maxRpmSlider = nullptr;
+  accelSlider = nullptr;
   rpmRangeVal = nullptr;
-  gearLabel = nullptr;
   saveFeedbackLabel = nullptr;
   invertToggle = nullptr;
   invertToggleLbl = nullptr;

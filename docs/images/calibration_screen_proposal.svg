@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480" viewBox="0 0 800 480">
+  <!-- ECC: frontend-design + design-system | Override: .claude/SKILL.md (800x480 ASCII), theme.h CAL_* / COL_* -->
+  <!-- Mirrors src/ui/theme.h CAL_* + screen_calibration.cpp (FW_VERSION in src/config.h). -->
+  <!-- Y math: CAL_WIZ_Y=119, CAL_INFO_Y=263, CAL_ACTION_Y=330, CAL_RESULT_Y=374, CAL_FOOT_Y=432 -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#050607"/>
+      <stop offset="100%" stop-color="#0b0d10"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#101216"/>
+      <stop offset="100%" stop-color="#08090b"/>
+    </linearGradient>
+    <linearGradient id="orangeBar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#FF9500"/>
+      <stop offset="100%" stop-color="#CC7700"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+    <filter id="glowOrange" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <style>
+      .bg { fill:url(#bg); }
+      .panel { fill:#050607; stroke:#25292f; stroke-width:1.4; }
+      .card { fill:url(#card); stroke:#22262d; stroke-width:1.2; }
+      .muted { fill:#666666; font-family:Montserrat, Arial, Helvetica, sans-serif; }
+      .text { fill:#AAAAAA; font-family:Montserrat, Arial, Helvetica, sans-serif; }
+      .orange { fill:#FF9500; font-family:Montserrat, Arial, Helvetica, sans-serif; }
+      .green { fill:#00C853; font-family:Montserrat, Arial, Helvetica, sans-serif; }
+      .red { fill:#FF1744; font-family:Montserrat, Arial, Helvetica, sans-serif; }
+      .btn { fill:#08090b; stroke:#343a42; stroke-width:1.2; }
+      .btn-o { fill:#1A1600; stroke:#FF9500; stroke-width:1.5; }
+      .btn-r { fill:#1A0A0A; stroke:#FF1744; stroke-width:1.5; }
+      .mono { font-family:Consolas, monospace; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="800" height="480"/>
+  <rect x="5" y="5" width="790" height="470" rx="8" class="panel"/>
+
+  <!-- SET_HEADER_H 38, PAD_X 16; right caption WROT + FW_VERSION -->
+  <rect y="0" width="800" height="38" fill="#090909"/>
+  <text x="16" y="25" class="orange" font-size="15" font-weight="700">CALIBRATION</text>
+  <line x1="0" y1="38" x2="800" y2="38" stroke="#25292f"/>
+  <text x="780" y="25" class="muted mono" font-size="10" text-anchor="end">WROT v2.0.6</text>
+
+  <!-- Top: CAL_TOP_Y=53 CAL_TOP_H=60; PM 52x38 @ x=96,160 y=12 in card -->
+  <g filter="url(#softShadow)">
+    <rect x="20" y="53" width="220" height="60" rx="2" class="card"/>
+    <text x="32" y="68" class="muted" font-size="10" font-weight="700">CAL FACTOR</text>
+    <text x="32" y="96" class="text mono" font-size="20">1.0000</text>
+    <rect x="116" y="65" width="52" height="38" rx="2" class="btn"/>
+    <text x="142" y="89" class="muted" font-size="16" text-anchor="middle">-</text>
+    <rect x="180" y="65" width="52" height="38" rx="2" class="btn"/>
+    <text x="206" y="89" class="muted" font-size="16" text-anchor="middle">+</text>
+
+    <rect x="255" y="53" width="220" height="60" rx="2" class="card"/>
+    <text x="267" y="66" class="text" font-size="12" font-weight="600">STEPS/DEG OUT|WP</text>
+    <text x="267" y="84" class="text mono" font-size="11">OUT 960.00</text>
+    <text x="267" y="100" class="text mono" font-size="11">WP 3600.00</text>
+
+    <rect x="490" y="53" width="286" height="60" rx="2" class="card"/>
+    <text x="502" y="66" class="text" font-size="12" font-weight="600">CMD 360 OUT|WP</text>
+    <text x="502" y="84" class="text mono" font-size="11">OUT 345600</text>
+    <text x="502" y="100" class="orange mono" font-size="11">WP 1296000</text>
+  </g>
+
+  <!-- Wizard CAL_WIZ_Y=119 h=138; track CAL_WIZ_TRACK_X=28 w=400; dots abs cx 50,170,290,410 -->
+  <g filter="url(#softShadow)">
+    <rect x="20" y="119" width="456" height="138" rx="2" class="card"/>
+    <text x="34" y="131" class="orange" font-size="14" font-weight="800">WIZARD</text>
+    <text x="34" y="150" class="text" font-size="12">WP OD in KIN. MOVE 360, APPLY. Then verify MOVE + 2nd meas.</text>
+    <rect x="48" y="169" width="400" height="8" rx="3" fill="#1a1e24"/>
+    <rect x="48" y="169" width="130" height="8" rx="3" fill="url(#orangeBar)"/>
+    <circle cx="50" cy="176" r="9" fill="#FF9500" filter="url(#glowOrange)"/>
+    <circle cx="170" cy="176" r="9" fill="#666d76"/>
+    <circle cx="290" cy="176" r="9" fill="#666d76"/>
+    <circle cx="410" cy="176" r="9" fill="#666d76"/>
+    <text x="22" y="201" class="muted" font-size="11">ZERO</text>
+    <text x="132" y="201" class="muted" font-size="11">MOVE 360</text>
+    <text x="242" y="201" class="muted" font-size="11">MEASURE</text>
+    <text x="368" y="201" class="muted" font-size="11">SAVE</text>
+  </g>
+
+  <!-- KIN card same box; layout matches screen_calibration.cpp kin card -->
+  <g filter="url(#softShadow)">
+    <rect x="490" y="119" width="286" height="138" rx="2" class="card"/>
+    <text x="504" y="127" class="orange" font-size="12" font-weight="800">KINEMATICS</text>
+    <text x="504" y="141" class="muted" font-size="9" font-weight="700">GEAR RATIO</text>
+    <text x="504" y="155" class="text mono" font-size="16">108:1</text>
+    <text x="504" y="169" class="muted" font-size="9" font-weight="700">MICROSTEP</text>
+    <text x="504" y="183" class="text mono" font-size="16">3200</text>
+    <text x="504" y="199" class="orange" font-size="9" font-weight="700">MOVE360 WP300 RULL80</text>
+    <text x="504" y="225" class="muted" font-size="9" font-weight="700">MODE</text>
+    <text x="578" y="225" class="orange" font-size="9" font-weight="800">OUTPUT</text>
+  </g>
+
+  <!-- CAL_INFO_Y=263 h=56; field CAL_MEAS_FIELD_* ; APPLY CAL_APPLY_MEAS_H -->
+  <g filter="url(#softShadow)">
+    <rect x="20" y="263" width="456" height="56" rx="2" class="card"/>
+    <text x="34" y="279" class="muted" font-size="9" font-weight="700">MEASURED DEG</text>
+    <rect x="34" y="280" width="216" height="34" rx="2" fill="#050607" stroke="#25292f"/>
+    <text x="142" y="301" class="text mono" font-size="13" text-anchor="middle">---</text>
+    <text x="338" y="293" class="muted" font-size="8" text-anchor="end">tap field</text>
+    <rect x="228" y="273" width="214" height="34" rx="2" class="btn-o"/>
+    <text x="335" y="295" class="orange" font-size="10" font-weight="800" text-anchor="middle">APPLY MEASUREMENT</text>
+
+    <rect x="490" y="263" width="286" height="56" rx="2" class="card"/>
+    <text x="504" y="279" class="muted" font-size="9" font-weight="700">FORMULA</text>
+    <text x="504" y="301" class="text mono" font-size="12">factor = old x 360 / measured</text>
+  </g>
+
+  <!-- CAL_ACTION_Y=330 h=40; MOVE/STOP/JOG per CAL_ACTION_* and CAL_JOG_* -->
+  <g filter="url(#softShadow)">
+    <rect x="29" y="330" width="204" height="40" rx="2" class="btn-o"/>
+    <text x="131" y="356" class="orange" font-size="12" font-weight="800" text-anchor="middle">MOVE 360</text>
+    <rect x="244" y="330" width="210" height="40" rx="2" class="btn-r"/>
+    <text x="349" y="356" class="red" font-size="12" font-weight="800" text-anchor="middle">STOP</text>
+    <rect x="490" y="330" width="144" height="40" rx="2" class="btn"/>
+    <text x="562" y="356" class="text" font-size="11" font-weight="800" text-anchor="middle">JOG -</text>
+    <rect x="648" y="330" width="144" height="40" rx="2" class="btn"/>
+    <text x="720" y="356" class="text" font-size="11" font-weight="800" text-anchor="middle">JOG +</text>
+  </g>
+
+  <!-- CAL_RESULT_Y=374 h=56; neutral post card (STEP 1/5) -->
+  <g filter="url(#softShadow)">
+    <rect x="20" y="374" width="756" height="56" rx="2" class="card"/>
+    <text x="34" y="392" class="orange" font-size="12" font-weight="800">STEP 1/5</text>
+    <text x="34" y="412" class="text" font-size="12">Match WP OD; MOVE 360 per KIN (set OD on Step).</text>
+  </g>
+
+  <!-- CAL_FOOT_Y=432 h=38 -->
+  <g filter="url(#softShadow)">
+    <rect x="20" y="432" width="180" height="38" rx="2" class="btn"/>
+    <text x="110" y="456" class="text" font-size="14" font-weight="700" text-anchor="middle">&lt;  BACK</text>
+    <rect x="220" y="432" width="180" height="38" rx="2" class="btn"/>
+    <text x="310" y="456" class="text" font-size="14" font-weight="700" text-anchor="middle">RESTART</text>
+    <rect x="420" y="432" width="260" height="38" rx="2" class="btn-o"/>
+    <text x="550" y="456" class="orange" font-size="14" font-weight="700" text-anchor="middle">SAVE CALIBRATION</text>
+  </g>
+</svg>

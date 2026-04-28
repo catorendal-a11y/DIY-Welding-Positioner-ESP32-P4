@@ -68,18 +68,18 @@ void lvglTask(void* pvParameters) {
 
   lvgl_lock();
   screens_show(SCREEN_BOOT);
-  screen_boot_update(10, "INITIALIZING DISPLAY");
+  screen_boot_update(10, "DISPLAY + LVGL");
   for (int i = 0; i < 5; i++) {
     lv_timer_handler();
     vTaskDelay(pdMS_TO_TICKS(50));
   }
   lvgl_unlock();
 
-  boot_step(30, "LOADING SETTINGS", 100);
-  boot_step(50, "MOTOR SYSTEM",     100);
-  boot_step(70, "SAFETY SYSTEM",    100);
-  boot_step(90, "SUBSYSTEMS",       100);
-  boot_step(100, "READY",           50);
+  boot_step(30, "TOUCH + STORAGE",    100);
+  boot_step(50, "MOTOR DRIVER CHECK", 100);
+  boot_step(70, "SAFETY INPUTS",      100);
+  boot_step(90, "PEDAL + SPEED INPUT", 100);
+  boot_step(100, "READY HANDOFF",      50);
 
   lvgl_lock();
   screens_show(SCREEN_MAIN);

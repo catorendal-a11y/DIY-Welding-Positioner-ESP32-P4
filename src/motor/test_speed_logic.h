@@ -12,12 +12,15 @@
 //   d_emne         = D_EMNE (0.300)
 //   d_rulle        = D_RULLE (0.080)
 //   steps_per_rev  = microstep_get_steps_per_rev() (e.g. 3200 for 1/16 default)
+// Base: steps_per_gear_output_rev = steps_per_rev * gear_ratio (e.g. 345600 @ 1/16 and 108:1).
+// Workpiece: multiply by (d_emne / d_rulle).
 // ───────────────────────────────────────────────────────────────────────────────
 inline float rpmToStepHz_testable(float rpm_workpiece, float gear_ratio,
                                   float d_emne, float d_rulle,
                                   uint32_t steps_per_rev) {
-  return rpm_workpiece * gear_ratio * (d_emne / d_rulle)
-         * (float)steps_per_rev / 60.0f;
+  const float steps_per_wp_rev =
+      (float)steps_per_rev * gear_ratio * (d_emne / d_rulle);
+  return rpm_workpiece * steps_per_wp_rev / 60.0f;
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -43,8 +46,9 @@ inline float stepHzToRpm_testable(uint32_t hz, float gear_ratio,
 inline long angleToSteps_testable(float degrees, float gear_ratio,
                                   float d_emne, float d_rulle,
                                   uint32_t steps_per_rev, float cal_factor) {
-  float motor_deg = degrees * gear_ratio * (d_emne / d_rulle);
-  long steps = (long)(motor_deg / 360.0f * (float)steps_per_rev);
+  const float steps_per_wp_rev =
+      (float)steps_per_rev * gear_ratio * (d_emne / d_rulle);
+  long steps = (long)((degrees / 360.0f) * steps_per_wp_rev);
   return (long)((float)steps * cal_factor);
 }
 

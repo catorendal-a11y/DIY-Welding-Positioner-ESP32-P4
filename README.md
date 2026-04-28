@@ -16,7 +16,7 @@
 
 <br>
 
-<img src="docs/images/main_screen.svg" width="800" alt="TIG Rotator Controller — Main Screen">
+<img src="docs/images/main_screen.svg?v=post-style-20260427" width="800" alt="TIG Rotator Controller — Main Screen">
 
 <img src="docs/images/ui_screens.svg" width="800" alt="TIG Rotator Controller — All Screens">
 

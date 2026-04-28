@@ -1,88 +1,99 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480">
-  <!-- SCREEN_MAIN: theme.h HEADER_H=38, MAIN_* + screen_main.cpp (mainTop=HEADER_H+16, side 150x64, botY=412) -->
-  <!-- RPM: FONT_HUGE montserrat_40 + MAIN_RPM_VALUE_ZOOM; unit FONT_XL @ MAIN_RPM_TAG_Y (229) -->
+  <!-- MAIN screen: aligned with docs/images/ui_screens_post_style_proposal.svg (thumbnail "2. MAIN") -->
+  <defs>
+    <linearGradient id="hdGrad" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#101010"/>
+      <stop offset="1" stop-color="#090909"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#121212"/>
+      <stop offset="1" stop-color="#0A0A0A"/>
+    </linearGradient>
+    <linearGradient id="thumbHdrAccent" x1="0" y1="0" x2="800" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF9500" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#FF9500" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#FF9500" stop-opacity="0"/>
+    </linearGradient>
+    <pattern id="thumbFineNoise" width="90" height="90" patternUnits="userSpaceOnUse">
+      <circle cx="22" cy="31" r="0.55" fill="#FFFFFF" opacity="0.028"/>
+      <circle cx="71" cy="58" r="0.45" fill="#FFFFFF" opacity="0.022"/>
+      <circle cx="48" cy="78" r="0.35" fill="#FFFFFF" opacity="0.018"/>
+    </pattern>
+    <style>
+      .hd { fill: url(#hdGrad); }
+      .card { fill: url(#cardGrad); stroke: #2E2E2E; stroke-width: 1; }
+      .run { fill: #1A1600; stroke: #FF9500; stroke-width: 1; }
+      .danger { fill: #1A0A0A; stroke: #FF1744; stroke-width: 1.5; }
+      .line { stroke: #2E2E2E; stroke-width: 1; }
+      .spine-soft { stroke: #FF9500; stroke-opacity: 0.14; stroke-width: 1; fill: none; }
+      .font { font-family: Montserrat, Arial, Helvetica, sans-serif; }
+      .accent { fill: #FF9500; }
+      .green { fill: #00C853; }
+      .red { fill: #FF1744; }
+      .txt { fill: #AAAAAA; }
+      .dim { fill: #666666; }
+      .vdim { fill: #555555; }
+    </style>
+  </defs>
 
-  <!-- ==================== BACKGROUND ==================== -->
   <rect width="800" height="480" fill="#050505"/>
+  <rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/>
 
-  <!-- ==================== HEADER BAR ==================== -->
-  <rect x="0" y="0" width="800" height="38" fill="#090909"/>
-  <line x1="0" y1="38" x2="800" y2="38" stroke="#2E2E2E" stroke-width="0.5"/>
-  <text x="16" y="25" fill="#FF9500" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="bold" letter-spacing="1.5">TIG-ROTATOR</text>
-  <text x="160" y="25" fill="#00C853" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="14" font-weight="normal">IDLE</text>
-  <text x="270" y="25" fill="#666666" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="14" font-weight="normal">SRC POT</text>
-  <text x="780" y="25" fill="#00C853" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="14" font-weight="normal" text-anchor="end">READY</text>
+  <rect x="0" y="0" width="800" height="38" class="hd"/>
+  <line x1="0" y1="38" x2="800" y2="38" class="line"/>
+  <line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/>
 
-  <!-- ==================== SEPARATORS (left edge 16+150=166; right stack x=634) ==================== -->
-  <line x1="166" y1="54" x2="166" y2="412" stroke="#1A1A1A" stroke-width="0.5"/>
-  <line x1="634" y1="54" x2="634" y2="412" stroke="#1A1A1A" stroke-width="0.5"/>
-  <line x1="0" y1="412" x2="800" y2="412" stroke="#1A1A1A" stroke-width="0.5"/>
+  <text x="16" y="25" class="font accent" font-size="18" font-weight="700">TIG-ROTATOR</text>
+  <text x="164" y="25" class="font green" font-size="14">IDLE</text>
+  <text x="298" y="25" class="font dim" font-size="14">SRC POT</text>
+  <text x="760" y="25" class="font green" font-size="14" text-anchor="end">READY</text>
 
-  <!-- ==================== LEFT SIDEBAR (leftX=16, mainTop=54, sideH=64, gap=12) ==================== -->
-  <rect x="16" y="54" width="150" height="64" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-  <text x="91" y="92" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">JOG</text>
+  <rect x="16" y="58" width="150" height="58" rx="3" class="card"/>
+  <text x="91" y="94" class="font txt" font-size="16" text-anchor="middle">JOG</text>
+  <rect x="16" y="126" width="150" height="58" rx="3" class="run"/>
+  <text x="91" y="162" class="font accent" font-size="16" text-anchor="middle">CW</text>
+  <rect x="16" y="194" width="150" height="58" rx="3" class="card"/>
+  <text x="91" y="230" class="font txt" font-size="16" text-anchor="middle">PULSE</text>
 
-  <rect x="16" y="130" width="150" height="64" rx="2" fill="#1A1600" stroke="#FF9500" stroke-width="2"/>
-  <text x="91" y="168" fill="#FF9500" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">CW</text>
+  <!-- Quick pulse times: align X with JOG column (16); ON/OFF past spine for air gap -->
+  <rect x="16" y="260" width="44" height="38" rx="3" class="card"/>
+  <text x="38" y="284" class="font txt" font-size="16" text-anchor="middle">-</text>
+  <text x="89" y="286" class="font accent" font-size="18" font-weight="700" text-anchor="middle">0.5s</text>
+  <rect x="118" y="260" width="44" height="38" rx="3" class="run"/>
+  <text x="140" y="284" class="font accent" font-size="16" text-anchor="middle">+</text>
+  <text x="188" y="283" class="font dim" font-size="13">ON</text>
 
-  <rect x="16" y="206" width="150" height="64" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-  <text x="91" y="244" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">PULSE</text>
+  <rect x="16" y="306" width="44" height="38" rx="3" class="card"/>
+  <text x="38" y="330" class="font txt" font-size="16" text-anchor="middle">-</text>
+  <text x="89" y="332" class="font txt" font-size="18" font-weight="700" text-anchor="middle">0.5s</text>
+  <rect x="118" y="306" width="44" height="38" rx="3" class="card"/>
+  <text x="140" y="330" class="font txt" font-size="16" text-anchor="middle">+</text>
+  <text x="188" y="329" class="font dim" font-size="13">OFF</text>
 
-  <!-- ==================== RIGHT SIDEBAR ==================== -->
-  <rect x="634" y="54" width="150" height="64" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-  <text x="709" y="92" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">STEP</text>
+  <rect x="634" y="58" width="150" height="58" rx="3" class="card"/>
+  <text x="709" y="94" class="font txt" font-size="16" text-anchor="middle">STEP</text>
+  <rect x="634" y="126" width="150" height="58" rx="3" class="card"/>
+  <text x="709" y="162" class="font txt" font-size="16" text-anchor="middle">3-2-1</text>
+  <rect x="634" y="194" width="150" height="58" rx="3" class="card"/>
+  <text x="709" y="230" class="font txt" font-size="16" text-anchor="middle">MENU</text>
+  <rect x="634" y="262" width="150" height="58" rx="3" class="card"/>
+  <text x="709" y="298" class="font txt" font-size="16" text-anchor="middle">PEDAL</text>
 
-  <rect x="634" y="130" width="150" height="64" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-  <text x="709" y="168" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">3-2-1</text>
+  <line x1="184" y1="58" x2="184" y2="402" class="spine-soft"/>
 
-  <rect x="634" y="206" width="150" height="64" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-  <text x="709" y="244" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">MENU</text>
-
-  <rect x="634" y="282" width="150" height="64" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-  <text x="709" y="320" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="600" text-anchor="middle">PEDAL</text>
-
-  <!-- ==================== CENTER GAUGE (MAIN_GAUGE_CX/CY/R, track W14, ind W10) ==================== -->
-  <g id="gauge">
-    <!-- Track only: lv_arc bg 135..405, COL_GAUGE_BG #111111, width 14 (outer R ~184) -->
-    <path d="M 269.9 335.1 A 184 184 0 1 1 530.1 335.1"
-          fill="none" stroke="#111111" stroke-width="14" stroke-linecap="round"/>
-
-    <!-- Indicator: COL_ACCENT flat #FF9500, width 10; value 0.50 of 3.0 max ~ 45 deg sweep from 135 deg -->
-    <path d="M 274.1 330.9 A 178 178 0 0 1 222 205"
-          fill="none" stroke="#FF9500" stroke-width="10" stroke-linecap="round"/>
-
-    <!-- RPM digits: montserrat_40 + zoom 332/256 (pivot center, matches lv_obj_set_style_transform_zoom) -->
-    <g transform="translate(400,185) scale(1.296875)">
-      <text x="0" y="0" fill="#FF9500" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="40" font-weight="700" text-anchor="middle" dominant-baseline="central">0.50</text>
-    </g>
-
-    <!-- RPM unit: FONT_XL (24), TOP_MID y=MAIN_RPM_TAG_Y (229) -->
-    <text x="400" y="248" fill="#666666" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="24" font-weight="normal" text-anchor="middle" letter-spacing="2">RPM</text>
+  <!-- Arc geometry matches proposal; translate down so arc clears header -->
+  <g transform="translate(0, 42)">
+    <path d="M 269.9 335.1 A 184 184 0 1 1 530.1 335.1" fill="none" stroke="#1A1A1A" stroke-width="16" stroke-linecap="round"/>
+    <path d="M 269.9 335.1 A 184 184 0 1 1 530.1 335.1" fill="none" stroke="#111111" stroke-width="14" stroke-linecap="round"/>
+    <path d="M 274.1 330.9 A 178 178 0 0 1 222 205" fill="none" stroke="#FF9500" stroke-width="10" stroke-linecap="round"/>
+    <text x="394" y="194" class="font accent" font-size="52" font-weight="700" text-anchor="middle">0.50</text>
+    <text x="394" y="242" class="font dim" font-size="24" text-anchor="middle">RPM</text>
+    <text x="400" y="348" class="font vdim" font-size="12" text-anchor="middle">speed follows potentiometer</text>
   </g>
 
-  <!-- ==================== PULSE CONTROLS (pulseRow1Y=288, pH=44, pBtnW=48) ==================== -->
-  <g id="pulse-controls">
-    <rect x="18" y="288" width="48" height="44" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-    <text x="42" y="316" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="22" font-weight="400" text-anchor="middle">-</text>
-    <text x="91" y="316" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="20" font-weight="normal" text-anchor="middle">0.5s</text>
-    <rect x="116" y="288" width="48" height="44" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-    <text x="140" y="316" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="22" font-weight="400" text-anchor="middle">+</text>
-    <text x="174" y="312" fill="#666666" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="14" font-weight="normal" letter-spacing="0.5">ON</text>
-
-    <rect x="18" y="340" width="48" height="44" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-    <text x="42" y="368" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="22" font-weight="400" text-anchor="middle">-</text>
-    <text x="91" y="368" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="20" font-weight="normal" text-anchor="middle">0.5s</text>
-    <rect x="116" y="340" width="48" height="44" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-    <text x="140" y="368" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="22" font-weight="400" text-anchor="middle">+</text>
-    <text x="174" y="364" fill="#666666" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="14" font-weight="normal" letter-spacing="0.5">OFF</text>
-  </g>
-
-  <!-- ==================== BOTTOM BAR (376x52, gap 16, FONT_SUBTITLE) ==================== -->
-  <g id="bottom-bar">
-    <rect x="16" y="412" width="376" height="52" rx="2" fill="#141414" stroke="#2E2E2E" stroke-width="1"/>
-    <text x="204" y="444" fill="#AAAAAA" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="700" text-anchor="middle" letter-spacing="1">&gt; START</text>
-
-    <rect x="408" y="412" width="376" height="52" rx="2" fill="#1A0A0A" stroke="#FF1744" stroke-width="2"/>
-    <text x="596" y="444" fill="#FF1744" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="16" font-weight="700" text-anchor="middle" letter-spacing="1">X STOP</text>
-  </g>
+  <rect x="16" y="414" width="376" height="50" rx="3" class="card"/>
+  <text x="204" y="446" class="font txt" font-size="16" text-anchor="middle">&gt; START</text>
+  <line x1="400" y1="414" x2="400" y2="464" class="spine-soft"/>
+  <rect x="408" y="414" width="376" height="50" rx="3" class="danger"/>
+  <text x="596" y="446" class="font red" font-size="16" text-anchor="middle">X STOP</text>
 </svg>

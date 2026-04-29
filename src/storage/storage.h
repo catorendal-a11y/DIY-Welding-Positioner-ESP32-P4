@@ -29,6 +29,7 @@ struct SystemSettings {
     bool dir_switch_enabled; // CW/CCW hardware switch (PIN_DIR_SWITCH)
     bool invert_direction;   // Invert CW/CCW direction
     uint8_t accent_color;  // Index into theme palette (0=Orange, 1=Cyan, etc.)
+    uint8_t color_scheme; // 0=dark (POST industrial), 1=light (warm cream HMI ref.)
     uint8_t countdown_seconds; // Countdown before rotation start (1-10, default 3)
     uint8_t stepper_driver;    // STEPPER_DRIVER_STANDARD or STEPPER_DRIVER_DM542T (pulse/dir timing)
     bool pedal_enabled;        // Foot pedal GPIO33 start/stop armed; ADS1115 only adds analog speed

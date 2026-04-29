@@ -15,7 +15,7 @@ std::vector<Preset> g_presets;
 SemaphoreHandle_t g_presets_mutex;
 SemaphoreHandle_t g_settings_mutex;
 SemaphoreHandle_t g_nvs_mutex;
-SystemSettings g_settings = { 7500, 16, MAX_RPM, 1.0f, 150, 60, true, false, 0, 3, STEPPER_DRIVER_DM542T, false, 1 };
+SystemSettings g_settings = { 7500, 16, MAX_RPM, 1.0f, 150, 60, true, false, 0, 0, 3, STEPPER_DRIVER_DM542T, false, 1 };
 // Cross-core atomics (g_dir_switch_cache, g_flashWriting, g_screenRedraw) live in app_state.cpp.
 
 static std::atomic<bool> savePending{false};
@@ -301,6 +301,7 @@ static bool storage_apply_settings_doc(JsonObjectConst doc) {
     g_settings.dir_switch_enabled = doc["dir_switch_enabled"] | true;
     g_settings.invert_direction = doc["invert_direction"] | false;
     g_settings.accent_color = constrain(doc["accent_color"] | 0, (uint8_t)0, (uint8_t)7);
+    g_settings.color_scheme = constrain(doc["color_scheme"] | 0, (uint8_t)0, (uint8_t)1);
     g_settings.countdown_seconds = constrain(doc["countdown_seconds"] | 3, (uint8_t)1, (uint8_t)10);
     // Missing JSON key: keep project default DM542T timing for older NVS blobs.
     g_settings.stepper_driver = constrain(doc["stepper_driver"] | (int)STEPPER_DRIVER_DM542T, 0, 1);
@@ -329,6 +330,7 @@ static bool storage_save_settings_internal() {
     doc["dir_switch_enabled"] = snap.dir_switch_enabled;
     doc["invert_direction"] = snap.invert_direction;
     doc["accent_color"] = snap.accent_color;
+    doc["color_scheme"] = snap.color_scheme;
     doc["countdown_seconds"] = snap.countdown_seconds;
     doc["stepper_driver"] = snap.stepper_driver;
     doc["pedal_enabled"] = snap.pedal_enabled;
@@ -439,7 +441,7 @@ void storage_format() {
     xSemaphoreGive(g_presets_mutex);
 
     xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-    g_settings = SystemSettings{ 7500, 16, MAX_RPM, 1.0f, 150, 60, true, false, 0, 3, STEPPER_DRIVER_DM542T, false, 1 };
+    g_settings = SystemSettings{ 7500, 16, MAX_RPM, 1.0f, 150, 60, true, false, 0, 0, 3, STEPPER_DRIVER_DM542T, false, 1 };
     const bool dirSw = g_settings.dir_switch_enabled;
     xSemaphoreGive(g_settings_mutex);
 

@@ -6,26 +6,93 @@
 #include "lvgl.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
-// BACKGROUND COLORS (from new_ui.svg)
+// NEUTRAL PALETTE (runtime: dark = POST industrial; light = warm cream HMI ref.)
+// Set by theme_sync_colors() from NVS color_scheme (0=dark, 1=light).
 // ───────────────────────────────────────────────────────────────────────────────
-#define COL_BG          lv_color_hex(0x050505)   // SVG: #050505 screen background
-#define COL_BG_HEADER   lv_color_hex(0x090909)   // SVG: #090909 header bar (.hd)
-#define COL_BG_CARD     lv_color_hex(0x0B0B0B)   // POST card background
-#define COL_BG_CARD_ALT lv_color_hex(0x0B0B0B)   // Alt card (even rows in lists)
-#define COL_BG_DIM      lv_color_hex(0x080808)   // SVG: #080808 dim area (.dim)
-#define COL_BG_ROW      lv_color_hex(0x080808)   // POST data rows
-#define COL_BG_EMPTY    lv_color_hex(0x1A1A1A)   // Empty-slot placeholder rows / neutral dark fill
-#define COL_BTN_BG      lv_color_hex(0x0B0B0B)   // POST button/card fill
-// COL_BG_ACTIVE is now dynamic (see g_accent_dim below)
-#define COL_BG_DANGER   lv_color_hex(0x1A0A0A)   // SVG: #1A0A0A danger/stop (.br)
-#define COL_PANEL_BG    lv_color_hex(0x141414)   // Panel background
-#define COL_SEPARATOR   lv_color_hex(0x1A1A1A)   // SVG: separator line color
-#define COL_BG_INPUT    lv_color_hex(0x0A0A0A)   // Input field background
-#define COL_GAUGE_BG    lv_color_hex(0x111111)   // SVG: #111 gauge track
-#define COL_TOGGLE_OFF  lv_color_hex(0x333333)   // Toggle switch "off" background
+extern lv_color_t g_col_bg;
+extern lv_color_t g_col_bg_header;
+extern lv_color_t g_col_bg_card;
+extern lv_color_t g_col_bg_card_alt;
+extern lv_color_t g_col_bg_dim;
+extern lv_color_t g_col_bg_row;
+extern lv_color_t g_col_bg_empty;
+extern lv_color_t g_col_btn_bg;
+extern lv_color_t g_col_bg_danger;
+extern lv_color_t g_col_panel_bg;
+extern lv_color_t g_col_separator;
+extern lv_color_t g_col_bg_input;
+extern lv_color_t g_col_gauge_bg;
+extern lv_color_t g_col_toggle_off;
+extern lv_color_t g_col_bg_ok;
+extern lv_color_t g_col_border_ok;
+extern lv_color_t g_col_bg_warn_panel;
+extern lv_color_t g_col_border_warn;
+extern lv_color_t g_col_warn;
+extern lv_color_t g_col_yellow;
+extern lv_color_t g_col_text;
+extern lv_color_t g_col_text_bright;
+extern lv_color_t g_col_text_white;
+extern lv_color_t g_col_text_dim;
+extern lv_color_t g_col_text_vdim;
+extern lv_color_t g_col_text_title;
+extern lv_color_t g_col_border;
+extern lv_color_t g_col_border_sm;
+extern lv_color_t g_col_border_row;
+extern lv_color_t g_col_border_dng;
+extern lv_color_t g_col_gauge_tick;
+extern lv_color_t g_col_gauge_minor;
+extern lv_color_t g_col_slider_track;
+extern lv_color_t g_col_slider_track2;
+extern lv_color_t g_col_slider_track3;
+extern lv_color_t g_col_slider_border;
+extern lv_color_t g_col_slider_border2;
+extern lv_color_t g_col_knob_border;
+extern lv_color_t g_col_progress_bg;
+extern lv_color_t g_col_protractor_bg;
+
+#define COL_BG            g_col_bg
+#define COL_BG_HEADER     g_col_bg_header
+#define COL_BG_CARD       g_col_bg_card
+#define COL_BG_CARD_ALT   g_col_bg_card_alt
+#define COL_BG_DIM        g_col_bg_dim
+#define COL_BG_ROW        g_col_bg_row
+#define COL_BG_EMPTY      g_col_bg_empty
+#define COL_BTN_BG        g_col_btn_bg
+#define COL_BG_DANGER     g_col_bg_danger
+#define COL_PANEL_BG      g_col_panel_bg
+#define COL_SEPARATOR     g_col_separator
+#define COL_BG_INPUT      g_col_bg_input
+#define COL_GAUGE_BG      g_col_gauge_bg
+#define COL_TOGGLE_OFF    g_col_toggle_off
+#define COL_BG_OK         g_col_bg_ok
+#define COL_BORDER_OK     g_col_border_ok
+#define COL_BG_WARN_PANEL g_col_bg_warn_panel
+#define COL_BORDER_WARN   g_col_border_warn
+#define COL_WARN          g_col_warn
+#define COL_YELLOW        g_col_yellow
+#define COL_TEXT          g_col_text
+#define COL_TEXT_BRIGHT   g_col_text_bright
+#define COL_TEXT_WHITE    g_col_text_white
+#define COL_TEXT_DIM      g_col_text_dim
+#define COL_TEXT_VDIM     g_col_text_vdim
+#define COL_TEXT_TITLE    g_col_text_title
+#define COL_BORDER        g_col_border
+#define COL_BORDER_SM     g_col_border_sm
+#define COL_BORDER_ROW    g_col_border_row
+#define COL_BORDER_DNG    g_col_border_dng
+#define COL_GAUGE_TICK    g_col_gauge_tick
+#define COL_GAUGE_MINOR   g_col_gauge_minor
+#define COL_SLIDER_TRACK    g_col_slider_track
+#define COL_SLIDER_TRACK2   g_col_slider_track2
+#define COL_SLIDER_TRACK3   g_col_slider_track3
+#define COL_SLIDER_BORDER   g_col_slider_border
+#define COL_SLIDER_BORDER2  g_col_slider_border2
+#define COL_KNOB_BORDER     g_col_knob_border
+#define COL_PROGRESS_BG     g_col_progress_bg
+#define COL_PROTRACTOR_BG   g_col_protractor_bg
 
 // ───────────────────────────────────────────────────────────────────────────────
-// DYNAMIC ACCENT COLORS (set at runtime from theme palette)
+// ACCENT (runtime index from accent_color) + fixed semantic greens/reds
 // ───────────────────────────────────────────────────────────────────────────────
 extern lv_color_t g_accent;
 extern lv_color_t g_accent_dim;
@@ -37,65 +104,22 @@ extern lv_color_t g_accent_border;
 #define COL_AMBER       g_accent
 #define COL_GREEN       lv_color_hex(0x00C853)
 #define COL_RED         lv_color_hex(0xFF1744)
-// POST "OK" pill / pass row (proposal .ok)
-#define COL_BG_OK       lv_color_hex(0x062616)
-#define COL_BORDER_OK   lv_color_hex(0x00C853)
-// POST warning panel (proposal .warn) — not the orange accent COL_WARN
-#define COL_BG_WARN_PANEL lv_color_hex(0x241B00)
-#define COL_BORDER_WARN   lv_color_hex(0xFFAA00)
-// Semantic warning colors (NOT tied to accent — kept stable across themes)
-#define COL_WARN        lv_color_hex(0xFF9500)   // Orange: flash usage / driver alarm / active cal step
-#define COL_YELLOW      lv_color_hex(0xFFAA00)   // Amber-yellow: countdown mid-range, transient warnings
 
 void theme_init();
 void theme_set_color(uint8_t idx);
+void theme_set_scheme(uint8_t scheme); // 0=dark, 1=light (warm cream HMI)
 void theme_refresh();
 const char* theme_get_name(uint8_t idx);
 uint8_t theme_get_count();
+const char* theme_get_scheme_name(uint8_t scheme);
+uint8_t theme_get_scheme_count(void);
 
 // ───────────────────────────────────────────────────────────────────────────────
-// TEXT COLORS (from new_ui.svg)
+// BUTTON STYLES — semantic mapping (POST mockups)
 // ───────────────────────────────────────────────────────────────────────────────
-#define COL_TEXT        lv_color_hex(0xAAAAAA)   // SVG: #AAA value text
-#define COL_TEXT_BRIGHT lv_color_hex(0xCCCCCC)   // SVG: #CCC bright text
-#define COL_TEXT_WHITE  lv_color_hex(0xD0D0D0)   // SVG: #D0D0D0 large values
-#define COL_TEXT_DIM    lv_color_hex(0x666666)   // Label text (was #4A4A4A)
-#define COL_TEXT_VDIM   lv_color_hex(0x555555)   // Very dim text (was #333333)
-#define COL_TEXT_TITLE  lv_color_hex(0x777777)   // Title text (was #555555)
-
-// ───────────────────────────────────────────────────────────────────────────────
-// BORDER COLORS (from new_ui.svg)
-// ───────────────────────────────────────────────────────────────────────────────
-#define COL_BORDER      lv_color_hex(0x2E2E2E)   // SVG: #2E2E2E inactive border (.b)
-// COL_BORDER_ACT is now dynamic (see g_accent_border below)
-#define COL_BORDER_SM   lv_color_hex(0x333333)   // SVG: #333 small button border (.sm)
-#define COL_BORDER_ROW  lv_color_hex(0x1E1E1E)   // SVG: #1E1E1E row border
-#define COL_BORDER_DNG  lv_color_hex(0xFF1744)   // SVG: #FF1744 danger border (.br)
-#define COL_GAUGE_TICK  lv_color_hex(0x444444)   // SVG: #444 gauge tick marks
-#define COL_GAUGE_MINOR lv_color_hex(0x2A2A2A)   // SVG: #2A2A2A minor ticks
-
-// ───────────────────────────────────────────────────────────────────────────────
-// SLIDER / BAR COLORS (shared across sliders, bars, progress widgets)
-// ───────────────────────────────────────────────────────────────────────────────
-#define COL_SLIDER_TRACK    lv_color_hex(0x1A1A1A)   // Slider/bar main track
-#define COL_SLIDER_TRACK2   lv_color_hex(0x3A3A3A)   // Lighter track on dark rows
-#define COL_SLIDER_TRACK3   lv_color_hex(0x444444)   // Even lighter track (display brightness)
-#define COL_SLIDER_BORDER   lv_color_hex(0x555555)   // Slider track border
-#define COL_SLIDER_BORDER2  lv_color_hex(0x666666)   // Alt slider track border
-#define COL_KNOB_BORDER     lv_color_hex(0xFFFFFF)   // Slider knob highlight border
-#define COL_PROGRESS_BG     lv_color_hex(0x222222)   // Progress bar / wizard bar background
-#define COL_PROTRACTOR_BG   lv_color_hex(0x0A0A0A)   // Protractor / waveform box background
-
-// ───────────────────────────────────────────────────────────────────────────────
-// BUTTON STYLES (from new_ui.svg)
-// ───────────────────────────────────────────────────────────────────────────────
-// Active: .ba { fill:#1A1600; stroke:#FF9500; stroke-width:2 }
-// Normal: .b  { fill:#141414; stroke:#2E2E2E; stroke-width:1.5 }
-// Danger: .br { fill:#1A0A0A; stroke:#FF1744; stroke-width:2 }
-// Small:  .sm { fill:#141414; stroke:#333;    stroke-width:1.5 }
-#define COL_BTN_NORMAL  COL_BTN_BG              // Normal button fill
-#define COL_BTN_ACTIVE  COL_BG_ACTIVE           // Active button fill
-#define COL_BTN_DANGER  COL_BG_DANGER           // Danger button fill
+#define COL_BTN_NORMAL  COL_BTN_BG
+#define COL_BTN_ACTIVE  COL_BG_ACTIVE
+#define COL_BTN_DANGER  COL_BG_DANGER
 
 // ───────────────────────────────────────────────────────────────────────────────
 // RADIUS CONSTANTS (from new_ui.svg — mostly rx=2 or rx=4)

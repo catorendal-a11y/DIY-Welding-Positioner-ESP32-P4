@@ -13,6 +13,8 @@ static lv_obj_t* brightnessSlider = nullptr;
 static lv_obj_t* brightnessValueLabel = nullptr;
 static lv_obj_t* dimBtn = nullptr;
 static lv_obj_t* dimBtnLabel = nullptr;
+static lv_obj_t* schemeBtn = nullptr;
+static lv_obj_t* schemeBtnLabel = nullptr;
 static lv_obj_t* themeBtn = nullptr;
 static lv_obj_t* themeBtnLabel = nullptr;
 static lv_obj_t* infoLabel = nullptr;
@@ -83,6 +85,20 @@ static void theme_cycle_cb(lv_event_t* e) {
   theme_set_color(next);
   if (themeBtnLabel) {
     lv_label_set_text(themeBtnLabel, theme_get_name(next));
+  }
+  themeRefreshPending.store(true, std::memory_order_release);
+}
+
+static void scheme_cycle_cb(lv_event_t* e) {
+  (void)e;
+  uint8_t cur = 0;
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  cur = g_settings.color_scheme;
+  xSemaphoreGive(g_settings_mutex);
+  const uint8_t next = (uint8_t)((cur + 1) % theme_get_scheme_count());
+  theme_set_scheme(next);
+  if (schemeBtnLabel) {
+    lv_label_set_text(schemeBtnLabel, theme_get_scheme_name(next));
   }
   themeRefreshPending.store(true, std::memory_order_release);
 }
@@ -196,6 +212,29 @@ void screen_display_create() {
 
   y += SET_ROW_H + 10;
 
+  lv_obj_t* schemeRow = lv_obj_create(screen);
+  lv_obj_set_size(schemeRow, CONTENT_W, SET_ROW_H);
+  lv_obj_set_pos(schemeRow, PX, y);
+  ui_style_post_row(schemeRow);
+  lv_obj_remove_flag(schemeRow, LV_OBJ_FLAG_CLICKABLE);
+
+  lv_obj_t* schemeTitleLbl = lv_label_create(schemeRow);
+  lv_label_set_text(schemeTitleLbl, "UI MODE");
+  lv_obj_set_style_text_font(schemeTitleLbl, SET_KEY_FONT, 0);
+  lv_obj_set_style_text_color(schemeTitleLbl, COL_TEXT_DIM, 0);
+  lv_obj_align(schemeTitleLbl, LV_ALIGN_LEFT_MID, 12, 0);
+
+  uint8_t schemeIdxForBtn = 0;
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  schemeIdxForBtn = g_settings.color_scheme;
+  xSemaphoreGive(g_settings_mutex);
+  schemeBtn = ui_create_btn(schemeRow, CONTENT_W - 130, 8, SET_CYCLE_W, SET_CYCLE_H,
+                            theme_get_scheme_name(schemeIdxForBtn), FONT_BTN, UI_BTN_NORMAL,
+                            scheme_cycle_cb, nullptr);
+  schemeBtnLabel = lv_obj_get_child(schemeBtn, 0);
+
+  y += SET_ROW_H + 10;
+
   lv_obj_t* themeRow = lv_obj_create(screen);
   lv_obj_set_size(themeRow, CONTENT_W, SET_ROW_H);
   lv_obj_set_pos(themeRow, PX, y);
@@ -246,6 +285,8 @@ void screen_display_invalidate_widgets() {
   brightnessValueLabel = nullptr;
   dimBtn = nullptr;
   dimBtnLabel = nullptr;
+  schemeBtn = nullptr;
+  schemeBtnLabel = nullptr;
   themeBtn = nullptr;
   themeBtnLabel = nullptr;
   infoLabel = nullptr;

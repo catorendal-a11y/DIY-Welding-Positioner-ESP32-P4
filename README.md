@@ -16,7 +16,7 @@
 
 <br>
 
-<img src="docs/images/main_screen.svg?v=post-style-20260427" width="800" alt="TIG Rotator Controller — Main Screen">
+<img src="https://raw.githubusercontent.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/1e613d4ebf6fad8be8cec4baac7e45d750d8d661/docs/images/main_screen.svg" width="800" alt="TIG Rotator Controller — Main Screen">
 
 <img src="docs/images/ui_screens.svg" width="800" alt="TIG Rotator Controller — All Screens">
 

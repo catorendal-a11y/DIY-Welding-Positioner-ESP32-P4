@@ -1,7 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1560" width="1440" height="1560">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1585" width="1440" height="1585">
   <!-- ECC: frontend-design + design-system | Override: .claude/SKILL.md (800x480 ASCII), theme.h COL_* -->
   <defs>
-    <linearGradient id="pageBgGrad" x1="0" y1="0" x2="720" y2="1560" gradientUnits="userSpaceOnUse">
+    <marker id="flowArrowHead" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" refX="10" refY="5.5" orient="auto">
+      <polygon points="0 0, 11 5.5, 0 11" fill="#FF9500" fill-opacity="0.92"/>
+    </marker>
+    <linearGradient id="pageBgGrad" x1="0" y1="0" x2="720" y2="1585" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#111111"/>
       <stop offset="0.45" stop-color="#070707"/>
       <stop offset="1" stop-color="#020202"/>
@@ -77,17 +80,26 @@
       .label { font-family: Montserrat, Arial, Helvetica, sans-serif; font-size: 11px; fill: #CCCCCC; font-weight: 600; letter-spacing: 0.08em; text-anchor: middle; }
       .font { font-family: Montserrat, Arial, Helvetica, sans-serif; }
       .mono { font-family: Consolas, "Courier New", monospace; }
+      .flow-arrow { stroke: #FF9500; stroke-width: 2.4; stroke-opacity: 0.88; fill: none; marker-end: url(#flowArrowHead); }
     </style>
   </defs>
 
-  <rect width="1440" height="1560" class="page"/>
-  <rect width="1440" height="1560" fill="url(#posterGrain)" opacity="0.85"/>
+  <rect width="1440" height="1585" class="page"/>
+  <rect width="1440" height="1585" fill="url(#posterGrain)" opacity="0.85"/>
   <text x="720" y="30" class="font accent" font-size="22" font-weight="700" text-anchor="middle" letter-spacing="0.06em">TIG ROTATOR · POST INDUSTRIAL UI MAP</text>
   <text x="720" y="52" class="font dim" font-size="12" text-anchor="middle">Design tokens: theme.h COL_* | 800 x 480 landscape | layered thumbnails (grain + hdr accent + spines)</text>
   <line x1="120" y1="62" x2="1320" y2="62" stroke="url(#titleAccentLine)" stroke-width="2"/>
 
+  <!-- PRIMARY FLOW: copy band above thumbs + arrows on vertical center of row 1 -->
+  <text x="720" y="76" class="font accent" font-size="13" font-weight="700" text-anchor="middle" letter-spacing="0.12em">PRIMARY FLOW</text>
+  <text x="720" y="94" class="font dim" font-size="10" text-anchor="middle">One-time startup (BOOT) lands on MAIN; MENU is the hub for run modes, programs, and setup.</text>
+  <path class="flow-arrow" d="M 334 204 L 362 204"/>
+  <path class="flow-arrow" d="M 684 204 L 712 204"/>
+  <text x="348" y="198" class="font accent" font-size="9" font-weight="700" text-anchor="middle">1</text>
+  <text x="698" y="198" class="font accent" font-size="9" font-weight="700" text-anchor="middle">2</text>
+
   <!-- Legend: semantic layers (matches firmware intent, not LVGL code) -->
-  <g transform="translate(24,1396)" filter="url(#legendShadow)">
+  <g transform="translate(24,1424)" filter="url(#legendShadow)">
     <rect x="0" y="0" width="1392" height="112" rx="8" fill="#0D0D0D" stroke="#2E2E2E" stroke-width="1"/>
     <line x1="14" y1="14" x2="14" y2="98" stroke="#FF9500" stroke-width="3" stroke-opacity="0.42"/>
     <text x="24" y="28" class="font accent" font-size="13" font-weight="700">SEMANTIC KEY</text>
@@ -106,7 +118,7 @@
   </g>
 
   <!-- 1 BOOT -->
-  <g transform="translate(20,70)">
+  <g transform="translate(20,108)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/><rect width="800" height="38" class="hd"/><line x1="0" y1="38" x2="800" y2="38" class="line"/><line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/>
@@ -154,7 +166,7 @@
   </g>
 
   <!-- 2 MAIN -->
-  <g transform="translate(370,70)">
+  <g transform="translate(370,108)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/><rect width="800" height="38" class="hd"/><line x1="0" y1="38" x2="800" y2="38" class="line"/><line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/>
@@ -197,7 +209,7 @@
   </g>
 
   <!-- 3 MENU -->
-  <g transform="translate(720,70)">
+  <g transform="translate(720,108)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/><rect width="800" height="38" class="hd"/><line x1="0" y1="38" x2="800" y2="38" class="line"/><line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/><text x="16" y="25" class="font accent" font-size="18" font-weight="700">MENU</text><text x="740" y="25" class="font dim" font-size="12" text-anchor="end">NAVIGATION HUB</text>
@@ -212,7 +224,7 @@
   </g>
 
   <!-- 4 JOG -->
-  <g transform="translate(1070,70)">
+  <g transform="translate(1070,108)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/><rect width="800" height="38" class="hd"/><line x1="0" y1="38" x2="800" y2="38" class="line"/><line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/><text x="16" y="25" class="font accent" font-size="18" font-weight="700">JOG MODE</text><text x="728" y="25" class="font green" font-size="14" text-anchor="end">IDLE</text>
@@ -230,7 +242,7 @@
   </g>
 
   <!-- 5 PULSE -->
-  <g transform="translate(20,290)">
+  <g transform="translate(20,332)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/><rect width="800" height="38" class="hd"/><line x1="0" y1="38" x2="800" y2="38" class="line"/><line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/><text x="16" y="25" class="font accent" font-size="18" font-weight="700">PULSE MODE</text><text x="728" y="25" class="font dim" font-size="14" text-anchor="end">CYCLE SETUP</text>
@@ -246,7 +258,7 @@
   </g>
 
   <!-- 6 STEP (firmware: right stack x=312 w=468; presets 86x44 gap 10; aux RPM row + DIA/RST inside 800px) -->
-  <g transform="translate(370,290)">
+  <g transform="translate(370,332)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/><rect width="800" height="38" class="hd"/><line x1="0" y1="38" x2="800" y2="38" class="line"/><line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/><text x="16" y="25" class="font accent" font-size="18" font-weight="700">STEP MODE</text><text x="728" y="25" class="font dim" font-size="14" text-anchor="end">ANGLE MOVE</text>
@@ -263,7 +275,7 @@
   </g>
 
   <!-- 7 TIMER -->
-  <g transform="translate(720,290)">
+  <g transform="translate(720,332)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/><rect width="800" height="38" class="hd"/><line x1="0" y1="38" x2="800" y2="38" class="line"/><line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/><text x="16" y="25" class="font accent" font-size="18" font-weight="700">COUNTDOWN</text><text x="728" y="25" class="font dim" font-size="14" text-anchor="end">DELAY START</text>
@@ -279,7 +291,7 @@
   </g>
 
   <!-- 8 SETTINGS -->
-  <g transform="translate(1070,290)">
+  <g transform="translate(1070,332)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/><rect width="800" height="38" class="hd"/><line x1="0" y1="38" x2="800" y2="38" class="line"/><line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/><text x="16" y="25" class="font accent" font-size="18" font-weight="700">SETTINGS</text><text x="728" y="25" class="font dim" font-size="14" text-anchor="end">SYSTEM CONFIG</text>
@@ -294,7 +306,7 @@
   </g>
 
   <!-- 9 PROGRAMS -->
-  <g transform="translate(20,510)">
+  <g transform="translate(20,546)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/><rect width="800" height="38" class="hd"/><line x1="0" y1="38" x2="800" y2="38" class="line"/><line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/><text x="16" y="25" class="font accent" font-size="18" font-weight="700">PROGRAMS</text><text x="140" y="25" class="font dim" font-size="14">3/16</text><rect x="650" y="6" width="128" height="26" rx="3" class="run"/><text x="714" y="24" class="font accent" font-size="12" text-anchor="middle">+ NEW</text>
@@ -308,7 +320,7 @@
   </g>
 
   <!-- 10 PROGRAM EDIT -->
-  <g transform="translate(370,510)">
+  <g transform="translate(370,546)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/><rect width="800" height="38" class="hd"/><line x1="0" y1="38" x2="800" y2="38" class="line"/><line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/><text x="16" y="25" class="font accent" font-size="18" font-weight="700">NEW PROGRAM</text><text x="728" y="25" class="font dim" font-size="14" text-anchor="end">PRESET EDIT</text>
@@ -321,7 +333,7 @@
   </g>
 
   <!-- 11 EDIT CONT -->
-  <g transform="translate(720,510)">
+  <g transform="translate(720,546)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/><rect width="800" height="38" class="hd"/><line x1="0" y1="38" x2="800" y2="38" class="line"/><line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/><text x="16" y="25" class="font accent" font-size="18" font-weight="700">EDIT CONTINUOUS</text>
@@ -336,7 +348,7 @@
   </g>
 
   <!-- 12 EDIT PULSE -->
-  <g transform="translate(1070,510)">
+  <g transform="translate(1070,546)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/><rect width="800" height="38" class="hd"/><line x1="0" y1="38" x2="800" y2="38" class="line"/><line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/><text x="16" y="25" class="font accent" font-size="18" font-weight="700">EDIT PULSE</text>
@@ -351,7 +363,7 @@
   </g>
 
   <!-- 13 EDIT STEP -->
-  <g transform="translate(20,730)">
+  <g transform="translate(20,762)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/><rect width="800" height="38" class="hd"/><line x1="0" y1="38" x2="800" y2="38" class="line"/><line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/><text x="16" y="25" class="font accent" font-size="18" font-weight="700">EDIT STEP</text>
@@ -368,7 +380,7 @@
   </g>
 
   <!-- 14 MOTOR CONFIG (spr left summary x=200; MAX RPM + ACCEL sliders; +/- on top; footer y=430) -->
-  <g transform="translate(370,730)">
+  <g transform="translate(370,762)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/><rect width="800" height="38" class="hd"/><line x1="0" y1="38" x2="800" y2="38" class="line"/><line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/><text x="16" y="25" class="font accent" font-size="18" font-weight="700">MOTOR CONFIG</text><text x="728" y="25" class="font dim" font-size="14" text-anchor="end">DM542T</text>
@@ -385,7 +397,7 @@
   </g>
 
   <!-- 15 CONFIRM -->
-  <g transform="translate(720,730)">
+  <g transform="translate(720,762)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/>
@@ -400,7 +412,7 @@
   </g>
 
   <!-- 16 E-STOP -->
-  <g transform="translate(1070,730)">
+  <g transform="translate(1070,762)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/>
@@ -416,7 +428,7 @@
   </g>
 
   <!-- 17 PEDAL -->
-  <g transform="translate(20,950)">
+  <g transform="translate(20,978)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/><rect width="800" height="38" class="hd"/><line x1="0" y1="38" x2="800" y2="38" class="line"/><line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/><text x="16" y="25" class="font accent" font-size="18" font-weight="700">PEDAL SETTINGS</text>
@@ -430,7 +442,7 @@
   </g>
 
   <!-- 18 DIAGNOSTICS -->
-  <g transform="translate(370,950)">
+  <g transform="translate(370,978)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/><rect width="800" height="38" class="hd"/><line x1="0" y1="38" x2="800" y2="38" class="line"/><line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/><text x="16" y="25" class="font accent" font-size="18" font-weight="700">DIAGNOSTICS</text><text x="728" y="25" class="font green" font-size="14" text-anchor="end">LIVE</text>
@@ -452,7 +464,7 @@
   </g>
 
   <!-- 19 SYSINFO -->
-  <g transform="translate(720,950)">
+  <g transform="translate(720,978)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/><rect width="800" height="38" class="hd"/><line x1="0" y1="38" x2="800" y2="38" class="line"/><line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/><text x="16" y="25" class="font accent" font-size="18" font-weight="700">SYSTEM INFO</text>
@@ -467,7 +479,7 @@
   </g>
 
   <!-- 20 DISPLAY -->
-  <g transform="translate(1070,950)">
+  <g transform="translate(1070,978)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/><rect width="800" height="38" class="hd"/><line x1="0" y1="38" x2="800" y2="38" class="line"/><line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/><text x="16" y="25" class="font accent" font-size="18" font-weight="700">DISPLAY SETTINGS</text>
@@ -481,7 +493,7 @@
   </g>
 
   <!-- 21 CALIBRATION — theme.h CAL_* + calibration_screen_proposal.svg -->
-  <g transform="translate(20,1170)">
+  <g transform="translate(20,1194)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/>
@@ -540,7 +552,7 @@
   </g>
 
   <!-- 22 ABOUT -->
-  <g transform="translate(370,1170)">
+  <g transform="translate(370,1194)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/><rect width="800" height="38" class="hd"/><line x1="0" y1="38" x2="800" y2="38" class="line"/><line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/><text x="16" y="25" class="font accent" font-size="18" font-weight="700">ABOUT</text>
@@ -556,7 +568,7 @@
   </g>
 
   <!-- 23 RUN MODES (from MENU; same card scale as MENU hub) -->
-  <g transform="translate(720,1170)">
+  <g transform="translate(720,1194)">
     <rect width="320" height="192" rx="6" class="screen"/>
     <g transform="scale(0.4)">
       <rect width="800" height="480" fill="#050505"/><rect width="800" height="480" fill="url(#thumbFineNoise)" opacity="0.32"/><rect width="800" height="38" class="hd"/><line x1="0" y1="38" x2="800" y2="38" class="line"/><line x1="48" y1="44" x2="752" y2="44" stroke="url(#thumbHdrAccent)" stroke-width="1"/><text x="16" y="25" class="font accent" font-size="18" font-weight="700">RUN MODES</text><text x="728" y="25" class="font dim" font-size="12" text-anchor="end">SELECT MODE</text>
@@ -570,5 +582,5 @@
     <text x="160" y="208" class="label">23. RUN MODES</text>
   </g>
 
-  <text x="720" y="1536" class="font dim" font-size="11" text-anchor="middle">CALIBRATION: layout from theme.h CAL_* (see calibration_screen_proposal.svg). OUT|WP steps/deg, CMD 360, APPLY + verify; PASS when |err| &lt;= 0.5 deg.</text>
+  <text x="720" y="1564" class="font dim" font-size="11" text-anchor="middle">CALIBRATION: layout from theme.h CAL_* (see calibration_screen_proposal.svg). OUT|WP steps/deg, CMD 360, APPLY + verify; PASS when |err| &lt;= 0.5 deg.</text>
 </svg>

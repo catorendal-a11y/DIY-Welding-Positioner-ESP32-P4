@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.8] - 2026-04-29
+
+### Changed
+- **`FW_VERSION`** and bundled documentation, wiki, SVG mockups, and GitHub issue template placeholders updated to **v2.0.8** (canonical successor tag after v2.0.7).
+
 ## [2.0.7] - 2026-04-27
 
 ### Added

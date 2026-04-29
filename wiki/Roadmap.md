@@ -1,6 +1,11 @@
 # Roadmap
 
-## v2.0.7 — Current Release (dark/light UI + header contrast)
+## v2.0.8 — Current Release (version alignment)
+
+### v2.0.8 (2026-04-29)
+- [x] **`FW_VERSION` v2.0.8** — README, STATUS, wiki, implementation docs, UI SVGs, issue templates synced to canonical release tag
+
+## v2.0.7 — dark/light UI + header contrast
 
 ### v2.0.7 (2026-04-27)
 - [x] **Display Settings > UI MODE** — DARK (POST industrial) vs LIGHT (warm cream HMI reference), persisted as NVS `cfg` JSON **`color_scheme`** (`0`/`1`)

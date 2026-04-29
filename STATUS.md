@@ -1,7 +1,7 @@
 # Project Status
 
-**Last Updated:** 2026-04-27
-**Firmware:** v2.0.7
+**Last Updated:** 2026-04-29
+**Firmware:** v2.0.8
 **Build:** SUCCESS (Release & Debug, 0 errors 0 warnings) — re-verify locally after toolchain updates
 
 ---
@@ -58,7 +58,7 @@
 - [x] **Gear ratio 1:108** total (60 x 72/40, NMRV030 + spur)
 
 ### Documentation
-- [x] **README** (v2.0.7, feature list, wiring diagram, BOM; synced with `config.h`)
+- [x] **README** (v2.0.8, feature list, wiring diagram, BOM; synced with `config.h`)
 - [x] **Wiki** (Home, Getting Started, Hardware Setup, Troubleshooting, Roadmap, Architecture)
 - [x] **docs/** (Hardware Setup, Safety System, EMI Mitigation, Implementation, Instructables)
 - [x] **Wiring diagram v2** (SVG, GPIO29 on correct side, clean cable routing)

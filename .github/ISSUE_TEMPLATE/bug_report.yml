@@ -17,7 +17,7 @@ body:
       label: Steps to reproduce
       description: Exact steps, mode, settings, and what was connected.
       placeholder: |
-        1. Boot firmware v2.0.7
+        1. Boot firmware v2.0.8
         2. Open Main
         3. Press START
     validations:
@@ -26,7 +26,7 @@ body:
     id: firmware
     attributes:
       label: Firmware version
-      placeholder: v2.0.7
+      placeholder: v2.0.8
     validations:
       required: true
   - type: textarea

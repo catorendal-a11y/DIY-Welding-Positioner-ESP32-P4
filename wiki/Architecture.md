@@ -138,7 +138,7 @@ All shared flags (`g_estopPending`, `g_estopTriggerMs`, `g_uiResetPending`, `g_w
 | `display.cpp` | MIPI-DSI ST7701S init, GT911 touch, LEDC backlight |
 | `lvgl_hal.cpp` | LVGL display driver, flush callback, dim control |
 | `screens.cpp` | Screen registry, lazy creation, show/hide management |
-| `theme.h` | Color palette, font definitions, layout constants (**`MAIN_GAUGE_*`**, **`MAIN_RPM_*`**, **`JOG_RPM_*`**, settings `SET_*`, etc.) |
+| `theme.h` / `theme.cpp` | Color palette: runtime **`g_col_*`** from **`NEUT_DARK`/`NEUT_LIGHT`** via `theme_sync_colors()` (`color_scheme` in settings); **`COL_HDR_MUTED`** for header secondary labels; fonts; layout constants (**`MAIN_GAUGE_*`**, **`MAIN_RPM_*`**, **`JOG_RPM_*`**, settings `SET_*`, etc.) |
 | `screens/` | `screen_*.cpp` — 21 active `ScreenId` roots + ESTOP overlay module |
 
 **v2.0.4 layout notes:** Main screen semicircular RPM gauge and stacked RPM labels are driven from `theme.h` constants; jog RPM row and right-aligned +/- use **`JOG_RPM_*`**. Main screen has **no** RPM +/- buttons (pot-only on that screen).

@@ -144,7 +144,7 @@ void screen_display_create() {
     }
   }
 
-  ui_create_settings_header(screen, "DISPLAY SETTINGS", "", COL_TEXT_DIM);
+  ui_create_settings_header(screen, "DISPLAY SETTINGS", "", COL_HDR_MUTED);
 
   int y = 48;
   ui_create_post_row(screen, PX, y, CONTENT_W, SET_ROW_H);

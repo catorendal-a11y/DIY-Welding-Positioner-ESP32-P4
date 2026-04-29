@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Dark / Light UI mode** — **Settings > Display** row **UI MODE** switches **DARK** (POST industrial neutral palette) vs **LIGHT** (warm cream HMI reference). Stored as `color_scheme` in NVS JSON `cfg` (`0` = dark, `1` = light). `theme_set_scheme()` / `theme_sync_colors()` apply `NEUT_DARK` / `NEUT_LIGHT` in `theme.cpp` (runtime `COL_*` globals + LVGL default theme).
+- **`COL_HDR_MUTED`** — secondary text on the dark header strip (settings headers and main header right caption) uses a dedicated muted gray per scheme so it stays readable on `#090909` / `#1A1A1A` bars (instead of reusing `COL_TEXT_DIM`).
+
+### Documentation
+- README, STATUS, `docs/PROJECT_IMPLEMENTATION.md`, wiki (Home, Roadmap, Getting Started, Architecture), AGENTS.md — synced with UI mode persistence and header muted color.
+
 ## [2.0.6] - 2026-04-26
 
 ### Added

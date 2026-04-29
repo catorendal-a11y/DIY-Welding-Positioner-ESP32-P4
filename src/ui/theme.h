@@ -49,6 +49,7 @@ extern lv_color_t g_col_slider_border2;
 extern lv_color_t g_col_knob_border;
 extern lv_color_t g_col_progress_bg;
 extern lv_color_t g_col_protractor_bg;
+extern lv_color_t g_col_hdr_muted;
 
 #define COL_BG            g_col_bg
 #define COL_BG_HEADER     g_col_bg_header
@@ -90,6 +91,7 @@ extern lv_color_t g_col_protractor_bg;
 #define COL_KNOB_BORDER     g_col_knob_border
 #define COL_PROGRESS_BG     g_col_progress_bg
 #define COL_PROTRACTOR_BG   g_col_protractor_bg
+#define COL_HDR_MUTED       g_col_hdr_muted
 
 // ───────────────────────────────────────────────────────────────────────────────
 // ACCENT (runtime index from accent_color) + fixed semantic greens/reds

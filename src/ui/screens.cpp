@@ -325,7 +325,7 @@ lv_obj_t* ui_create_header(lv_obj_t* parent, const char* title, const char* righ
   lv_obj_t* state_lbl = lv_label_create(header);
   lv_label_set_text(state_lbl, right_caption ? right_caption : "");
   lv_obj_set_style_text_font(state_lbl, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(state_lbl, COL_TEXT_DIM, 0);
+  lv_obj_set_style_text_color(state_lbl, COL_HDR_MUTED, 0);
   lv_obj_set_width(state_lbl, 300);
   lv_obj_set_style_text_align(state_lbl, LV_TEXT_ALIGN_RIGHT, 0);
   lv_obj_set_pos(state_lbl, SCREEN_W - PAD_X - 300, 12);

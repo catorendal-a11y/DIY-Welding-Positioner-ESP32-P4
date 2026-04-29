@@ -73,7 +73,7 @@ Expected boot output:
 - [ ] Reset E-STOP — tap overlay to dismiss
 - [ ] Try each mode: JOG, PULSE, STEP, TIMER
 - [ ] Navigate to Settings > Motor Config — enable direction switch
-- [ ] Navigate to Settings > Display — adjust brightness
+- [ ] Navigate to Settings > Display — adjust brightness, optional **UI MODE** (dark/light), and accent theme
 
 ## Configuration
 

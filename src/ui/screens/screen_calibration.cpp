@@ -407,7 +407,7 @@ void screen_calibration_create() {
 
   char cap[28];
   snprintf(cap, sizeof(cap), "WROT %s", FW_VERSION);
-  ui_create_settings_header(screen, "CALIBRATION", cap, COL_TEXT_DIM);
+  ui_create_settings_header(screen, "CALIBRATION", cap, COL_HDR_MUTED);
 
   const int topY = CAL_TOP_Y;
   const int topH = CAL_TOP_H;

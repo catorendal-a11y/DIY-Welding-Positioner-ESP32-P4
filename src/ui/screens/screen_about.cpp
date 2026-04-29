@@ -39,7 +39,7 @@ void screen_about_create() {
   const int PX = 16;
   const int CW = SCREEN_W - 2 * PX;
 
-  ui_create_settings_header(screen, "ABOUT", "", COL_TEXT_DIM);
+  ui_create_settings_header(screen, "ABOUT", "", COL_HDR_MUTED);
   ui_create_post_card(screen, PX, 46, CW, 66);
 
   int y = 50;

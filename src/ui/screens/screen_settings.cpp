@@ -42,7 +42,7 @@ void screen_settings_create() {
   lv_obj_clean(screen);
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
-  ui_create_settings_header(screen, "SETTINGS", "SYSTEM CONFIG", COL_TEXT_DIM);
+  ui_create_settings_header(screen, "SETTINGS", "SYSTEM CONFIG", COL_HDR_MUTED);
 
   const int rowH = 44;
   const int rowY0 = SET_HEADER_H + 10;

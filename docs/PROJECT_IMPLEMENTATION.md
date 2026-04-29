@@ -89,7 +89,7 @@
 ## 5. Storage & Presets
 
 - **Backend**: **NVS** using Arduino `Preferences`, namespace `wrot`
-- **Keys**: `cfg` — JSON object for `SystemSettings` (acceleration, microstep, calibration, brightness, themes, countdown, etc.); `prs` — JSON array for up to **16** presets, including per-program `workpiece_diameter_mm` (`0` = default reference diameter)
+- **Keys**: `cfg` — JSON object for `SystemSettings` (acceleration, microstep, calibration, brightness, **`color_scheme`** (0=dark / 1=light UI neutral palette), accent index, countdown, etc.); `prs` — JSON array for up to **16** presets, including per-program `workpiece_diameter_mm` (`0` = default reference diameter)
 - **Serialization**: ArduinoJson → buffer → `putBytes` / `getBytes` (plaintext JSON on flash)
 - **Legacy**: One-time import from LittleFS `/settings.json` and `/presets.json` if NVS keys are empty and those files exist
 - **Thread safety**: `g_nvs_mutex` around Preferences I/O; `g_presets_mutex` / `g_settings_mutex` for in-RAM structures
@@ -110,6 +110,7 @@
 - **Settings diagnostics**: `SCREEN_DIAGNOSTICS` shows live ESTOP, DM542T ALM, DIR switch, pedal switch, ENA, RPM, direction and motion-block state.
 - **Event log**: `src/event_log.cpp` keeps a small mutex-protected RAM ring buffer of recent operator, program, state and fault events. Diagnostics renders the newest entries so blocked starts can be checked on the panel without serial output.
 - **Pedal settings**: `SCREEN_PEDAL_SETTINGS` arms/disarms GPIO33 pedal input and shows ADS1115/analog status.
+- **Theme**: neutral backgrounds and text colors are **runtime** values (`g_col_*` in `theme.h`), filled by `theme_sync_colors()` from **`NEUT_DARK`** vs **`NEUT_LIGHT`** packs according to `g_settings.color_scheme`. Accent hue comes from `accent_color` + `theme_palette[]`. **`COL_HDR_MUTED`** is used for secondary labels on the dark header strip (better contrast than `COL_TEXT_DIM` on the fixed dark header bar in both schemes).
 - **Footer navigation**: BACK button at bottom of all settings screens
 
 ---

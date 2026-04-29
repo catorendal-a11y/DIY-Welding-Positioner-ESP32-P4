@@ -261,7 +261,7 @@ void screen_motor_config_create() {
   if (motorMaxRpmMilliUi < kMaxRpmMilliMin) motorMaxRpmMilliUi = kMaxRpmMilliMin;
   if (motorMaxRpmMilliUi > kMaxRpmMilliMax) motorMaxRpmMilliUi = kMaxRpmMilliMax;
 
-  ui_create_settings_header(screen, "MOTOR CONFIG", "DM542T", COL_TEXT_DIM);
+  ui_create_settings_header(screen, "MOTOR CONFIG", "DM542T", COL_HDR_MUTED);
 
   const int ROW_X = 20;
   const int ROW_W = 760;

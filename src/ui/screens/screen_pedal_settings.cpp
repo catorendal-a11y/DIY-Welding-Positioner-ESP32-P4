@@ -57,7 +57,7 @@ void screen_pedal_settings_create() {
   lv_obj_clean(screen);
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
-  ui_create_settings_header(screen, "PEDAL SETTINGS", "", COL_TEXT_DIM);
+  ui_create_settings_header(screen, "PEDAL SETTINGS", "", COL_HDR_MUTED);
 
   lv_obj_t* topCard = ui_create_post_card(screen, 20, 62, 760, 78);
   lv_obj_remove_flag(topCard, LV_OBJ_FLAG_CLICKABLE);

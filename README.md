@@ -156,10 +156,10 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 | **Foot Pedal** | Digital start switch (GPIO 33); analog speed via ADS1115 I2C ADC on the touch I2C bus when `ENABLE_ADS1115_PEDAL=1` (enabled in `platformio.ini`; non-blocking reads in `motorTask`); Pedal Settings shows live switch/ADC status |
 | **Direction Switch** | Physical CW/CCW toggle (GPIO 29) |
 | **Driver Fault** | DM542T `ALM` fault input on GPIO 32 (open-drain, `INPUT_PULLUP`, LOW = alarm) |
-| **Touch UI** | LVGL 9.x glove-safe interface, high-contrast dark theme, 8 accent colors |
+| **Touch UI** | LVGL 9.x glove-safe interface, **dark or light** neutral UI mode plus **8 accent colors** (Display Settings) |
 | **Program Presets** | Save/load up to 16 welding parameter sets to **NVS** (flash, JSON blobs); ProgramExecutor applies direction override, workpiece diameter, pulse cycles, step repeats/dwell, continuous soft-start and auto-stop timer fields |
 | **Motor Config** | Microstepping (1/4 – 1/32), acceleration, calibration, direction invert |
-| **Display Settings** | Brightness slider, dim timeout, theme color selection |
+| **Display Settings** | Brightness, dim timeout, **UI MODE** (dark/light, persisted in NVS), accent theme selection |
 | **System Info / Diagnostics** | Live CPU core load, free heap, PSRAM usage, uptime, plus Diagnostics for ESTOP, ALM, DIR, pedal, ENA, RPM, motion-block reason and the latest operator/fault events |
 | **Hardware Safety** | NC E-STOP interrupt (<0.5 ms), software watchdog, CAS state transitions, boot-time ESTOP de-floating (3-sample majority vote), `fatal_halt()` with serial-visible reason on unrecoverable init errors; dimmed backlight wakes on ESTOP |
 | **Thread Safety** | FreeRTOS mutex-protected stepper access, `std::atomic` cross-core variables with explicit memory ordering (single source of truth in `src/app_state.h`), pending-flag patterns |
@@ -197,7 +197,7 @@ The interface is built from many full-screen flows and editors—each purpose-bu
 | **Edit Step** | `SCREEN_EDIT_STEP` | Quick preset edit for step parameters |
 | **Edit Continuous** | `SCREEN_EDIT_CONT` | Quick preset edit for continuous / RPM preset fields |
 | **Settings** | `SCREEN_SETTINGS` | Hub for Motor Config, Calibration, Display, Pedal Settings, Diagnostics, System Info and About |
-| **Display** | `SCREEN_DISPLAY` | Brightness slider, dim timeout, accent theme selection |
+| **Display** | `SCREEN_DISPLAY` | Brightness, dim timeout, **UI MODE** (DARK/LIGHT), accent theme selection |
 | **System Info** | `SCREEN_SYSINFO` | Core load, heap, PSRAM, uptime |
 | **Calibration** | `SCREEN_CALIBRATION` | Motor calibration factor adjustment |
 | **Motor Config** | `SCREEN_MOTOR_CONFIG` | Microstepping, acceleration, direction switch, pedal enable |
@@ -396,6 +396,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 **Behaviour**
 
 - **`storage_init()`** opens the namespace, then runs a **one-time migration**: if `cfg` / `prs` are empty but legacy LittleFS files exist (`/settings.json`, `/presets.json`), their contents are copied into NVS. After that, normal operation uses NVS only.
+- **Display / UI:** the settings blob includes e.g. **`color_scheme`** (`0` = dark neutral palette, `1` = light), **`accent_color`** (0–7), brightness and dim-timeout fields — see `SystemSettings` / `storage.cpp` for the authoritative list.
 - **Saves** run on **Core 1** in `storageTask`: debounced **~500 ms** after preset changes and **~1 s** after settings changes (`storage_flush()`). UI code sets a pending flag; it does not write flash directly.
 - **Flash cache:** NVS commits can disable the flash cache briefly. The firmware sets `g_flashWriting` so the UI can avoid glitches during writes; PSRAM code/rodata mitigations still apply (`CONFIG_SPIRAM_FETCH_INSTRUCTIONS`, `CONFIG_SPIRAM_RODATA` in sdkconfig).
 
@@ -511,7 +512,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - [x] Foot pedal support (digital + optional ADS1115 analog)
 - [x] Direction switch
 - [x] 8 accent color themes
-- [x] Display settings (brightness, dim timeout)
+- [x] Display settings (brightness, dim timeout, dark/light UI mode)
 - [x] System info screen (core load, heap, PSRAM, uptime)
 - [x] Diagnostics screen (live ESTOP/ALM/DIR/pedal/ENA/RPM status + recent event log)
 - [x] Workpiece diameter per preset (stored as `workpiece_diameter_mm`, applied by ProgramExecutor)
@@ -568,7 +569,7 @@ src/
   ui/                       LVGL display
     display.cpp               MIPI-DSI ST7701 init
     lvgl_hal.cpp              Flush callback (manual 90° rotation), dim, touch polling
-    theme.cpp/h               Color themes, font definitions, layout constants
+    theme.cpp/h               Runtime neutral palettes (dark/light), accent themes, `COL_HDR_MUTED`, fonts, layout constants
     screens.cpp/h             Screen management, lazy creation, g_lvgl_mutex
     screens/                  screen_*.cpp (21 active ScreenId roots + ESTOP overlay module)
 test/

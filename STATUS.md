@@ -1,6 +1,6 @@
 # Project Status
 
-**Last Updated:** 2026-04-26
+**Last Updated:** 2026-04-27
 **Firmware:** v2.0.6
 **Build:** SUCCESS (Release & Debug, 0 errors 0 warnings) — re-verify locally after toolchain updates
 
@@ -33,9 +33,10 @@
 
 ### UI/UX
 - [x] **21 active root screens** with lazy creation pattern + ESTOP overlay
-- [x] **8 accent color themes** (switchable from Display Settings)
+- [x] **8 accent color themes** (switchable from Display Settings; combines with dark/light neutral UI mode)
+- [x] **Dark / Light UI mode** (Display Settings **UI MODE**, persisted as `color_scheme` in NVS `cfg`)
 - [x] **Settings hub** (Motor Config, Calibration, Display, Pedal Settings, Diagnostics, System Info, About)
-- [x] **Display Settings** (brightness slider, dim timeout)
+- [x] **Display Settings** (brightness slider, dim timeout, UI MODE dark/light, accent theme)
 - [x] **System Info** (CPU core load, heap, PSRAM, uptime)
 - [x] **Diagnostics** (live ESTOP, ALM, DIR switch, pedal switch, ENA, direction, RPM, motion-block state, recent event log)
 - [x] **Pedal Settings** (pedal arm/disarm, GPIO33 switch status, ADS1115 analog status)

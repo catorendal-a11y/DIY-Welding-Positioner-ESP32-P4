@@ -49,6 +49,7 @@ lv_color_t g_col_slider_border2;
 lv_color_t g_col_knob_border;
 lv_color_t g_col_progress_bg;
 lv_color_t g_col_protractor_bg;
+lv_color_t g_col_hdr_muted;
 
 typedef struct {
   uint32_t accent;
@@ -98,6 +99,7 @@ typedef struct {
   uint32_t knob_border;
   uint32_t progress_bg;
   uint32_t protractor_bg;
+  uint32_t hdr_muted;
 } NeutralPack;
 
 // Dark: POST industrial (matches prior theme.h hex constants)
@@ -106,7 +108,7 @@ static const NeutralPack NEUT_DARK = {
     0x1A0A0A, 0x141414, 0x1A1A1A, 0x0A0A0A, 0x111111, 0x333333, 0x062616, 0x00C853,
     0x241B00, 0xFFAA00, 0xFF9500, 0xFFAA00, 0xAAAAAA, 0xCCCCCC, 0xD0D0D0, 0x666666,
     0x555555, 0x777777, 0x2E2E2E, 0x333333, 0x1E1E1E, 0xFF1744, 0x444444, 0x2A2A2A,
-    0x1A1A1A, 0x3A3A3A, 0x444444, 0x555555, 0x666666, 0xFFFFFF, 0x222222, 0x0A0A0A,
+    0x1A1A1A, 0x3A3A3A, 0x444444, 0x555555, 0x666666, 0xFFFFFF, 0x222222, 0x0A0A0A, 0xB3B3B3,
 };
 
 // Light: warm cream HMI (reference: main bg #F9F7F2, header bar #1A1A1A, subtle borders)
@@ -115,7 +117,7 @@ static const NeutralPack NEUT_LIGHT = {
     0xFFEBEE, 0xEFEBE4, 0xD8D4CC, 0xFBFAF8, 0xE8E4DD, 0xBDB9B3, 0xE8F5E9, 0x00C853,
     0xFFF8E1, 0xFF9800, 0xE65100, 0xF57F17, 0x37474F, 0x263238, 0x212121, 0x607D8B,
     0x90A4AE, 0x455A64, 0xC4C0B8, 0xB0ACA5, 0xD8D4CC, 0xFF1744, 0x78909E, 0xB0BEC5,
-    0xE3DFDB, 0xCFD8DC, 0xB0BEC5, 0x90A4AE, 0x78909C, 0x455A64, 0xE8E4DD, 0xF3F1EC,
+    0xE3DFDB, 0xCFD8DC, 0xB0BEC5, 0x90A4AE, 0x78909C, 0x455A64, 0xE8E4DD, 0xF3F1EC, 0xCFD8DC,
 };
 
 static const ThemeEntry theme_palette[] = {
@@ -172,6 +174,7 @@ static void apply_neutral_pack(const NeutralPack* p) {
   g_col_knob_border = lv_color_hex(p->knob_border);
   g_col_progress_bg = lv_color_hex(p->progress_bg);
   g_col_protractor_bg = lv_color_hex(p->protractor_bg);
+  g_col_hdr_muted = lv_color_hex(p->hdr_muted);
 }
 
 static void theme_sync_colors(void) {

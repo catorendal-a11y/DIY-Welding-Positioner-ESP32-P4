@@ -83,7 +83,7 @@ void screen_sysinfo_create() {
   lastTempRead = 0;
   lastCoreRead = 0;
 
-  ui_create_settings_header(screen, "SYSTEM INFO", "", COL_TEXT_DIM);
+  ui_create_settings_header(screen, "SYSTEM INFO", "", COL_HDR_MUTED);
   ui_create_post_card(screen, SYSINFO_CARD_X, SYSINFO_CARD1_Y, SYSINFO_CARD_W, SYSINFO_CARD1_H);
   ui_create_post_card(screen, SYSINFO_CARD_X, SYSINFO_CARD2_Y, SYSINFO_CARD_W, SYSINFO_CARD2_H);
   ui_create_post_card(screen, SYSINFO_CARD_X, SYSINFO_CARD3_Y, SYSINFO_CARD_W, SYSINFO_CARD3_H);

@@ -318,7 +318,7 @@ void screen_step_create() {
   targetRpm = speed_get_target_rpm();
   step_clamp_target_rpm();
 
-  ui_create_settings_header(screen, "STEP MODE", "ANGLE MOVE", COL_TEXT_DIM);
+  ui_create_settings_header(screen, "STEP MODE", "ANGLE MOVE", COL_HDR_MUTED);
 
   // POST mockup #6: gauge left, stack right; keep x+w <= SCREEN_W (800) for presets + aux row + footer
   const int kProSz = 276;

@@ -45,7 +45,7 @@
   <rect y="0" width="800" height="38" fill="#090909"/>
   <text x="16" y="25" class="orange" font-size="15" font-weight="700">CALIBRATION</text>
   <line x1="0" y1="38" x2="800" y2="38" stroke="#25292f"/>
-  <text x="780" y="25" class="muted mono" font-size="10" text-anchor="end">WROT v2.0.6</text>
+  <text x="780" y="25" class="muted mono" font-size="10" text-anchor="end">WROT v2.0.7</text>
 
   <!-- Top: CAL_TOP_Y=53 CAL_TOP_H=60; PM 52x38 @ x=96,160 y=12 in card -->
   <g filter="url(#softShadow)">

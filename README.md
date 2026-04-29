@@ -4,7 +4,7 @@
 
 ### Precision Multi-Mode Welding Rotator for TIG, MIG, and Pipe Welding
 
-**ESP32-P4 &nbsp;&middot;&nbsp; Firmware v2.0.6**
+**ESP32-P4 &nbsp;&middot;&nbsp; Firmware v2.0.7**
 
 [![PlatformIO CI](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml/badge.svg)](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml)
 [![Latest Release](https://img.shields.io/github/v/release/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4)](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/latest)

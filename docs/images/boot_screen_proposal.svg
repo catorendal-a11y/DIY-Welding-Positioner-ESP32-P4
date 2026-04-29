@@ -60,7 +60,7 @@
   <circle cx="164" cy="18" r="3.5" fill="#00C853" opacity="0.95"/>
   <text x="178" y="25" class="font green" font-size="14" font-weight="600">BOOT POST</text>
   <text x="646" y="16" class="font dim" font-size="11">FW</text>
-  <text x="670" y="16" class="font text" font-size="11">v2.0.6</text>
+  <text x="670" y="16" class="font text" font-size="11">v2.0.7</text>
   <text x="646" y="31" class="font dim" font-size="11">MODE</text>
   <text x="690" y="31" class="font green" font-size="11">SAFE INIT</text>
 

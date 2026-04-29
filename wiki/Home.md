@@ -2,9 +2,9 @@
 
 **ESP32-P4 / C6 GUITION JC4880P443C** | Open-source firmware for TIG/MIG welding rotators
 
-## Current Status: v2.0.6 — diagnostics and preset polish
+## Current Status: v2.0.7 — dark/light UI + header contrast
 
-Release **v2.0.6** adds the Diagnostics event log, per-preset workpiece diameter for STEP programs, Pedal Settings, Diagnostics, ProgramExecutor polish, start-request race fixes and documentation sync. Release **v2.0.5** previously centralised cross-core atomics, added `fatal_halt()`, release-visible `LOG_E`, non-blocking ADS1115 reads and boot-time ESTOP de-floating. See `CHANGELOG.md` for the full list.
+Release **v2.0.7** adds **Display Settings > UI MODE** (dark vs light neutral palettes, persisted as NVS `color_scheme`), **`COL_HDR_MUTED`** for readable secondary text on header bars, and documentation/SVG sync. Release **v2.0.6** added the Diagnostics event log, per-preset workpiece diameter for STEP programs, Pedal Settings, ProgramExecutor polish, and start-request race fixes. Release **v2.0.5** previously centralised cross-core atomics, added `fatal_halt()`, release-visible `LOG_E`, non-blocking ADS1115 reads and boot-time ESTOP de-floating. See `CHANGELOG.md` for the full list.
 
 All core features tested and confirmed working on real hardware:
 

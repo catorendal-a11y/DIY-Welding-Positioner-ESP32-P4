@@ -1,10 +1,13 @@
 # Roadmap
 
-## v2.0.6 — Current Release (diagnostics and preset polish)
+## v2.0.7 — Current Release (dark/light UI + header contrast)
 
-### UI theme — dark/light mode (same generation as v2.0.6+)
+### v2.0.7 (2026-04-27)
 - [x] **Display Settings > UI MODE** — DARK (POST industrial) vs LIGHT (warm cream HMI reference), persisted as NVS `cfg` JSON **`color_scheme`** (`0`/`1`)
 - [x] Runtime neutral palettes (`NEUT_DARK` / `NEUT_LIGHT`) + **`COL_HDR_MUTED`** for secondary header text on the dark header bar
+- [x] README, STATUS, wiki, implementation docs, UI SVG sync
+
+## v2.0.6 — diagnostics and preset polish
 
 ### v2.0.6 (2026-04-26)
 - [x] Diagnostics screen with live GPIO/fault/motion-block state

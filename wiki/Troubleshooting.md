@@ -43,6 +43,14 @@
 
 ## Display Issues
 
+### Controller resets, touch freezes, or inputs glitch when TIG arc starts
+- HF-start TIG can couple into open wiring strongly enough to reset ESP32-P4, lock I2C/touch, or create false GPIO/ADC readings
+- Install the ESP32-P4 screen, stepper driver, and motor PSU inside the same grounded aluminum/steel enclosure
+- Bond the enclosure to PE/chassis ground with a short low-impedance connection
+- Keep motor cables physically separated from E-STOP, pedal, pot, STEP/DIR/ENA, and I2C wiring
+- Use shielded external cables and terminate shields to the enclosure at the controller side
+- Add ferrites on motor, E-STOP, pedal/pot, USB/power, and external signal cables if needed
+
 ### Black screen on boot
 - Verify ESP32-P4 drivers installed correctly
 - Check PSRAM init settings in `platformio.ini`

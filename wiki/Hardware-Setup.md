@@ -14,6 +14,19 @@
 | **Direction Switch** | SPDT toggle | 1 | CW/CCW |
 | **Foot Pedal** | Analog pot + momentary switch | 1 | Optional |
 | **DC-DC Converter** | 36V or 24V -> 5V 2A | 1 | If not using USB-C for ESP32 |
+| **Metal enclosure** | Grounded aluminum/steel | 1 | Required for TIG HF-start welding |
+
+## TIG HF Enclosure Requirement
+
+Real TIG welding validation has been completed. The controller works during welding when the ESP32-P4 screen, stepper driver, and motor PSU are installed inside the same grounded metal enclosure.
+
+Do not weld with open bench wiring near an HF-start TIG machine. HF noise can reset the ESP32-P4, freeze touch/I2C, or create false GPIO/ADC inputs.
+
+- Bond the enclosure to protective earth / welding chassis ground.
+- Keep motor wiring away from E-STOP, pedal, pot, STEP/DIR/ENA, and I2C wiring.
+- Use shielded external cables where practical.
+- Terminate shields at the controller enclosure side.
+- Add ferrites if HF start still causes resets or glitches.
 
 ## DIP stepper driver configuration
 

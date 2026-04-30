@@ -1,6 +1,15 @@
 # Roadmap
 
-## v2.0.8 — Current Release (version alignment)
+## v2.0.9 - Current Release (TIG HF field validation)
+
+### v2.0.9 (2026-04-30)
+- [x] **`FW_VERSION` v2.0.9** - firmware and bundled documentation synced to current release
+- [x] Real TIG welding validated with ESP32-P4 screen, stepper driver, and motor PSU inside one grounded metal enclosure
+- [x] README, docs, and wiki now document the TIG HF enclosure requirement
+
+## v2.0.8 - version alignment
+
+This is the previous release; v2.0.9 above is current.
 
 ### v2.0.8 (2026-04-29)
 - [x] **`FW_VERSION` v2.0.8** — README, STATUS, wiki, implementation docs, UI SVGs, issue templates synced to canonical release tag

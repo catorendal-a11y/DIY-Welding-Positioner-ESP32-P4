@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.9] - 2026-04-30
+
 ### Documentation
+- **TIG HF field validation** - documented the real-world welding test result: TIG welding works reliably, but HF start/noise requires the ESP32-P4 screen, stepper driver, and motor PSU to be installed inside the same grounded metal enclosure.
+- **EMI / hardware guides** - strengthened enclosure, grounding, cable shielding, ferrite, and troubleshooting guidance for TIG HF environments.
 - **CODE_OF_CONDUCT.md** — Contributor Covenant 2.1 for GitHub Community Standards checklist.
 
 ## [2.0.8] - 2026-04-29

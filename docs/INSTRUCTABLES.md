@@ -145,6 +145,7 @@ IMAGE: docs/images/Wiring_diagram.v2.svg
 - **ENA is active LOW** — HIGH means motor disabled (fail-safe)
 - **E-STOP uses NC contact** — breaks connection when pressed
 - **All grounds must be connected** — ESP32 GND, PSU GND, motor driver GND
+- **TIG HF start requires a grounded metal enclosure** around the ESP32-P4 screen, stepper driver, and motor PSU
 - **Pot ADC range is 0-3315** with 11dB attenuation on ESP32-P4
 
 IMAGE: Photo of wired breadboard/connections

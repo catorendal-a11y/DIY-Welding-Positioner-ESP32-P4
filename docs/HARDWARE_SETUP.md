@@ -8,7 +8,7 @@ This guide details the physical electrical wiring and structural assembly requir
 - **Motor:** NEMA 23 Stepper Motor (approx 3.0 Nm holding torque recommended).
 - **Power Supply (PSU):** **36V DC** is optimal on the stepper `VM` bus for headroom; **24V DC** also works within typical driver input range (e.g. 18–50 V). Minimum **5.0 A** — size wattage for your chosen rail (~180 W @ 36 V, ~120 W @ 24 V as a rough guide). Dedicated for the stepper driver.
 - **DC-DC Converter:** Step-down buck converter (**36V** or **24V** → **5V**, 2 A) to power the ESP32-P4 if not using USB-C.
-- **Enclosure:** **Metallic (Aluminum/Steel) grounded enclosure**. Essential for EMI mitigation.
+- **Enclosure:** **Metallic (Aluminum/Steel) grounded enclosure**. Required for TIG HF-start welding. Put the ESP32-P4 screen, stepper driver, and motor PSU inside the same enclosure.
 
 ## 2. DIP stepper driver configuration (basic PUL/DIR boards)
 Before powering on, configure the DIP switches on the side of your driver board.
@@ -142,6 +142,7 @@ Firmware: **LOW** on the ENA GPIO line = **motor enabled**, **HIGH** = disabled 
 ## 5. Safety & Thermal Management
 - **Heat Sinking:** Stepper drivers get hot during long welding runs. Mount the driver to the metal enclosure for thermal dissipation or add a 40mm fan.
 - **Power Sequencing:** Always power the logic (USB-C or DC-DC) first, then the **motor supply** (24 V or 36 V on `VM`). The firmware holds the motor ENA pin HIGH (Disabled) on boot for safety.
+- **TIG HF Noise:** Open-bench wiring is only for motion/firmware testing. For welding, install the ESP32-P4 screen, stepper driver, and motor PSU inside the same grounded metal enclosure. Without this, HF start can reset the controller, freeze the touch/I2C bus, or create false GPIO/ADC inputs.
 
 ## 6. Validated Hardware
 
@@ -156,6 +157,7 @@ Firmware: **LOW** on the ENA GPIO line = **motor enabled**, **HIGH** = disabled 
 | **E-STOP** | NC Button | Tested |
 | **Direction Switch** | SPDT toggle on GPIO 29 | Tested |
 | **Foot Pedal** | Analog pot + momentary switch | Tested |
+| **TIG HF welding** | Shared grounded metal enclosure for ESP32-P4 screen, driver, and PSU | Field tested |
 
 ### Known limitations (basic PUL/DIR drivers)
 - Motor resonance at 100-300 motor RPM causes stalling at coarse microstepping (1/4)

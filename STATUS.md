@@ -1,7 +1,7 @@
 # Project Status
 
-**Last Updated:** 2026-04-29
-**Firmware:** v2.0.8
+**Last Updated:** 2026-04-30
+**Firmware:** v2.0.9
 **Build:** SUCCESS (Release & Debug, 0 errors 0 warnings) — re-verify locally after toolchain updates
 
 ---
@@ -56,9 +56,10 @@
 - [x] **Foot pedal support** (analog speed via ADS1115 I2C ADC, digital switch GPIO33)
 - [x] **Direction switch** (GPIO29, CW/CCW toggle)
 - [x] **Gear ratio 1:108** total (60 x 72/40, NMRV030 + spur)
+- [x] **TIG HF field validation** (welding works with ESP32-P4 screen, driver, and PSU inside one grounded metal enclosure)
 
 ### Documentation
-- [x] **README** (v2.0.8, feature list, wiring diagram, BOM; synced with `config.h`)
+- [x] **README** (v2.0.9, feature list, wiring diagram, BOM, TIG HF enclosure requirement; synced with `config.h`)
 - [x] **Wiki** (Home, Getting Started, Hardware Setup, Troubleshooting, Roadmap, Architecture)
 - [x] **docs/** (Hardware Setup, Safety System, EMI Mitigation, Implementation, Instructables)
 - [x] **Wiring diagram v2** (SVG, GPIO29 on correct side, clean cable routing)
@@ -88,7 +89,6 @@
 ## In Progress
 
 - [ ] **Higher-RPM DM542T tuning** (DM542T driver mode and ALM input exist; wider tested RPM range is still field work)
-- [ ] **Field testing with real weld parameters**
 
 ## Planned
 

@@ -4,7 +4,7 @@
 
 ### Precision Multi-Mode Welding Rotator for TIG, MIG, and Pipe Welding
 
-**ESP32-P4 &nbsp;&middot;&nbsp; Firmware v2.0.8**
+**ESP32-P4 &nbsp;&middot;&nbsp; Firmware v2.0.9**
 
 [![PlatformIO CI](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml/badge.svg)](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml)
 [![Latest Release](https://img.shields.io/github/v/release/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4)](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/latest)
@@ -59,6 +59,7 @@ Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Posit
 - [Bill of Materials](#bill-of-materials)
 - [Performance Specifications](#performance-specifications)
 - [Safety-Critical Wiring](#safety-critical-wiring)
+- [TIG HF Noise Requirement](#tig-hf-noise-requirement)
 - [Welding Modes](#welding-modes)
 - [Configuration](#configuration)
 - [Persistence (NVS)](#persistence-nvs)
@@ -80,6 +81,7 @@ Use this path if you already have PlatformIO installed and only want to build or
 - VS Code + PlatformIO extension, or PlatformIO Core on PATH as `pio`
 - GUITION JC4880P443C ESP32-P4 board connected over USB-C
 - Motor driver wiring verified before applying motor PSU power
+- Grounded metal enclosure for TIG HF welding use
 - No LittleFS upload for settings/presets; current firmware uses NVS
 
 1. **Clone the repository:**
@@ -114,6 +116,8 @@ Use this path if you already have PlatformIO installed and only want to build or
    ```
 
 6. **Connect hardware** per the [wiring diagram](#wiring-diagram) below. Keep the motor supply off until logic power, E-STOP, ENA, STEP, DIR, and driver settings have been verified.
+
+7. **For TIG HF start welding:** install the ESP32-P4 screen, stepper driver, and motor PSU inside the same grounded metal enclosure before welding near the controller. Open bench wiring may work for motion tests, but HF start can reset the controller, freeze touch/I2C, or inject false inputs.
 
 ---
 
@@ -349,8 +353,25 @@ Verify these signals with a meter before enabling motor power:
 | STEP / GPIO50 | Pulse output only; do not share with other hardware |
 | DIR / GPIO51 | Direction output to driver |
 | Grounds | ESP32 logic ground, driver signal ground, and pedal/ADS1115 ground must be common |
+| Enclosure | ESP32-P4 screen, driver, and motor PSU must be inside one grounded metal enclosure for TIG HF use |
 
 The firmware never intentionally enables the motor while E-STOP is active. If the motor moves at boot or while ENA is HIGH, treat it as a wiring or driver configuration fault before continuing.
+
+---
+
+## TIG HF Noise Requirement
+
+Real TIG welding validation has been completed. The controller, motor logic, UI, and E-STOP behavior worked during TIG welding after the electronics were installed in a shared grounded metal enclosure.
+
+This is a hard installation requirement for HF-start TIG environments:
+
+- Put the ESP32-P4 display board, stepper driver, and motor PSU in the same aluminum or steel enclosure.
+- Bond the enclosure to protective earth / welding chassis ground using a short, low-impedance connection.
+- Route motor power separately from GPIO, ADC, I2C, E-STOP, and foot-pedal wiring.
+- Use shielded external cables where practical, with the shield terminated to the enclosure at the controller side.
+- Add ferrites on motor, E-STOP, pedal/pot, USB/power, and external signal cables if the welder still injects noise.
+
+Do not judge TIG reliability from an open-bench test. Bench wiring is acceptable for firmware and motion checks only.
 
 ---
 
@@ -418,6 +439,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - [ ] All 5 welding modes tested
 - [ ] Program preset save/load verified
 - [ ] Foot pedal starts/stops motor (if connected)
+- [ ] TIG HF start tested with controller electronics inside the grounded metal enclosure
 - [ ] Let display dim, then trigger E-STOP — backlight returns and overlay is readable
 
 ---
@@ -433,10 +455,24 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 | **Power Sequencing** | Never power motor without driver connected to coils |
 | **Motor Coils** | Never connect/disconnect coils while driver is powered |
 | **Voltage** | Verify motor PSU (24V or 36V) before connecting; **36V** is optimal if your driver and wiring allow it |
+| **TIG HF noise** | Use a grounded metal enclosure around ESP32-P4 screen, stepper driver, and PSU before welding |
 
 ---
 
 ## Troubleshooting
+
+<details>
+<summary><b>Controller resets, touch freezes, or inputs glitch when TIG arc starts</b></summary>
+
+- HF-start TIG can couple into open wiring strongly enough to reset ESP32-P4, lock I2C/touch, or create false GPIO/ADC readings
+- Install the ESP32-P4 screen, stepper driver, and motor PSU inside the same grounded aluminum/steel enclosure
+- Bond enclosure to PE/chassis ground with a short low-impedance connection
+- Keep motor cables physically separated from E-STOP, pedal, pot, STEP/DIR/ENA, and I2C wiring
+- Use shielded external cables and terminate shields to the enclosure at the controller side
+- Add ferrites on motor, E-STOP, pedal/pot, USB/power, and external signal cables if needed
+- See [docs/EMI_MITIGATION.md](docs/EMI_MITIGATION.md) and [docs/emi_test.md](docs/emi_test.md)
+
+</details>
 
 <details>
 <summary><b>Main START does not always start motor</b></summary>
@@ -531,6 +567,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 | Document | Use It For |
 |:---|:---|
 | [docs/HARDWARE_SETUP.md](docs/HARDWARE_SETUP.md) | Detailed driver wiring, DM542T checklist, ADS1115 wiring, reserved pins |
+| [docs/EMI_MITIGATION.md](docs/EMI_MITIGATION.md) | Required TIG HF enclosure, shielding, grounding, ferrites, RC and TVS guidance |
 | [docs/SAFETY_SYSTEM.md](docs/SAFETY_SYSTEM.md) | E-STOP behavior, watchdog model, safety assumptions |
 | [docs/PROJECT_IMPLEMENTATION.md](docs/PROJECT_IMPLEMENTATION.md) | RTOS architecture, storage, display pipeline, known workarounds |
 | [docs/INSTRUCTABLES.md](docs/INSTRUCTABLES.md) | Builder-friendly article content and assembly flow |

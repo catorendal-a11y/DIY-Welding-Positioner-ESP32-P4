@@ -45,45 +45,20 @@ Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Posit
 
 ---
 
-## Table of Contents
+## Quick Navigation
 
-- [Quick Start](#quick-start)
-- [What This Project Controls](#what-this-project-controls)
-- [Demo](#demo)
-- [Features](#features)
-- [Why This Project Is Different](#why-this-project-is-different)
-- [Operator Workflow](#operator-workflow)
-- [UI Screens](#ui-screens)
-- [Architecture](#industrial-rtos-architecture)
-- [Gear System & Wiring](#gear-system)
-- [Build Commands](#build-commands)
-- [Bill of Materials](#bill-of-materials)
-- [Performance Specifications](#performance-specifications)
-- [Safety-Critical Wiring](#safety-critical-wiring)
-- [TIG HF Noise Requirement](#tig-hf-noise-requirement)
-- [Welding Modes](#welding-modes)
-- [Configuration](#configuration)
-- [Persistence (NVS)](#persistence-nvs)
-- [Safety Notice](#safety-notice)
-- [Troubleshooting](#troubleshooting)
-- [Roadmap](#roadmap)
-- [Documentation Map](#documentation-map)
-- [Project Structure](#project-structure)
-- [License](#license)
+| Start | Build | Hardware | Safety | Docs |
+|:---|:---|:---|:---|:---|
+| [Quick Start](#quick-start) | [Build Commands](#build-commands) | [Wiring](#wiring-diagram) | [TIG HF Requirement](#tig-hf-noise-requirement) | [Documentation Map](#documentation-map) |
+| [Demo](#demo) | [Features](#features) | [Bill of Materials](#bill-of-materials) | [Troubleshooting](#troubleshooting) | [Project Structure](#project-structure) |
 
 ---
 
 ## Quick Start
 
-Use this path if you already have PlatformIO installed and only want to build or flash the firmware.
+Fast path for builders who already have PlatformIO installed.
 
-**You need:**
-
-- VS Code + PlatformIO extension, or PlatformIO Core on PATH as `pio`
-- GUITION JC4880P443C ESP32-P4 board connected over USB-C
-- Motor driver wiring verified before applying motor PSU power
-- Grounded metal enclosure for TIG HF welding use
-- No LittleFS upload for settings/presets; current firmware uses NVS
+**Needed:** GUITION JC4880P443C ESP32-P4 board, PlatformIO, verified driver wiring, and a grounded metal enclosure for TIG HF welding. No LittleFS upload is needed; settings and presets use NVS.
 
 1. **Clone the repository:**
 
@@ -92,11 +67,7 @@ Use this path if you already have PlatformIO installed and only want to build or
    cd DIY-Welding-Positioner-ESP32-P4
    ```
 
-2. **Open in VS Code** with the **PlatformIO** extension installed. On Windows, run commands from the PlatformIO terminal so `pio` uses PlatformIO's managed Python runtime.
-
-3. **Select board environment:** `esp32p4-release` (GUITION JC4880P443C 4.3")
-
-4. **Build and flash**:
+2. **Build and flash** from VS Code / PlatformIO terminal:
 
    ```bash
    pio run --target upload
@@ -110,31 +81,31 @@ Use this path if you already have PlatformIO installed and only want to build or
 
    Build output is written to `.pio/build-fw` to avoid Windows file-lock conflicts.
 
-5. **(Optional) Run native unit tests** — pure logic, no hardware required:
+3. **Optional native tests** - pure logic, no hardware required:
 
    ```bash
    pio test -e native
    ```
 
-6. **Connect hardware** per the [wiring diagram](#wiring-diagram) below. Keep the motor supply off until logic power, E-STOP, ENA, STEP, DIR, and driver settings have been verified.
+4. **Connect hardware** per the [wiring diagram](#wiring-diagram). Keep motor PSU off until logic power, E-STOP, ENA, STEP, DIR, and driver settings are verified.
 
-7. **For TIG HF start welding:** install the ESP32-P4 screen, stepper driver, and motor PSU inside the same grounded metal enclosure before welding near the controller. Open bench wiring may work for motion tests, but HF start can reset the controller, freeze touch/I2C, or inject false inputs.
+5. **For TIG HF start welding:** put the ESP32-P4 screen, stepper driver, and motor PSU inside the same grounded metal enclosure before welding near the controller.
 
 ---
 
-## What This Project Controls
+## At a Glance
 
-This firmware targets a single-axis welding positioner using:
+Single-axis welding positioner firmware for a NEMA 23 / DM542T-style stepper rotator.
 
 | Area | Current Implementation |
 |:---|:---|
 | Controller | GUITION JC4880P443C ESP32-P4 4.3" MIPI-DSI touch board |
 | Motion | NEMA 23 stepper through PUL/DIR driver or DM542T |
 | Drivetrain | NMRV030 60:1 worm stage plus 72/40 spur stage, total 1:108 |
-| Speed input | Main-screen potentiometer, optional ADS1115 pedal pot, presets |
-| Start input | Touch UI plus optional foot pedal switch |
-| Safety | NC E-STOP on GPIO34; ENA forced disabled immediately in ISR |
-| Storage | NVS JSON blobs for settings and up to 16 presets |
+| Speed | Main potentiometer, optional ADS1115 pedal pot, saved presets |
+| UI | LVGL 9, 800x480 landscape, glove-safe welding workflow |
+| Safety | NC E-STOP on GPIO34, DM542T ALM input, ENA forced safe in ISR |
+| Storage | NVS JSON settings + up to 16 presets |
 
 The main screen is deliberately pot-driven: there are no main-screen RPM +/- buttons. Jog has its own touch +/- controls for setup movement.
 
@@ -154,20 +125,15 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 
 ## Features
 
-| Category | Details |
+| Area | What matters |
 |:---|:---|
-| **Welding Modes** | 5 modes — Continuous, Jog, Pulse, Step, and Countdown (configurable 1-10s delay) |
-| **Speed Control** | Live RPM via **potentiometer** on the main screen; touch **+/-** on **Jog** (and presets/settings where applicable) |
-| **Foot Pedal** | Digital start switch (GPIO 33); analog speed via ADS1115 I2C ADC on the touch I2C bus when `ENABLE_ADS1115_PEDAL=1` (enabled in `platformio.ini`; non-blocking reads in `motorTask`); Pedal Settings shows live switch/ADC status |
-| **Direction Switch** | Physical CW/CCW toggle (GPIO 29) |
-| **Driver Fault** | DM542T `ALM` fault input on GPIO 32 (open-drain, `INPUT_PULLUP`, LOW = alarm) |
-| **Touch UI** | LVGL 9.x glove-safe interface, **dark or light** neutral UI mode plus **8 accent colors** (Display Settings) |
-| **Program Presets** | Save/load up to 16 welding parameter sets to **NVS** (flash, JSON blobs); ProgramExecutor applies direction override, workpiece diameter, pulse cycles, step repeats/dwell, continuous soft-start and auto-stop timer fields |
-| **Motor Config** | Microstepping (1/4 – 1/32), acceleration, calibration, direction invert |
-| **Display Settings** | Brightness, dim timeout, **UI MODE** (dark/light, persisted in NVS), accent theme selection |
-| **System Info / Diagnostics** | Live CPU core load, free heap, PSRAM usage, uptime, plus Diagnostics for ESTOP, ALM, DIR, pedal, ENA, RPM, motion-block reason and the latest operator/fault events |
-| **Hardware Safety** | NC E-STOP interrupt (<0.5 ms), software watchdog, CAS state transitions, boot-time ESTOP de-floating (3-sample majority vote), final ENA safety re-checks before motion, `fatal_halt()` with serial-visible reason on unrecoverable init errors; dimmed backlight wakes on ESTOP |
-| **Thread Safety** | FreeRTOS mutex-protected stepper access, `std::atomic` cross-core variables with explicit memory ordering (single source of truth in `src/app_state.h`), pending-flag patterns |
+| **Welding workflow** | Continuous, Jog, Pulse, Step, and Countdown modes with pot-driven main RPM and Jog +/- setup control |
+| **Presets** | 16 NVS-backed jobs with RPM, direction, workpiece diameter, pulse cycles, step repeats/dwell, soft-start, and auto-stop fields |
+| **Industrial inputs** | E-STOP, DM542T ALM, direction switch, foot pedal switch, optional ADS1115 pedal speed input |
+| **Touch HMI** | LVGL 9, 800x480 landscape, dark/light neutral UI, 8 accent colors, diagnostics, system info, motor config, display settings |
+| **Motor control** | FastAccelStepper RMT pulses, milli-Hz RPM commands, acceleration tuning, microstepping, calibration, direction invert |
+| **Safety model** | ISR disables ENA, state machine latches faults, start paths re-check E-STOP/ALM after ENA LOW, dimmed display wakes on fault |
+| **Robustness** | Dual-core FreeRTOS split, mutex-protected stepper API, `std::atomic` cross-core flags, debounced NVS writes |
 
 ---
 
@@ -203,7 +169,10 @@ The practical difference: this is not just a rotating table demo. It is firmware
 
 ## UI Screens
 
-The interface is built from many full-screen flows and editors—each purpose-built for industrial use with glove-safe touch targets (see `docs/images/ui_screens.svg` for the full visual map). In firmware, root views are registered as **`ScreenId` values** in `src/ui/screens.h`: there are **21** active roots from `SCREEN_MAIN` through `SCREEN_ABOUT` (including boot, confirm, preset editors, settings hub, modes, programs, calibration, motor config, pedal settings, diagnostics, display, about, etc.), plus a separate full-screen **E-STOP overlay** module that is not a `ScreenId` but can appear over any active screen. Older documentation sometimes referred to a larger “screen count” when counting every mockup panel separately; the numbers above match the current C++ registry.
+The UI is built from 21 active `ScreenId` roots plus a separate full-screen E-STOP overlay. The full visual map is in `docs/images/ui_screens.svg`; the table below maps the firmware registry.
+
+<details>
+<summary><b>ScreenId registry</b></summary>
 
 | Screen | `ScreenId` | Description |
 |:---|:---|:---|
@@ -229,6 +198,8 @@ The interface is built from many full-screen flows and editors—each purpose-bu
 | **About** | `SCREEN_ABOUT` | Firmware version, hardware info |
 | **Confirm** | `SCREEN_CONFIRM` | Shared confirmation dialog (destructive actions, etc.) |
 | **E-STOP Overlay** | _(separate module, not a `ScreenId`)_ | Full-screen red overlay on any active screen |
+
+</details>
 
 ---
 
@@ -301,7 +272,7 @@ controlTask  (pri 3, 4 KB)
 
 ## Build Commands
 
-The default PlatformIO environment is `esp32p4-release`. Build output is redirected to `.pio/build-fw` by `platformio.ini` to reduce Windows file-lock problems.
+Default environment: `esp32p4-release`. Build output goes to `.pio/build-fw` to reduce Windows file-lock problems.
 
 | Task | Command |
 |:---|:---|
@@ -312,11 +283,7 @@ The default PlatformIO environment is `esp32p4-release`. Build output is redirec
 | Native tests | `pio test -e native` |
 | On-device tests | `pio test -e esp32p4-test` |
 
-Useful environment notes:
-
-- The configured upload and monitor port is `COM5`; change `upload_port` / `monitor_port` in `platformio.ini` if your board enumerates differently.
-- If Windows serial flashing fails with Unicode output errors, run `set PYTHONUTF8=1` before upload or use a UTF-8 capable terminal.
-- Native tests do not need ESP32-P4 hardware. On-device tests require the board connected and flashable.
+`COM5` is configured in `platformio.ini`; change `upload_port` / `monitor_port` if Windows assigns another port. Native tests do not need hardware.
 
 ---
 
@@ -562,25 +529,14 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 
 ## Roadmap
 
-**Completed:**
+**Completed:** 5 welding modes, NVS presets, foot pedal support, direction switch, diagnostics, workpiece diameter presets, motor config UI, dark/light display mode, FreeRTOS/atomic hardening, E-STOP display wake, non-blocking ADS1115 pedal ADC, and TIG HF validation in a grounded enclosure.
 
-- [x] 5 welding modes (Continuous, Jog, Pulse, Step, Timer)
-- [x] Program preset storage (NVS JSON blobs, 16 slots; legacy LittleFS migration on boot)
-- [x] Live RPM adjustment (pot on main; touch +/- on Jog and in program flows)
-- [x] Foot pedal support (digital + optional ADS1115 analog)
-- [x] Direction switch
-- [x] 8 accent color themes
-- [x] Display settings (brightness, dim timeout, dark/light UI mode)
-- [x] System info screen (core load, heap, PSRAM, uptime)
-- [x] Diagnostics screen (live ESTOP/ALM/DIR/pedal/ENA/RPM status + recent event log)
-- [x] Workpiece diameter per preset (stored as `workpiece_diameter_mm`, applied by ProgramExecutor)
-- [x] Pedal settings screen (GPIO33 arm/disarm + ADS1115 status)
-- [x] Motor configuration UI
-- [x] FreeRTOS mutex stepper access + atomic cross-core variables
-- [x] Countdown before start (configurable 1-10s delay with visual countdown)
-- [x] LVGL async object deletion + widget invalidation pattern
-- [x] E-STOP wakes dimmed display (backlight / dim pipeline, v2.0.3+)
-- [x] v2.0.5+: centralised cross-core atomics in `src/app_state.h`, `fatal_halt()` with serial-visible reason, `LOG_E` always compiled in, boot-time ESTOP de-floating, non-blocking ADS1115 pedal ADC with short runtime I2C timeout, motion-start safety re-checks, start-request race fix, extended native tests
+**Next useful work:**
+
+- [ ] Enclosure CAD / printable panel files
+- [ ] Assembly guide with real build photos
+- [ ] Wider DM542T speed/current tuning data
+- [ ] Optional binary release workflow for builders without PlatformIO
 
 ---
 
@@ -603,6 +559,9 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 ---
 
 ## Project Structure
+
+<details>
+<summary><b>Source tree overview</b></summary>
 
 ```
 src/
@@ -638,6 +597,8 @@ test/
   test_device_*/            On-device integration tests (require ESP32-P4)
 docs/images/                Wiring diagrams, UI mockups
 ```
+
+</details>
 
 ---
 

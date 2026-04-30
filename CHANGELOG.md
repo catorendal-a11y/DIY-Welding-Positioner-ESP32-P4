@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Motion-start safety race** - continuous, jog-backed starts, and step-mode moves now re-check E-STOP / DM542T ALM immediately after ENA is pulled LOW. If a fault appears in that narrow window, ENA is driven HIGH again before any stepper command is issued.
+- **Safety-task stepper access** - driver alarm and E-STOP handling no longer call `FastAccelStepper::forceStop()` without `g_stepperMutex`; ENA is already hardware-disabled and stepper API access stays serialized.
+- **Storage load order** - settings now load before presets so preset RPM values are clamped against the saved `max_rpm` setting instead of the firmware default.
+- **Invalid microstep in NVS** - persisted `microstep` now accepts only 4, 8, 16, or 32 and falls back to 16 for corrupt/old values.
+- **Step screen rebuild cleanup** - removed an async-delete path immediately before `lv_obj_clean()` to avoid a possible LVGL double-delete edge during screen rebuild.
+
+### Changed
+- **ADS1115 runtime I2C timeout** - optional pedal ADC runtime reads use a short motor-task timeout while init/probe still keeps the longer timeout window.
+
+### Tests
+- Native test coverage extended for microstep storage validation.
+- Verified with `pio test -e native`, release build, debug build, LVGL API scan, non-ASCII label scan, and `git diff --check`.
+
 ## [2.0.9] - 2026-04-30
 
 ### Documentation

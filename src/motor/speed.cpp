@@ -35,6 +35,8 @@ static_assert((int)(60.0f * 72.0f / 40.0f + 0.5f) == 108, "GEAR_RATIO must match
 #define ADS_REG_PTR_CONFIG  0x01
 #define ADS_REG_PTR_LOTH    0x02
 #define ADS_REG_PTR_HITH    0x03
+#define ADS_I2C_INIT_TIMEOUT_MS    80
+#define ADS_I2C_RUNTIME_TIMEOUT_MS 2
 
 #define ADS_CFG_CQUE_1CONV    0x0000
 #define ADS_CFG_CLAT_NONLAT   0x0000
@@ -48,16 +50,16 @@ static_assert((int)(60.0f * 72.0f / 40.0f + 0.5f) == 108, "GEAR_RATIO must match
 
 static i2c_master_dev_handle_t s_ads_dev = nullptr;
 
-static bool ads_i2c_write_reg(uint8_t reg, uint16_t val) {
+static bool ads_i2c_write_reg_timeout(uint8_t reg, uint16_t val, uint32_t timeout_ms) {
   if (!s_ads_dev) return false;
   uint8_t buf[3] = { reg, (uint8_t)(val >> 8), (uint8_t)(val & 0xFF) };
-  return i2c_master_transmit(s_ads_dev, buf, sizeof(buf), pdMS_TO_TICKS(80)) == ESP_OK;
+  return i2c_master_transmit(s_ads_dev, buf, sizeof(buf), pdMS_TO_TICKS(timeout_ms)) == ESP_OK;
 }
 
-static bool ads_i2c_read_reg(uint8_t reg, uint16_t* out) {
+static bool ads_i2c_read_reg_timeout(uint8_t reg, uint16_t* out, uint32_t timeout_ms) {
   if (!s_ads_dev || !out) return false;
   uint8_t data[2];
-  esp_err_t e = i2c_master_transmit_receive(s_ads_dev, &reg, 1, data, 2, pdMS_TO_TICKS(80));
+  esp_err_t e = i2c_master_transmit_receive(s_ads_dev, &reg, 1, data, 2, pdMS_TO_TICKS(timeout_ms));
   if (e != ESP_OK) return false;
   *out = ((uint16_t)data[0] << 8) | data[1];
   return true;
@@ -68,17 +70,17 @@ static int16_t ads_read_channel0_blocking() {
   if (!s_ads_dev) return 0;
   uint16_t config = ADS_CFG_CQUE_1CONV | ADS_CFG_CLAT_NONLAT | ADS_CFG_CPOL_ACTVLOW | ADS_CFG_CMODE_TRAD
       | ADS_CFG_MODE_SINGLE | ADS_CFG_PGA_4_096V | ADS_CFG_DR_128SPS | ADS_CFG_MUX_SINGLE_0 | ADS_CFG_OS_START;
-  if (!ads_i2c_write_reg(ADS_REG_PTR_CONFIG, config)) return 0;
-  if (!ads_i2c_write_reg(ADS_REG_PTR_HITH, 0x8000)) return 0;
-  if (!ads_i2c_write_reg(ADS_REG_PTR_LOTH, 0)) return 0;
+  if (!ads_i2c_write_reg_timeout(ADS_REG_PTR_CONFIG, config, ADS_I2C_INIT_TIMEOUT_MS)) return 0;
+  if (!ads_i2c_write_reg_timeout(ADS_REG_PTR_HITH, 0x8000, ADS_I2C_INIT_TIMEOUT_MS)) return 0;
+  if (!ads_i2c_write_reg_timeout(ADS_REG_PTR_LOTH, 0, ADS_I2C_INIT_TIMEOUT_MS)) return 0;
   for (int i = 0; i < 25; i++) {
     uint16_t st = 0;
-    if (!ads_i2c_read_reg(ADS_REG_PTR_CONFIG, &st)) return 0;
+    if (!ads_i2c_read_reg_timeout(ADS_REG_PTR_CONFIG, &st, ADS_I2C_INIT_TIMEOUT_MS)) return 0;
     if (st & 0x8000) break;
     vTaskDelay(pdMS_TO_TICKS(1));
   }
   uint16_t raw = 0;
-  if (!ads_i2c_read_reg(ADS_REG_PTR_CONVERT, &raw)) return 0;
+  if (!ads_i2c_read_reg_timeout(ADS_REG_PTR_CONVERT, &raw, ADS_I2C_INIT_TIMEOUT_MS)) return 0;
   return (int16_t)raw;
 }
 
@@ -95,7 +97,7 @@ static bool ads_start_conversion() {
   if (!s_ads_dev) return false;
   uint16_t config = ADS_CFG_CQUE_1CONV | ADS_CFG_CLAT_NONLAT | ADS_CFG_CPOL_ACTVLOW | ADS_CFG_CMODE_TRAD
       | ADS_CFG_MODE_SINGLE | ADS_CFG_PGA_4_096V | ADS_CFG_DR_128SPS | ADS_CFG_MUX_SINGLE_0 | ADS_CFG_OS_START;
-  return ads_i2c_write_reg(ADS_REG_PTR_CONFIG, config);
+  return ads_i2c_write_reg_timeout(ADS_REG_PTR_CONFIG, config, ADS_I2C_RUNTIME_TIMEOUT_MS);
 }
 
 // If a conversion is in flight and >= ~8ms old, read and complete it.
@@ -104,7 +106,7 @@ static bool ads_poll_and_start(int16_t* out) {
   const uint32_t now = millis();
   if (s_adsState == ADS_CONVERTING && (now - s_adsStartedMs) >= 9u) {
     uint16_t raw = 0;
-    if (ads_i2c_read_reg(ADS_REG_PTR_CONVERT, &raw)) {
+    if (ads_i2c_read_reg_timeout(ADS_REG_PTR_CONVERT, &raw, ADS_I2C_RUNTIME_TIMEOUT_MS)) {
       s_adsLastValue = (int16_t)raw;
     }
     s_adsState = ADS_IDLE;
@@ -244,7 +246,7 @@ void speed_init() {
       if (i2c_master_bus_add_device(bus, &dev_cfg, &s_ads_dev) != ESP_OK) continue;
 
       uint16_t cfgProbe = 0;
-      if (ads_i2c_read_reg(ADS_REG_PTR_CONFIG, &cfgProbe)) {
+      if (ads_i2c_read_reg_timeout(ADS_REG_PTR_CONFIG, &cfgProbe, ADS_I2C_INIT_TIMEOUT_MS)) {
         ads1115Connected = true;
         LOG_I("ADS1115 on touch I2C 0x%02X", a);
         if (a != ADS1115_ADDR) {

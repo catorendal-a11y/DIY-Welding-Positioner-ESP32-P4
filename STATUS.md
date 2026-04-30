@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-04-30
 **Firmware:** v2.0.9
-**Build:** SUCCESS (Release & Debug, 0 errors 0 warnings) — re-verify locally after toolchain updates
+**Build:** SUCCESS (Release & Debug, 0 errors 0 warnings) - verified 2026-04-30 after motor/safety/storage audit
 
 ---
 
@@ -25,6 +25,7 @@
 
 ### Safety
 - [x] **Hardware E-STOP** (GPIO34, active LOW fault, <0.5ms ISR; wakes dimmed display)
+- [x] **Motion-start safety re-checks** (ENA is re-disabled if E-STOP/ALM appears during the final start window)
 - [x] **Task Watchdog Timer** (motor & safety tasks)
 - [x] **Boot-safe ENA pin** (motor disabled on startup)
 - [x] **CAS state transitions** (race-free between safetyTask and controlTask)
@@ -49,6 +50,8 @@
 ### Storage
 - [x] **Program preset storage** (ArduinoJson blobs in **NVS** `wrot`/`prs`, 16 slots; one-time LittleFS migration)
 - [x] **Settings persistence** (motor config, display settings, and related fields in NVS `wrot`/`cfg`)
+- [x] **Settings-before-presets load order** (preset RPM clamp uses saved `max_rpm`)
+- [x] **Microstep validation on load** (only 4/8/16/32 accepted; invalid NVS falls back to 16)
 - [x] **Mutex-protected presets** (`g_presets_mutex`)
 - [x] **Debounced flash writes** (500ms presets, 1000ms settings)
 
@@ -74,6 +77,8 @@
 - [x] **Screen reinit safety** (screens_reinit calls invalidate_widgets for all screens with static pointers)
 - [x] **Confirm dialog validation** (returnScreen range check prevents invalid screen navigation)
 - [x] **E-STOP display wake** (v2.0.3 — `g_wakePending` + `dim_reset_activity()` so dimmed MIPI panel shows fault UI)
+- [x] **Safety-task stepper serialization** (E-STOP/ALM `forceStop()` path uses `g_stepperMutex`; no unsynchronized FastAccelStepper calls)
+- [x] **Step-screen rebuild cleanup** (no async object delete immediately before `lv_obj_clean()`)
 
 ### v2.0.5 — Cross-core & Error-handling Cleanup
 - [x] **Centralised cross-core atomics** in `src/app_state.h`/`app_state.cpp` (single source of truth; no more scattered `std::atomic` definitions across safety/storage/main)
@@ -102,8 +107,8 @@
 |--------|-------|
 | **Platform** | pioarduino (ESP-IDF 5.5.x) |
 | **Board** | GUITION JC4880P443C (ESP32-P4 + ESP32-C6) |
-| **RAM Usage** | ~13% (41 KB / 320 KB) |
-| **Flash Usage** | ~27% (1.8 MB / 6.5 MB) |
+| **RAM Usage** | ~10.0% (32 KB / 320 KB, release build) |
+| **Flash Usage** | ~16.1% (1.06 MB / 6.5 MB, release build) |
 | **FastAccelStepper** | 0.33.x |
 | **LVGL** | 9.5.0 (RGB565) |
 | **ArduinoJson** | 7.4.3 |

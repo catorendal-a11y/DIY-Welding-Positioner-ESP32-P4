@@ -67,9 +67,10 @@
 - **Live speed**: `applySpeedAcceleration()` required after `setSpeedInMilliHz()` for changes during running
 - **Cross-core**: Shared RPM variables use `std::atomic<float>` with explicit `.load(memory_order_*)` / `.store(...)`. All cross-core atomic flags are declared in `src/app_state.h` / defined in `src/app_state.cpp` (single source of truth).
 - **Stepper mutex**: `g_stepperMutex` (`SemaphoreHandle_t`, FreeRTOS mutex) protects all stepper calls — uses `xSemaphoreTake`/`xSemaphoreGive`, keeps interrupts enabled during cross-core contention. Non-motor modules should call `motor_set_target_milli_hz()` instead of taking the mutex directly (it wraps `setSpeedInMilliHz` + `applySpeedAcceleration`).
+- **Motion-start guard**: start paths check `safety_inhibit_motion()` before ENA is enabled and again immediately after `digitalWrite(PIN_ENA, LOW)`. If E-STOP/ALM appears in that final window, ENA is driven HIGH and no run/move command is issued.
 - **Control command queue**: START/STOP/JOG/program requests are sent as a single overwrite command to `controlTask`, so the latest operator command wins and parameters cannot be mixed across requests.
 - **Pending-flag pattern**: UI `.store()`s atomic flags with `memory_order_release` for non-motion flags; motorTask/controlTask `.load()`s them with `memory_order_acquire` and executes within the owning task cycle.
-- **Non-blocking pedal ADC**: When `ENABLE_ADS1115_PEDAL=1`, `motorTask` uses a state-machine (`ads_poll_and_start()` in `src/motor/speed.cpp`) that starts a single-shot conversion in one tick and reads the result in a later tick — so the 5 ms loop is never blocked by I2C. Blocking helper (`ads_read_channel0_blocking()`) is reserved for `speed_init()`.
+- **Non-blocking pedal ADC**: When `ENABLE_ADS1115_PEDAL=1`, `motorTask` uses a state-machine (`ads_poll_and_start()` in `src/motor/speed.cpp`) that starts a single-shot conversion in one tick and reads the result in a later tick. Runtime I2C transactions use a short timeout; the longer timeout is reserved for `speed_init()` probe/init.
 
 ---
 
@@ -79,6 +80,7 @@
 - **ISR**: GPIO register write (ENA HIGH) + `g_estopPending.store(true, std::memory_order_release)` + `g_wakePending.store(true, ...)` (NO function calls — flash may be disabled)
 - **Boot sampling**: `safety_init()` takes 3 samples of `PIN_ESTOP` with 500 µs spacing after `INPUT_PULLUP` + 2 ms settle, requires ≥2/3 LOW (mitigates floating GPIO34 at power-on — this pin has no internal pull-up on ESP32-P4)
 - **Debounce**: 5ms in safetyTask before STATE_ESTOP transition; `g_estopTriggerMs` is set by `safetyTask` on the debounced edge (not by the ISR)
+- **Stepper API safety**: safetyTask disables ENA first and only calls FastAccelStepper `forceStop()` while holding `g_stepperMutex`; no unsynchronized stepper access is used in ALM/E-STOP paths.
 - **CAS transitions**: `control_transition_to()` uses `compare_exchange_strong` for race-free state changes
 - **UI reset**: `g_uiResetPending.store(true, std::memory_order_release)` from UI, processed in controlTask on Core 0
 - **Overlay**: lvglTask auto-shows/hides ESTOP overlay based on current state
@@ -92,6 +94,7 @@
 - **Keys**: `cfg` — JSON object for `SystemSettings` (acceleration, microstep, calibration, brightness, **`color_scheme`** (0=dark / 1=light UI neutral palette), accent index, countdown, etc.); `prs` — JSON array for up to **16** presets, including per-program `workpiece_diameter_mm` (`0` = default reference diameter)
 - **Serialization**: ArduinoJson → buffer → `putBytes` / `getBytes` (plaintext JSON on flash)
 - **Legacy**: One-time import from LittleFS `/settings.json` and `/presets.json` if NVS keys are empty and those files exist
+- **Load order / validation**: settings are loaded before presets so preset RPM clamp uses the saved `max_rpm`; invalid persisted microstep values are sanitized to 16.
 - **Thread safety**: `g_nvs_mutex` around Preferences I/O; `g_presets_mutex` / `g_settings_mutex` for in-RAM structures
 - **Copy-based API**: `storage_get_preset()` returns copy, never pointer into vector
 - **Debounce**: ~500ms presets, ~1000ms settings in `storage_flush()` on **storageTask**

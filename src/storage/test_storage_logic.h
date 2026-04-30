@@ -26,6 +26,11 @@ inline int settings_constrain_acceleration(int val) {
   return val;
 }
 
+inline int settings_constrain_microstep(int val) {
+  if (val == 4 || val == 8 || val == 16 || val == 32) return val;
+  return 16;
+}
+
 inline uint8_t settings_constrain_brightness(uint8_t val) {
   if (val < 10) return 10;
   if (val > 255) return 255;

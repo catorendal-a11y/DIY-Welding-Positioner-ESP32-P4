@@ -18,6 +18,7 @@ The system transitions through a rigorous state machine (defined in `control.h`)
 - **Active LOW on fault:** Wiring must match firmware: **safe / released = HIGH**, **pressed / fault = LOW** (same sense as `digitalRead(PIN_ESTOP)==LOW` meaning “active” in code).
 - **ISR Response (<0.5ms):** Direct GPIO register write sets ENA HIGH (Disabled) + `g_estopPending.store(true, std::memory_order_release)` + `g_wakePending.store(true, ...)` so a dimmed panel is woken on the next `dim_update()` / overlay path. NO function calls in ISR (flash may be disabled during NVS or other flash writes).
 - **State Transition (<5ms):** `safetyTask` (priority 5) checks the pending flag with debounce, stores `g_estopTriggerMs` on the debounced edge, and transitions to STATE_ESTOP via CAS.
+- **Final motion-start guard:** continuous/jog/step start paths check E-STOP/driver ALM before enabling ENA and again immediately after ENA is pulled LOW. If the input becomes unsafe in that final window, ENA is driven HIGH again before any run/move command.
 - **Boot-time sampling:** `safety_init()` samples `PIN_ESTOP` 3× with 500 µs spacing after `INPUT_PULLUP` + 2 ms settle; requires ≥2/3 LOW to treat ESTOP as pressed. GPIO34 has no internal pull-up on ESP32-P4, so this mitigates false ESTOPs from a floating line at power-on.
 - **UI Overlay:** `lvglTask` detects STATE_ESTOP and shows full-screen red overlay on any active screen.
 - **ESTOP Reset:** UI sets `g_uiResetPending.store(true, std::memory_order_release)`. `controlTask` on Core 0 calls `safety_check_ui_reset()` and transitions to STATE_IDLE. Overlay auto-hides.
@@ -31,6 +32,7 @@ The system transitions through a rigorous state machine (defined in `control.h`)
 
 ## 4. Thread Safety
 - **Stepper mutex:** `g_stepperMutex` (`SemaphoreHandle_t`, FreeRTOS mutex) protects all FastAccelStepper calls. Uses `xSemaphoreTake`/`xSemaphoreGive` — keeps tick interrupts enabled during cross-core contention (prevents IWDT crashes). Non-motor modules call `motor_set_target_milli_hz()` (encapsulated lock) instead of taking the mutex directly.
+- **Safety stepper stop:** safetyTask disables ENA first, then calls `forceStop()` only when `g_stepperMutex` can be taken. If the mutex is busy, ENA remains disabled and the state machine still transitions to the fault state.
 - **Atomic variables:** Cross-core shared state uses `std::atomic` with explicit memory ordering. All such flags are declared in `src/app_state.h` and defined in `src/app_state.cpp` — no scattered declarations.
 - **Pending-flag pattern:** UI callbacks `.store()` atomic flags with `memory_order_release`; Core 0 tasks `.load()` with `memory_order_acquire` and execute within their cycle. No direct motor calls from UI thread.
 - **Storage mutex:** `g_presets_mutex` semaphore protects preset vector access.

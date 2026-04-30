@@ -29,6 +29,7 @@ static bool g_prefs_open = false;
 static void storage_migrate_littlefs_to_nvs();
 static bool storage_apply_settings_doc(JsonObjectConst doc);
 static bool storage_parse_presets_buffer(const uint8_t* data, size_t len);
+static int storage_sanitize_microstep(int value);
 
 void storage_init() {
     LOG_I("Initializing NVS storage...");
@@ -48,8 +49,8 @@ void storage_init() {
     xSemaphoreGive(g_nvs_mutex);
 
     storage_migrate_littlefs_to_nvs();
-    storage_load_presets();
     storage_load_settings();
+    storage_load_presets();
     lastSaveMs = millis();
     lastPresetsSaveMs = millis();
     LOG_I("NVS storage ready.");
@@ -285,10 +286,17 @@ bool storage_load_settings() {
     return true;
 }
 
+static int storage_sanitize_microstep(int value) {
+    if (value == 4 || value == 8 || value == 16 || value == 32) {
+        return value;
+    }
+    return 16;
+}
+
 static bool storage_apply_settings_doc(JsonObjectConst doc) {
     xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
     g_settings.acceleration = constrain(doc["acceleration"] | 5000, (int)1000, (int)30000);
-    g_settings.microstep = doc["microstep"] | 16;
+    g_settings.microstep = storage_sanitize_microstep(doc["microstep"] | 16);
     {
       float mx = doc["max_rpm"] | MAX_RPM;
       if (mx < MIN_RPM) mx = MIN_RPM;

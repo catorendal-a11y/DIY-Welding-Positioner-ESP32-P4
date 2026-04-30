@@ -165,7 +165,7 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 | **Motor Config** | Microstepping (1/4 – 1/32), acceleration, calibration, direction invert |
 | **Display Settings** | Brightness, dim timeout, **UI MODE** (dark/light, persisted in NVS), accent theme selection |
 | **System Info / Diagnostics** | Live CPU core load, free heap, PSRAM usage, uptime, plus Diagnostics for ESTOP, ALM, DIR, pedal, ENA, RPM, motion-block reason and the latest operator/fault events |
-| **Hardware Safety** | NC E-STOP interrupt (<0.5 ms), software watchdog, CAS state transitions, boot-time ESTOP de-floating (3-sample majority vote), `fatal_halt()` with serial-visible reason on unrecoverable init errors; dimmed backlight wakes on ESTOP |
+| **Hardware Safety** | NC E-STOP interrupt (<0.5 ms), software watchdog, CAS state transitions, boot-time ESTOP de-floating (3-sample majority vote), final ENA safety re-checks before motion, `fatal_halt()` with serial-visible reason on unrecoverable init errors; dimmed backlight wakes on ESTOP |
 | **Thread Safety** | FreeRTOS mutex-protected stepper access, `std::atomic` cross-core variables with explicit memory ordering (single source of truth in `src/app_state.h`), pending-flag patterns |
 
 ---
@@ -231,7 +231,7 @@ controlTask  (pri 3, 4 KB)
 |:---|:---|
 | **Task Isolation** | UI rendering cannot block motor pulse generation |
 | **Hardware Timers** | RMT peripheral for jitter-free micro-stepping |
-| **Fail-Safe** | E-STOP ISR cuts ENA pin in <0.5 ms |
+| **Fail-Safe** | E-STOP ISR cuts ENA pin in <0.5 ms; motion-start paths re-check E-STOP/ALM after ENA LOW and disable again if unsafe |
 | **Thread Safety** | FreeRTOS mutex on stepper access, atomic cross-core variables, pending-flag patterns |
 | **Live Speed** | `applySpeedAcceleration()` for immediate RPM changes during rotation |
 
@@ -337,7 +337,7 @@ Useful environment notes:
 | **Control Resolution** | Sub-milli-RPM (speed is computed in milli-Hz and applied via `setSpeedInMilliHz()` + `applySpeedAcceleration()`) |
 | **Display** | 800 x 480, landscape, LVGL 9.5.0, RGB565, 2-lane MIPI-DSI |
 | **Flash partition** | 16 MB total; 2x 4 MB app (OTA-capable); 8 MB storage partition |
-| **RAM Usage** | ~13% &ensp; (41 KB / 320 KB internal SRAM) — LVGL buffers live in PSRAM (`CONFIG_SPIRAM_FETCH_INSTRUCTIONS`) |
+| **RAM Usage** | ~10% &ensp; (about 32 KB / 320 KB internal SRAM in release build) — LVGL buffers live in PSRAM (`CONFIG_SPIRAM_FETCH_INSTRUCTIONS`) |
 
 ---
 
@@ -356,6 +356,8 @@ Verify these signals with a meter before enabling motor power:
 | Enclosure | ESP32-P4 screen, driver, and motor PSU must be inside one grounded metal enclosure for TIG HF use |
 
 The firmware never intentionally enables the motor while E-STOP is active. If the motor moves at boot or while ENA is HIGH, treat it as a wiring or driver configuration fault before continuing.
+
+At motion start, firmware checks the safety inputs before taking the stepper mutex and again immediately after ENA is pulled LOW. If E-STOP or DM542T ALM becomes active in that final window, ENA is driven HIGH again before a run/move command is sent.
 
 ---
 
@@ -417,6 +419,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 **Behaviour**
 
 - **`storage_init()`** opens the namespace, then runs a **one-time migration**: if `cfg` / `prs` are empty but legacy LittleFS files exist (`/settings.json`, `/presets.json`), their contents are copied into NVS. After that, normal operation uses NVS only.
+- **Load order:** settings load before presets, so preset RPM values are clamped against the saved **Max RPM** setting. Invalid persisted microstep values are sanitized to the safe default `1/16`.
 - **Display / UI:** the settings blob includes e.g. **`color_scheme`** (`0` = dark neutral palette, `1` = light), **`accent_color`** (0–7), brightness and dim-timeout fields — see `SystemSettings` / `storage.cpp` for the authoritative list.
 - **Saves** run on **Core 1** in `storageTask`: debounced **~500 ms** after preset changes and **~1 s** after settings changes (`storage_flush()`). UI code sets a pending flag; it does not write flash directly.
 - **Flash cache:** NVS commits can disable the flash cache briefly. The firmware sets `g_flashWriting` so the UI can avoid glitches during writes; PSRAM code/rodata mitigations still apply (`CONFIG_SPIRAM_FETCH_INSTRUCTIONS`, `CONFIG_SPIRAM_RODATA` in sdkconfig).
@@ -558,7 +561,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - [x] Countdown before start (configurable 1-10s delay with visual countdown)
 - [x] LVGL async object deletion + widget invalidation pattern
 - [x] E-STOP wakes dimmed display (backlight / dim pipeline, v2.0.3+)
-- [x] v2.0.5: centralised cross-core atomics in `src/app_state.h`, `fatal_halt()` with serial-visible reason, `LOG_E` always compiled in, boot-time ESTOP de-floating, non-blocking ADS1115 pedal ADC, start-request race fix, extended native tests
+- [x] v2.0.5+: centralised cross-core atomics in `src/app_state.h`, `fatal_halt()` with serial-visible reason, `LOG_E` always compiled in, boot-time ESTOP de-floating, non-blocking ADS1115 pedal ADC with short runtime I2C timeout, motion-start safety re-checks, start-request race fix, extended native tests
 
 ---
 

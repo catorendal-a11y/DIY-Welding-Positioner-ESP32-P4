@@ -101,6 +101,20 @@ void test_settings_accel_above() {
   TEST_ASSERT_EQUAL(30000, settings_constrain_acceleration(99999));
 }
 
+void test_settings_microstep_valid() {
+  TEST_ASSERT_EQUAL(4, settings_constrain_microstep(4));
+  TEST_ASSERT_EQUAL(8, settings_constrain_microstep(8));
+  TEST_ASSERT_EQUAL(16, settings_constrain_microstep(16));
+  TEST_ASSERT_EQUAL(32, settings_constrain_microstep(32));
+}
+
+void test_settings_microstep_invalid_defaults_16() {
+  TEST_ASSERT_EQUAL(16, settings_constrain_microstep(0));
+  TEST_ASSERT_EQUAL(16, settings_constrain_microstep(1));
+  TEST_ASSERT_EQUAL(16, settings_constrain_microstep(5));
+  TEST_ASSERT_EQUAL(16, settings_constrain_microstep(64));
+}
+
 void test_settings_brightness_in_range() {
   TEST_ASSERT_EQUAL(150, settings_constrain_brightness(150));
   TEST_ASSERT_EQUAL(10, settings_constrain_brightness(10));
@@ -365,10 +379,12 @@ int main(int argc, char** argv) {
   RUN_TEST(test_sanitize_ascii_empty);
   RUN_TEST(test_sanitize_ascii_len_limit);
 
-  // Section 2: Settings constrain (12 tests)
+  // Section 2: Settings constrain (15 tests)
   RUN_TEST(test_settings_accel_in_range);
   RUN_TEST(test_settings_accel_below);
   RUN_TEST(test_settings_accel_above);
+  RUN_TEST(test_settings_microstep_valid);
+  RUN_TEST(test_settings_microstep_invalid_defaults_16);
   RUN_TEST(test_settings_brightness_in_range);
   RUN_TEST(test_settings_brightness_below);
   RUN_TEST(test_settings_countdown_in_range);

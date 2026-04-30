@@ -246,7 +246,7 @@ static void diameter_btn_cb(lv_event_t* e) {
 static void custom_btn_cb(lv_event_t* e) {
   (void)e;
   if (!customNumpad) {
-  purge_diameter_overlay_async();
+    purge_diameter_overlay_async();
     lv_obj_t* scr = screenRoots[SCREEN_STEP];
     customHint = lv_label_create(scr);
     lv_label_set_text(customHint, "Angle on the part in degrees (e.g. 90 or 90.5)");
@@ -310,7 +310,6 @@ static void stop_event_cb(lv_event_t* e) {
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_step_create() {
   lv_obj_t* screen = screenRoots[SCREEN_STEP];
-  purge_diameter_overlay_async();
   screen_step_invalidate_widgets();
   lv_obj_clean(screen);
   lv_obj_set_style_bg_color(screen, COL_BG, 0);

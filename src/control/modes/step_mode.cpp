@@ -27,15 +27,21 @@ static uint32_t step_sequence_dwell_ms = 0;
 static bool step_waiting_dwell = false;
 static uint32_t step_dwell_until_ms = 0;
 
-static void start_step_move_locked(FastAccelStepper* stepper) {
+static bool start_step_move_locked(FastAccelStepper* stepper) {
+  if (stepper == nullptr || safety_inhibit_motion()) return false;
   accumulatedAngle = 0.0f;
   step_move_start_pos = stepper->getCurrentPosition();
   motor_apply_speed_for_rpm_locked(speed_get_target_rpm());
   digitalWrite(PIN_ENA, LOW);
+  if (safety_inhibit_motion()) {
+    digitalWrite(PIN_ENA, HIGH);
+    return false;
+  }
   stepper->move(step_sequence_signed_steps);
   step_move_steps_total = labs(step_sequence_signed_steps);
   step_finish_earliest_ms = millis() + 50u;
   step_waiting_dwell = false;
+  return true;
 }
 
 void step_execute_sequence(float angle_deg, uint16_t repeats, float dwell_sec);
@@ -91,7 +97,13 @@ void step_execute_sequence(float angle_deg, uint16_t repeats, float dwell_sec) {
   step_sequence_dwell_ms = (uint32_t)(dwell_sec * 1000.0f + 0.5f);
   step_waiting_dwell = false;
   step_dwell_until_ms = 0;
-  start_step_move_locked(stepper);
+  if (!start_step_move_locked(stepper)) {
+    digitalWrite(PIN_ENA, HIGH);
+    step_move_steps_total = 0;
+    step_finish_earliest_ms = 0u;
+    xSemaphoreGive(g_stepperMutex);
+    return;
+  }
   // STATE_STEP before give: otherwise speed_apply() can setSpeedInMilliHz during move().
   if (!control_transition_to(STATE_STEP)) {
     stepper->forceStop();
@@ -119,7 +131,12 @@ void step_update() {
       return;
     }
     if ((int32_t)(now - step_dwell_until_ms) >= 0) {
-      start_step_move_locked(stepper);
+      if (!start_step_move_locked(stepper)) {
+        step_sequence_completed = step_sequence_target_repeats;
+        xSemaphoreGive(g_stepperMutex);
+        control_transition_to(STATE_STOPPING);
+        return;
+      }
     }
     xSemaphoreGive(g_stepperMutex);
     return;
@@ -161,7 +178,9 @@ void step_update() {
         xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
         FastAccelStepper* nextStepper = motor_get_stepper();
         if (nextStepper != nullptr) {
-          start_step_move_locked(nextStepper);
+          if (!start_step_move_locked(nextStepper)) {
+            step_sequence_completed = step_sequence_target_repeats;
+          }
         } else {
           step_sequence_completed = step_sequence_target_repeats;
         }

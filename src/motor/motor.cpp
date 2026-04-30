@@ -151,6 +151,11 @@ bool motor_run_cw() {
     return false;
   }
   digitalWrite(PIN_ENA, LOW);
+  if (safety_inhibit_motion()) {
+    digitalWrite(PIN_ENA, HIGH);
+    xSemaphoreGive(g_stepperMutex);
+    return false;
+  }
   stepper->runForward();
   xSemaphoreGive(g_stepperMutex);
   LOG_I("Motor: CW");
@@ -169,6 +174,11 @@ bool motor_run_ccw() {
     return false;
   }
   digitalWrite(PIN_ENA, LOW);
+  if (safety_inhibit_motion()) {
+    digitalWrite(PIN_ENA, HIGH);
+    xSemaphoreGive(g_stepperMutex);
+    return false;
+  }
   stepper->runBackward();
   xSemaphoreGive(g_stepperMutex);
   LOG_I("Motor: CCW");

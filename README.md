@@ -51,6 +51,7 @@ Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Posit
 - [What This Project Controls](#what-this-project-controls)
 - [Demo](#demo)
 - [Features](#features)
+- [Why This Project Is Different](#why-this-project-is-different)
 - [Operator Workflow](#operator-workflow)
 - [UI Screens](#ui-screens)
 - [Architecture](#industrial-rtos-architecture)
@@ -167,6 +168,24 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 | **System Info / Diagnostics** | Live CPU core load, free heap, PSRAM usage, uptime, plus Diagnostics for ESTOP, ALM, DIR, pedal, ENA, RPM, motion-block reason and the latest operator/fault events |
 | **Hardware Safety** | NC E-STOP interrupt (<0.5 ms), software watchdog, CAS state transitions, boot-time ESTOP de-floating (3-sample majority vote), final ENA safety re-checks before motion, `fatal_halt()` with serial-visible reason on unrecoverable init errors; dimmed backlight wakes on ESTOP |
 | **Thread Safety** | FreeRTOS mutex-protected stepper access, `std::atomic` cross-core variables with explicit memory ordering (single source of truth in `src/app_state.h`), pending-flag patterns |
+
+---
+
+## Why This Project Is Different
+
+Most DIY welding rotator projects stop at "turn a stepper at a set speed." This firmware is built around the parts that usually fail in a real TIG shop: HF noise, blocked starts, unsafe enable timing, touch UI reliability, and recoverable field diagnostics.
+
+| Compared With | Typical Limitation | This Project |
+|:---|:---|:---|
+| Basic Arduino stepper sketch | Single loop, no UI state machine, limited fault handling | Dual-core FreeRTOS with separate motor, control, safety, UI, and storage tasks |
+| Generic CNC / GRBL controller | Optimized for G-code, not glove-safe welding workflow | Purpose-built TIG rotator UI with Continuous, Jog, Pulse, Step, Timer, presets, and foot pedal support |
+| Cheap speed-controller modules | Pot-only control, no saved jobs, weak diagnostics | NVS presets, workpiece diameter fields, diagnostics screen, event log, and display/system info |
+| Open-bench ESP32 projects | Often unstable near HF-start TIG welding | Field-tested with TIG after moving ESP32-P4 screen, DM542T driver, and PSU into one grounded metal enclosure |
+| Simple E-STOP input | Software polling or unsafe enable assumptions | GPIO34 ISR forces ENA HIGH, state machine latches fault, and motion-start paths re-check E-STOP/ALM after ENA LOW |
+| Display demos | Pretty screen but no realtime motor isolation | LVGL 9 UI isolated to Core 1; FastAccelStepper and safety-critical logic stay on Core 0 |
+| Fixed motor configs | Hardcoded microstep/speed assumptions | Touch-configurable microstepping, acceleration, direction invert, max RPM clamp, calibration, and storage validation |
+
+The practical difference: this is not just a rotating table demo. It is firmware for a welding positioner that has been tested against the real failure modes of TIG HF start, noisy wiring, stalled UI, blocked starts, and unsafe motor enable timing.
 
 ---
 

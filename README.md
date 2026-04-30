@@ -534,6 +534,8 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 | [docs/SAFETY_SYSTEM.md](docs/SAFETY_SYSTEM.md) | E-STOP behavior, watchdog model, safety assumptions |
 | [docs/PROJECT_IMPLEMENTATION.md](docs/PROJECT_IMPLEMENTATION.md) | RTOS architecture, storage, display pipeline, known workarounds |
 | [docs/INSTRUCTABLES.md](docs/INSTRUCTABLES.md) | Builder-friendly article content and assembly flow |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Fork, build, test, and pull-request workflow |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Contributor Covenant (community standards for GitHub / contributors) |
 | [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/wiki) | Public builder guide with clone/build, hardware setup, troubleshooting, architecture, and roadmap |
 | [wiki/Getting-Started.md](wiki/Getting-Started.md) | Short build/flash/use walkthrough |
 | [wiki/Troubleshooting.md](wiki/Troubleshooting.md) | Field problems and fixes |

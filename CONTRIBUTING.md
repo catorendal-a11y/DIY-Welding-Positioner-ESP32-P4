@@ -2,6 +2,8 @@
 
 Thank you for considering contributing to this open-source project!
 
+Please read our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agree to uphold it.
+
 ## Development Environment
 
 - **PlatformIO** with `pioarduino` platform (ESP-IDF 5.5.x)

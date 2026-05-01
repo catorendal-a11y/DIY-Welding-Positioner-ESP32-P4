@@ -1,0 +1,207 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "en-US"
+early_access: false
+enable_free_tier: true
+tone_instructions: >
+  Be concise, pragmatic, and specific. Prioritize correctness, safety,
+  concurrency, embedded hardware behavior, and regressions over style-only
+  comments.
+
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  high_level_summary_placeholder: "@coderabbitai summary"
+  high_level_summary_instructions: >
+    Summarize firmware behavior changes, operator or hardware impact,
+    documentation changes, and validation performed. Explicitly call out
+    changes touching motor enable, E-STOP, DM542T ALM, LVGL threading,
+    storage/NVS, build, release, or wiring behavior.
+  high_level_summary_in_walkthrough: false
+  review_status: true
+  review_details: true
+  commit_status: true
+  fail_commit_status: false
+  collapse_walkthrough: true
+  changed_files_summary: true
+  sequence_diagrams: false
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_labels: true
+  auto_apply_labels: false
+  suggested_reviewers: false
+  auto_assign_reviewers: false
+  in_progress_fortune: false
+  poem: false
+  enable_prompt_for_ai_agents: true
+  path_filters:
+    - "!**/.pio/**"
+    - "!**/.cache/**"
+    - "!**/.venv/**"
+    - "!**/node_modules/**"
+    - "!**/*.bin"
+    - "!**/*.elf"
+    - "!**/*.map"
+    - "!**/*.jpg"
+    - "!**/*.jpeg"
+    - "!**/*.png"
+    - "!lib/**"
+  path_instructions:
+    - path: "src/ui/**"
+      instructions: >
+        Review as LVGL 9 code for ESP32-P4. All LVGL calls must run from
+        lvglTask/Core 1 under the LVGL mutex pattern. Do not suggest LVGL v8
+        APIs. Flag stack-allocated lv_style_t, direct hardware/motor calls from
+        UI callbacks, non-ASCII label text, coordinates outside 800x480, use of
+        lv_display_set_rotation(), and unsafe object deletion in event callbacks.
+    - path: "src/motor/**"
+      instructions: >
+        Treat motor control as safety-critical embedded code. ENA HIGH means
+        disabled and LOW means enabled. FastAccelStepper API calls must hold
+        g_stepperMutex unless the function explicitly documents a locked
+        precondition. Live speed changes need setSpeedInMilliHz() followed by
+        applySpeedAcceleration(). Flag any path that can enable ENA without an
+        E-STOP/ALM safety check.
+    - path: "src/control/**"
+      instructions: >
+        Review state-machine logic for race-free transitions and stale command
+        handling. START/STOP/JOG/program requests use a single overwrite queue;
+        ESTOP must interrupt every active mode and clear pending motion. UI
+        modules must not directly execute motor functions.
+    - path: "src/safety/**"
+      instructions: >
+        ESTOP ISR must only do GPIO register writes and atomic flag stores. Do
+        not allow millis(), logging, heap allocation, FastAccelStepper calls, or
+        flash-touching functions in the ISR. Driver ALM is active LOW and must
+        latch a fault until reset is safe.
+    - path: "src/storage/**"
+      instructions: >
+        Settings and presets are stored in NVS via Preferences. UI callbacks
+        should only request deferred saves; storageTask performs writes. Guard
+        g_settings, g_presets, and NVS access with the correct mutexes. Preserve
+        legacy LittleFS migration behavior.
+    - path: "src/config.h"
+      instructions: >
+        Hardware pins and motion constants are wiring-critical. Flag changes to
+        STEP, DIR, ENA, E-STOP, POT, DIR switch, pedal, driver ALM, RPM limits,
+        gear ratio, or display timing unless docs and wiring diagrams are kept
+        in sync.
+    - path: "test/**"
+      instructions: >
+        Native tests must remain hardware-independent. On-device tests must stay
+        under esp32p4-test filters and clearly document hardware requirements.
+    - path: "docs/**"
+      instructions: >
+        Documentation must be clone/build friendly for other users. Do not allow
+        local machine paths, private workspace structure, or instructions that
+        contradict config.h, platformio.ini, wiring diagrams, or current UI
+        behavior. Preserve existing images unless the PR intentionally replaces
+        them.
+    - path: "README.md"
+      instructions: >
+        Keep the README compact and builder-focused. Preserve existing images,
+        keep clone/build commands generic, and avoid duplicating long technical
+        details already covered in docs/ or wiki/.
+    - path: ".github/workflows/**"
+      instructions: >
+        Review GitHub Actions changes for pinned action versions, Node runtime
+        deprecations, PlatformIO cache safety, and consistency with the documented
+        build commands.
+  labeling_instructions:
+    - label: "firmware"
+      instructions: "Apply when src/control, src/motor, src/safety, src/storage, src/ui, or src/config.h changes."
+    - label: "documentation"
+      instructions: "Apply when README, docs, wiki, markdown, diagrams, or release notes change."
+    - label: "hardware"
+      instructions: "Apply when wiring, pin assignments, driver settings, enclosure, EMI, or BOM details change."
+    - label: "tests"
+      instructions: "Apply when native or on-device tests change."
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+    ignore_title_keywords:
+      - "WIP"
+      - "DO NOT REVIEW"
+  pre_merge_checks:
+    title:
+      mode: "warning"
+      requirements: >
+        Prefer concise conventional-commit style titles such as
+        "fix: harden estop handling" or "docs: update wiring guide".
+    description:
+      mode: "warning"
+    custom_checks:
+      - name: "Motor safety invariants"
+        mode: "warning"
+        instructions: >
+          If the PR changes motor, control, safety, config, or driver wiring
+          code, verify that ENA HIGH remains the disabled state, E-STOP/ALM
+          inputs cannot be bypassed, and stepper API calls are serialized.
+      - name: "LVGL task safety"
+        mode: "warning"
+        instructions: >
+          If the PR changes UI code, verify that LVGL calls remain in the UI
+          task/mutex flow, widgets are not deleted unsafely from callbacks, and
+          labels remain ASCII-only.
+      - name: "Docs and wiring sync"
+        mode: "warning"
+        instructions: >
+          If the PR changes pinout, motor constants, wiring, UI behavior, or
+          release/build behavior, verify that README/docs/wiki/SVG diagrams are
+          updated or that the PR explains why no documentation change is needed.
+  tools:
+    github-checks:
+      enabled: true
+      timeout_ms: 900000
+    actionlint:
+      enabled: true
+    markdownlint:
+      enabled: true
+    shellcheck:
+      enabled: true
+    yamllint:
+      enabled: true
+    clang:
+      enabled: false
+    cppcheck:
+      enabled: false
+
+chat:
+  auto_reply: true
+  allow_non_org_members: true
+  art: false
+
+knowledge_base:
+  opt_out: false
+  web_search:
+    enabled: true
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "AGENTS.md"
+      - "CLAUDE.md"
+      - "CONTRIBUTING.md"
+      - "docs/SAFETY_SYSTEM.md"
+      - "docs/PROJECT_IMPLEMENTATION.md"
+      - "docs/EMI_MITIGATION.md"
+      - "docs/HARDWARE_SETUP.md"
+  learnings:
+    scope: "local"
+  issues:
+    scope: "local"
+  pull_requests:
+    scope: "local"
+
+code_generation:
+  docstrings:
+    language: "en-US"
+  unit_tests:
+    path_instructions:
+      - path: "test/**"
+        instructions: >
+          Prefer native Unity tests for pure logic. Use on-device test suites
+          only when hardware behavior is required and document the required
+          ESP32-P4 setup.

@@ -10,6 +10,7 @@ static constexpr uint16_t USB_MIRROR_KEEPALIVE_TIMEOUT_MS = 1500;
 
 static constexpr uint32_t USB_MIRROR_MAGIC = 0x31524D52u;  // "RMR1" little-endian
 static constexpr uint8_t USB_MIRROR_VERSION = 1;
+static constexpr uint32_t USB_MIRROR_DEFAULT_BAUD = 4000000u;
 static constexpr size_t USB_MIRROR_HEADER_SIZE = 20;
 static constexpr uint16_t USB_MIRROR_CHUNK_ROWS = 16;
 static constexpr size_t USB_MIRROR_MAX_CHUNK_PAYLOAD =

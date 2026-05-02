@@ -99,7 +99,7 @@ Fast path for builders who already have PlatformIO installed.
 
    ```powershell
    pio run -e esp32p4-mirror --target upload
-   .\simulator\run.ps1 -UsbMirror COM5 -Baud 2000000
+   .\simulator\run.ps1 -UsbMirror COM5 -Baud 4000000
    ```
 
    On the device, open **Settings > Display > USB MIRROR** and arm it after the PC viewer shows a link. E-STOP and driver faults still override all UI input.
@@ -340,10 +340,10 @@ pio run -e esp32p4-mirror --target upload
 Run the Windows viewer:
 
 ```powershell
-.\simulator\run.ps1 -UsbMirror COM5 -Baud 2000000
+.\simulator\run.ps1 -UsbMirror COM5 -Baud 4000000
 ```
 
-Use `-Baud 921600` if the Windows USB serial driver is unstable at 2M. `COM5` must not be open in PlatformIO Monitor while the viewer is connected.
+Use `-Baud 2000000` or `-Baud 921600` if the Windows USB serial driver is unstable at 4M. `COM5` must not be open in PlatformIO Monitor while the viewer is connected.
 
 Remote control is fail-closed: it starts disabled after boot, requires **Settings > Display > USB MIRROR** to be armed on the physical screen, and releases on USB disconnect/keepalive timeout. The PC only injects LVGL touch input; it has no direct motor command API.
 

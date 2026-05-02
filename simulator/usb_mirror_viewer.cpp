@@ -292,7 +292,7 @@ int main(int argc, char** argv) {
   }
 
   const char* port = argv[1];
-  DWORD baud = (argc >= 3) ? (DWORD)std::strtoul(argv[2], nullptr, 10) : 2000000;
+  DWORD baud = (argc >= 3) ? (DWORD)std::strtoul(argv[2], nullptr, 10) : USB_MIRROR_DEFAULT_BAUD;
 
   SerialPort serial;
   if (!serial.open(port, baud)) return 1;

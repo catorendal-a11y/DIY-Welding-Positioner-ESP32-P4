@@ -5,15 +5,16 @@
 #define ENABLE_USB_UI_MIRROR 0
 #endif
 
+#include "usb_mirror_protocol.h"
+
 #ifndef USB_MIRROR_SERIAL_BAUD
 #if ENABLE_USB_UI_MIRROR
-#define USB_MIRROR_SERIAL_BAUD 2000000
+#define USB_MIRROR_SERIAL_BAUD USB_MIRROR_DEFAULT_BAUD
 #else
 #define USB_MIRROR_SERIAL_BAUD 115200
 #endif
 #endif
 
-#include "usb_mirror_protocol.h"
 #include <lvgl.h>
 
 void usb_mirror_begin();

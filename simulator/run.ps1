@@ -1,7 +1,7 @@
 param(
   [switch]$SelfTest,
   [string]$UsbMirror,
-  [int]$Baud = 2000000
+  [int]$Baud = 4000000
 )
 
 $ErrorActionPreference = "Stop"

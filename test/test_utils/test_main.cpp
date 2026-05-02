@@ -413,6 +413,10 @@ void test_usb_mirror_keepalive_timeout() {
   TEST_ASSERT_TRUE(usb_mirror_keepalive_fresh(1000, 2499));
 }
 
+void test_usb_mirror_default_baud_is_4m() {
+  TEST_ASSERT_EQUAL_UINT32(4000000u, USB_MIRROR_DEFAULT_BAUD);
+}
+
 void test_usb_mirror_accepts_rle_video_rect() {
   UsbMirrorVideoRect rect{};
   rect.x = 10;
@@ -548,12 +552,13 @@ int main(int argc, char** argv) {
   RUN_TEST(test_flush_rotate_portrait_rect_partial);
   RUN_TEST(test_flush_rotate_portrait_rect_single_pixel);
 
-  // Section 7: USB mirror protocol (9 tests)
+  // Section 7: USB mirror protocol (10 tests)
   RUN_TEST(test_usb_mirror_crc32_known_value);
   RUN_TEST(test_usb_mirror_header_round_trip);
   RUN_TEST(test_usb_mirror_rejects_bad_magic);
   RUN_TEST(test_usb_mirror_clamps_pointer);
   RUN_TEST(test_usb_mirror_keepalive_timeout);
+  RUN_TEST(test_usb_mirror_default_baud_is_4m);
   RUN_TEST(test_usb_mirror_accepts_rle_video_rect);
   RUN_TEST(test_usb_mirror_rle_round_trip_repeated_pixels);
   RUN_TEST(test_usb_mirror_rle_rejects_output_overflow);

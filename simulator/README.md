@@ -38,13 +38,13 @@ Flash mirror firmware first:
 Start the viewer:
 
 ```powershell
-.\simulator\run.ps1 -UsbMirror COM5 -Baud 2000000
+.\simulator\run.ps1 -UsbMirror COM5 -Baud 4000000
 ```
 
 Fallback baud:
 
 ```powershell
-.\simulator\run.ps1 -UsbMirror COM5 -Baud 921600
+.\simulator\run.ps1 -UsbMirror COM5 -Baud 2000000
 ```
 
 On the physical screen, open **Settings > Display > USB MIRROR** and arm it

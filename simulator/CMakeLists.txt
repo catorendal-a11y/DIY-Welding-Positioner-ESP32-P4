@@ -52,11 +52,19 @@ add_executable(rotator_simulator
   ${LVGL_SOURCES}
 )
 
+add_executable(rotator_usb_mirror
+  usb_mirror_viewer.cpp
+)
+
 target_compile_definitions(rotator_simulator PRIVATE
   ROTATOR_SIMULATOR=1
   LV_CONF_INCLUDE_SIMPLE=1
   SDL_MAIN_HANDLED=1
   DEBUG_BUILD=1
+)
+
+target_compile_definitions(rotator_usb_mirror PRIVATE
+  SDL_MAIN_HANDLED=1
 )
 
 target_include_directories(rotator_simulator PRIVATE
@@ -69,6 +77,11 @@ target_include_directories(rotator_simulator PRIVATE
   "${SDL2_INCLUDE_DIR}"
 )
 
+target_include_directories(rotator_usb_mirror PRIVATE
+  "${PROJECT_ROOT}"
+  "${SDL2_INCLUDE_DIR}"
+)
+
 target_compile_options(rotator_simulator PRIVATE
   -Wall
   -Wno-unused-parameter
@@ -78,12 +91,30 @@ target_compile_options(rotator_simulator PRIVATE
   -Wno-missing-field-initializers
 )
 
+target_compile_options(rotator_usb_mirror PRIVATE
+  -Wall
+  -Wno-unused-parameter
+)
+
 target_link_libraries(rotator_simulator PRIVATE
+  "${SDL2_LIBRARY}"
+)
+
+target_link_libraries(rotator_usb_mirror PRIVATE
   "${SDL2_LIBRARY}"
 )
 
 if(WIN32)
   target_link_libraries(rotator_simulator PRIVATE
+    user32
+    gdi32
+    winmm
+    imm32
+    ole32
+    oleaut32
+    version
+  )
+  target_link_libraries(rotator_usb_mirror PRIVATE
     user32
     gdi32
     winmm
@@ -99,5 +130,10 @@ if(SDL2_DLL)
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different
       "${SDL2_DLL}"
       "$<TARGET_FILE_DIR:rotator_simulator>/SDL2.dll"
+  )
+  add_custom_command(TARGET rotator_usb_mirror POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+      "${SDL2_DLL}"
+      "$<TARGET_FILE_DIR:rotator_usb_mirror>/SDL2.dll"
   )
 endif()

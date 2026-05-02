@@ -1,5 +1,7 @@
 param(
-  [switch]$SelfTest
+  [switch]$SelfTest,
+  [string]$UsbMirror,
+  [int]$Baud = 2000000
 )
 
 $ErrorActionPreference = "Stop"
@@ -13,13 +15,16 @@ cmake -S $PSScriptRoot -B $build -G Ninja `
 
 cmake --build $build
 
-$exe = Join-Path $build "rotator_simulator.exe"
-if ($SelfTest) {
-  & $exe --self-test
+$simExe = Join-Path $build "rotator_simulator.exe"
+$mirrorExe = Join-Path $build "rotator_usb_mirror.exe"
+if ($UsbMirror) {
+  & $mirrorExe $UsbMirror $Baud
+} elseif ($SelfTest) {
+  & $simExe --self-test
 } else {
-  & $exe
+  & $simExe
 }
 
 if ($LASTEXITCODE -ne 0) {
-  throw "rotator_simulator.exe exited with code $LASTEXITCODE"
+  throw "simulator tool exited with code $LASTEXITCODE"
 }

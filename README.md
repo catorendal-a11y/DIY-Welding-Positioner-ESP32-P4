@@ -51,7 +51,7 @@ Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Posit
 |:---|:---|:---|:---|:---|
 | [Quick Start](#quick-start) | [Build Commands](#build-commands) | [Wiring](#wiring-diagram) | [TIG HF Requirement](#tig-hf-noise-requirement) | [Documentation Map](#documentation-map) |
 | [Demo](#demo) | [Features](#features) | [Bill of Materials](#bill-of-materials) | [Troubleshooting](#troubleshooting) | [Project Structure](#project-structure) |
-| [PC UI Simulator](#pc-ui-simulator) | [Native Tests](#build-commands) | [First Bench Test](#first-bench-test-checklist) | [Safety Notice](#safety-notice) | [Simulator README](simulator/README.md) |
+| [PC UI Simulator](#pc-ui-simulator) | [USB-C Live Mirror](#usb-c-live-mirror) | [First Bench Test](#first-bench-test-checklist) | [Safety Notice](#safety-notice) | [Simulator README](simulator/README.md) |
 
 ---
 
@@ -95,9 +95,18 @@ Fast path for builders who already have PlatformIO installed.
    .\simulator\run.ps1 -SelfTest
    ```
 
-5. **Connect hardware** per the [wiring diagram](#wiring-diagram). Keep motor PSU off until logic power, E-STOP, ENA, STEP, DIR, and driver settings are verified.
+5. **Optional USB-C live mirror** - view and control the real ESP32 UI from Windows:
 
-6. **For TIG HF start welding:** put the ESP32-P4 screen, stepper driver, and motor PSU inside the same grounded metal enclosure before welding near the controller.
+   ```powershell
+   pio run -e esp32p4-mirror --target upload
+   .\simulator\run.ps1 -UsbMirror COM5 -Baud 2000000
+   ```
+
+   On the device, open **Settings > Display > USB MIRROR** and arm it after the PC viewer shows a link. E-STOP and driver faults still override all UI input.
+
+6. **Connect hardware** per the [wiring diagram](#wiring-diagram). Keep motor PSU off until logic power, E-STOP, ENA, STEP, DIR, and driver settings are verified.
+
+7. **For TIG HF start welding:** put the ESP32-P4 screen, stepper driver, and motor PSU inside the same grounded metal enclosure before welding near the controller.
 
 ---
 
@@ -286,6 +295,7 @@ Default environment: `esp32p4-release`. Build output goes to `.pio/build-fw` to 
 |:---|:---|
 | Release build | `pio run` |
 | Debug build | `pio run -e esp32p4-debug` |
+| USB-C mirror build | `pio run -e esp32p4-mirror` |
 | Flash release firmware | `pio run --target upload` |
 | Serial monitor | `pio device monitor` |
 | Native tests | `pio test -e native` |
@@ -314,6 +324,28 @@ The self-test creates every screen, runs update loops, clicks key navigation/con
 This is not live device mirroring and it cannot control motor hardware. Real E-STOP, driver alarm, ENA polarity, touch, and motor behavior still need bench testing on the actual controller.
 
 Requirements: CMake, Ninja, MSYS2 MinGW SDL2, and PlatformIO dependencies already installed. See [simulator/README.md](simulator/README.md).
+
+---
+
+## USB-C Live Mirror
+
+The USB-C mirror streams real LVGL RGB565 pixels from the ESP32-P4 and sends PC mouse input back as LVGL pointer events. It is not a second UI implementation.
+
+Flash the mirror firmware:
+
+```powershell
+pio run -e esp32p4-mirror --target upload
+```
+
+Run the Windows viewer:
+
+```powershell
+.\simulator\run.ps1 -UsbMirror COM5 -Baud 2000000
+```
+
+Use `-Baud 921600` if the Windows USB serial driver is unstable at 2M. `COM5` must not be open in PlatformIO Monitor while the viewer is connected.
+
+Remote control is fail-closed: it starts disabled after boot, requires **Settings > Display > USB MIRROR** to be armed on the physical screen, and releases on USB disconnect/keepalive timeout. The PC only injects LVGL touch input; it has no direct motor command API.
 
 ---
 

@@ -8,6 +8,7 @@
 
 #include "../../src/storage/test_storage_logic.h"
 #include "../../src/ui/test_hal_logic.h"
+#include "../../src/mirror/usb_mirror_protocol.h"
 
 void setUp(void) {}
 void tearDown(void) {}
@@ -361,6 +362,57 @@ void test_flush_rotate_portrait_rect_single_pixel() {
   TEST_ASSERT_EQUAL(399, py2);
 }
 
+// =============================================================================
+// SECTION 7: USB MIRROR PROTOCOL
+// =============================================================================
+
+void test_usb_mirror_crc32_known_value() {
+  const uint8_t data[] = {'1','2','3','4','5','6','7','8','9'};
+  TEST_ASSERT_EQUAL_HEX32(0xCBF43926u, usb_mirror_crc32(data, sizeof(data)));
+}
+
+void test_usb_mirror_header_round_trip() {
+  UsbMirrorHeader h{};
+  h.magic = USB_MIRROR_MAGIC;
+  h.version = USB_MIRROR_VERSION;
+  h.type = USB_MIRROR_PACKET_VIDEO;
+  h.flags = 0;
+  h.sequence = 42;
+  h.payload_len = 12;
+  h.payload_crc = 0x12345678u;
+
+  uint8_t out[USB_MIRROR_HEADER_SIZE];
+  TEST_ASSERT_TRUE(usb_mirror_write_header(h, out, sizeof(out)));
+
+  UsbMirrorHeader decoded{};
+  TEST_ASSERT_TRUE(usb_mirror_read_header(out, sizeof(out), decoded));
+  TEST_ASSERT_EQUAL_UINT32(h.magic, decoded.magic);
+  TEST_ASSERT_EQUAL_UINT8(h.version, decoded.version);
+  TEST_ASSERT_EQUAL_UINT8(h.type, decoded.type);
+  TEST_ASSERT_EQUAL_UINT8(h.flags, decoded.flags);
+  TEST_ASSERT_EQUAL_UINT32(h.sequence, decoded.sequence);
+  TEST_ASSERT_EQUAL_UINT32(h.payload_len, decoded.payload_len);
+  TEST_ASSERT_EQUAL_UINT32(h.payload_crc, decoded.payload_crc);
+}
+
+void test_usb_mirror_rejects_bad_magic() {
+  uint8_t out[USB_MIRROR_HEADER_SIZE] = {};
+  UsbMirrorHeader decoded{};
+  TEST_ASSERT_FALSE(usb_mirror_read_header(out, sizeof(out), decoded));
+}
+
+void test_usb_mirror_clamps_pointer() {
+  UsbMirrorPointer p = usb_mirror_clamp_pointer(999, -4, USB_MIRROR_POINTER_PRESSED);
+  TEST_ASSERT_EQUAL_INT16(799, p.x);
+  TEST_ASSERT_EQUAL_INT16(0, p.y);
+  TEST_ASSERT_EQUAL_UINT8(USB_MIRROR_POINTER_PRESSED, p.state);
+}
+
+void test_usb_mirror_keepalive_timeout() {
+  TEST_ASSERT_FALSE(usb_mirror_keepalive_fresh(1000, 2601));
+  TEST_ASSERT_TRUE(usb_mirror_keepalive_fresh(1000, 2499));
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST RUNNER
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -438,6 +490,13 @@ int main(int argc, char** argv) {
   RUN_TEST(test_flush_rotate_portrait_rect_full);
   RUN_TEST(test_flush_rotate_portrait_rect_partial);
   RUN_TEST(test_flush_rotate_portrait_rect_single_pixel);
+
+  // Section 7: USB mirror protocol (5 tests)
+  RUN_TEST(test_usb_mirror_crc32_known_value);
+  RUN_TEST(test_usb_mirror_header_round_trip);
+  RUN_TEST(test_usb_mirror_rejects_bad_magic);
+  RUN_TEST(test_usb_mirror_clamps_pointer);
+  RUN_TEST(test_usb_mirror_keepalive_timeout);
 
   return UNITY_END();
 }

@@ -26,6 +26,7 @@ struct MirrorChunk {
 };
 
 static MirrorChunk* g_chunks = nullptr;
+static uint8_t* g_txCompress = nullptr;
 static QueueHandle_t g_freeQueue = nullptr;
 static QueueHandle_t g_readyQueue = nullptr;
 
@@ -83,11 +84,32 @@ static bool send_packet(uint8_t type, const uint8_t* payload, uint32_t payloadLe
 static bool send_video_chunk(const MirrorChunk& chunk) {
   uint8_t headerBuf[USB_MIRROR_HEADER_SIZE];
   uint8_t rectBuf[USB_MIRROR_VIDEO_RECT_SIZE];
-  if (!usb_mirror_write_video_rect(chunk.rect, rectBuf, sizeof(rectBuf))) return false;
+  UsbMirrorVideoRect rect = chunk.rect;
+  const uint8_t* payload = chunk.pixels;
+  uint32_t payloadLen = chunk.pixelBytes;
+
+  if (g_txCompress && chunk.pixelBytes >= 4u && (chunk.pixelBytes % 2u) == 0) {
+    size_t encodedLen = 0;
+    size_t maxEncodedLen = (chunk.pixelBytes > 0u) ? (size_t)chunk.pixelBytes - 1u : 0u;
+    if (maxEncodedLen > USB_MIRROR_MAX_CHUNK_PAYLOAD) {
+      maxEncodedLen = USB_MIRROR_MAX_CHUNK_PAYLOAD;
+    }
+
+    bool encoded = usb_mirror_encode_rgb565_rle((const uint16_t*)chunk.pixels,
+                                                (size_t)chunk.pixelBytes / 2u,
+                                                g_txCompress, maxEncodedLen, encodedLen);
+    if (encoded && encodedLen > 0u && encodedLen < chunk.pixelBytes) {
+      rect.format = USB_MIRROR_FORMAT_RGB565_RLE;
+      payload = g_txCompress;
+      payloadLen = (uint32_t)encodedLen;
+    }
+  }
+
+  if (!usb_mirror_write_video_rect(rect, rectBuf, sizeof(rectBuf))) return false;
 
   uint32_t crc = usb_mirror_crc32_begin();
   crc = usb_mirror_crc32_update(crc, rectBuf, sizeof(rectBuf));
-  crc = usb_mirror_crc32_update(crc, chunk.pixels, chunk.pixelBytes);
+  crc = usb_mirror_crc32_update(crc, payload, payloadLen);
   crc = usb_mirror_crc32_finish(crc);
 
   UsbMirrorHeader h{};
@@ -95,13 +117,13 @@ static bool send_video_chunk(const MirrorChunk& chunk) {
   h.version = USB_MIRROR_VERSION;
   h.type = USB_MIRROR_PACKET_VIDEO;
   h.sequence = g_sequence.fetch_add(1, std::memory_order_acq_rel);
-  h.payload_len = (uint32_t)(sizeof(rectBuf) + chunk.pixelBytes);
+  h.payload_len = (uint32_t)(sizeof(rectBuf) + payloadLen);
   h.payload_crc = crc;
 
   if (!usb_mirror_write_header(h, headerBuf, sizeof(headerBuf))) return false;
   if (!serial_write_all(headerBuf, sizeof(headerBuf))) return false;
   if (!serial_write_all(rectBuf, sizeof(rectBuf))) return false;
-  if (!serial_write_all(chunk.pixels, chunk.pixelBytes)) return false;
+  if (!serial_write_all(payload, payloadLen)) return false;
   return true;
 }
 
@@ -245,12 +267,15 @@ void usb_mirror_begin() {
 
   g_chunks = (MirrorChunk*)heap_caps_calloc(MIRROR_CHUNK_COUNT, sizeof(MirrorChunk),
                                             MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+  g_txCompress = (uint8_t*)heap_caps_malloc(USB_MIRROR_MAX_CHUNK_PAYLOAD,
+                                            MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
   g_freeQueue = xQueueCreate(MIRROR_CHUNK_COUNT, sizeof(uint8_t));
   g_readyQueue = xQueueCreate(MIRROR_CHUNK_COUNT, sizeof(uint8_t));
 
   if (!g_chunks || !g_freeQueue || !g_readyQueue) {
     LOG_E("USB mirror init failed");
     g_chunks = nullptr;
+    g_txCompress = nullptr;
     g_freeQueue = nullptr;
     g_readyQueue = nullptr;
     return;

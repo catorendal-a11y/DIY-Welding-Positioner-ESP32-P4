@@ -62,6 +62,7 @@ struct UsbMirrorPointer {
 };
 
 static constexpr uint8_t USB_MIRROR_FORMAT_RGB565_LE = 1;
+static constexpr uint8_t USB_MIRROR_FORMAT_RGB565_RLE = 2;
 
 inline uint16_t usb_mirror_clamp_u16(int32_t value, uint16_t maxValue) {
   if (value < 0) return 0;
@@ -126,6 +127,51 @@ inline uint32_t usb_mirror_get_u32(const uint8_t* in) {
          ((uint32_t)in[1] << 8) |
          ((uint32_t)in[2] << 16) |
          ((uint32_t)in[3] << 24);
+}
+
+inline bool usb_mirror_encode_rgb565_rle(const uint16_t* pixels, size_t pixelCount,
+                                         uint8_t* out, size_t outCap, size_t& outLen) {
+  outLen = 0;
+  if (pixelCount == 0) return true;
+  if (!pixels || !out) return false;
+
+  size_t i = 0;
+  while (i < pixelCount) {
+    uint16_t color = pixels[i];
+    uint16_t run = 1;
+    while ((i + run) < pixelCount && run < 0xFFFFu && pixels[i + run] == color) {
+      run++;
+    }
+
+    if (outLen + 4u > outCap) return false;
+    usb_mirror_put_u16(out + outLen, run);
+    usb_mirror_put_u16(out + outLen + 2u, color);
+    outLen += 4u;
+    i += run;
+  }
+
+  return true;
+}
+
+inline bool usb_mirror_decode_rgb565_rle(const uint8_t* in, size_t inLen,
+                                         uint16_t* out, size_t pixelCount) {
+  if ((inLen % 4u) != 0) return false;
+  if (pixelCount == 0) return inLen == 0;
+  if (!in || !out) return false;
+
+  size_t outPos = 0;
+  for (size_t i = 0; i < inLen; i += 4u) {
+    uint16_t run = usb_mirror_get_u16(in + i);
+    uint16_t color = usb_mirror_get_u16(in + i + 2u);
+    if (run == 0) return false;
+    if (outPos + run > pixelCount) return false;
+
+    for (uint16_t r = 0; r < run; r++) {
+      out[outPos++] = color;
+    }
+  }
+
+  return outPos == pixelCount;
 }
 
 inline bool usb_mirror_write_header(const UsbMirrorHeader& h, uint8_t* out, size_t outLen) {
@@ -210,7 +256,10 @@ inline bool usb_mirror_read_video_rect(const uint8_t* in, size_t inLen, UsbMirro
   r.reserved[1] = 0;
   r.reserved[2] = 0;
 
-  if (r.format != USB_MIRROR_FORMAT_RGB565_LE) return false;
+  if (r.format != USB_MIRROR_FORMAT_RGB565_LE &&
+      r.format != USB_MIRROR_FORMAT_RGB565_RLE) {
+    return false;
+  }
   if (r.x >= USB_MIRROR_WIDTH || r.y >= USB_MIRROR_HEIGHT) return false;
   if (r.w == 0 || r.h == 0 || r.rows == 0) return false;
   if ((uint32_t)r.x + r.w > USB_MIRROR_WIDTH) return false;

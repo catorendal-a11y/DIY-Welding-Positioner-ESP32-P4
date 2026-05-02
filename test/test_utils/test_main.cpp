@@ -413,6 +413,63 @@ void test_usb_mirror_keepalive_timeout() {
   TEST_ASSERT_TRUE(usb_mirror_keepalive_fresh(1000, 2499));
 }
 
+void test_usb_mirror_accepts_rle_video_rect() {
+  UsbMirrorVideoRect rect{};
+  rect.x = 10;
+  rect.y = 20;
+  rect.w = 40;
+  rect.h = 16;
+  rect.row = 0;
+  rect.rows = 8;
+  rect.format = USB_MIRROR_FORMAT_RGB565_RLE;
+
+  uint8_t out[USB_MIRROR_VIDEO_RECT_SIZE];
+  TEST_ASSERT_TRUE(usb_mirror_write_video_rect(rect, out, sizeof(out)));
+
+  UsbMirrorVideoRect decoded{};
+  TEST_ASSERT_TRUE(usb_mirror_read_video_rect(out, sizeof(out), decoded));
+  TEST_ASSERT_EQUAL_UINT8(USB_MIRROR_FORMAT_RGB565_RLE, decoded.format);
+  TEST_ASSERT_EQUAL_UINT16(rect.x, decoded.x);
+  TEST_ASSERT_EQUAL_UINT16(rect.rows, decoded.rows);
+}
+
+void test_usb_mirror_rle_round_trip_repeated_pixels() {
+  const uint16_t pixels[] = {
+    0x1111, 0x1111, 0x1111, 0x1111,
+    0x2222, 0x2222, 0x2222, 0x3333
+  };
+  uint8_t encoded[32];
+  size_t encodedLen = 0;
+
+  TEST_ASSERT_TRUE(usb_mirror_encode_rgb565_rle(pixels, 8, encoded, sizeof(encoded), encodedLen));
+  TEST_ASSERT_EQUAL_UINT(12, encodedLen);
+
+  uint16_t decoded[8] = {};
+  TEST_ASSERT_TRUE(usb_mirror_decode_rgb565_rle(encoded, encodedLen, decoded, 8));
+  TEST_ASSERT_EQUAL_UINT16_ARRAY(pixels, decoded, 8);
+}
+
+void test_usb_mirror_rle_rejects_output_overflow() {
+  uint8_t encoded[8];
+  usb_mirror_put_u16(encoded + 0, 6);
+  usb_mirror_put_u16(encoded + 2, 0x1234);
+  usb_mirror_put_u16(encoded + 4, 1);
+  usb_mirror_put_u16(encoded + 6, 0x5678);
+
+  uint16_t decoded[4] = {};
+  TEST_ASSERT_FALSE(usb_mirror_decode_rgb565_rle(encoded, sizeof(encoded), decoded, 4));
+}
+
+void test_usb_mirror_rle_rejects_truncated_pair() {
+  uint8_t encoded[6];
+  usb_mirror_put_u16(encoded + 0, 2);
+  usb_mirror_put_u16(encoded + 2, 0x1234);
+  usb_mirror_put_u16(encoded + 4, 1);
+
+  uint16_t decoded[3] = {};
+  TEST_ASSERT_FALSE(usb_mirror_decode_rgb565_rle(encoded, sizeof(encoded), decoded, 3));
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST RUNNER
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -491,12 +548,16 @@ int main(int argc, char** argv) {
   RUN_TEST(test_flush_rotate_portrait_rect_partial);
   RUN_TEST(test_flush_rotate_portrait_rect_single_pixel);
 
-  // Section 7: USB mirror protocol (5 tests)
+  // Section 7: USB mirror protocol (9 tests)
   RUN_TEST(test_usb_mirror_crc32_known_value);
   RUN_TEST(test_usb_mirror_header_round_trip);
   RUN_TEST(test_usb_mirror_rejects_bad_magic);
   RUN_TEST(test_usb_mirror_clamps_pointer);
   RUN_TEST(test_usb_mirror_keepalive_timeout);
+  RUN_TEST(test_usb_mirror_accepts_rle_video_rect);
+  RUN_TEST(test_usb_mirror_rle_round_trip_repeated_pixels);
+  RUN_TEST(test_usb_mirror_rle_rejects_output_overflow);
+  RUN_TEST(test_usb_mirror_rle_rejects_truncated_pair);
 
   return UNITY_END();
 }

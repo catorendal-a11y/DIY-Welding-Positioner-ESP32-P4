@@ -180,15 +180,29 @@ static void apply_video_packet(const uint8_t* payload, uint32_t payloadLen,
 
   const uint8_t* pixels = payload + USB_MIRROR_VIDEO_RECT_SIZE;
   uint32_t pixelBytes = payloadLen - USB_MIRROR_VIDEO_RECT_SIZE;
-  uint32_t expected = (uint32_t)rect.w * rect.rows * 2u;
-  if (pixelBytes != expected) return;
+  size_t pixelCount = (size_t)rect.w * rect.rows;
+  uint32_t expected = (uint32_t)pixelCount * 2u;
+  static std::vector<uint16_t> decodedPixels;
+  const uint8_t* srcPixels = pixels;
+
+  if (rect.format == USB_MIRROR_FORMAT_RGB565_LE) {
+    if (pixelBytes != expected) return;
+  } else if (rect.format == USB_MIRROR_FORMAT_RGB565_RLE) {
+    if (decodedPixels.size() < pixelCount) {
+      decodedPixels.resize(pixelCount);
+    }
+    if (!usb_mirror_decode_rgb565_rle(pixels, pixelBytes, decodedPixels.data(), pixelCount)) return;
+    srcPixels = (const uint8_t*)decodedPixels.data();
+  } else {
+    return;
+  }
 
   uint16_t dstY = (uint16_t)(rect.y + rect.row);
   if ((uint32_t)dstY + rect.rows > USB_MIRROR_HEIGHT) return;
 
   for (uint16_t r = 0; r < rect.rows; r++) {
     uint16_t* dst = framebuffer.data() + ((size_t)(dstY + r) * USB_MIRROR_WIDTH + rect.x);
-    const uint8_t* src = pixels + ((size_t)r * rect.w * 2u);
+    const uint8_t* src = srcPixels + ((size_t)r * rect.w * 2u);
     std::memcpy(dst, src, (size_t)rect.w * 2u);
   }
 

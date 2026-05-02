@@ -259,7 +259,7 @@ void lvgl_hal_init() {
   // ─────────────────────────────────────────────────────────────────────────
   lv_display_t *disp = lv_display_create(DISPLAY_H_RES, DISPLAY_V_RES);
   lv_display_set_color_format(disp, LV_COLOR_FORMAT_RGB565);
-  lv_display_set_buffers(disp, buf1, buf2, buf_bytes, LV_DISPLAY_RENDER_MODE_FULL);
+  lv_display_set_buffers(disp, buf1, buf2, buf_bytes, LV_DISPLAY_RENDER_MODE_PARTIAL);
   lv_display_set_flush_cb(disp, lvgl_flush_cb);
   // NO lv_display_set_rotation() — causes Load access fault on ESP32-P4.
   // lv_display_set_rotation() triggers LVGL's internal buffer rearrangement

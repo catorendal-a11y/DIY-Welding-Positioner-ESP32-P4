@@ -1,8 +1,8 @@
 # Project Status
 
-**Last Updated:** 2026-04-30
+**Last Updated:** 2026-05-02
 **Firmware:** v2.0.9
-**Build:** SUCCESS (Release & Debug, 0 errors 0 warnings) - verified 2026-04-30 after motor/safety/storage audit
+**Build:** SUCCESS (`esp32p4-mirror`, native tests, simulator self-test) - verified 2026-05-02 after USB mirror/calibration pass
 
 ---
 
@@ -38,11 +38,13 @@
 - [x] **Dark / Light UI mode** (Display Settings **UI MODE**, persisted as `color_scheme` in NVS `cfg`)
 - [x] **Settings hub** (Motor Config, Calibration, Display, Pedal Settings, Diagnostics, System Info, About)
 - [x] **Display Settings** (brightness slider, dim timeout, UI MODE dark/light, accent theme)
+- [x] **USB-C live mirror** (mirror firmware + Windows SDL viewer; armed from Display Settings; PC input is LVGL touch only)
 - [x] **System Info** (CPU core load, heap, PSRAM, uptime)
 - [x] **Diagnostics** (live ESTOP, ALM, DIR switch, pedal switch, ENA, direction, RPM, motion-block state, recent event log)
 - [x] **Pedal Settings** (pedal arm/disarm, GPIO33 switch status, ADS1115 analog status)
 - [x] **Workpiece diameter per preset** (`workpiece_diameter_mm`, 0 = default reference diameter)
 - [x] **Motor Config** (microstepping, acceleration, direction switch, pedal enable)
+- [x] **Calibration verify-before-save** (larger calibration screen; save blocked until verification passes)
 - [x] **About screen** (firmware version, hardware info)
 - [x] **Program Edit** (full preset editor with on-screen keyboard)
 - [x] **Consistent footer navigation** and back buttons
@@ -66,6 +68,7 @@
 - [x] **Wiki** (Home, Getting Started, Hardware Setup, Troubleshooting, Roadmap, Architecture)
 - [x] **docs/** (Hardware Setup, Safety System, EMI Mitigation, Implementation, Instructables)
 - [x] **Wiring diagram v2** (SVG, GPIO29 on correct side, clean cable routing)
+- [x] **Simulator screenshots** (`simulator/run.ps1 -Screenshots <dir>` exports every registered screen)
 
 ---
 
@@ -79,6 +82,7 @@
 - [x] **E-STOP display wake** (v2.0.3 — `g_wakePending` + `dim_reset_activity()` so dimmed MIPI panel shows fault UI)
 - [x] **Safety-task stepper serialization** (E-STOP/ALM `forceStop()` path uses `g_stepperMutex`; no unsynchronized FastAccelStepper calls)
 - [x] **Step-screen rebuild cleanup** (no async object delete immediately before `lv_obj_clean()`)
+- [x] **USB mirror partial flush** (dirty rectangles instead of full 800x480 mirror traffic)
 
 ### v2.0.5 — Cross-core & Error-handling Cleanup
 - [x] **Centralised cross-core atomics** in `src/app_state.h`/`app_state.cpp` (single source of truth; no more scattered `std::atomic` definitions across safety/storage/main)

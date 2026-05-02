@@ -60,6 +60,13 @@
 - Rotation is handled manually in the flush callback — this is correct
 - Do NOT add `lv_display_set_rotation()` — it crashes ESP32-P4
 
+### USB-C mirror is slow or stuck on WAITING
+- Build and flash the mirror firmware: `pio run -e esp32p4-mirror --target upload`
+- Close PlatformIO Monitor; the mirror viewer needs exclusive access to the COM port
+- Start with `.\simulator\run.ps1 -UsbMirror COM5 -Baud 4000000`; fall back to `2000000` or `921600` only if the Windows driver is unstable
+- After flashing, arm **Settings > Display > USB MIRROR** again on the physical screen. It is intentionally not saved across reboot.
+- Higher baud alone is not the main fix; current mirror firmware uses LVGL partial flushes so only dirty rectangles are streamed.
+
 ### Touch not responding
 - Verify I2C SDA=GPIO 7, SCL=GPIO 8
 - Check that external pull-ups are present on the board
@@ -102,6 +109,11 @@
 - On first boot after upgrading, `storage_init()` migrates legacy `/settings.json` and `/presets.json` into NVS if the NVS keys are empty.
 
 ## Speed Control Issues
+
+### Calibration will not save
+- This is intentional unless verification has passed.
+- Use **Settings > Step** to set the workpiece OD, then **Settings > Calibration**: MOVE 360, measure real rotation, enter measured degrees, APPLY, run verify, and SAVE only after PASS.
+- Test calibration unloaded first. The firmware can verify UI/math flow, but the final factor depends on the real drivetrain measurement.
 
 ### Potentiometer dead zone at bottom
 - ADC reference is 3315 (measured range of 10k pot with 11dB attenuation)

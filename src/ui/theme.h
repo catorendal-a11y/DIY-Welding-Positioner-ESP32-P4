@@ -306,44 +306,44 @@ uint8_t theme_get_scheme_count(void);
 // ───────────────────────────────────────────────────────────────────────────────
 #define CAL_CARD_LEFT      20
 #define CAL_TOP_Y          53
-#define CAL_TOP_H          60
+#define CAL_TOP_H          70
 #define CAL_TOP_W_A        220
 #define CAL_TOP_W_B        220
 #define CAL_TOP_W_C        286
 #define CAL_TOP_GAP        15
-#define CAL_PM_BTN_W       52
-#define CAL_PM_BTN_H       38
+#define CAL_PM_BTN_W       54
+#define CAL_PM_BTN_H       42
 #define CAL_FACTOR_PM_Y    (CAL_TOP_H - CAL_PM_BTN_H - 10)
-#define CAL_FACTOR_PM_MINUS_X 96
-#define CAL_FACTOR_PM_PLUS_X  160
+#define CAL_FACTOR_PM_MINUS_X 104
+#define CAL_FACTOR_PM_PLUS_X  166
 #define CAL_BLOCK_GAP      6
 #define CAL_WIZ_Y          (CAL_TOP_Y + CAL_TOP_H + CAL_BLOCK_GAP)
 #define CAL_WIZ_W          456
-#define CAL_WIZ_H          138
+#define CAL_WIZ_H          126
 #define CAL_WIZ_TRACK_X    28
 #define CAL_WIZ_TRACK_W    400
 #define CAL_RIGHT_X        (CAL_CARD_LEFT + CAL_WIZ_W + 14)
 #define CAL_RIGHT_W        286
 #define CAL_WIZ_PAD        14
 #define CAL_INFO_Y         (CAL_WIZ_Y + CAL_WIZ_H + CAL_BLOCK_GAP)
-#define CAL_INFO_H         56
-#define CAL_MEAS_FIELD_Y   17
-#define CAL_MEAS_FIELD_W   216
-#define CAL_MEAS_FIELD_H   34
-#define CAL_APPLY_MEAS_H   34
-#define CAL_ACTION_GAP     11
+#define CAL_INFO_H         66
+#define CAL_MEAS_FIELD_Y   18
+#define CAL_MEAS_FIELD_W   220
+#define CAL_MEAS_FIELD_H   40
+#define CAL_APPLY_MEAS_H   42
+#define CAL_ACTION_GAP     8
 #define CAL_ACTION_Y       (CAL_INFO_Y + CAL_INFO_H + CAL_ACTION_GAP)
-#define CAL_ACTION_BTN_H   40
+#define CAL_ACTION_BTN_H   48
 #define CAL_ACTION_MOVE_W  204
 #define CAL_ACTION_STOP_W  210
 #define CAL_JOG_BTN_W      144
 #define CAL_JOG_GAP        14
 #define CAL_RESULT_TOPGAP  4
 #define CAL_RESULT_Y       (CAL_ACTION_Y + CAL_ACTION_BTN_H + CAL_RESULT_TOPGAP)
-#define CAL_RESULT_H       56
+#define CAL_RESULT_H       54
 #define CAL_RESULT_GAP     2
 #define CAL_FOOT_Y         (CAL_RESULT_Y + CAL_RESULT_H + CAL_RESULT_GAP)
-#define CAL_FOOT_H         38
+#define CAL_FOOT_H         34
 
 // ───────────────────────────────────────────────────────────────────────────────
 // FONT SIZES — Montserrat (closest match to Courier New monospace)

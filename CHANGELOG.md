@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Simulator screenshot dump** - `simulator/run.ps1 -Screenshots <dir>` builds the SDL simulator and exports one BMP per registered screen for UI review.
+
 ### Fixed
+- **USB-C mirror throughput** - mirror firmware now uses LVGL partial render mode so the USB mirror sends dirty rectangles instead of full-screen refresh traffic.
+- **Calibration save guard** - calibration settings cannot be saved until the verify step passes, reducing the chance of storing an unmeasured factor.
+- **Calibration screen readability** - larger calibration factor, measured-angle input, action buttons, result/status text, and tighter layout constants.
 - **Motion-start safety race** - continuous, jog-backed starts, and step-mode moves now re-check E-STOP / DM542T ALM immediately after ENA is pulled LOW. If a fault appears in that narrow window, ENA is driven HIGH again before any stepper command is issued.
 - **Safety-task stepper access** - driver alarm and E-STOP handling no longer call `FastAccelStepper::forceStop()` without `g_stepperMutex`; ENA is already hardware-disabled and stepper API access stays serialized.
 - **Storage load order** - settings now load before presets so preset RPM values are clamped against the saved `max_rpm` setting instead of the firmware default.
@@ -18,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ADS1115 runtime I2C timeout** - optional pedal ADC runtime reads use a short motor-task timeout while init/probe still keeps the longer timeout window.
 
 ### Tests
+- Verified USB mirror build, native tests, simulator self-test, simulator screenshot export, and flashing mirror firmware to ESP32-P4.
 - Native test coverage extended for microstep storage validation.
 - Verified with `pio test -e native`, release build, debug build, LVGL API scan, non-ASCII label scan, and `git diff --check`.
 

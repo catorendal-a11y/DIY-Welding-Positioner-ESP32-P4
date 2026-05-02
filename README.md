@@ -93,6 +93,7 @@ Fast path for builders who already have PlatformIO installed.
    ```powershell
    .\simulator\run.ps1
    .\simulator\run.ps1 -SelfTest
+   .\simulator\run.ps1 -Screenshots artifacts\sim_screens
    ```
 
 5. **Optional USB-C live mirror** - view and control the real ESP32 UI from Windows:
@@ -120,7 +121,7 @@ Single-axis welding positioner firmware for a NEMA 23 / DM542T-style stepper rot
 | Motion | NEMA 23 stepper through PUL/DIR driver or DM542T |
 | Drivetrain | NMRV030 60:1 worm stage plus 72/40 spur stage, total 1:108 |
 | Speed | Main potentiometer, optional ADS1115 pedal pot, saved presets |
-| UI | LVGL 9, 800x480 landscape, glove-safe welding workflow |
+| UI | LVGL 9, 800x480 landscape, glove-safe welding workflow, PC simulator screenshots |
 | Safety | NC E-STOP on GPIO34, DM542T ALM input, ENA forced safe in ISR |
 | Storage | NVS JSON settings + up to 16 presets |
 
@@ -147,7 +148,7 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 | **Welding workflow** | Continuous, Jog, Pulse, Step, and Countdown modes with pot-driven main RPM and Jog +/- setup control |
 | **Presets** | 16 NVS-backed jobs with RPM, direction, workpiece diameter, pulse cycles, step repeats/dwell, soft-start, and auto-stop fields |
 | **Industrial inputs** | E-STOP, DM542T ALM, direction switch, foot pedal switch, optional ADS1115 pedal speed input |
-| **Touch HMI** | LVGL 9, 800x480 landscape, dark/light neutral UI, 8 accent colors, diagnostics, system info, motor config, display settings |
+| **Touch HMI** | LVGL 9, 800x480 landscape, dark/light neutral UI, 8 accent colors, diagnostics, system info, motor config, calibration, display settings |
 | **Motor control** | FastAccelStepper RMT pulses, milli-Hz RPM commands, acceleration tuning, microstepping, calibration, direction invert |
 | **Safety model** | ISR disables ENA, state machine latches faults, start paths re-check E-STOP/ALM after ENA LOW, dimmed display wakes on fault |
 | **Robustness** | Dual-core FreeRTOS split, mutex-protected stepper API, `std::atomic` cross-core flags, debounced NVS writes |
@@ -208,7 +209,7 @@ The UI is built from 21 active `ScreenId` roots plus a separate full-screen E-ST
 | **Settings** | `SCREEN_SETTINGS` | Hub for Motor Config, Calibration, Display, Pedal Settings, Diagnostics, System Info and About |
 | **Display** | `SCREEN_DISPLAY` | Brightness, dim timeout, **UI MODE** (DARK/LIGHT), accent theme selection |
 | **System Info** | `SCREEN_SYSINFO` | Core load, heap, PSRAM, uptime |
-| **Calibration** | `SCREEN_CALIBRATION` | Motor calibration factor adjustment |
+| **Calibration** | `SCREEN_CALIBRATION` | Motor calibration factor adjustment with mandatory verify-before-save |
 | **Motor Config** | `SCREEN_MOTOR_CONFIG` | Microstepping, acceleration, direction switch, pedal enable |
 | **Pedal Settings** | `SCREEN_PEDAL_SETTINGS` | Pedal arm/disarm plus live GPIO33 and ADS1115 status |
 | **Diagnostics** | `SCREEN_DIAGNOSTICS` | Live GPIO/fault page for ESTOP, ALM, DIR switch, pedal switch, ENA, direction, RPM state and recent event log |
@@ -321,6 +322,14 @@ Automated UI smoke test:
 
 The self-test creates every screen, runs update loops, clicks key navigation/control buttons against fake simulator state, and exits non-zero on failure.
 
+Export screenshots of every registered screen:
+
+```powershell
+.\simulator\run.ps1 -Screenshots artifacts\sim_screens
+```
+
+The screenshot dump writes `*.bmp` files for all simulator screens. Use it for UI review before flashing, especially after layout or theme changes.
+
 This is not live device mirroring and it cannot control motor hardware. Real E-STOP, driver alarm, ENA polarity, touch, and motor behavior still need bench testing on the actual controller.
 
 Requirements: CMake, Ninja, MSYS2 MinGW SDL2, and PlatformIO dependencies already installed. See [simulator/README.md](simulator/README.md).
@@ -329,7 +338,7 @@ Requirements: CMake, Ninja, MSYS2 MinGW SDL2, and PlatformIO dependencies alread
 
 ## USB-C Live Mirror
 
-The USB-C mirror streams real LVGL RGB565 pixels from the ESP32-P4 and sends PC mouse input back as LVGL pointer events. It is not a second UI implementation.
+The USB-C mirror streams real LVGL RGB565 pixels from the ESP32-P4 and sends PC mouse input back as LVGL pointer events. It is not a second UI implementation. Mirror firmware uses LVGL partial flushes, so only dirty rectangles are sent instead of a full 800x480 frame every refresh.
 
 Flash the mirror firmware:
 
@@ -343,7 +352,7 @@ Run the Windows viewer:
 .\simulator\run.ps1 -UsbMirror COM5 -Baud 4000000
 ```
 
-Use `-Baud 2000000` or `-Baud 921600` if the Windows USB serial driver is unstable at 4M. `COM5` must not be open in PlatformIO Monitor while the viewer is connected.
+Use `-Baud 2000000` or `-Baud 921600` if the Windows USB serial driver is unstable at 4M. Native USB CDC baud is mostly a host/driver setting; the main speed win is partial dirty-rectangle traffic. `COM5` must not be open in PlatformIO Monitor while the viewer is connected.
 
 Remote control is fail-closed: it starts disabled after boot, requires **Settings > Display > USB MIRROR** to be armed on the physical screen, and releases on USB disconnect/keepalive timeout. The PC only injects LVGL touch input; it has no direct motor command API.
 
@@ -452,6 +461,8 @@ Open `src/config.h` to adjust hardware parameters:
 ```
 
 Settings can also be changed from the touchscreen via **Settings > Motor Config** and are persisted to **NVS** (see [Persistence (NVS)](#persistence-nvs)).
+
+Calibration is changed from **Settings > Calibration**. The screen now requires a verify pass before saving: set workpiece OD on Step, command a 360-degree move, enter the measured angle, apply, run verify, and save only after the result is within tolerance. This prevents storing an unverified calibration factor by accident.
 
 ---
 

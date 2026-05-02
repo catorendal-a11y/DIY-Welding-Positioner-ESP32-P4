@@ -1,6 +1,7 @@
 // PC Simulator - LVGL SDL host for the rotator HMI
 
 #include "lvgl.h"
+#include "src/draw/snapshot/lv_snapshot.h"
 #include "src/drivers/sdl/lv_sdl_window.h"
 #include "src/drivers/sdl/lv_sdl_mouse.h"
 #include "src/drivers/sdl/lv_sdl_keyboard.h"
@@ -14,6 +15,8 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <direct.h>
+#include <vector>
 
 void simulator_init_state();
 void simulator_tick();
@@ -365,8 +368,93 @@ static int run_self_test() {
   return 0;
 }
 
+static bool sim_write_bmp_argb8888(const char* path, const lv_draw_buf_t* buf) {
+  if (!path || !buf || !buf->data || buf->header.cf != LV_COLOR_FORMAT_ARGB8888) return false;
+
+  const uint32_t w = buf->header.w;
+  const uint32_t h = buf->header.h;
+  const uint32_t srcStride = buf->header.stride;
+  const uint32_t rowStride = ((w * 3u + 3u) / 4u) * 4u;
+  const uint32_t pixelBytes = rowStride * h;
+  const uint32_t fileBytes = 54u + pixelBytes;
+
+  FILE* f = std::fopen(path, "wb");
+  if (!f) return false;
+
+  uint8_t header[54] = {};
+  header[0] = 'B';
+  header[1] = 'M';
+  header[2] = (uint8_t)(fileBytes);
+  header[3] = (uint8_t)(fileBytes >> 8);
+  header[4] = (uint8_t)(fileBytes >> 16);
+  header[5] = (uint8_t)(fileBytes >> 24);
+  header[10] = 54;
+  header[14] = 40;
+  header[18] = (uint8_t)(w);
+  header[19] = (uint8_t)(w >> 8);
+  header[20] = (uint8_t)(w >> 16);
+  header[21] = (uint8_t)(w >> 24);
+  header[22] = (uint8_t)(h);
+  header[23] = (uint8_t)(h >> 8);
+  header[24] = (uint8_t)(h >> 16);
+  header[25] = (uint8_t)(h >> 24);
+  header[26] = 1;
+  header[28] = 24;
+  std::fwrite(header, 1, sizeof(header), f);
+
+  std::vector<uint8_t> row(rowStride, 0);
+  const uint8_t* data = (const uint8_t*)buf->data;
+  for (int32_t y = (int32_t)h - 1; y >= 0; y--) {
+    const uint8_t* src = data + (size_t)y * srcStride;
+    for (uint32_t x = 0; x < w; x++) {
+      row[x * 3u + 0u] = src[x * 4u + 0u];
+      row[x * 3u + 1u] = src[x * 4u + 1u];
+      row[x * 3u + 2u] = src[x * 4u + 2u];
+    }
+    std::fwrite(row.data(), 1, rowStride, f);
+  }
+
+  std::fclose(f);
+  return true;
+}
+
+static int run_screenshot_dump(const char* dir) {
+  if (!dir || !dir[0]) return 2;
+  _mkdir(dir);
+
+  const ScreenId ids[] = {
+    SCREEN_BOOT, SCREEN_MAIN, SCREEN_MENU, SCREEN_RUN_MODES, SCREEN_PULSE,
+    SCREEN_STEP, SCREEN_JOG, SCREEN_TIMER, SCREEN_PROGRAMS, SCREEN_PROGRAM_EDIT,
+    SCREEN_EDIT_CONT, SCREEN_EDIT_PULSE, SCREEN_EDIT_STEP, SCREEN_SETTINGS,
+    SCREEN_MOTOR_CONFIG, SCREEN_CALIBRATION, SCREEN_DISPLAY, SCREEN_PEDAL_SETTINGS,
+    SCREEN_DIAGNOSTICS, SCREEN_SYSINFO, SCREEN_ABOUT, SCREEN_CONFIRM,
+  };
+
+  for (ScreenId id : ids) {
+    if (!sim_show_and_check(id)) return 3;
+    lv_refr_now(nullptr);
+    lv_draw_buf_t* shot = lv_snapshot_take(screenRoots[id], LV_COLOR_FORMAT_ARGB8888);
+    if (!shot) {
+      std::fprintf(stderr, "SCREENSHOT FAIL: %s\n", sim_screen_name(id));
+      return 4;
+    }
+    char path[512];
+    std::snprintf(path, sizeof(path), "%s/%02d_%s.bmp", dir, (int)id, sim_screen_name(id));
+    bool ok = sim_write_bmp_argb8888(path, shot);
+    lv_draw_buf_destroy(shot);
+    if (!ok) {
+      std::fprintf(stderr, "SCREENSHOT WRITE FAIL: %s\n", path);
+      return 5;
+    }
+    std::printf("SCREENSHOT: %s\n", path);
+  }
+
+  return 0;
+}
+
 int main(int argc, char** argv) {
   bool selfTest = argc > 1 && std::strcmp(argv[1], "--self-test") == 0;
+  bool screenshots = argc > 2 && std::strcmp(argv[1], "--screenshots") == 0;
 
   simulator_init_state();
 
@@ -387,6 +475,9 @@ int main(int argc, char** argv) {
 
   if (selfTest) {
     return run_self_test();
+  }
+  if (screenshots) {
+    return run_screenshot_dump(argv[2]);
   }
 
   uint32_t lastScreenUpdate = 0;

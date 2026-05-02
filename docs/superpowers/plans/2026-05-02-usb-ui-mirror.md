@@ -4,7 +4,7 @@
 
 **Goal:** Build a real USB-C mirror that streams live ESP32 LVGL pixels to Windows and sends PC mouse/touch input back into the same LVGL UI path.
 
-**Architecture:** Firmware adds a gated `src/mirror` module with testable packet framing, non-blocking rectangle queuing, and LVGL pointer state. `lvgl_flush_cb()` taps logical RGB565 dirty rectangles before physical panel rotation. A Windows SDL viewer opens COM5, renders the framebuffer, sends keepalives, and injects pointer packets.
+**Architecture:** Firmware adds a gated `src/mirror` module with testable packet framing, non-blocking rectangle queuing, and LVGL pointer state. `lvgl_flush_cb()` taps logical RGB565 dirty rectangles before physical panel rotation. LVGL partial rendering keeps mirror traffic to dirty rectangles instead of full frames. A Windows SDL viewer opens COM5, renders the framebuffer, sends keepalives, and injects pointer packets.
 
 **Tech Stack:** ESP32-P4 Arduino/FreeRTOS, LVGL 9.5, USB CDC `Serial`, PlatformIO native Unity tests, CMake/SDL2 Windows viewer.
 
@@ -20,7 +20,7 @@
 - Modify `platformio.ini`: add `esp32p4-mirror` environment with `ENABLE_USB_UI_MIRROR=1`.
 - Create `simulator/usb_mirror_viewer.cpp`: Windows SDL serial viewer.
 - Modify `simulator/CMakeLists.txt`: build `rotator_usb_mirror.exe`.
-- Modify `simulator/run.ps1`: add `-UsbMirror` and `-Baud`.
+- Modify `simulator/run.ps1`: add `-UsbMirror`, `-Baud`, and `-Screenshots`.
 - Modify `test/test_utils/test_main.cpp`: add protocol and timeout tests.
 - Modify `README.md` and `simulator/README.md`: add mirror usage and hardware notes.
 
@@ -273,11 +273,11 @@ Extend `run.ps1`:
 param(
   [switch]$SelfTest,
   [string]$UsbMirror,
-  [int]$Baud = 2000000
+  [int]$Baud = 4000000
 )
 ```
 
-When `-UsbMirror COM5` is passed, run `rotator_usb_mirror.exe COM5 2000000`.
+When `-UsbMirror COM5` is passed, run `rotator_usb_mirror.exe COM5 4000000` unless another baud is provided. When `-Screenshots <dir>` is passed, build `rotator_simulator` and dump every registered screen.
 
 - [ ] **Step 3: Verify build**
 
@@ -307,11 +307,12 @@ Expected: viewer target builds.
 
 - [ ] **Step 1: Document usage**
 
-Add USB mirror commands:
+Add USB mirror and screenshot commands:
 
 ```powershell
 "C:\Users\Rendalsniken\.platformio\penv\Scripts\pio.exe" run -e esp32p4-mirror --target upload
-.\simulator\run.ps1 -UsbMirror COM5 -Baud 2000000
+.\simulator\run.ps1 -UsbMirror COM5 -Baud 4000000
+.\simulator\run.ps1 -Screenshots artifacts\sim_screens
 ```
 
 Mention that physical UI must arm `USB MIRROR` first and that PlatformIO monitor cannot use COM5 while the viewer is connected.

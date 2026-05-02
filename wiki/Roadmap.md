@@ -2,6 +2,11 @@
 
 ## v2.0.9 - Current Release (TIG HF field validation)
 
+### Unreleased
+- [x] USB-C live mirror speed-up via LVGL partial flush / dirty-rectangle streaming
+- [x] Simulator screenshot export for all registered screens
+- [x] Calibration screen readability pass with verify-before-save guard
+
 ### v2.0.9 (2026-04-30)
 - [x] **`FW_VERSION` v2.0.9** - firmware and bundled documentation synced to current release
 - [x] Real TIG welding validated with ESP32-P4 screen, stepper driver, and motor PSU inside one grounded metal enclosure

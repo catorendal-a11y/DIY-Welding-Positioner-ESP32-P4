@@ -59,6 +59,7 @@ add_executable(rotator_usb_mirror
 target_compile_definitions(rotator_simulator PRIVATE
   ROTATOR_SIMULATOR=1
   LV_CONF_INCLUDE_SIMPLE=1
+  LV_USE_SNAPSHOT=1
   SDL_MAIN_HANDLED=1
   DEBUG_BUILD=1
 )

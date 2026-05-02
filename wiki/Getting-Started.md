@@ -60,6 +60,24 @@ Expected boot output:
 [I] System ready — ESP32-P4 + MIPI-DSI display
 ```
 
+## Optional: USB-C Live Mirror
+
+For the real device UI mirrored on Windows:
+
+```powershell
+pio run -e esp32p4-mirror --target upload
+.\simulator\run.ps1 -UsbMirror COM5 -Baud 4000000
+```
+
+Then arm **Settings > Display > USB MIRROR** on the physical screen. PC clicks are ignored until armed, and E-STOP/driver faults still override all input.
+
+For simulator-only UI review:
+
+```powershell
+.\simulator\run.ps1 -SelfTest
+.\simulator\run.ps1 -Screenshots artifacts\sim_screens
+```
+
 ## 5. First Run Checklist
 
 - [ ] Display boots and shows main screen

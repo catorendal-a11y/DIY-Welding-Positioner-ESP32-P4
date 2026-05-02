@@ -29,6 +29,7 @@
 - **DMA2D**: Disabled (causes crashes with PSRAM on ESP32-P4)
 - **Rotation**: Software rotation via `sw_rotate = 1` in LVGL driver (do NOT use `lv_display_set_rotation()` — crashes ESP32-P4)
 - **Buffers**: Internal DMA-RAM (not PSRAM) — 80 lines x 800 pixels x 2 bytes = 128KB
+- **Render mode**: LVGL partial rendering. The flush path receives dirty rectangles, rotates them for the physical panel, and feeds the optional USB mirror with packed logical RGB565 rectangles.
 
 ### Touch (GT911)
 - **I2C**: GPIO 7 (SDA), GPIO 8 (SCL)
@@ -115,6 +116,8 @@
 - **Pedal settings**: `SCREEN_PEDAL_SETTINGS` arms/disarms GPIO33 pedal input and shows ADS1115/analog status.
 - **Theme**: neutral backgrounds and text colors are **runtime** values (`g_col_*` in `theme.h`), filled by `theme_sync_colors()` from **`NEUT_DARK`** vs **`NEUT_LIGHT`** packs according to `g_settings.color_scheme`. Accent hue comes from `accent_color` + `theme_palette[]`. **`COL_HDR_MUTED`** is used for secondary labels on the dark header strip (better contrast than `COL_TEXT_DIM` on the fixed dark header bar in both schemes).
 - **Footer navigation**: BACK button at bottom of all settings screens
+- **Calibration guard**: `SCREEN_CALIBRATION` uses larger layout constants for bench readability and blocks SAVE until the verify result is within tolerance.
+- **USB mirror arm**: Display Settings exposes a volatile `USB MIRROR` arm control for mirror builds. It is not persisted, starts disabled after boot, and gates PC pointer injection.
 
 ---
 
@@ -194,6 +197,7 @@ void screen_example_invalidate_widgets() {
 | Issue | Workaround |
 |-------|-----------|
 | `lv_display_set_rotation()` crashes ESP32-P4 | Manual rotation in flush callback |
+| Slow USB mirror updates | Use LVGL partial rendering and send dirty rectangles; high baud alone does not fix full-frame traffic |
 | `ledc_set_duty_and_update()` crashes backlight | Use separate `ledc_set_duty()` + `ledc_update_duty()` |
 | Legacy LittleFS data may exist from old firmware | Current firmware imports it once into NVS if NVS keys are empty |
 | GPIO 28 / 14-19 / 54 may be claimed by C6 co-processor | Do not use for application GPIO without GUITION schematic; GPIO 32 is reserved for DM542T ALM in this firmware |

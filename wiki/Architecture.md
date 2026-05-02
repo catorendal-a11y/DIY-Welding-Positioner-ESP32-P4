@@ -143,6 +143,14 @@ All shared flags (`g_estopPending`, `g_estopTriggerMs`, `g_uiResetPending`, `g_w
 
 **v2.0.4 layout notes:** Main screen semicircular RPM gauge and stacked RPM labels are driven from `theme.h` constants; jog RPM row and right-aligned +/- use **`JOG_RPM_*`**. Main screen has **no** RPM +/- buttons (pot-only on that screen).
 
+**USB mirror note:** mirror builds use LVGL partial rendering so `lvgl_hal.cpp`
+streams dirty RGB565 rectangles to the Windows viewer instead of repeatedly
+sending full 800x480 frames. PC input is registered as a second LVGL pointer
+device and is accepted only while **Settings > Display > USB MIRROR** is armed.
+
+**Calibration note:** the calibration screen uses larger bench-readable controls
+and blocks SAVE until the verify move result passes tolerance.
+
 ## Display Pipeline
 
 Physical panel is 480x800 portrait. LVGL renders at 800x480 landscape with manual rotation in the flush callback:

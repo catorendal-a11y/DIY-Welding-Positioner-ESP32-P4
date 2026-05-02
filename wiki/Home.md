@@ -15,6 +15,7 @@ All core features tested and confirmed working on real hardware:
 - Hardware E-STOP with <0.5ms response + UI reset
 - 16 program preset save/load (NVS JSON blobs; legacy LittleFS migration on first boot if needed)
 - 21 active LVGL root screens (`ScreenId`) plus E-STOP overlay; settings, diagnostics, pedal settings, system info, calibration
+- USB-C live mirror for the real device UI, plus simulator screenshot export for all screens
 - Direction switch (GPIO29), foot pedal support
 - 8 accent color themes, dark or light UI mode (Display UI MODE), brightness control, dim timeout
 - TIG HF welding works when electronics are inside one grounded metal enclosure
@@ -59,6 +60,7 @@ src/
   safety/               - E-STOP ISR + watchdog
   storage/              - NVS persistence (+ legacy LittleFS migration)
   ui/                   - LVGL screens, display init, touch, theme
+  mirror/               - Optional USB-C live mirror protocol/task
 docs/
   images/               - SVG wiring diagrams, UI mockups
 wiki/                   - GitHub Wiki pages

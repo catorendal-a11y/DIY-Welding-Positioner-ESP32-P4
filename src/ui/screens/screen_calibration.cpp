@@ -73,6 +73,15 @@ static const int WIZ_DOT_CX[4] = { 50, 170, 290, 410 };
 
 static const float kCalFactorStep = 0.0005f;
 
+static void style_result_bar_pass(bool pass);
+
+static bool calibration_verify_passed() {
+  if (calStep != STEP_VERIFY_RESULT || s_verifyMeasuredDeg < 0.5f) return false;
+  const float err = s_verifyMeasuredDeg - kCalCommandedDeg;
+  const float absErr = err < 0.0f ? -err : err;
+  return absErr <= kVerifyTolDeg;
+}
+
 static void update_wizard_progress_fill() {
   if (!wizardFill) return;
   if (calStep >= STEP_SAVE) {
@@ -168,6 +177,17 @@ static void factor_adj_cb(lv_event_t* e) {
 
 static void save_cb(lv_event_t* e) {
   (void)e;
+  if (!calibration_verify_passed()) {
+    if (resultStatusLabel) {
+      lv_label_set_text(resultStatusLabel, "VERIFY FIRST");
+      lv_obj_set_style_text_color(resultStatusLabel, COL_RED, 0);
+    }
+    if (resultDetailLabel) {
+      lv_label_set_text(resultDetailLabel, "Run verify MOVE 360 and enter measured DEG before saving.");
+    }
+    style_result_bar_pass(false);
+    return;
+  }
   calibration_save();
   calStep = STEP_SAVE;
   screen_calibration_update();
@@ -379,8 +399,7 @@ static void update_wizard() {
     } else if (calStep >= STEP_ROTATE) {
       lv_label_set_text(wizardHintLabel, "MEASURED DEG + APPLY when stopped.");
     } else {
-      lv_label_set_text(wizardHintLabel,
-                        "WP OD in KIN. MOVE 360, APPLY. Then verify MOVE + 2nd meas.");
+      lv_label_set_text(wizardHintLabel, "Set WP OD in Step. MOVE 360, APPLY, then verify.");
     }
     lv_obj_set_style_text_color(wizardHintLabel, COL_TEXT_DIM, 0);
   }
@@ -442,10 +461,10 @@ void screen_calibration_create() {
 
   zeroValueLabel = lv_label_create(factorCard);
   lv_label_set_text(zeroValueLabel, "1.0000");
-  lv_obj_set_style_text_font(zeroValueLabel, FONT_LARGE, 0);
+  lv_obj_set_style_text_font(zeroValueLabel, FONT_XL, 0);
   lv_obj_set_style_text_color(zeroValueLabel, COL_TEXT_WHITE, 0);
-  lv_obj_set_pos(zeroValueLabel, 12, 30);
-  lv_obj_set_width(zeroValueLabel, 92);
+  lv_obj_set_pos(zeroValueLabel, 12, 28);
+  lv_obj_set_width(zeroValueLabel, 108);
   lv_label_set_long_mode(zeroValueLabel, LV_LABEL_LONG_MODE_DOTS);
 
   lv_obj_t* spdCard = ui_create_post_card(screen, xMid, topY, CAL_TOP_W_B, topH);
@@ -460,7 +479,7 @@ void screen_calibration_create() {
 
   dualStepsDegLabel = lv_label_create(spdCard);
   lv_label_set_text(dualStepsDegLabel, "OUT 0.00\nWP 0.00");
-  lv_obj_set_style_text_font(dualStepsDegLabel, FONT_SMALL, 0);
+  lv_obj_set_style_text_font(dualStepsDegLabel, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(dualStepsDegLabel, COL_TEXT_WHITE, 0);
   lv_obj_set_style_text_line_space(dualStepsDegLabel, 3, 0);
   lv_obj_set_pos(dualStepsDegLabel, 12, 24);
@@ -479,7 +498,7 @@ void screen_calibration_create() {
 
   cmdStepsOutLabel = lv_label_create(cmdCard);
   lv_label_set_text(cmdStepsOutLabel, "OUT 0");
-  lv_obj_set_style_text_font(cmdStepsOutLabel, FONT_SMALL, 0);
+  lv_obj_set_style_text_font(cmdStepsOutLabel, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(cmdStepsOutLabel, COL_TEXT_WHITE, 0);
   lv_obj_set_pos(cmdStepsOutLabel, 12, 24);
   lv_obj_set_width(cmdStepsOutLabel, CAL_TOP_W_C - 20);
@@ -487,7 +506,7 @@ void screen_calibration_create() {
 
   cmdStepsWpLabel = lv_label_create(cmdCard);
   lv_label_set_text(cmdStepsWpLabel, "WP 0");
-  lv_obj_set_style_text_font(cmdStepsWpLabel, FONT_SMALL, 0);
+  lv_obj_set_style_text_font(cmdStepsWpLabel, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(cmdStepsWpLabel, COL_ACCENT, 0);
   lv_obj_set_pos(cmdStepsWpLabel, 12, 40);
   lv_obj_set_width(cmdStepsWpLabel, CAL_TOP_W_C - 20);
@@ -504,9 +523,8 @@ void screen_calibration_create() {
   lv_obj_set_pos(wizTitle, wizPad, 6);
 
   wizardHintLabel = lv_label_create(wizardCard);
-  lv_label_set_text(wizardHintLabel,
-                    "WP OD in KIN. MOVE 360, APPLY. Then verify MOVE + 2nd meas.");
-  lv_obj_set_style_text_font(wizardHintLabel, FONT_SMALL, 0);
+  lv_label_set_text(wizardHintLabel, "Set WP OD in Step. MOVE 360, APPLY, then verify.");
+  lv_obj_set_style_text_font(wizardHintLabel, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(wizardHintLabel, COL_TEXT, 0);
   lv_obj_set_style_text_line_space(wizardHintLabel, 3, 0);
   lv_obj_set_pos(wizardHintLabel, wizPad, 22);
@@ -531,7 +549,7 @@ void screen_calibration_create() {
   lv_obj_remove_flag(wizardFill, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_remove_flag(wizardFill, LV_OBJ_FLAG_CLICKABLE);
 
-  const int dotD = 18;
+  const int dotD = 20;
   const int dotY = 48;
   for (int i = 0; i < 4; i++) {
     wizardDots[i] = lv_obj_create(wizardCard);
@@ -547,22 +565,22 @@ void screen_calibration_create() {
 
   lv_obj_t* wz0 = lv_label_create(wizardCard);
   lv_label_set_text(wz0, "ZERO");
-  lv_obj_set_style_text_font(wz0, FONT_SMALL, 0);
+  lv_obj_set_style_text_font(wz0, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(wz0, COL_TEXT_VDIM, 0);
   lv_obj_set_pos(wz0, 12, 78);
   lv_obj_t* wz1 = lv_label_create(wizardCard);
   lv_label_set_text(wz1, "MOVE 360");
-  lv_obj_set_style_text_font(wz1, FONT_SMALL, 0);
+  lv_obj_set_style_text_font(wz1, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(wz1, COL_TEXT_VDIM, 0);
   lv_obj_set_pos(wz1, 112, 78);
   lv_obj_t* wz2 = lv_label_create(wizardCard);
   lv_label_set_text(wz2, "MEASURE");
-  lv_obj_set_style_text_font(wz2, FONT_SMALL, 0);
+  lv_obj_set_style_text_font(wz2, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(wz2, COL_TEXT_VDIM, 0);
   lv_obj_set_pos(wz2, 232, 78);
   lv_obj_t* wz3 = lv_label_create(wizardCard);
   lv_label_set_text(wz3, "SAVE");
-  lv_obj_set_style_text_font(wz3, FONT_SMALL, 0);
+  lv_obj_set_style_text_font(wz3, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(wz3, COL_TEXT_VDIM, 0);
   lv_obj_set_pos(wz3, 352, 78);
 
@@ -646,7 +664,7 @@ void screen_calibration_create() {
 
   measuredTapLabel = lv_label_create(measuredFieldBg);
   lv_label_set_text(measuredTapLabel, "---");
-  lv_obj_set_style_text_font(measuredTapLabel, FONT_NORMAL, 0);
+  lv_obj_set_style_text_font(measuredTapLabel, FONT_LARGE, 0);
   lv_obj_set_style_text_color(measuredTapLabel, COL_TEXT_WHITE, 0);
   lv_obj_align(measuredTapLabel, LV_ALIGN_CENTER, 0, 0);
   lv_obj_remove_flag(measuredTapLabel, LV_OBJ_FLAG_CLICKABLE);
@@ -657,12 +675,12 @@ void screen_calibration_create() {
   lv_obj_set_style_text_color(tapHint, COL_TEXT_VDIM, 0);
   lv_obj_set_width(tapHint, 100);
   lv_obj_set_style_text_align(tapHint, LV_TEXT_ALIGN_RIGHT, 0);
-  lv_obj_set_pos(tapHint, wizW - 118, CAL_MEAS_FIELD_Y + 8);
+  lv_obj_set_pos(tapHint, wizW - 118, CAL_MEAS_FIELD_Y + 12);
 
   const int applyW = 214;
   const int applyX = wizW - wizPad - applyW;
   applyMeasureBtn =
-      ui_create_btn(measCard, applyX, 10, applyW, CAL_APPLY_MEAS_H, "APPLY MEASUREMENT", FONT_SMALL,
+      ui_create_btn(measCard, applyX, 12, applyW, CAL_APPLY_MEAS_H, "APPLY MEASUREMENT", FONT_NORMAL,
                     UI_BTN_ACCENT, apply_measure_cb, nullptr);
 
   lv_obj_t* formCard = ui_create_post_card(screen, rightX, infoY, rightW, infoH);
@@ -677,7 +695,7 @@ void screen_calibration_create() {
 
   lv_obj_t* fmBody = lv_label_create(formCard);
   lv_label_set_text(fmBody, "factor = old x 360 / measured");
-  lv_obj_set_style_text_font(fmBody, FONT_SMALL, 0);
+  lv_obj_set_style_text_font(fmBody, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(fmBody, COL_TEXT, 0);
   lv_obj_set_pos(fmBody, 14, 24);
 
@@ -720,7 +738,7 @@ void screen_calibration_create() {
   lv_obj_set_pos(resultStatusLabel, 14, 6);
 
   resultDetailLabel = lv_label_create(resultBar);
-  lv_label_set_text(resultDetailLabel, "Match WP OD; MOVE 360 per KIN (set OD on Step).");
+  lv_label_set_text(resultDetailLabel, "Set WP OD on Step, then MOVE 360 and measure.");
   lv_obj_set_style_text_font(resultDetailLabel, FONT_SMALL, 0);
   lv_obj_set_style_text_color(resultDetailLabel, COL_TEXT, 0);
   lv_obj_set_style_text_line_space(resultDetailLabel, 0, 0);
@@ -892,7 +910,7 @@ void screen_calibration_update() {
     } else if (calStep == STEP_VERIFY_RESULT) {
       const float err = s_verifyMeasuredDeg - kCalCommandedDeg;
       const float absErr = err < 0.0f ? -err : err;
-      const bool pass = (absErr <= kVerifyTolDeg);
+      const bool pass = calibration_verify_passed();
       char buf[80];
       snprintf(buf, sizeof(buf), "meas %.2f err %+.2f tol %.1f f %.4f", (double)s_verifyMeasuredDeg,
                (double)err, (double)kVerifyTolDeg, (double)factor);
@@ -941,8 +959,7 @@ void screen_calibration_update() {
     } else {
       lv_label_set_text(resultStatusLabel, "STEP 1/5");
       lv_obj_set_style_text_color(resultStatusLabel, COL_ACCENT, 0);
-      lv_label_set_text(resultDetailLabel,
-                        "Match WP OD; MOVE 360 per KIN (set OD on Step).");
+      lv_label_set_text(resultDetailLabel, "Set WP OD on Step, then MOVE 360 and measure.");
       lv_obj_set_width(resultDetailLabel, resultW - 36);
       style_result_bar_neutral();
     }

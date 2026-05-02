@@ -26,10 +26,10 @@ Implement a binary USB mirror protocol with two directions:
 The PC app will be a separate SDL-based viewer target in `simulator/`, launched from PowerShell:
 
 ```powershell
-.\simulator\run.ps1 -UsbMirror COM5 -Baud 2000000
+.\simulator\run.ps1 -UsbMirror COM5 -Baud 4000000
 ```
 
-Default baud will be `2000000`. The viewer should allow fallback to `921600` and test use of `3000000`. Because ESP32 native USB CDC is not a real UART clock, the baud value is mostly host/driver configuration, but Windows serial buffering still makes it useful to set high.
+Default test baud is `4000000`, with fallbacks to `2000000` and `921600`. Because ESP32 native USB CDC is not a real UART clock, the baud value is mostly host/driver configuration. The main throughput requirement is avoiding unnecessary full-frame traffic.
 
 ## Alternatives Considered
 
@@ -121,10 +121,10 @@ Windows SDL app that:
 Add:
 
 ```powershell
-.\simulator\run.ps1 -UsbMirror COM5 -Baud 2000000
+.\simulator\run.ps1 -UsbMirror COM5 -Baud 4000000
 ```
 
-Existing simulator and self-test behavior must keep working.
+Existing simulator, self-test, and screenshot dump behavior must keep working.
 
 ## Protocol
 
@@ -163,6 +163,7 @@ Pointer payload:
 
 ## Performance Rules
 
+- Use LVGL partial render mode so normal UI updates send dirty rectangles, not full 800x480 frames.
 - Do not send full frames continuously unless LVGL invalidates the full screen.
 - Stream dirty rectangles/chunks only.
 - If output queue is full, drop old mirror data and keep the latest UI responsive.
@@ -175,6 +176,7 @@ Software checks:
 
 - Native unit tests for packet encode/decode, CRC rejection, resync after junk bytes, coordinate clamp, keepalive timeout, and queue overflow/drop behavior.
 - Existing simulator self-test must still pass.
+- Simulator screenshot export must dump every registered screen for UI review.
 - `pio test -e native` must pass.
 - `pio run -e esp32p4-mirror` must build.
 - Normal `pio run` release must still build and must not enable mirror by default.
@@ -182,7 +184,7 @@ Software checks:
 Bench hardware checks:
 
 - Flash mirror firmware to ESP32-P4 over COM5.
-- Launch the PC viewer at `2000000` baud.
+- Launch the PC viewer at `4000000` baud, with `2000000`/`921600` as compatibility fallbacks.
 - Confirm the PC window follows real device screen changes.
 - Confirm PC click/touch activates normal UI buttons.
 - Confirm USB unplug releases touch and does not leave a pressed button.

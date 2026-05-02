@@ -23,11 +23,27 @@ This creates every LVGL screen, runs update loops, clicks key navigation and
 machine-control UI buttons against fake simulator state, and exits non-zero on
 failure.
 
+## Screen Screenshot Dump
+
+```powershell
+.\simulator\run.ps1 -Screenshots artifacts\sim_screens
+```
+
+This builds the simulator, creates every registered screen, and writes a BMP per
+screen to the requested directory. It is intended for fast UI review before
+flashing the ESP32-P4. The dump is still simulator output; hardware-only behavior
+such as touch wiring, E-STOP, driver alarm, and real calibration measurement must
+be checked on the device.
+
 ## USB-C Live Mirror
 
 The live mirror is separate from the simulator. It connects to the real ESP32-P4
 over USB-C, draws actual LVGL RGB565 pixels, and sends mouse/touch input back as
 LVGL pointer events.
+
+The mirror firmware uses LVGL partial flushes, so it streams dirty rectangles
+instead of full 800x480 frames on every refresh. Higher baud helps the Windows
+serial path, but reducing mirror traffic is the main speed improvement.
 
 Flash mirror firmware first:
 
@@ -46,6 +62,9 @@ Fallback baud:
 ```powershell
 .\simulator\run.ps1 -UsbMirror COM5 -Baud 2000000
 ```
+
+Use `921600` only as a compatibility fallback if the Windows USB serial driver is
+unstable at higher rates.
 
 On the physical screen, open **Settings > Display > USB MIRROR** and arm it
 after the viewer shows a link. The viewer can display pixels before arming, but

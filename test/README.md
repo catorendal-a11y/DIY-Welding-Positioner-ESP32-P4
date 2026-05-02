@@ -12,3 +12,17 @@ To run tests:
 ```bash
 pio test -e native
 ```
+
+## Simulator UI Checks
+
+The Windows SDL simulator can smoke-test the screen registry and export visual
+screenshots:
+
+```powershell
+.\simulator\run.ps1 -SelfTest
+.\simulator\run.ps1 -Screenshots artifacts\sim_screens
+```
+
+These checks verify UI construction/navigation logic only. Real E-STOP, driver
+alarm, touch hardware, motor movement, and calibration measurement still require
+the ESP32-P4 device.

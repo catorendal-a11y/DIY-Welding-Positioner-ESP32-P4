@@ -15,6 +15,7 @@ AGENTS.md
 .pio/
 .pioenvs/
 .piolibdeps/
+simulator/build/
 
 # Test / CI logs
 test_run.log

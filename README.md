@@ -51,6 +51,7 @@ Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Posit
 |:---|:---|:---|:---|:---|
 | [Quick Start](#quick-start) | [Build Commands](#build-commands) | [Wiring](#wiring-diagram) | [TIG HF Requirement](#tig-hf-noise-requirement) | [Documentation Map](#documentation-map) |
 | [Demo](#demo) | [Features](#features) | [Bill of Materials](#bill-of-materials) | [Troubleshooting](#troubleshooting) | [Project Structure](#project-structure) |
+| [PC UI Simulator](#pc-ui-simulator) | [Native Tests](#build-commands) | [First Bench Test](#first-bench-test-checklist) | [Safety Notice](#safety-notice) | [Simulator README](simulator/README.md) |
 
 ---
 
@@ -87,9 +88,16 @@ Fast path for builders who already have PlatformIO installed.
    pio test -e native
    ```
 
-4. **Connect hardware** per the [wiring diagram](#wiring-diagram). Keep motor PSU off until logic power, E-STOP, ENA, STEP, DIR, and driver settings are verified.
+4. **Optional PC UI simulator** - test the LVGL interface without ESP32 hardware:
 
-5. **For TIG HF start welding:** put the ESP32-P4 screen, stepper driver, and motor PSU inside the same grounded metal enclosure before welding near the controller.
+   ```powershell
+   .\simulator\run.ps1
+   .\simulator\run.ps1 -SelfTest
+   ```
+
+5. **Connect hardware** per the [wiring diagram](#wiring-diagram). Keep motor PSU off until logic power, E-STOP, ENA, STEP, DIR, and driver settings are verified.
+
+6. **For TIG HF start welding:** put the ESP32-P4 screen, stepper driver, and motor PSU inside the same grounded metal enclosure before welding near the controller.
 
 ---
 
@@ -284,6 +292,28 @@ Default environment: `esp32p4-release`. Build output goes to `.pio/build-fw` to 
 | On-device tests | `pio test -e esp32p4-test` |
 
 `COM5` is configured in `platformio.ini`; change `upload_port` / `monitor_port` if Windows assigns another port. Native tests do not need hardware.
+
+---
+
+## PC UI Simulator
+
+The Windows simulator runs the real LVGL screen code on the PC using SDL2. It is useful for UI review, navigation testing, and quick logic checks without flashing the ESP32-P4.
+
+```powershell
+.\simulator\run.ps1
+```
+
+Automated UI smoke test:
+
+```powershell
+.\simulator\run.ps1 -SelfTest
+```
+
+The self-test creates every screen, runs update loops, clicks key navigation/control buttons against fake simulator state, and exits non-zero on failure.
+
+This is not live device mirroring and it cannot control motor hardware. Real E-STOP, driver alarm, ENA polarity, touch, and motor behavior still need bench testing on the actual controller.
+
+Requirements: CMake, Ninja, MSYS2 MinGW SDL2, and PlatformIO dependencies already installed. See [simulator/README.md](simulator/README.md).
 
 ---
 
@@ -596,6 +626,7 @@ test/
   test_logic/               Native Unity tests (no hardware required)
   test_device_*/            On-device integration tests (require ESP32-P4)
 docs/images/                Wiring diagrams, UI mockups
+simulator/                  Windows SDL2 LVGL simulator and automated UI smoke test
 ```
 
 </details>

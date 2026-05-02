@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **ADS1115 runtime I2C timeout** - optional pedal ADC runtime reads use a short motor-task timeout while init/probe still keeps the longer timeout window.
 
+### Removed
+- **Obsolete root analysis docs** - removed `DIY-Welding-Positioner-ESP32-P4_UI_logic_function_improvements.md` and `DIY-Welding-Positioner-ESP32-P4_bug_logic_analysis.md` from the repository.
+
 ### Tests
 - Verified USB mirror build, native tests, simulator self-test, simulator screenshot export, and flashing mirror firmware to ESP32-P4.
 - Native test coverage extended for microstep storage validation.

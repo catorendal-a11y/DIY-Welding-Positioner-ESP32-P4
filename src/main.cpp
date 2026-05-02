@@ -14,6 +14,7 @@
 #include "motor/calibration.h"
 #include "control/control.h"
 #include "event_log.h"
+#include "mirror/usb_mirror.h"
 
 #include <atomic>
 #include "app_state.h"
@@ -288,8 +289,12 @@ void setup() {
   pinMode(PIN_PEDAL_SW, INPUT_PULLUP);
   // ─────────────────────────────────────────────────────────────────────────
 
-  Serial.begin(115200);
+  Serial.begin(USB_MIRROR_SERIAL_BAUD);
   delay(100);
+
+  #if ENABLE_USB_UI_MIRROR
+  usb_mirror_begin();
+  #endif
 
   LOG_I("BOOT OK — ENA=HIGH (motor disabled)");
   LOG_I("TIG Rotator Controller %s", FW_VERSION);
@@ -343,6 +348,9 @@ void setup() {
   xTaskCreatePinnedToCore(controlTask, "control", 4096,  nullptr, 3, &controlHandle, 0);
   xTaskCreatePinnedToCore(lvglTask,    "lvgl",    65536, nullptr, 2, &lvglHandle,    1);  // 64KB: LVGL 9 rotation + arc rendering needs large stack
   xTaskCreatePinnedToCore(storageTask, "storage", 12288, nullptr, 1, &storageHandle, 1);
+  #if ENABLE_USB_UI_MIRROR
+  xTaskCreatePinnedToCore(usbMirrorTask, "usbMirror", 8192, nullptr, 1, nullptr, 1);
+  #endif
 
   LOG_I("All FreeRTOS tasks started");
   LOG_I("System ready — ESP32-P4 + MIPI-DSI display");

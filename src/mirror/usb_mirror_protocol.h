@@ -11,7 +11,11 @@ static constexpr uint16_t USB_MIRROR_KEEPALIVE_TIMEOUT_MS = 1500;
 static constexpr uint32_t USB_MIRROR_MAGIC = 0x31524D52u;  // "RMR1" little-endian
 static constexpr uint8_t USB_MIRROR_VERSION = 1;
 static constexpr size_t USB_MIRROR_HEADER_SIZE = 20;
-static constexpr size_t USB_MIRROR_MAX_CHUNK_PAYLOAD = 4096;
+static constexpr uint16_t USB_MIRROR_CHUNK_ROWS = 16;
+static constexpr size_t USB_MIRROR_MAX_CHUNK_PAYLOAD =
+  (size_t)USB_MIRROR_WIDTH * USB_MIRROR_CHUNK_ROWS * 2u;
+static constexpr size_t USB_MIRROR_VIDEO_RECT_SIZE = 16;
+static constexpr size_t USB_MIRROR_POINTER_SIZE = 8;
 
 enum UsbMirrorPacketType : uint8_t {
   USB_MIRROR_PACKET_HELLO = 1,
@@ -78,8 +82,11 @@ inline bool usb_mirror_keepalive_fresh(uint32_t lastMs, uint32_t nowMs) {
   return (uint32_t)(nowMs - lastMs) < USB_MIRROR_KEEPALIVE_TIMEOUT_MS;
 }
 
-inline uint32_t usb_mirror_crc32(const uint8_t* data, size_t len) {
-  uint32_t crc = 0xFFFFFFFFu;
+inline uint32_t usb_mirror_crc32_begin() {
+  return 0xFFFFFFFFu;
+}
+
+inline uint32_t usb_mirror_crc32_update(uint32_t crc, const uint8_t* data, size_t len) {
   for (size_t i = 0; i < len; i++) {
     crc ^= data[i];
     for (uint8_t bit = 0; bit < 8; bit++) {
@@ -87,7 +94,15 @@ inline uint32_t usb_mirror_crc32(const uint8_t* data, size_t len) {
       crc = (crc >> 1) ^ (0xEDB88320u & mask);
     }
   }
+  return crc;
+}
+
+inline uint32_t usb_mirror_crc32_finish(uint32_t crc) {
   return ~crc;
+}
+
+inline uint32_t usb_mirror_crc32(const uint8_t* data, size_t len) {
+  return usb_mirror_crc32_finish(usb_mirror_crc32_update(usb_mirror_crc32_begin(), data, len));
 }
 
 inline void usb_mirror_put_u16(uint8_t* out, uint16_t value) {
@@ -145,7 +160,7 @@ inline bool usb_mirror_read_header(const uint8_t* in, size_t inLen, UsbMirrorHea
 }
 
 inline bool usb_mirror_write_pointer(const UsbMirrorPointer& p, uint8_t* out, size_t outLen) {
-  if (!out || outLen < sizeof(UsbMirrorPointer)) return false;
+  if (!out || outLen < USB_MIRROR_POINTER_SIZE) return false;
 
   usb_mirror_put_u16(out + 0, (uint16_t)p.x);
   usb_mirror_put_u16(out + 2, (uint16_t)p.y);
@@ -157,10 +172,49 @@ inline bool usb_mirror_write_pointer(const UsbMirrorPointer& p, uint8_t* out, si
 }
 
 inline bool usb_mirror_read_pointer(const uint8_t* in, size_t inLen, UsbMirrorPointer& p) {
-  if (!in || inLen < sizeof(UsbMirrorPointer)) return false;
+  if (!in || inLen < USB_MIRROR_POINTER_SIZE) return false;
 
   int16_t x = (int16_t)usb_mirror_get_u16(in + 0);
   int16_t y = (int16_t)usb_mirror_get_u16(in + 2);
   p = usb_mirror_clamp_pointer(x, y, in[4]);
+  return true;
+}
+
+inline bool usb_mirror_write_video_rect(const UsbMirrorVideoRect& r, uint8_t* out, size_t outLen) {
+  if (!out || outLen < USB_MIRROR_VIDEO_RECT_SIZE) return false;
+
+  usb_mirror_put_u16(out + 0, r.x);
+  usb_mirror_put_u16(out + 2, r.y);
+  usb_mirror_put_u16(out + 4, r.w);
+  usb_mirror_put_u16(out + 6, r.h);
+  usb_mirror_put_u16(out + 8, r.row);
+  usb_mirror_put_u16(out + 10, r.rows);
+  out[12] = r.format;
+  out[13] = 0;
+  out[14] = 0;
+  out[15] = 0;
+  return true;
+}
+
+inline bool usb_mirror_read_video_rect(const uint8_t* in, size_t inLen, UsbMirrorVideoRect& r) {
+  if (!in || inLen < USB_MIRROR_VIDEO_RECT_SIZE) return false;
+
+  r.x = usb_mirror_get_u16(in + 0);
+  r.y = usb_mirror_get_u16(in + 2);
+  r.w = usb_mirror_get_u16(in + 4);
+  r.h = usb_mirror_get_u16(in + 6);
+  r.row = usb_mirror_get_u16(in + 8);
+  r.rows = usb_mirror_get_u16(in + 10);
+  r.format = in[12];
+  r.reserved[0] = 0;
+  r.reserved[1] = 0;
+  r.reserved[2] = 0;
+
+  if (r.format != USB_MIRROR_FORMAT_RGB565_LE) return false;
+  if (r.x >= USB_MIRROR_WIDTH || r.y >= USB_MIRROR_HEIGHT) return false;
+  if (r.w == 0 || r.h == 0 || r.rows == 0) return false;
+  if ((uint32_t)r.x + r.w > USB_MIRROR_WIDTH) return false;
+  if ((uint32_t)r.y + r.h > USB_MIRROR_HEIGHT) return false;
+  if ((uint32_t)r.row + r.rows > r.h) return false;
   return true;
 }

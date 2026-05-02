@@ -8,6 +8,7 @@
 #include <atomic>
 #include "../config.h"
 #include "../app_state.h"
+#include "../mirror/usb_mirror.h"
 #include "display.h"
 #include "../storage/storage.h"
 
@@ -152,6 +153,10 @@ void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
 
   uint16_t *src = (uint16_t*)px_map;
 
+  #if ENABLE_USB_UI_MIRROR
+  usb_mirror_enqueue_rect(area, px_map);
+  #endif
+
   // 90° CW rotation: landscape (x, y) → portrait (y, 799-x)
   for (int r = 0; r < H; r++) {
     int ly = y1 + r;  // landscape y
@@ -220,6 +225,15 @@ void lvgl_touchpad_read_cb(lv_indev_t *indev_drv, lv_indev_data_t *data) {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
+#if ENABLE_USB_UI_MIRROR
+static void lvgl_usb_mirror_read_cb(lv_indev_t*, lv_indev_data_t* data) {
+  usb_mirror_read_pointer(data);
+  if (data && data->state == LV_INDEV_STATE_PRESSED) {
+    dim_reset_activity();
+  }
+}
+#endif
+
 // LVGL INITIALIZATION
 // ───────────────────────────────────────────────────────────────────────────────
 void lvgl_hal_init() {
@@ -269,6 +283,13 @@ void lvgl_hal_init() {
   lv_indev_set_read_cb(indev, lvgl_touchpad_read_cb);
 
   LOG_I("LVGL touch input registered (GT911, manual coordinate swap)");
+
+  #if ENABLE_USB_UI_MIRROR
+  lv_indev_t *mirrorIndev = lv_indev_create();
+  lv_indev_set_type(mirrorIndev, LV_INDEV_TYPE_POINTER);
+  lv_indev_set_read_cb(mirrorIndev, lvgl_usb_mirror_read_cb);
+  LOG_I("LVGL USB mirror input registered");
+  #endif
 
   // ─────────────────────────────────────────────────────────────────────────
   // CREATE 1MS TICK TIMER

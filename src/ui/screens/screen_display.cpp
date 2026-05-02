@@ -4,6 +4,7 @@
 #include "../theme.h"
 #include "../display.h"
 #include "../../config.h"
+#include "../../mirror/usb_mirror.h"
 #include "../../storage/storage.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
@@ -17,6 +18,10 @@ static lv_obj_t* schemeBtn = nullptr;
 static lv_obj_t* schemeBtnLabel = nullptr;
 static lv_obj_t* themeBtn = nullptr;
 static lv_obj_t* themeBtnLabel = nullptr;
+#if ENABLE_USB_UI_MIRROR
+static lv_obj_t* mirrorBtn = nullptr;
+static lv_obj_t* mirrorBtnLabel = nullptr;
+#endif
 static lv_obj_t* infoLabel = nullptr;
 
 static const int dimTimeouts[] = { 0, 30, 60, 120, 300 };
@@ -27,6 +32,9 @@ static int currentDimIdx = 0;
 static bool displayScreenActive = false;
 static bool ignoreSliderCb = false;
 static void update_info_text();
+#if ENABLE_USB_UI_MIRROR
+static void update_mirror_label();
+#endif
 
 void screen_display_mark_dirty() {
   displayScreenActive = true;
@@ -109,6 +117,29 @@ static void save_cb(lv_event_t* e) {
   xSemaphoreGive(g_settings_mutex);
   storage_save_settings();
 }
+
+#if ENABLE_USB_UI_MIRROR
+static void mirror_toggle_cb(lv_event_t* e) {
+  (void)e;
+  if (!usb_mirror_is_connected()) {
+    usb_mirror_set_armed(false);
+  } else {
+    usb_mirror_set_armed(!usb_mirror_is_armed());
+  }
+  update_mirror_label();
+}
+
+static void update_mirror_label() {
+  if (!mirrorBtnLabel) return;
+  if (usb_mirror_is_armed()) {
+    lv_label_set_text(mirrorBtnLabel, "ARMED");
+  } else if (usb_mirror_is_connected()) {
+    lv_label_set_text(mirrorBtnLabel, "LINK");
+  } else {
+    lv_label_set_text(mirrorBtnLabel, "NO LINK");
+  }
+}
+#endif
 
 static void update_info_text() {
   if (!infoLabel) return;
@@ -257,6 +288,27 @@ void screen_display_create() {
 
   y += SET_ROW_H + 10;
 
+#if ENABLE_USB_UI_MIRROR
+  lv_obj_t* mirrorRow = lv_obj_create(screen);
+  lv_obj_set_size(mirrorRow, CONTENT_W, SET_ROW_H);
+  lv_obj_set_pos(mirrorRow, PX, y);
+  ui_style_post_row(mirrorRow);
+  lv_obj_remove_flag(mirrorRow, LV_OBJ_FLAG_CLICKABLE);
+
+  lv_obj_t* mirrorTitleLbl = lv_label_create(mirrorRow);
+  lv_label_set_text(mirrorTitleLbl, "USB MIRROR");
+  lv_obj_set_style_text_font(mirrorTitleLbl, SET_KEY_FONT, 0);
+  lv_obj_set_style_text_color(mirrorTitleLbl, COL_TEXT_DIM, 0);
+  lv_obj_align(mirrorTitleLbl, LV_ALIGN_LEFT_MID, 12, 0);
+
+  mirrorBtn = ui_create_btn(mirrorRow, CONTENT_W - 130, 8, SET_CYCLE_W, SET_CYCLE_H,
+                            "NO LINK", FONT_BTN, UI_BTN_NORMAL, mirror_toggle_cb, nullptr);
+  mirrorBtnLabel = lv_obj_get_child(mirrorBtn, 0);
+  update_mirror_label();
+
+  y += SET_ROW_H + 10;
+#endif
+
   lv_obj_t* infoBar = lv_obj_create(screen);
   lv_obj_set_size(infoBar, CONTENT_W, 36);
   lv_obj_set_pos(infoBar, PX, y);
@@ -289,6 +341,10 @@ void screen_display_invalidate_widgets() {
   schemeBtnLabel = nullptr;
   themeBtn = nullptr;
   themeBtnLabel = nullptr;
+  #if ENABLE_USB_UI_MIRROR
+  mirrorBtn = nullptr;
+  mirrorBtnLabel = nullptr;
+  #endif
   infoLabel = nullptr;
   displayScreenActive = false;
 }
@@ -303,4 +359,7 @@ void screen_display_update() {
     displayScreenActive = false;
     update_slider_from_settings();
   }
+  #if ENABLE_USB_UI_MIRROR
+  update_mirror_label();
+  #endif
 }

@@ -73,6 +73,31 @@ class SimulatorPackagingTests(unittest.TestCase):
         with self.assertRaisesRegex(FileNotFoundError, 'Missing required licenses'):
             self.run_package()
 
+    def test_packages_split_runtime_license_notices(self):
+        for old in ['gcc-libs', 'winpthreads']:
+            folder = self.toolchain / 'share/licenses' / old
+            (folder / 'LICENSE').unlink()
+            folder.rmdir()
+        for dependency in ['libgcc', 'libstdc++', 'libwinpthread']:
+            folder = self.toolchain / 'share/licenses' / dependency
+            folder.mkdir()
+            (folder / 'LICENSE').write_text(dependency + ' notice', encoding='utf-8')
+        self.run_package()
+        with zipfile.ZipFile(next((self.root / 'output').glob('*.zip'))) as bundle:
+            notices = bundle.read('welding-positioner-v2.1.0-simulator-windows-x64/LICENSES.txt').decode()
+            for dependency in ['libgcc', 'libstdc++', 'libwinpthread']:
+                self.assertIn(dependency + ' notice', notices)
+
+    def test_rejects_missing_split_cpp_runtime_license(self):
+        folder = self.toolchain / 'share/licenses/gcc-libs'
+        (folder / 'LICENSE').unlink()
+        folder.rmdir()
+        folder = self.toolchain / 'share/licenses/libgcc'
+        folder.mkdir()
+        (folder / 'LICENSE').write_text('gcc notice', encoding='utf-8')
+        with self.assertRaisesRegex(FileNotFoundError, 'libstdc'):
+            self.run_package()
+
     def test_clean_staging_excludes_previous_files_and_preserves_identity(self):
         previous = self.root / 'output/welding-positioner-v2.1.0-simulator-windows-x64'
         previous.mkdir(parents=True)

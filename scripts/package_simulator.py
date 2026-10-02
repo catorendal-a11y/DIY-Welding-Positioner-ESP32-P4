@@ -70,7 +70,11 @@ def package_into(folder, executable, args, identity, name):
                 ROOT / '.pio/libdeps/esp32p4-release/lvgl/src/stdlib/builtin/LICENSE_TLSF.txt',
                 ROOT / '.pio/libdeps/esp32p4-release/lvgl/src/stdlib/builtin/LICENSE_SPRINTF.txt',
                 ROOT / '.pio/libdeps/esp32p4-release/lvgl/scripts/built_in_font/font_license/FontAwesome5/LICENSE.txt']
-    for dependency in ['SDL2', 'gcc-libs', 'winpthreads']:
+    license_root = args.toolchain / 'share/licenses'
+    # MSYS2 split gcc-libs into libgcc/libstdc++ and renamed runtime notices.
+    gcc_notices = ['gcc-libs'] if (license_root / 'gcc-libs').is_dir() else ['libgcc', 'libstdc++']
+    pthread_notices = 'winpthreads' if (license_root / 'winpthreads').is_dir() else 'libwinpthread'
+    for dependency in ['SDL2', *gcc_notices, pthread_notices]:
         notices = sorted(p for p in (args.toolchain / 'share/licenses' / dependency).glob('*') if p.is_file())
         if not notices:
             raise FileNotFoundError('Missing toolchain license notices: ' + dependency)

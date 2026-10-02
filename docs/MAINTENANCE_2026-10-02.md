@@ -35,12 +35,12 @@ The existing motor/control tasks still share a bounded stepper adapter. Converti
 ## Validation
 
 - **419/419** native and production-control test cases passed.
-- **4/4** Python simulator-packaging regression cases passed.
+- **6/6** Python simulator-packaging regression cases passed.
 - **Release, debug and USB-mirror firmware builds passed** with the pinned ESP32-P4 toolchain. A pre-existing Arduino SPI dependency warning remains; the maintenance application build produced no compiler warnings.
 - LVGL simulator self-test passed, including failed persistence/retry and rejected-motion scenarios.
 - Layout audit passed with **0 failures** across registered screens at 800×480 and E-STOP/driver/ADC/I2C overlays, including minimum main-screen RPM. Explicit ellipsis/scrolling and compact event summaries are intentional; this is not an exhaustive audit of every possible operator input.
 - A local v2.1.1 development simulator ZIP was packaged and all 11 archived files passed checksum verification. Its `BUILD.json` explicitly records a dirty development build. Portable self-test was run with only Windows system paths on PATH.
-- Workflow YAML parsed locally. The newly added cloud Windows/UCRT64 job still needs its first GitHub Actions execution; local packaging used the installed MinGW toolchain.
+- GitHub Actions passed native tests, all three firmware builds and Linux UI checks. The first Windows/UCRT64 run passed simulator self-test and layout audit but exposed changed MSYS2 runtime-license directories. Packaging now supports both the legacy and split runtime packages, with regression coverage; the corrected cloud package is being verified.
 
 ## Simulator scenarios
 

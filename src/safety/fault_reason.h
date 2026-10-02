@@ -72,4 +72,3 @@ inline const char* safety_fault_reason_message(FaultReason reason) {
       return "Unknown fault";
   }
 }
-

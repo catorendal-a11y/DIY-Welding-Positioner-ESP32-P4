@@ -1,5 +1,7 @@
 # USB UI Mirror Implementation Plan
 
+Historical May 2026 planning document. USB mirror is implemented as an optional build in v2.1.0. See [the current simulator and viewer guide](../../../simulator/README.md) for setup and operation; details below describe the original plan.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a real USB-C mirror that streams live ESP32 LVGL pixels to Windows and sends PC mouse/touch input back into the same LVGL UI path.

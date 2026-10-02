@@ -1,5 +1,7 @@
 # USB-C UI Mirror Design
 
+Historical May 2026 planning document. USB mirror is implemented as an optional build in v2.1.0. See [the current simulator and viewer guide](../../../simulator/README.md) for setup and operation; details below describe the original plan.
+
 ## Goal
 
 Add a local Windows UI mirror for the ESP32-P4 rotator over the existing USB-C CDC serial link. This must be a real mirror of the running device UI, not a simulator state clone.

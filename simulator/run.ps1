@@ -7,12 +7,13 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$root = Resolve-Path "$PSScriptRoot\.."
 $build = Join-Path $PSScriptRoot "build"
 
 cmake -S $PSScriptRoot -B $build -G Ninja `
   -DCMAKE_C_COMPILER=gcc `
   -DCMAKE_CXX_COMPILER=g++
+
+if ($LASTEXITCODE -ne 0) { throw "simulator configure exited with code $LASTEXITCODE" }
 
 $simExe = Join-Path $build "rotator_simulator.exe"
 $mirrorExe = Join-Path $build "rotator_usb_mirror.exe"

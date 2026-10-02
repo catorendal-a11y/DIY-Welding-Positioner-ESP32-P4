@@ -4,53 +4,169 @@
     {
       "label": "PlatformIO: Build (esp32p4-release)",
       "type": "shell",
-      "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe",
-      "args": ["run", "-e", "esp32p4-release"],
-      "options": { "cwd": "${workspaceFolder}" },
-      "group": { "kind": "build", "isDefault": true },
-      "presentation": { "reveal": "always", "panel": "shared", "focus": false },
-      "problemMatcher": ["$gcc"]
+      "command": "pio",
+      "args": [
+        "run",
+        "-e",
+        "esp32p4-release"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "focus": false
+      },
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "windows": {
+        "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe"
+      }
     },
     {
       "label": "PlatformIO: Build (esp32p4-debug)",
       "type": "shell",
-      "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe",
-      "args": ["run", "-e", "esp32p4-debug"],
-      "options": { "cwd": "${workspaceFolder}" },
+      "command": "pio",
+      "args": [
+        "run",
+        "-e",
+        "esp32p4-debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "group": "build",
-      "presentation": { "reveal": "always", "panel": "shared", "focus": false },
-      "problemMatcher": ["$gcc"]
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "focus": false
+      },
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "windows": {
+        "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe"
+      }
     },
     {
       "label": "PlatformIO: Upload (release)",
       "type": "shell",
-      "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe",
-      "args": ["run", "-e", "esp32p4-release", "-t", "upload"],
-      "options": { "cwd": "${workspaceFolder}" },
+      "command": "pio",
+      "args": [
+        "run",
+        "-e",
+        "esp32p4-release",
+        "-t",
+        "upload"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "group": "none",
-      "presentation": { "reveal": "always", "panel": "shared", "focus": true },
-      "problemMatcher": ["$gcc"]
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "focus": true
+      },
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "windows": {
+        "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe"
+      }
     },
     {
       "label": "PlatformIO: Serial monitor",
       "type": "shell",
-      "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe",
-      "args": ["device", "monitor"],
-      "options": { "cwd": "${workspaceFolder}" },
+      "command": "pio",
+      "args": [
+        "device",
+        "monitor"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "group": "none",
-      "presentation": { "reveal": "always", "panel": "dedicated", "focus": true },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
       "isBackground": true,
-      "problemMatcher": []
+      "problemMatcher": [],
+      "windows": {
+        "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe"
+      }
     },
     {
       "label": "PlatformIO: Clean",
       "type": "shell",
-      "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe",
-      "args": ["run", "-t", "clean"],
-      "options": { "cwd": "${workspaceFolder}" },
+      "command": "pio",
+      "args": [
+        "run",
+        "-e",
+        "esp32p4-release",
+        "-t",
+        "clean"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "group": "none",
-      "presentation": { "reveal": "always", "panel": "shared" },
-      "problemMatcher": []
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": [],
+      "windows": {
+        "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe"
+      }
+    },
+    {
+      "label": "PlatformIO: Build (esp32p4-mirror)",
+      "type": "shell",
+      "command": "pio",
+      "windows": {
+        "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe"
+      },
+      "args": [
+        "run",
+        "-e",
+        "esp32p4-mirror"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": [
+        "$gcc"
+      ]
+    },
+    {
+      "label": "PlatformIO: Native tests",
+      "type": "shell",
+      "command": "pio",
+      "windows": {
+        "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe"
+      },
+      "args": [
+        "test",
+        "-e",
+        "native"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "test",
+      "problemMatcher": [
+        "$gcc"
+      ]
     }
   ]
 }

@@ -1,9 +1,6 @@
 {
-  "cmake.cmakePath": "C:/Program Files/CMake/bin/cmake.exe",
   "cmake.generator": "Ninja",
   "cmake.configureOnOpen": false,
-  "python.defaultInterpreterPath": "C:/Users/Rendalsniken/.platformio/penv/Scripts/python.exe",
-  "platformio-ide.customPATH": "C:/Users/Rendalsniken/.platformio/penv/Scripts",
   "platformio-ide.useBuiltinPIOCore": true,
   "platformio-ide.disablePIOHomeWizard": true
 }

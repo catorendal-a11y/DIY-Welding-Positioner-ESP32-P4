@@ -12,6 +12,7 @@
 #include "../control/motion_policy.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include "freertos/task.h"
 #include <FastAccelStepper.h>
 #include <atomic>
 #include <cstdint>
@@ -131,15 +132,16 @@ void motor_gpio_init() {
 // ───────────────────────────────────────────────────────────────────────────────
 // FASTACCELSTEPPER INITIALIZATION
 // ───────────────────────────────────────────────────────────────────────────────
-void motor_init() {
-  motor_gpio_init();
-
+static void motor_init_on_control_core() {
   g_stepperMutex = xSemaphoreCreateMutex();
   if (!g_stepperMutex) fatal_halt("motor: stepper mutex alloc");
 
-  // Pin stepper engine to Core 0 — motorTask, controlTask and safetyTask all run here.
-  // Without pinning, FastAccelStepper's internal timer ISR may fire on Core 1
-  // causing inter-core contention and jitter in step pulse timing.
+  // init(0) pins the library task only. IDF allocates the RMT interrupt on
+  // the caller's core, so channel allocation must also execute on Core 0.
+#if defined(ARDUINO_ARCH_ESP32)
+  configASSERT(xPortGetCoreID() == 0);
+  LOG_I("FastAccelStepper channel allocation: Core %d", xPortGetCoreID());
+#endif
   engine.init(0);
 
   // Connect stepper to step pin with RMT driver
@@ -173,6 +175,26 @@ void motor_init() {
   LOG_I("  Steps/rev: %u", static_cast<unsigned>(microstep_get_steps_per_rev()));
   LOG_I("  Accel: %d steps/s2", accelSteps);
   LOG_I("  Start speed: %d Hz", START_SPEED);
+}
+
+void motor_init() {
+  motor_gpio_init(); // Keep ENA inhibited before allocation or any boot failure.
+#if defined(ARDUINO_ARCH_ESP32)
+  if (xPortGetCoreID() != 0) {
+    const TaskHandle_t caller = xTaskGetCurrentTaskHandle();
+    const auto initialize = [](void* context) {
+      motor_init_on_control_core();
+      xTaskNotifyGive(static_cast<TaskHandle_t>(context));
+      vTaskDelete(nullptr);
+    };
+    if (xTaskCreatePinnedToCore(initialize,"motor-init",8192,caller,5,nullptr,0) != pdPASS)
+      fatal_halt("motor: initialization task allocation");
+    if (ulTaskNotifyTake(pdTRUE,pdMS_TO_TICKS(5000)) == 0)
+      fatal_halt("motor: initialization timeout");
+    return;
+  }
+#endif
+  motor_init_on_control_core();
 }
 
 // ───────────────────────────────────────────────────────────────────────────────

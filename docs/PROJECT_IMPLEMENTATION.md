@@ -3,9 +3,9 @@
 **Board**: GUITION JC4880P443C ESP32-P4 4.3" Touch Display (with ESP32-C6 co-processor)
 **Display**: ST7701S 480x800 MIPI-DSI (rotated to 800x480 landscape)
 **Touch**: GT911 capacitive touch controller
-**Source**: v2.1.1 (`FW_VERSION` in `src/config.h`); published firmware remains v2.1.0.
+**Source**: v2.1.1 (`FW_VERSION` in `src/config.h`); published firmware is v2.1.1; historical v2.1.0 artifacts are unchanged.
 
-See [control/setup implementation and validation](CONTROL_SETUP_IMPLEMENTATION.md) for the unreleased single-owner executor, coherent snapshots and guided commissioning.
+See [control/setup implementation and validation](CONTROL_SETUP_IMPLEMENTATION.md) for the single-owner executor, coherent snapshots and guided commissioning.
 
 ---
 

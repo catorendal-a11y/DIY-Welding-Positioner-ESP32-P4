@@ -2,7 +2,7 @@
 
 ## Download and try
 
-[Download the portable Windows x64 ZIP](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.1.0/welding-positioner-v2.1.0-simulator-windows-x64.zip). Extract all files and double-click **Start Simulator.cmd**. No development tools or hardware are required. Runtime libraries and license notices are included. See the [portable guide](../docs/releases/SIMULATOR.md). The build instructions below are for source development.
+[Download the portable Windows x64 ZIP](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.1.1/welding-positioner-v2.1.1-simulator-windows-x64.zip). Extract all files and double-click **Start Simulator.cmd**. No development tools or hardware are required. Runtime libraries and license notices are included. See the [portable guide](../docs/releases/SIMULATOR.md). The build instructions below are for source development.
 
 Runs the existing LVGL screens on Windows using SDL2. This is a UI simulator only:
 no ESP32 hardware, motor driver, GPIO, ESTOP input, flash, or serial protocol is
@@ -78,7 +78,7 @@ PlatformIO Monitor cannot use COM5 while the viewer is connected.
 
 ## Source dependency update
 
-Unreleased source uses LVGL **9.6.0** with an explicit SDL software renderer. SDL2 **2.32.10** is current in the compatible SDL2 series on the local Windows toolchain; Linux CI uses its distro SDL2 package. SDL3 is a different API and is not used by the LVGL SDL2 driver. The simulated drive models asynchronous force-stop drain, and movement result codes match the typed 1.4.0 API. [Full migration report](../docs/DEPENDENCY_UPGRADE_2026-10-02.md).
+v2.1.1 uses LVGL **9.6.0** with an explicit SDL software renderer. SDL2 **2.32.10** is current in the compatible SDL2 series on the local Windows toolchain; Linux CI uses its distro SDL2 package. SDL3 is a different API and is not used by the LVGL SDL2 driver. The simulated drive models asynchronous force-stop drain, and movement result codes match the typed 1.4.0 API. [Full migration report](../docs/DEPENDENCY_UPGRADE_2026-10-02.md).
 
 ## Requirements
 
@@ -115,7 +115,7 @@ xvfb-run -a simulator/build/rotator_simulator --self-test
 
 ## Maintenance checks and scenarios (source v2.1.1)
 
-The source simulator now compiles the production command dispatcher, motor adapter, all four motion modes and program executor. Only hardware/input/safety/storage adapters are simulated; the save-generation policy is shared. Control runs every 5 ms, independently of 40 ms UI updates. Simulator timing and drive deceleration are models, not measurements. The v2.1.0 public ZIP predates these additions.
+The source simulator now compiles the production command dispatcher, motor adapter, all four motion modes and program executor. Only hardware/input/safety/storage adapters are simulated; the save-generation policy is shared. Control runs every 5 ms, independently of 40 ms UI updates. Simulator timing and drive deceleration are models, not measurements. The v2.1.1 portable ZIP includes these additions; the historical v2.1.0 ZIP predates them.
 
 ```powershell
 simulator/build/rotator_simulator.exe --audit-layout

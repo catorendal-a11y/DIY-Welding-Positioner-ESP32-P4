@@ -1,7 +1,7 @@
 # ESTOP Timing Verification
 
 ## Hardware: GUITION JC4880P443C (ESP32-P4 + ESP32-C6)
-## Firmware: v2.1.0 (see `FW_VERSION` in `src/config.h`)
+## Firmware: v2.1.1 (see `FW_VERSION` in `src/config.h`)
 ## Test Date: [FILL IN AFTER HARDWARE TEST]
 
 ---

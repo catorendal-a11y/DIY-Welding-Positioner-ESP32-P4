@@ -1,6 +1,6 @@
 # Setup Wizard
 
-This is an unreleased source feature. The published v2.1.0 firmware and simulator do not include it. The existing V5 operating-screen design is retained.
+Included in v2.1.1 firmware and simulator. Historical v2.1.0 downloads do not include it. The existing V5 operating-screen design is retained.
 
 New installations open the wizard after boot. Existing valid settings without `setup_completed` migrate as configured and retain all settings/presets. Open **Settings → Setup Wizard** to run it voluntarily. An interrupted, incomplete new setup is offered again on restart. Exiting stops any requested motion and keeps settings already saved; it does not reset the machine configuration.
 

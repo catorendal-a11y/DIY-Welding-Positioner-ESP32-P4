@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-10-03
+
+### FastAccelStepper re-audit and release
+
+- Verify installed FastAccelStepper HEAD against upstream tag 1.4.0. Retain asynchronous force-stop drain handling, explicit RMT selection and typed movement results.
+- Allocate the RMT channel in a bounded Core 0 boot task; engine task affinity alone does not select the interrupt allocation core. Keep ENA inhibited throughout initialization and stop boot on allocation/timeout failure.
+- Correct IRQ-affinity and jitter claims. Publish firmware and the portable simulator from the exact green master CI commit with English release notes and complete download checksums.
+
 ### Dependency refresh and API migration
 
 - Upgrade LVGL 9.5.0 to 9.6.0, use RGB565 default-format configuration, public driver/snapshot headers and dedicated object setters; retain the V5 screen design and English labels.

@@ -4,7 +4,7 @@ Try the V5 welding positioner interface without buying hardware or installing de
 
 ## Start
 
-1. Download the simulator Windows x64 ZIP from the v2.1.0 GitHub release.
+1. Download the simulator Windows x64 ZIP from the v2.1.1 GitHub release.
 2. Right-click the ZIP and choose Extract All. Keep all extracted files together.
 3. Open the extracted folder and double-click Start Simulator.cmd (or rotator_simulator.exe).
 4. Use the mouse to operate the touchscreen interface. Close the window to exit.

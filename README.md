@@ -61,11 +61,11 @@ Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Posit
 
 [Implementation details](docs/IMPROVEMENTS_2026-10-01.md) · [V5 integration and upload record](docs/UI_V5_DEPLOYMENT.md) · [Changelog](CHANGELOG.md)
 
-**Current release: v2.1.0, updated 2 October 2026.** V5 identifies the UI design iteration. [Download firmware and read the release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.1.0). Runtime screenshots below were refreshed from the v2.1.1 source simulator; the downloadable stable binaries remain v2.1.0.
+**Current release: v2.1.1, updated 3 October 2026.** V5 identifies the UI design iteration. [Download firmware and read the release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.1.1). The current firmware and simulator include LVGL 9.6, FastAccelStepper 1.4, guided setup/calibration and the revised program editor.
+
+v2.1.1 adds bounded motor error handling, precise RPM values, durable calibration confirmation and production motion tests. This release is validated on the host and has not been flashed or physically tested as part of publication. [Maintenance implementation report](docs/MAINTENANCE_2026-10-02.md) · [FastAccelStepper re-audit](docs/FASTACCELSTEPPER_1_4_REAUDIT.md).
 
 ---
-
-The source maintenance update targets **v2.1.1**; the published download above remains **v2.1.0** until a new release is published. It adds bounded motor error handling, precise RPM values on all screens, durable calibration save confirmation and tests of the production motion code. See the [maintenance implementation report](docs/MAINTENANCE_2026-10-02.md) for validation and hardware limits.
 
 ## Quick Navigation
 
@@ -188,7 +188,7 @@ Most DIY welding rotator projects stop at "turn a stepper at a set speed." This 
 | Cheap speed-controller modules | Pot-only control, no saved jobs, weak diagnostics | NVS presets, workpiece diameter fields, diagnostics screen, event log, and display/system info |
 | Open-bench ESP32 projects | Often unstable near HF-start TIG welding | Field-tested with TIG after moving ESP32-P4 screen, DM542T driver, and PSU into one grounded metal enclosure |
 | Simple E-STOP input | Software polling or unsafe enable assumptions | GPIO34 ISR forces ENA HIGH, state machine latches fault, and motion-start paths re-check E-STOP/ALM after ENA LOW |
-| Display demos | Pretty screen but no realtime motor isolation | LVGL 9 UI isolated to Core 1; FastAccelStepper and safety-critical logic stay on Core 0 |
+| Display demos | Pretty screen but no realtime motor isolation | LVGL runs on Core 1; motion tasks and RMT channel allocation use Core 0 |
 | Fixed motor configs | Hardcoded microstep/speed assumptions | Touch-configurable microstepping, acceleration, direction invert, max RPM clamp, calibration, and storage validation |
 
 The project combines dedicated welding modes, input diagnostics and documented enclosure experience from TIG HF testing. The latest software changes have native and simulator coverage; physical motor and safety checks for this update remain bench work.
@@ -209,7 +209,7 @@ The project combines dedicated welding modes, input diagnostics and documented e
 
 ## UI Screens
 
-The UI is built from **23 registered screen types** (including the unreleased Setup Wizard) plus a separate full-screen fault overlay. The table below maps the firmware registry.
+The UI is built from **23 registered screen types** (including the Setup Wizard) plus a separate full-screen fault overlay. The table below maps the firmware registry.
 
 ![Emergency-stop overlay](docs/images/ui_runtime_v5/ESTOP_ACTIVE.png)
 
@@ -230,7 +230,7 @@ The 30 design views cover all 22 screen types, additional states and keyboards. 
 | **Main** | `SCREEN_MAIN` | Large orange RPM panel, idle RPM +/−, CW/CCW and wide START/STOP |
 | **Menu** | `SCREEN_MENU` | Advanced mode selection and settings |
 | **Run Modes** | `SCREEN_RUN_MODES` | Pulse / Step / Jog / Timer selection |
-| **Setup Wizard** | `SCREEN_SETUP` | Motor, direction, verified calibration and physical E-STOP function check (unreleased source) |
+| **Setup Wizard** | `SCREEN_SETUP` | Motor, direction, verified calibration and physical E-STOP function check (v2.1.1) |
 | **Jog** | `SCREEN_JOG` | Touch-and-hold rotation for manual positioning (has its own RPM +/-) |
 | **Pulse** | `SCREEN_PULSE` | ON/OFF cycle for tack welding |
 | **Step** | `SCREEN_STEP` | Rotate exact angle, then stop |
@@ -272,7 +272,7 @@ controlTask  (pri 3, 4 KB)
 | Principle | Implementation |
 |:---|:---|
 | **Task Isolation** | UI rendering cannot block motor pulse generation |
-| **Hardware Timers** | RMT peripheral for jitter-free micro-stepping |
+| **Hardware Timers** | Hardware-timed RMT STEP output; refill latency and physical pulse timing require measurement |
 | **Fail-Safe** | E-STOP ISR drives ENA HIGH; stop latency requires measurement; motion-start paths re-check E-STOP/ALM after ENA LOW and disable again if unsafe |
 | **Thread Safety** | FreeRTOS mutex on stepper access, atomic cross-core variables, pending-flag patterns |
 | **Live Speed** | `applySpeedAcceleration()` for immediate RPM changes during rotation |
@@ -340,33 +340,33 @@ Default environment: `esp32p4-release`. Build output goes to `.pio/build-fw` to 
 
 Serial ports are detected automatically. Use `pio device list` and override the port with `--upload-port COM3` (example) if needed. Native tests do not need hardware.
 
-Pinned source dependencies: PlatformIO Core `6.2.0`, pioarduino `55.03.312-1` (Arduino `3.3.12` / ESP-IDF `5.5.5`), LVGL `9.6.0`, FastAccelStepper `1.4.0` at commit `f24a659`, ArduinoJson `7.4.3`, and Unity `2.7.0`. FastAccelStepper uses the upstream Git commit because the registry package with the same version lacks the corrected RMT implementation. [Dependency inventory, migration analysis and validation](docs/DEPENDENCY_UPGRADE_2026-10-02.md). Published v2.1.0 binaries retain their original dependencies.
+Pinned source dependencies: PlatformIO Core `6.2.0`, pioarduino `55.03.312-1` (Arduino `3.3.12` / ESP-IDF `5.5.5`), LVGL `9.6.0`, FastAccelStepper `1.4.0` at commit `f24a659`, ArduinoJson `7.4.3`, and Unity `2.7.0`. FastAccelStepper uses the upstream Git commit because the registry package with the same version lacks the corrected RMT implementation. [Dependency inventory, migration analysis and validation](docs/DEPENDENCY_UPGRADE_2026-10-02.md). Older v2.1.0 binaries retain their original dependencies.
 
 ---
 
-## Dependency Update (Unreleased Source)
+## Dependency Update (v2.1.1)
 
 The source now uses **LVGL 9.6.0** and **FastAccelStepper 1.4.0** with the current Arduino ESP32 framework. The V5 visual style and English labels are retained; Calibration now has a guided, non-scrolling layout. Motor initialization selects RMT explicitly; reset waits for queued pulses to finish after `forceStop()`. The actual upstream RMT encoder is tested on the PC as well as the production control code. [Complete dependency and migration report](docs/DEPENDENCY_UPGRADE_2026-10-02.md).
 
-## Program Editor (Unreleased Source)
+## Program Editor (v2.1.1)
 
 **New Program** keeps the V5 dark/orange style with a fixed 800×480 layout. Select one **RUN MODE**, choose the other modes the preset allows, enter an exact RPM, and open **MODE SETTINGS** for direction and timing. Name and RPM have separate full-screen editors; invalid input keeps the draft unchanged. Low-speed adjustments preserve 0.001 RPM precision in every mode editor. Save stores the program without starting rotation.
 
 <img src="docs/images/program_v2/01_new_program.png" width="800" alt="Actual LVGL New Program page with run mode, availability, exact speed and mode settings">
 
-[All editor screens and workflow](docs/PROGRAM_EDITOR.md). These additions are in unreleased source; the published v2.1.0 simulator and firmware retain their original UI.
+[All editor screens and workflow](docs/PROGRAM_EDITOR.md). Included in v2.1.1 firmware and simulator. Older v2.1.0 downloads retain their original UI.
 
-## Guided Setup (Unreleased Source)
+## Guided Setup (v2.1.1)
 
 The source includes a four-step **Setup Wizard** using the existing V5 dark/orange UI: motor settings, hold-to-run direction checks, verified manual calibration, and a user-confirmed function check of the **physical E-STOP switch**, reset and normal START/STOP. New installations open the wizard; existing valid settings without the new field remain configured. Re-run it from **Settings → Setup Wizard**. Completing setup does not start motion, and completion is confirmed only after its save succeeds.
 
 <img src="docs/images/setup_v1/01_motor.png" width="800" alt="Actual LVGL setup wizard motor stage">
 
-[All wizard screens and instructions](docs/SETUP_WIZARD.md) · [Control architecture and validation](docs/CONTROL_SETUP_IMPLEMENTATION.md). The currently published v2.1.0 binaries do not contain this unreleased addition.
+[All wizard screens and instructions](docs/SETUP_WIZARD.md) · [Control architecture and validation](docs/CONTROL_SETUP_IMPLEMENTATION.md). Included in v2.1.1; older v2.1.0 binaries do not contain this addition.
 
 ## PC UI Simulator
 
-**Try it without installing development tools:** [Download the Windows x64 simulator ZIP](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.1.0/welding-positioner-v2.1.0-simulator-windows-x64.zip), extract all files, and double-click **Start Simulator.cmd**. No hardware is needed. [Portable simulator guide](docs/releases/SIMULATOR.md).
+**Try it without installing development tools:** [Download the Windows x64 simulator ZIP](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.1.1/welding-positioner-v2.1.1-simulator-windows-x64.zip), extract all files, and double-click **Start Simulator.cmd**. No hardware is needed. [Portable simulator guide](docs/releases/SIMULATOR.md).
 
 The Windows simulator runs the real LVGL screen code on the PC using SDL2. It is useful for UI review, navigation testing, and quick logic checks without flashing the ESP32-P4.
 

@@ -1,6 +1,6 @@
 # Control ownership and guided setup
 
-Source v2.1.1, unreleased. This change preserves the existing V5 design and physical E-STOP input. It has not been flashed or released as part of this implementation.
+Source/release v2.1.1. This change preserves the existing V5 design and physical E-STOP input. It has not been flashed or physically tested as part of release publication.
 
 ## Control and safety boundaries
 

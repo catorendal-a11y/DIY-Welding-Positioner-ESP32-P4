@@ -1,6 +1,6 @@
 # Workpiece calibration
 
-Unreleased v2.1.1 source. These are actual 800 × 480 LVGL 9.6 simulator captures, using the V5 dark graphite/orange design. The simulator validates interaction and state transitions; the operator must measure the real workpiece.
+Included in v2.1.1 firmware and simulator. These are actual 800 × 480 LVGL 9.6 simulator captures, using the V5 dark graphite/orange design. The simulator validates interaction and state transitions; the operator must measure the real workpiece.
 
 ## Align
 

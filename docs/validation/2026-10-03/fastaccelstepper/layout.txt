@@ -1,0 +1,10 @@
+[D] Screen show: 23
+[E] ESTOP overlay: shown
+[I] State: ESTOP -> IDLE
+[E] ESTOP overlay: shown
+[I] State: ESTOP -> IDLE
+[E] ESTOP overlay: shown
+[I] State: ESTOP -> IDLE
+[E] ESTOP overlay: shown
+[I] State: ESTOP -> IDLE
+LAYOUT AUDIT: 0 failures

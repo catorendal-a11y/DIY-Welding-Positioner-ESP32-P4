@@ -1,6 +1,6 @@
 # v2.1.1 maintenance implementation
 
-This source update implements the software corrections from [the code review](CODE_REVIEW_2026-10-02.md). The published v2.1.0 assets are unchanged; v2.1.1 has not been published or flashed to the device during this task.
+This report records the 2 October source corrections from [the code review](CODE_REVIEW_2026-10-02.md), before the later single-owner control refactor and dependency migration. These corrections are included in v2.1.1. Historical v2.1.0 assets are unchanged; the connected device has not been flashed with this update. See [current control architecture](CONTROL_SETUP_IMPLEMENTATION.md) and [FastAccelStepper re-audit](FASTACCELSTEPPER_1_4_REAUDIT.md) for subsequent changes.
 
 **Subsequent source work:** [single-owner control and Setup Wizard](CONTROL_SETUP_IMPLEMENTATION.md) supersedes the architectural follow-up items in this historical maintenance report.
 

@@ -1,9 +1,9 @@
 # Project Status
 
-**Last Updated:** 2026-10-02
-**Published firmware:** v2.1.0
-**Source:** v2.1.1 with unreleased control/setup, dependency and calibration improvements
-**Build:** Source validation passed 438 native/production-control cases, six packaging cases, the full simulator setup/self-test and layout audit, and release/debug/mirror builds. The source update has not been flashed. Published v2.1.0 binaries remain unchanged.
+**Last Updated:** 2026-10-03
+**Published firmware:** v2.1.1
+**Source:** v2.1.1 with control/setup, dependency, calibration and program-editor improvements
+**Build:** Source validation passed 438 native/production-control cases, six packaging cases, the full simulator setup/self-test and layout audit, and release/debug/mirror builds. The source update has not been flashed. Historical v2.1.0 assets remain unchanged.
 
 ---
 
@@ -69,7 +69,7 @@ Runtime stepper calls belong to controlTask; inputTask samples ADC/pedal separat
 - [x] **TIG HF field validation** (welding works with ESP32-P4 screen, driver, and PSU inside one grounded metal enclosure)
 
 ### Documentation
-- [x] **README** (source v2.1.1 / published v2.1.0, feature list, wiring diagram, BOM, TIG HF enclosure requirement; synced with `config.h`)
+- [x] **README** (source and release v2.1.1, feature list, wiring diagram, BOM, TIG HF enclosure requirement; synced with `config.h`)
 - [x] **Wiki** (Home, Getting Started, Hardware Setup, Troubleshooting, Roadmap, Architecture)
 - [x] **docs/** (Hardware Setup, Safety System, EMI Mitigation, Implementation, Instructables)
 - [x] **Wiring diagram v2** (SVG, GPIO29 on correct side, clean cable routing)
@@ -112,14 +112,14 @@ Runtime stepper calls belong to controlTask; inputTask samples ADC/pedal separat
 
 ## Build Info
 
-See the [dependency inventory and migration analysis](docs/DEPENDENCY_UPGRADE_2026-10-02.md). These metrics describe the unreleased source build, not the published v2.1.0 download.
+See the [dependency inventory and migration analysis](docs/DEPENDENCY_UPGRADE_2026-10-02.md). Metrics describe the v2.1.1 release build; prior v2.1.0 artifacts are unchanged.
 
 | Metric | Value |
 |--------|-------|
 | **Platform** | pioarduino 55.03.312-1 (Arduino 3.3.12 / ESP-IDF 5.5.5) |
 | **Board** | GUITION JC4880P443C (ESP32-P4 + ESP32-C6) |
-| **RAM Usage** | 9.9% (32,540 bytes / 327,680 bytes, release build) |
-| **Flash Usage** | 17.0% (1,110,964 bytes / 6,553,600 bytes, release build) |
+| **RAM Usage** | 10.0% (32,692 bytes / 327,680 bytes, release build) |
+| **Flash Usage** | 16.9% (1,109,552 bytes / 6,553,600 bytes, release build) |
 | **FastAccelStepper** | 1.4.0, upstream `f24a659` |
 | **LVGL** | 9.6.0 (RGB565) |
 | **ArduinoJson** | 7.4.3 |

@@ -1,6 +1,6 @@
 # Dependency upgrade and migration analysis
 
-Verified 2 October 2026; feature review and program-editor validation updated 3 October 2026 for unreleased source v2.1.1. The published v2.1.0 binaries and the connected device have not been replaced by this update. The existing V5 design, physical E-STOP wiring and saved presets/settings are retained.
+Verified 2 October 2026; feature review, program-editor validation and FastAccelStepper re-audit updated 3 October 2026 for source/release v2.1.1. Historical v2.1.0 binaries remain unchanged. The connected device has not been flashed with this update. The existing V5 design, physical E-STOP wiring and saved presets/settings are retained.
 
 ## Dependency inventory
 
@@ -126,7 +126,7 @@ See [guided calibration](CALIBRATION_WORKFLOW.md) for the new UI, formula, runti
 - The GPIO, storage and system device-test programs compile against the updated dependencies; build-only validation does not execute hardware tests.
 - Release, debug and USB-mirror firmware build against the pinned platform and actual upstream FastAccelStepper commit.
 - LVGL navigation/setup/calibration/program self-test, layout audit and screenshot exports use the actual 9.6 source. The program regression covers the full editing flow and low-speed adjustment in every sub-editor. Runtime screenshots are refreshed from this simulator.
-- Release build: 32,692 / 327,680 bytes static RAM and 1,109,208 / 6,553,600 bytes application flash. The incremental build has no compiler warnings; the earlier full framework build emitted an upstream discarded-volatile SPI warning. Application compilation succeeds. [Current validation excerpts](validation/2026-10-03/program-editor/README.md).
+- Release build after the Core 0 allocation correction: 32,692 / 327,680 bytes static RAM and 1,109,552 / 6,553,600 bytes application flash. The incremental build has no compiler warnings; the earlier full framework build emitted an upstream discarded-volatile SPI warning. Application compilation succeeds. [Latest validation excerpts](validation/2026-10-03/fastaccelstepper/README.md); [program-editor validation](validation/2026-10-03/program-editor/README.md).
 
 Reproduce:
 
@@ -145,4 +145,4 @@ Run `simulator/run.ps1 -SelfTest` and the simulator's `--audit-layout` for the a
 
 Before deploying this major motor-library update, compare commanded and measured movement in both directions over repeated Step moves and full revolutions; sweep the configured RPM range at each used microstep setting. Measure STEP high/low widths and DIR setup/hold at the driver inputs, including direction reversals. Verify normal STOP, physical E-STOP, driver alarm, queue-drain reset and fresh START without automatic restart. Repeat under display/USB-mirror load and NVS writes; upstream warns that flash writes during movement can disturb motion timing. This upgrade does not change the storage scheduling policy.
 
-Confirm presets, calibration, setup state and display settings survive reboot. These checks require the real board/driver and have not been performed by this update. No device flashing, release publication or merge is implied by successful compilation or host regression results.
+Confirm presets, calibration, setup state and display settings survive reboot. These checks require the real board/driver and have not been performed by this update. Release publication follows successful CI for its exact master commit; device flashing and hardware timing measurements remain separate. [Independent 1.4.0 re-audit](FASTACCELSTEPPER_1_4_REAUDIT.md).

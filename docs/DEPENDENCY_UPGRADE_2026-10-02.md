@@ -1,6 +1,6 @@
 # Dependency upgrade and migration analysis
 
-Verified 2 October 2026 for unreleased source v2.1.1. The published v2.1.0 binaries and the connected device have not been replaced by this update. The existing V5 design, physical E-STOP wiring and saved presets/settings are retained.
+Verified 2 October 2026; feature review and program-editor validation updated 3 October 2026 for unreleased source v2.1.1. The published v2.1.0 binaries and the connected device have not been replaced by this update. The existing V5 design, physical E-STOP wiring and saved presets/settings are retained.
 
 ## Dependency inventory
 
@@ -41,8 +41,12 @@ Both upstream snapshots were inspected. Every library method used by the applica
 | 0.34.0 reorganizes queue, ramp and platform sources | Application uses the public `FastAccelStepper.h`; no private include migration is required. Timing documentation now points to `pd_esp32/pd_config.h`. |
 | 1.0.0 changes internal log2/ramp representation and adds I2S backends | Workpiece RPM/angle conversion remains in the application. Select `FasDriver::RMT` explicitly so allocation failure cannot select I2S silently. A null result still stops initialization. |
 | 1.1.0 rewrites external DIR callbacks and queue retry behavior | DIR is a direct GPIO here. No external callback API is used. Single control-task ownership remains in place. |
+| 1.2.0 fixes I2S MUX bit mapping | Included upstream; this controller explicitly uses RMT, so it does not use the I2S correction. |
+| 1.2.1 / 1.2.2 fix Pico/SAM allocation | Included upstream; neither backend is built for this P4. |
+| 1.2.3 fixes ESP32 stepper allocation | Correct initialization of the step-pin sentinel is included. Application still checks allocation failure and inhibits the motor. |
 | 1.2.4 changes internal `init()` from bool to void and allocation initialization | Application calls `engine.init(0)` and checks `stepperConnectToPin()`; it never calls private stepper initialization. No invented success check is added to a void method. |
 | 1.2.5 adds driver-type introspection | Explicit RMT selection replaces reliance on the default selection order. |
+| 1.2.6 / 1.2.7 fix IDF6 headers, demo watchdog API and CI warnings | Included upstream; the project uses IDF5.5.5 and its own supervised tasks, rather than the demo. |
 | 1.2.8–1.3.3 revise `moveTimed()` capacity, pause reporting and direction retries | This machine uses the high-level ramped `move()`, not `moveTimed()`/`addQueueEntry()`. The library handles pause retries internally. No application-level retry loop or duplicate move is introduced. |
 | 1.3.0 consistently enforces direction-change delay | Keep the requested 200 µs DM542T DIR delay. The new RMT implementation adds its own pipeline-drain pause before DIR changes. Timing configuration is rejected with ENA inhibited if the queue is still running. |
 | 1.3.1 extends PCNT attachment | No feedback counter is attached. The IDF5 configuration disables the library PCNT helper on IDF ≥5.5; this upgrade does not promise hardware pulse feedback. |
@@ -91,9 +95,26 @@ The release notes and installed source were reviewed for applicability, not just
 | ArduinoJson 7.4.3 | Already includes its floating-point string conversion buffer fix. Settings formats and APIs need no migration. |
 | Touch/panel/SDL components | GT911 source fixes are included, retaining 400 kHz and shared-bus ownership. Remaining panel updates are metadata-only; SDL2 remains the supported simulator driver. |
 
-The calibration redesign also resolves the program editor's collapsed layout: LVGL layout must be updated before reading child positions and applying the existing header offset. The layout audit now checks the editor footer and mode-row positions, in addition to label boundaries.
+### LVGL 9.6: complete applicability review
 
-Sources: [LVGL 9.6 changelog](https://github.com/lvgl/lvgl/blob/v9.6.0/docs/src/changelog/CHANGELOG.mdx), [Arduino 3.3.8](https://github.com/espressif/arduino-esp32/releases/tag/3.3.8), [3.3.9](https://github.com/espressif/arduino-esp32/releases/tag/3.3.9), [3.3.10](https://github.com/espressif/arduino-esp32/releases/tag/3.3.10), [3.3.11](https://github.com/espressif/arduino-esp32/releases/tag/3.3.11), [3.3.12](https://github.com/espressif/arduino-esp32/releases/tag/3.3.12), [IDF 5.5.5](https://github.com/espressif/esp-idf/releases/tag/v5.5.5), [PlatformIO 6.2.0](https://github.com/platformio/platformio-core/releases/tag/v6.2.0), [Unity 2.7.0](https://github.com/ThrowTheSwitch/Unity/releases/tag/v2.7.0).
+The tagged changelog and migration guide were checked across configuration, core APIs, rendering, display/input drivers, fonts, widgets and builds. Hand-written `lv_conf.h` remains supported despite the new Kconfig-generated defaults. The application uses the new color/state APIs and public headers; no deprecated-call suppression remains in the touch adapter.
+
+- **Rendering:** software blending/transform fixes are compiled with the update. The ESP32 PPA fixes are available upstream, but this project's PPA backend remains disabled. Enabling PPA requires validating rotated RGB565 buffers, cache ownership and USB mirror output on the board. RISC-V vector assembly also remains disabled; a RISC-V CPU alone does not establish vector-extension support.
+- **Display scheduling:** the new sync callback is available, but the existing custom flush callback still owns rotation, aligned buffers and completion. Adding a callback without measuring panel synchronization would not establish tear-free output.
+- **Operating system:** the FreeRTOS idle/CPU-load changes apply to LVGL's internal FreeRTOS integration. This project uses external locking and `LV_OS_NONE`; those changes do not establish a CPU-load improvement here.
+- **Text/widgets:** dedicated checked/disabled states, bounded label lines and a full-screen keyboard are used by the new program editor. Its checked-state colors and a valid, zero-duration transition descriptor prevent default-theme recoloring from reducing contrast. Fixed fonts remain in use; variable fonts, glTF, translations and new calendar features do not solve a current controller requirement.
+- **Build/platform:** new CMake fetching/install options, desktop Linux drivers and other GPU ports are not needed by the current direct-source simulator build or MIPI firmware. SDL2 is retained. Compiler, license and widget-validation checks cover the actual selected source.
+- **Touch:** replace deprecated coordinate arrays with `esp_lcd_touch_get_data()` and its typed point structure. Errors/empty reports release touch; shared I2C, rotation and coordinate clamps remain intact. This compiles for all three firmware variants; real touch behavior still needs device verification.
+
+### Program editor improvements
+
+[New Program and mode settings](PROGRAM_EDITOR.md) now use a fixed 800×480 layout. Selecting a run mode is idempotent and automatically includes it; independent availability buttons cannot remove the active mode. Separate name and RPM editors validate the entire entry before updating the draft. Names respect the stored UTF-8 byte limit without splitting a character. Cancel and navigation discard unconfirmed input.
+
+The continuous-mode editor no longer rounds low RPM to one decimal. All three mode editors and the program summary use 0.001 RPM increments below 0.1 and 0.01 otherwise. Step duration is shown down to the configured minimum instead of disappearing below 0.01 RPM. Unchanged drafts skip repeated label/style updates during the 40 ms UI refresh; no FPS improvement is claimed without measurement.
+
+The previous offset/layout workaround is replaced with explicit positions. Actual LVGL interaction tests cover mode availability, UTF-8 limits, comma decimals, invalid RPM, low-speed adjustments in all three sub-editors, draft preservation, save/cancel and keyboard cleanup. Seven states are captured with the actual 9.6 fonts, including a 31-character wide name.
+
+Sources: [LVGL 9.6 migration guide](https://github.com/lvgl/lvgl/blob/v9.6.0/docs/src/changelog/migration-v9-6.mdx), [LVGL 9.6 changelog](https://github.com/lvgl/lvgl/blob/v9.6.0/docs/src/changelog/CHANGELOG.mdx), [Arduino 3.3.8](https://github.com/espressif/arduino-esp32/releases/tag/3.3.8), [3.3.9](https://github.com/espressif/arduino-esp32/releases/tag/3.3.9), [3.3.10](https://github.com/espressif/arduino-esp32/releases/tag/3.3.10), [3.3.11](https://github.com/espressif/arduino-esp32/releases/tag/3.3.11), [3.3.12](https://github.com/espressif/arduino-esp32/releases/tag/3.3.12), [IDF 5.5.5](https://github.com/espressif/esp-idf/releases/tag/v5.5.5), [PlatformIO 6.2.0](https://github.com/platformio/platformio-core/releases/tag/v6.2.0), [Unity 2.7.0](https://github.com/ThrowTheSwitch/Unity/releases/tag/v2.7.0).
 
 See [guided calibration](CALIBRATION_WORKFLOW.md) for the new UI, formula, runtime draft isolation and verified-save behavior.
 
@@ -104,8 +125,8 @@ See [guided calibration](CALIBRATION_WORKFLOW.md) for the new UI, formula, runti
 - `scripts/test_fas_rmt.py` compiles the installed upstream 1.4.0 core and actual IDF5/6 encoder with upstream `test_30.cpp`. Both RMT buffer geometries pass (PART_SIZE 32 and 24; 158 profiles covering long low phases, pauses, pulse counts and direction changes). Linux and Windows CI run this test.
 - The GPIO, storage and system device-test programs compile against the updated dependencies; build-only validation does not execute hardware tests.
 - Release, debug and USB-mirror firmware build against the pinned platform and actual upstream FastAccelStepper commit.
-- LVGL navigation/setup self-test, layout audit and commissioning/screenshot exports use the actual 9.6 source. Runtime screenshots are refreshed from this simulator.
-- Release build: 32,564 / 327,680 bytes static RAM and 1,108,124 / 6,553,600 bytes application flash. Framework SPI code emits an upstream discarded-volatile warning; application compilation succeeds.
+- LVGL navigation/setup/calibration/program self-test, layout audit and screenshot exports use the actual 9.6 source. The program regression covers the full editing flow and low-speed adjustment in every sub-editor. Runtime screenshots are refreshed from this simulator.
+- Release build: 32,692 / 327,680 bytes static RAM and 1,109,208 / 6,553,600 bytes application flash. The incremental build has no compiler warnings; the earlier full framework build emitted an upstream discarded-volatile SPI warning. Application compilation succeeds. [Current validation excerpts](validation/2026-10-03/program-editor/README.md).
 
 Reproduce:
 

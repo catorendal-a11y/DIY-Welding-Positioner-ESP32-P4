@@ -149,6 +149,7 @@ void screen_programs_update();
 void screen_programs_mark_dirty();
 void screen_programs_invalidate_widgets();
 void screen_program_edit_invalidate_widgets();
+void screen_program_edit_leave();
 void screen_step_invalidate_widgets();
 void screen_main_invalidate_widgets();
 void screen_pulse_invalidate_widgets();

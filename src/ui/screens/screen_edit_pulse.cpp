@@ -5,6 +5,7 @@
 #include <Arduino.h>
 #include "../screens.h"
 #include "../theme.h"
+#include "../value_format.h"
 #include "../../config.h"
 #include "../../motor/speed.h"
 #include <cstdio>
@@ -115,9 +116,9 @@ static void rpm_adj_cb(lv_event_t* e) {
   if (!rpmLabel) return;
   int delta = (int)(intptr_t)lv_event_get_user_data(e);
   if (delta > 0)
-    editRpm += 0.1f;
+    editRpm += ui_rpm_increment(editRpm);
   else if (editRpm > MIN_RPM)
-    editRpm -= 0.1f;
+    editRpm -= ui_rpm_increment(editRpm);
   if (editRpm < MIN_RPM) editRpm = MIN_RPM;
   if (editRpm > speed_get_rpm_max()) editRpm = speed_get_rpm_max();
   ui_set_rpm(rpmLabel, editRpm);

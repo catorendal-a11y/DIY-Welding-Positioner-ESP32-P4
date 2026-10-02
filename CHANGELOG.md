@@ -25,6 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adopt LVGL 9.6 dedicated state queries/setters, explicit style caching, simulator argument/widget-tree validation and bounded label lines. Cache FastAccelStepper driver/DIR budgets for Diagnostics.
 - Fix program editor positioning by resolving LVGL layout before shifting controls; add footer/mode-position audit checks and refresh runtime images.
 
+### Program editor and touch API
+
+- Replace the program editor's layout-offset workaround with fixed 800×480 positions, separate run-mode and availability buttons, a visible mode-settings summary and separate full-screen name/RPM editors.
+- Keep the active run mode available, make mode selection idempotent, validate complete numeric input and UTF-8 byte capacity, retain drafts across mode editors and clean up keyboards on navigation.
+- Restore low-RPM display precision in Continuous settings; use 0.001 RPM increments below 0.1 and 0.01 otherwise in all mode editors. Show Step duration at the minimum valid RPM.
+- Apply explicit LVGL checked-state contrast and valid zero-duration transitions; skip repeated text/style updates for unchanged drafts.
+- Replace deprecated touch-coordinate arrays with the typed `esp_lcd_touch_get_data()` API while retaining release-on-error and rotation handling.
+- Add actual LVGL regressions for every sub-editor's precision, invalid entries, UTF-8 limits, mode availability, save/cancel and modal cleanup; refresh runtime screenshots and the complete library-feature review.
+
 ### Control ownership and guided setup
 
 - Single control-task owner of runtime stepper calls; input task publishes ADC/pedal inputs separately. Physical E-STOP directly inhibits ENA without waiting for the executor.

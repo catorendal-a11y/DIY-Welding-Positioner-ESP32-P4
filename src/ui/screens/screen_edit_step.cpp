@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include "../screens.h"
 #include "../theme.h"
+#include "../value_format.h"
 #include "../../config.h"
 #include "../../motor/microstep.h"
 #include "../../motor/speed.h"
@@ -43,7 +44,7 @@ static void update_computed() {
   // Duration: time for all steps + dwell between steps
   // Step duration = angle / 360 / RPM * 60 seconds
   // Total duration = step_duration * repeats + dwell * (repeats - 1)
-  if (editRpm > 0.01f) {
+  if (editRpm >= MIN_RPM) {
     float stepDuration = (editAngle / 360.0f) / editRpm * 60.0f;
     float totalDuration = stepDuration * editRepeats + editDwell * (editRepeats > 0 ? editRepeats - 1 : 0);
     if (durationLabel) {
@@ -99,7 +100,7 @@ static void angle_adj_cb(lv_event_t* e) {
 }
 
 static void rpm_adj_cb(lv_event_t* e) {
-  float delta = (float)(intptr_t)lv_event_get_user_data(e) * 0.1f;
+  float delta = (float)(intptr_t)lv_event_get_user_data(e) * ui_rpm_increment(editRpm);
   editRpm += delta;
   if (editRpm < MIN_RPM) editRpm = MIN_RPM;
   if (editRpm > speed_get_rpm_max()) editRpm = speed_get_rpm_max();

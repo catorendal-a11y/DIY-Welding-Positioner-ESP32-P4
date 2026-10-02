@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include "../screens.h"
 #include "../theme.h"
+#include "../value_format.h"
 #include "../../config.h"
 #include "../../storage/storage.h"
 #include "../../control/control.h"
@@ -72,7 +73,7 @@ static void restyle_soft_start() {
 
 static void update_rpm_display() {
   if (rpmValueLabel) {
-    lv_label_set_text_fmt(rpmValueLabel, "%.1f", editRpm);
+    ui_set_rpm(rpmValueLabel, editRpm);
   }
   if (rpmBar) {
     lv_bar_set_value(rpmBar, (int32_t)(editRpm * 1000.0f + 0.5f), LV_ANIM_OFF);
@@ -86,7 +87,7 @@ static void update_rpm_display() {
 
 static void rpm_adj_cb(lv_event_t* e) {
   intptr_t delta = (intptr_t)lv_event_get_user_data(e);
-  editRpm += (float)delta * 0.1f;  // delta in tenths: -1→-0.1, -10→-1.0, etc.
+  editRpm += (float)delta * ui_rpm_increment(editRpm);
   float mx = speed_get_rpm_max();
   if (editRpm < MIN_RPM) editRpm = MIN_RPM;
   if (editRpm > mx) editRpm = mx;

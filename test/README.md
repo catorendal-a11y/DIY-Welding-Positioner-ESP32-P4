@@ -36,3 +36,13 @@ screenshots:
 These checks run actual LVGL screen code against stubbed hardware, including navigation, program editing, main RPM +/−, blocked/available fault reset and the full commissioning workflow. The simulator uses the same production dispatcher, motor wrapper and four modes as native-control. Real E-STOP, driver
 alarm, touch hardware, motor movement, and calibration measurement still require
 the ESP32-P4 device.
+
+## Program editor regression and preview
+
+The actual LVGL self-test checks idempotent run-mode selection, availability, invalid RPM, decimal commas, UTF-8 byte limits, a 31-character wide name, fine RPM adjustment in Continuous/Pulse/Step settings, draft preservation, save/cancel and keyboard cleanup during navigation.
+
+```powershell
+simulator/build/rotator_simulator.exe --program-preview .pio/program-preview
+```
+
+This runs the same interaction regression and exports seven actual LVGL states with label-layout checks. [Program editor guide](../docs/PROGRAM_EDITOR.md). It does not connect to hardware.

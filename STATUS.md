@@ -49,7 +49,7 @@ Runtime stepper calls belong to controlTask; inputTask samples ADC/pedal separat
 - [x] **Motor Config** (microstepping, acceleration, direction switch, pedal enable)
 - [x] **Guided calibration** (non-scrolling stages, same-page diameter, interrupted-move rejection, isolated draft, verification and storage receipt)
 - [x] **About screen** (firmware version, hardware info)
-- [x] **Program Edit** (full preset editor with on-screen keyboard)
+- [x] **Program Edit** (fixed layout, explicit run/available modes, exact RPM, full-screen input and retained drafts)
 - [x] **Guided setup** (motor, direction, verified calibration and physical E-STOP function check; compatible legacy settings)
 - [x] **Snapshot freshness** (40 ms UI updates, 100 ms stale motion blocking; STOP stays available)
 - [x] **Consistent footer navigation** and back buttons

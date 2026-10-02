@@ -280,6 +280,7 @@ void screens_show(ScreenId id) {
 
   ScreenId prev = currentScreen;
   if (prev == SCREEN_CALIBRATION && id != SCREEN_CALIBRATION) screen_calibration_leave();
+  if (prev == SCREEN_PROGRAM_EDIT && id != SCREEN_PROGRAM_EDIT) screen_program_edit_leave();
   screen_setup_leave(id);
   const bool leavingSliderPriorityScreen =
       (prev == SCREEN_STEP || prev == SCREEN_CALIBRATION) && (id != SCREEN_STEP && id != SCREEN_CALIBRATION);

@@ -194,20 +194,13 @@ void lvgl_touchpad_read_cb(lv_indev_t* indev_drv, lv_indev_data_t* data) {
     return;
   }
 
-  uint16_t touch_x[1];
-  uint16_t touch_y[1];
-  uint16_t touch_strength[1];
+  esp_lcd_touch_point_data_t point{};
   uint8_t touch_cnt = 0;
+  const esp_err_t result = esp_lcd_touch_get_data(display_touch, &point, &touch_cnt, 1);
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-  bool touched =
-      esp_lcd_touch_get_coordinates(display_touch, touch_x, touch_y, touch_strength, &touch_cnt, 1);
-#pragma GCC diagnostic pop
-
-  if (touched && touch_cnt > 0) {
-    uint16_t px = touch_x[0];
-    uint16_t py = touch_y[0];
+  if (result == ESP_OK && touch_cnt == 1) {
+    uint16_t px = point.x;
+    uint16_t py = point.y;
 
     int32_t lx = 799 - (int32_t)py;  // landscape x = 799 - portrait y
     int32_t ly = (int32_t)px;        // landscape y = portrait x

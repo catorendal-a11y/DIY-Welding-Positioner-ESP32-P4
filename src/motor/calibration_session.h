@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include "../utils/numeric_input.h"
 
 // A measurement belongs to a completed move and its unchanged machine context.
 // The draft never changes persisted settings until the verified Save action.
@@ -65,10 +66,5 @@ struct CalibrationSession {
 
 // Require the whole entry to be numeric; accept either decimal separator.
 inline bool calibration_parse_angle(const char* text, float& value) {
-  if (!text || !*text) return false;
-  char entry[24]; unsigned n = 0;
-  for (; text[n] && n < sizeof(entry)-1; ++n) entry[n] = text[n] == ',' ? '.' : text[n];
-  if (text[n]) return false;
-  entry[n] = 0; char* end = nullptr; value = std::strtof(entry, &end);
-  return end != entry && *end == 0 && std::isfinite(value);
+  return parse_float_entry(text, value);
 }

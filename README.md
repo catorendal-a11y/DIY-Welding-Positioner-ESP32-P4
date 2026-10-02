@@ -236,7 +236,7 @@ The 30 design views cover all 22 screen types, additional states and keyboards. 
 | **Step** | `SCREEN_STEP` | Rotate exact angle, then stop |
 | **Timer (Countdown)** | `SCREEN_TIMER` | Visual 3-2-1 countdown before continuous rotation starts (1-10 s configurable) |
 | **Programs** | `SCREEN_PROGRAMS` | Preset list with save, load, delete |
-| **Program Edit** | `SCREEN_PROGRAM_EDIT` | Full preset editor with on-screen keyboard |
+| **Program Edit** | `SCREEN_PROGRAM_EDIT` | Fixed layout, separate run/available modes, exact RPM and full-screen name editor |
 | **Edit Pulse** | `SCREEN_EDIT_PULSE` | Quick preset edit for pulse parameters |
 | **Edit Step** | `SCREEN_EDIT_STEP` | Quick preset edit for step parameters |
 | **Edit Continuous** | `SCREEN_EDIT_CONT` | Quick preset edit for continuous / RPM preset fields |
@@ -347,6 +347,14 @@ Pinned source dependencies: PlatformIO Core `6.2.0`, pioarduino `55.03.312-1` (A
 ## Dependency Update (Unreleased Source)
 
 The source now uses **LVGL 9.6.0** and **FastAccelStepper 1.4.0** with the current Arduino ESP32 framework. The V5 visual style and English labels are retained; Calibration now has a guided, non-scrolling layout. Motor initialization selects RMT explicitly; reset waits for queued pulses to finish after `forceStop()`. The actual upstream RMT encoder is tested on the PC as well as the production control code. [Complete dependency and migration report](docs/DEPENDENCY_UPGRADE_2026-10-02.md).
+
+## Program Editor (Unreleased Source)
+
+**New Program** keeps the V5 dark/orange style with a fixed 800×480 layout. Select one **RUN MODE**, choose the other modes the preset allows, enter an exact RPM, and open **MODE SETTINGS** for direction and timing. Name and RPM have separate full-screen editors; invalid input keeps the draft unchanged. Low-speed adjustments preserve 0.001 RPM precision in every mode editor. Save stores the program without starting rotation.
+
+<img src="docs/images/program_v2/01_new_program.png" width="800" alt="Actual LVGL New Program page with run mode, availability, exact speed and mode settings">
+
+[All editor screens and workflow](docs/PROGRAM_EDITOR.md). These additions are in unreleased source; the published v2.1.0 simulator and firmware retain their original UI.
 
 ## Guided Setup (Unreleased Source)
 
@@ -678,7 +686,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 | Device upload | This control/setup update has not been flashed. The earlier V5 upload to COM3 is recorded in the deployment report. |
 | Physical motor/safety testing | Not performed as part of this update |
 
-[Dependency validation logs](docs/validation/2026-10-02/dependencies/) record local runs. Native tests include direct production-policy tests, but older tests also model behavior separately; simulator hardware is stubbed. CI runs native tests, three firmware variants and SDL navigation checks. The badge links to the current GitHub result.
+[Dependency validation logs](docs/validation/2026-10-02/dependencies/) and [program editor validation](docs/validation/2026-10-03/program-editor/README.md) record local runs. Native tests include direct production-policy tests, but older tests also model behavior separately; simulator hardware is stubbed. CI runs native tests, three firmware variants and SDL navigation checks. The badge links to the current GitHub result.
 
 ---
 
@@ -693,6 +701,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 | [docs/SAFETY_SYSTEM.md](docs/SAFETY_SYSTEM.md) | E-STOP behavior, watchdog model, safety assumptions |
 | [docs/PROJECT_IMPLEMENTATION.md](docs/PROJECT_IMPLEMENTATION.md) | RTOS architecture, storage, display pipeline, known workarounds |
 | [docs/INSTRUCTABLES.md](docs/INSTRUCTABLES.md) | Builder-friendly article content and assembly flow |
+| [docs/PROGRAM_EDITOR.md](docs/PROGRAM_EDITOR.md) | New Program workflow, exact input, available modes and actual screenshots |
 | [docs/CALIBRATION_WORKFLOW.md](docs/CALIBRATION_WORKFLOW.md) | Guided measurement, verification, temporary correction and runtime screenshots |
 | [docs/SETUP_WIZARD.md](docs/SETUP_WIZARD.md) | Guided setup, physical switch checks and runtime screenshots |
 | [docs/CONTROL_SETUP_IMPLEMENTATION.md](docs/CONTROL_SETUP_IMPLEMENTATION.md) | Motion ownership, snapshot freshness, compatibility and validation |

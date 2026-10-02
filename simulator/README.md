@@ -142,3 +142,13 @@ This runs the same regression and exports the four stages plus failed-save and c
 ## Calibration regression and preview
 
 The simulator compiles the actual calibration module and session policy alongside production control. `--self-test` checks interrupted motion, draft isolation, failed/passing verification and save failure/retry, including STOP while saving. `--calibration-preview <directory>` exports eight actual LVGL states and checks their label layouts. See [the calibration guide](../docs/CALIBRATION_WORKFLOW.md). LVGL argument and widget-tree validation are enabled in the simulator; invalid calls abort the test. Diagnostics uses cached driver/DIR timing information without calling the stepper from the UI.
+
+## Program editor regression and preview
+
+The actual LVGL self-test checks idempotent run-mode selection, availability, invalid RPM, decimal commas, UTF-8 byte limits, a 31-character wide name, fine RPM adjustment in Continuous/Pulse/Step settings, draft preservation, save/cancel and keyboard cleanup during navigation.
+
+```powershell
+simulator/build/rotator_simulator.exe --program-preview .pio/program-preview
+```
+
+This runs the same interaction regression and exports seven actual LVGL states with label-layout checks. [Program editor guide](../docs/PROGRAM_EDITOR.md). It does not connect to hardware.

@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### V5 integration — 2026-10-02
+## [2.1.0] - 2026-10-02
+
+### V5 integration
 
 - Graphite/orange UI across 22 screens, large native numeric font, main RPM +/−, direction selection and a prominent fault overlay with guarded reset.
 - Separate STOP latch and generation checks, bounded JOG renewal, pedal release/freshness interlocks and critical-task readiness gate.

@@ -1,8 +1,8 @@
 # Project Status
 
-**Last Updated:** 2026-05-02
-**Firmware:** v2.0.9
-**Build:** SUCCESS (`esp32p4-mirror`, native tests, simulator self-test) - verified 2026-05-02 after USB mirror/calibration pass
+**Last Updated:** 2026-10-02
+**Firmware:** v2.1.0
+**Build:** V5 local validation passed native tests (403), simulator and release/debug/mirror builds. Exact v2.1.0 release commit is checked by GitHub CI.
 
 ---
 
@@ -11,7 +11,7 @@
 ### Core Motor Control
 - [x] **ESP32-P4 MIPI-DSI display** (ST7701S 480x800, RGB565, landscape rotation)
 - [x] **GT911 capacitive touch** (I2C, coordinate mapping)
-- [x] **LVGL 9.5.x UI framework** (800x480 landscape, 21 active `ScreenId` roots + E-STOP overlay)
+- [x] **LVGL 9.5.x UI framework** (800x480 landscape, 22 registered `ScreenId` roots + E-STOP overlay)
 - [x] **FastAccelStepper motor control** (hardware RMT pulses, v0.33.x)
 - [x] **FreeRTOS dual-core architecture** (Core 0: Motor/Safety, Core 1: UI)
 - [x] **5 welding modes:** Continuous, Jog, Pulse, Step, Timer
@@ -33,7 +33,7 @@
 - [x] **UI reset from ESTOP** (via Core 0 pending flag pattern)
 
 ### UI/UX
-- [x] **21 active root screens** with lazy creation pattern + ESTOP overlay
+- [x] **22 registered root screens** with lazy creation pattern + ESTOP overlay
 - [x] **8 accent color themes** (switchable from Display Settings; combines with dark/light neutral UI mode)
 - [x] **Dark / Light UI mode** (Display Settings **UI MODE**, persisted as `color_scheme` in NVS `cfg`)
 - [x] **Settings hub** (Motor Config, Calibration, Display, Pedal Settings, Diagnostics, System Info, About)
@@ -64,7 +64,7 @@
 - [x] **TIG HF field validation** (welding works with ESP32-P4 screen, driver, and PSU inside one grounded metal enclosure)
 
 ### Documentation
-- [x] **README** (v2.0.9, feature list, wiring diagram, BOM, TIG HF enclosure requirement; synced with `config.h`)
+- [x] **README** (v2.1.0, feature list, wiring diagram, BOM, TIG HF enclosure requirement; synced with `config.h`)
 - [x] **Wiki** (Home, Getting Started, Hardware Setup, Troubleshooting, Roadmap, Architecture)
 - [x] **docs/** (Hardware Setup, Safety System, EMI Mitigation, Implementation, Instructables)
 - [x] **Wiring diagram v2** (SVG, GPIO29 on correct side, clean cable routing)

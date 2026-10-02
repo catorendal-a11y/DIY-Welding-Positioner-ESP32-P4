@@ -1,6 +1,6 @@
 # Implementerte forbedringer – 1. oktober 2026
 
-Arbeidsgren: `codex/ui-v3-integration`, basert på `929b1f6` (v2.0.9). Endringene er lokale og ikke publisert. Etter brukerens bekreftelse ble release-firmwaren lastet opp til ESP32-P4 på COM3. Esptool verifiserte datahash og sendte omstart via RTS. Ingen fysisk motortest er utført.
+Arbeidsgren: `codex/ui-v3-integration`, basert på `929b1f6` (v2.0.9). Endringene ble publisert på GitHub i commit `65238f3` 2. oktober 2026; v2.1.0 er release-versjonen som følger denne integrasjonen. Etter brukerens bekreftelse ble release-firmwaren lastet opp til ESP32-P4 på COM3. Esptool verifiserte datahash og sendte omstart via RTS. Ingen fysisk motortest er utført.
 
 Gjennomgangen omfatter kontrollflyt, pedal/touch, sikkerhetsoppgaver, motorinnstillinger, lagring, USB-speiling, alle registrerte skjermbilder, simulator, tester, bygg og dokumentasjon. Tredjepartsbiblioteker er ikke fullstendig revidert.
 

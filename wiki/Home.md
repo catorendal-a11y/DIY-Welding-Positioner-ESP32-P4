@@ -2,13 +2,13 @@
 
 **ESP32-P4 / C6 GUITION JC4880P443C** | Open-source firmware for TIG/MIG welding rotators
 
-## Current Status: v2.0.9 - TIG HF field validation
+## Current Status: v2.1.0 - V5 UI and input reliability
 
-Release **v2.0.9** is the current firmware identifier (**`FW_VERSION`**). Real TIG welding validation is complete: the controller works during welding when the ESP32-P4 screen, stepper driver, and motor PSU are installed inside the same grounded metal enclosure.
+Release **v2.1.0** is the current firmware identifier (**`FW_VERSION`**), with V5 UI, STOP/pedal/JOG interlocks and persistence fixes. The previous v2.0.9 release documented TIG welding validation: the controller works during welding when the ESP32-P4 screen, stepper driver, and motor PSU are installed inside the same grounded metal enclosure.
 
 Release **v2.0.8** was the previous version-alignment release; behaviour also includes the **v2.0.7** dark/light UI mode and header contrast work. See `CHANGELOG.md` for the full list.
 
-All core features tested and confirmed working on real hardware:
+Implemented features (latest update verified in native tests and simulator; physical safety checks remain bench work):
 
 - Motor rotation with live RPM adjustment (potentiometer + foot pedal; V5 main screen has idle RPM +/− controls)
 - All 5 welding modes (Continuous, Jog, Pulse, Step, Timer)

@@ -1,8 +1,11 @@
 # Roadmap
 
-## v2.0.9 - Current Release (TIG HF field validation)
+## v2.1.0 - Current Release (V5 UI and input reliability)
 
-### Unreleased
+### v2.1.0 (2026-10-02)
+- [x] V5 UI across 22 screens, idle RPM +/− and visible fault reset
+- [x] STOP generation/latch, pedal freshness/release and JOG renewal gates
+- [x] Persistence retries, input handling and CI coverage
 - [x] USB-C live mirror speed-up via LVGL partial flush / dirty-rectangle streaming
 - [x] Simulator screenshot export for all registered screens
 - [x] Calibration screen readability pass with verify-before-save guard
@@ -14,7 +17,7 @@
 
 ## v2.0.8 - version alignment
 
-This is the previous release; v2.0.9 above is current.
+Historical release; v2.1.0 above is current.
 
 ### v2.0.8 (2026-04-29)
 - [x] **`FW_VERSION` v2.0.8** — README, STATUS, wiki, implementation docs, UI SVGs, issue templates synced to canonical release tag

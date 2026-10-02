@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### v2.1.1 maintenance
+
+- Bounded motor access, rejected-command faults and independently supervised STOP acknowledgement/deceleration deadlines; physical latency still requires measurement.
+- Correct ESP-IDF stack units, actual NVS partition size and entry statistics, I2C timeout units and ADS1115 conversion-ready handling.
+- Adaptive RPM precision on all screens, effective program direction preview, estimated-speed labels and generation-specific calibration save confirmation.
+- Explicit pulse phases/completed counts, modular step progress and retryable event snapshots with visible drop counts.
+- Actual production dispatcher/motor/four-mode host tests, simulator fault scenarios and LVGL text/layout audit.
+- Embedded simulator build identity, clean staging, required license checks, Windows CI packaging and release artifact integration.
+- Serial-port autodetection and stricter application warnings; unused UI helpers removed.
+
 ## [2.1.0] - 2026-10-02
 
 ### V5 integration

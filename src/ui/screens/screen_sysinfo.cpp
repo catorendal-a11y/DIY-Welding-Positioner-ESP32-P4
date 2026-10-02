@@ -48,24 +48,6 @@ static void reboot_cb(lv_event_t* e) {
       nullptr);
 }
 
-static lv_obj_t* make_key_label(lv_obj_t* parent, int x, int y, const char* text, const lv_font_t* font) {
-  lv_obj_t* lbl = lv_label_create(parent);
-  lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, font, 0);
-  lv_obj_set_style_text_color(lbl, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(lbl, x, y);
-  return lbl;
-}
-
-static lv_obj_t* make_val_label(lv_obj_t* parent, int x, int y, const char* text) {
-  lv_obj_t* lbl = lv_label_create(parent);
-  lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, SET_VAL_FONT, 0);
-  lv_obj_set_style_text_color(lbl, COL_TEXT, 0);
-  lv_obj_set_pos(lbl, x, y);
-  return lbl;
-}
-
 static lv_obj_t* make_bar(lv_obj_t* parent, int x, int y, int w, int h, lv_color_t color) {
   lv_obj_t* bar = lv_bar_create(parent);
   lv_obj_set_size(bar, w, h);
@@ -188,7 +170,7 @@ void screen_sysinfo_update() {
       }
       vPortFree(taskArray);
 
-      if (prevTotalRunTime > 0 && totalRunTime > prevTotalRunTime) {
+      if (prevTotalRunTime > 0 && totalRunTime != prevTotalRunTime) {
         uint32_t deltaTotal = totalRunTime - prevTotalRunTime;
         uint32_t deltaIdle0 = idleCore0Time - prevIdleCore0Time;
         uint32_t deltaIdle1 = idleCore1Time - prevIdleCore1Time;
@@ -196,6 +178,8 @@ void screen_sysinfo_update() {
         cachedCore1Pct = 100 - (int)((uint64_t)deltaIdle1 * 100 / deltaTotal);
         if (cachedCore0Pct < 0) cachedCore0Pct = 0;
         if (cachedCore1Pct < 0) cachedCore1Pct = 0;
+        if (cachedCore0Pct > 100) cachedCore0Pct = 100;
+        if (cachedCore1Pct > 100) cachedCore1Pct = 100;
       }
       prevTotalRunTime = totalRunTime;
       prevIdleCore0Time = idleCore0Time;

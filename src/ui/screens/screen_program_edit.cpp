@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include "../screens.h"
 #include "../theme.h"
+#include "../value_format.h"
 #include "../../config.h"
 #include "../../storage/storage.h"
 #include "../../control/control.h"
@@ -47,11 +48,6 @@ static void do_cleanup_kb() {
     lv_obj_delete_async(kb);
   }
   kbClosePending.store(false, std::memory_order_release);
-}
-
-static void back_event_cb(lv_event_t* e) {
-  do_cleanup_kb();
-  screens_show(SCREEN_PROGRAMS);
 }
 
 static void keyboard_event_cb(lv_event_t* e) {
@@ -235,7 +231,7 @@ static void rpm_minus_cb(lv_event_t* e) {
   if (editPreset.rpm > mx) editPreset.rpm = mx;
 
   if (rpmLabel) {
-    lv_label_set_text_fmt(rpmLabel, "%.1f", editPreset.rpm);
+    ui_set_rpm(rpmLabel, editPreset.rpm);
   }
   if (rpmBarObj) {
     lv_bar_set_value(rpmBarObj, (int32_t)(editPreset.rpm * 1000.0f + 0.5f), LV_ANIM_OFF);
@@ -478,7 +474,7 @@ void screen_program_edit_create(int slot) {
   // ── RPM row (SVG: y=204, large value + progress bar + -/+ buttons) ──
   // RPM value display (SVG: large "2.0" in #FF9500 bold)
   rpmLabel = lv_label_create(screen);
-  lv_label_set_text_fmt(rpmLabel, "%.1f", editPreset.rpm);
+  ui_set_rpm(rpmLabel, editPreset.rpm);
   lv_obj_set_style_text_font(rpmLabel, FONT_HUGE, 0);
   lv_obj_set_style_text_color(rpmLabel, COL_ACCENT, 0);
   lv_obj_set_pos(rpmLabel, 20, 216);
@@ -498,7 +494,7 @@ void screen_program_edit_create(int slot) {
 
   // Scale marks on progress bar (derived from MIN_RPM / speed_get_rpm_max())
   char t0[12], t1[12], t2[12], t3[12];
-  snprintf(t0, sizeof(t0), "%.2f", (double)MIN_RPM);
+  ui_format_rpm(t0, sizeof(t0), MIN_RPM);
   {
     float mx = speed_get_rpm_max();
     snprintf(t1, sizeof(t1), "%.2f", (double)(MIN_RPM + (mx - MIN_RPM) * 0.33f));
@@ -603,7 +599,7 @@ void screen_program_edit_poll_keyboard() {
 void screen_program_edit_update_ui() {
   // Update RPM label
   if (rpmLabel) {
-    lv_label_set_text_fmt(rpmLabel, "%.1f", editPreset.rpm);
+    ui_set_rpm(rpmLabel, editPreset.rpm);
   }
   if (rpmBarObj) {
     lv_bar_set_value(rpmBarObj, (int32_t)(editPreset.rpm * 1000.0f + 0.5f), LV_ANIM_OFF);

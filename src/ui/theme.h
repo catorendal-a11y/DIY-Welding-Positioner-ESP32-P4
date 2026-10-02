@@ -3,6 +3,7 @@
 // ESP32-P4 4.3" Touch Display: 800x480 landscape
 
 #pragma once
+// Shared adaptive speed rendering for every operator screen.
 #include "lvgl.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -359,3 +360,5 @@ uint8_t theme_get_scheme_count(void);
 #define FONT_XL &lv_font_montserrat_24
 #define FONT_XXL &lv_font_montserrat_28
 #define FONT_HUGE &lv_font_montserrat_40
+
+void ui_set_rpm(lv_obj_t* label, float rpm);

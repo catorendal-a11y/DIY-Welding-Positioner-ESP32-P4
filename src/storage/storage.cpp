@@ -10,6 +10,8 @@
 #include <atomic>
 #include <cstring>
 #include <vector>
+#include <esp_partition.h>
+#include <nvs.h>
 
 // NVS namespace and keys (names <= 15 chars for ESP-IDF NVS)
 #define NVS_NS "wrot"
@@ -28,6 +30,11 @@ static SaveRequest settingsSave{1000}, presetsSave{500};
 StorageStatus storage_status() {
   if (settingsSave.failed() || presetsSave.failed()) return STORAGE_ERROR;
   return settingsSave.pending() || presetsSave.pending() ? STORAGE_PENDING : STORAGE_SAVED;
+}
+uint32_t storage_request_settings_save() { return settingsSave.request(); }
+StorageStatus storage_settings_save_status(uint32_t ticket) {
+  if (settingsSave.saved(ticket)) return STORAGE_SAVED;
+  return settingsSave.failed() ? STORAGE_ERROR : STORAGE_PENDING;
 }
 
 static Preferences g_prefs;
@@ -201,7 +208,7 @@ static bool storage_parse_presets_buffer(const uint8_t* data, size_t len) {
     loaded.push_back(p);
   }
 
-  const size_t count = loaded.size();
+  [[maybe_unused]] const size_t count = loaded.size();
   xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
   g_presets = std::move(loaded);
   xSemaphoreGive(g_presets_mutex);
@@ -379,7 +386,7 @@ static bool storage_save_settings_internal() {
   return true;
 }
 
-void storage_save_settings() { settingsSave.request(); }
+void storage_save_settings() { storage_request_settings_save(); }
 
 void storage_flush() {
   auto write = [](SaveRequest& request, bool (*save)(), const char* label) {
@@ -430,16 +437,27 @@ bool storage_delete_preset(uint8_t id) {
 }
 
 void storage_get_usage(size_t* used, size_t* total) {
-  // NVS data partition size from default_16MB.csv (0x6000)
-  *total = 0x6000;
+  if (!used || !total) return;
+  const esp_partition_t* partition = esp_partition_find_first(
+      ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_NVS, "nvs");
+  *total = partition ? partition->size : 0u;
   xSemaphoreTake(g_nvs_mutex, portMAX_DELAY);
   size_t u = g_prefs.getBytesLength(NVS_KEY_SETTINGS);
   u += g_prefs.getBytesLength(NVS_KEY_PRESETS);
   xSemaphoreGive(g_nvs_mutex);
-  *used = u + 1536;
-  if (*used > *total) {
-    *used = *total;
-  }
+  *used = u; // Serialized payload bytes, not NVS physical occupancy.
+}
+
+bool storage_get_nvs_stats(size_t* used_entries, size_t* total_entries) {
+  if (!used_entries || !total_entries) return false;
+  nvs_stats_t stats{};
+  xSemaphoreTake(g_nvs_mutex, portMAX_DELAY);
+  const esp_err_t result = nvs_get_stats("nvs", &stats);
+  xSemaphoreGive(g_nvs_mutex);
+  if (result != ESP_OK) return false;
+  *used_entries = stats.used_entries;
+  *total_entries = stats.total_entries;
+  return true;
 }
 
 void storage_format() {

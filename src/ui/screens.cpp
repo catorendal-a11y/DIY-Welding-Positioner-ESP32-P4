@@ -259,7 +259,7 @@ void screens_show(ScreenId id) {
 
 #if DEBUG_BUILD
   if (lvglHandle) {
-    LOG_I("Screen %d stack free: %u bytes", id, uxTaskGetStackHighWaterMark(lvglHandle) * 4);
+    LOG_I("Screen %d stack free: %u bytes", id, uxTaskGetStackHighWaterMark(lvglHandle));
   }
 #endif
 

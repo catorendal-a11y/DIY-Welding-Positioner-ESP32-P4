@@ -105,7 +105,7 @@ void screen_diagnostics_create() {
   ry += 32;
   targetRpmVal = add_rt_row(rtPanel, ry, "TARGET RPM");
   ry += 32;
-  actualRpmVal = add_rt_row(rtPanel, ry, "CALC. RPM");
+  actualRpmVal = add_rt_row(rtPanel, ry, "ESTIMATED RPM");
   ry += 32;
   enaVal = add_rt_row(rtPanel, ry, "ENA");
 
@@ -158,12 +158,16 @@ void screen_diagnostics_update() {
 
   uint32_t eventVersion = event_log_version();
   if (eventVersion != lastEventLogVersion && eventStripLabel) {
-    lastEventLogVersion = eventVersion;
     EventLogEntry ev[4];
-    size_t n = event_log_snapshot(ev, 4);
+    size_t n = 0;
+    if (!event_log_try_snapshot(ev, 4, &n, &lastEventLogVersion)) return;
     char line[220];
     size_t pos = 0;
     line[0] = '\0';
+    const uint32_t dropped = event_log_dropped();
+    if (dropped) {
+      pos = static_cast<size_t>(snprintf(line, sizeof(line), "Dropped %lu | ", (unsigned long)dropped));
+    }
     for (size_t i = 0; i < n && i < 3; i++) {
       if (i > 0) {
         int w = snprintf(line + pos, sizeof(line) - pos, "  /  ");

@@ -237,3 +237,11 @@ const char* theme_get_scheme_name(uint8_t scheme) { return (scheme != 0) ? "LIGH
 uint8_t theme_get_scheme_count(void) { return 2; }
 
 void theme_refresh() { screens_reinit(); }
+
+#include "value_format.h"
+void ui_set_rpm(lv_obj_t* label, float rpm) {
+  if (!label) return;
+  char text[16];
+  ui_format_rpm(text, sizeof(text), rpm);
+  lv_label_set_text(label, text);
+}

@@ -45,6 +45,7 @@ void speed_apply();         // Apply speed to motor (call every 5ms)
 // Direction control
 typedef enum { DIR_CW = 0, DIR_CCW = 1 } Direction;
 Direction speed_get_direction();
+Direction speed_resolve_direction(Direction requested); // Effective direction after configured inversion
 void speed_set_direction(Direction dir);
 void speed_set_program_direction_override(Direction dir);
 void speed_clear_program_direction_override();

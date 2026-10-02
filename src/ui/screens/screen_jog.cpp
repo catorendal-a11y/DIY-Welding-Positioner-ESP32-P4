@@ -34,7 +34,7 @@ static int rpm_to_pct(float rpm) {
 }
 
 static void set_jog_rpm(float rpm) {
-  if (rpmLabel) lv_label_set_text_fmt(rpmLabel, "%.1f", rpm);
+  if (rpmLabel) ui_set_rpm(rpmLabel, rpm);
   if (rpmBar) lv_bar_set_value(rpmBar, rpm_to_pct(rpm), LV_ANIM_OFF);
 }
 

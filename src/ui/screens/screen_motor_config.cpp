@@ -201,11 +201,6 @@ static void idle_toggle_cb(lv_event_t* e) {
 static lv_timer_t* saveNavTimer = nullptr;
 static bool saveRequested = false;
 
-static void save_nav_timer_cb(lv_timer_t* timer) {
-  saveNavTimer = nullptr;
-  screens_show(SCREEN_SETTINGS);
-}
-
 static void save_apply_cb(lv_event_t* e) {
   (void)e;
   if (control_get_state() != STATE_IDLE) {

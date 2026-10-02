@@ -6,6 +6,8 @@
 // Run: pio test -e native
 
 #include <unity.h>
+#include "../../src/ui/value_format.h"
+#include "../../src/control/motion_policy.h"
 #include <cstring>
 #include <cstdint>
 
@@ -517,6 +519,48 @@ void test_save_request_during_write_survives_completion() {
   TEST_ASSERT_FALSE(save.pending());
 }
 
+void test_save_operation_waits_for_own_generation() {
+  SaveRequest save{100};
+  const uint32_t first = save.request();
+  TEST_ASSERT_FALSE(save.saved(first));
+  TEST_ASSERT_TRUE(save.begin(100));
+  const uint32_t second = save.request();
+  save.complete(true);
+  TEST_ASSERT_TRUE(save.saved(first)); TEST_ASSERT_FALSE(save.saved(second));
+  TEST_ASSERT_TRUE(save.begin(200)); save.complete(false);
+  TEST_ASSERT_FALSE(save.saved(second)); TEST_ASSERT_TRUE(save.failed());
+  TEST_ASSERT_TRUE(save.begin(400)); save.complete(true);
+  TEST_ASSERT_TRUE(save.saved(second)); TEST_ASSERT_FALSE(save.failed());
+}
+void test_rpm_formatter_keeps_minimum_speed_visible() {
+  char text[16];
+  ui_format_rpm(text, sizeof(text), 0.001f); TEST_ASSERT_EQUAL_STRING("0.001", text);
+  ui_format_rpm(text, sizeof(text), 0.01f); TEST_ASSERT_EQUAL_STRING("0.010", text);
+  ui_format_rpm(text, sizeof(text), 0.04f); TEST_ASSERT_EQUAL_STRING("0.040", text);
+  ui_format_rpm(text, sizeof(text), 0.1f); TEST_ASSERT_EQUAL_STRING("0.10", text);
+  ui_format_rpm(text, sizeof(text), 3.0f); TEST_ASSERT_EQUAL_STRING("3.00", text);
+  ui_format_rpm(text, sizeof(text), NAN); TEST_ASSERT_EQUAL_STRING("--", text);
+}
+void test_direction_preview_matches_configured_inversion() {
+  TEST_ASSERT_TRUE(motion_direction_cw(true, false));
+  TEST_ASSERT_FALSE(motion_direction_cw(true, true));
+  TEST_ASSERT_FALSE(motion_direction_cw(false, false));
+  TEST_ASSERT_TRUE(motion_direction_cw(false, true));
+}
+void test_pulse_core_wraparound_and_more_than_65535_cycles() {
+  PulseTimeline pulse;
+  pulse.start(UINT32_MAX - 49u, 100, 100, 1);
+  TEST_ASSERT_EQUAL(static_cast<int>(PulseAction::Stop), static_cast<int>(pulse.update(50u, true)));
+  pulse.update(50u, false);
+  TEST_ASSERT_EQUAL(static_cast<int>(PulseAction::Complete), static_cast<int>(pulse.update(150u, false)));
+  pulse.start(0, 1, 1, 0);
+  for (uint32_t i = 0; i < 65537; ++i) {
+    pulse.update(i * 2u + 1u, true); pulse.update(i * 2u + 1u, false);
+    pulse.update(i * 2u + 2u, false);
+  }
+  TEST_ASSERT_EQUAL_UINT32(65537, pulse.completed());
+}
+
 int main(int argc, char** argv) {
   UNITY_BEGIN();
 
@@ -612,5 +656,9 @@ int main(int argc, char** argv) {
   RUN_TEST(test_dim_timeout_storage_width_and_migration);
   RUN_TEST(test_save_failure_retries_and_clears_error);
   RUN_TEST(test_save_request_during_write_survives_completion);
+  RUN_TEST(test_save_operation_waits_for_own_generation);
+  RUN_TEST(test_rpm_formatter_keeps_minimum_speed_visible);
+  RUN_TEST(test_direction_preview_matches_configured_inversion);
+  RUN_TEST(test_pulse_core_wraparound_and_more_than_65535_cycles);
   return UNITY_END();
 }

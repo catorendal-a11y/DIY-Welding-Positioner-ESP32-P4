@@ -140,7 +140,7 @@ void lvglTask(void* pvParameters) {
     static uint32_t lastLvglStackLog = 0;
     if (millis() - lastLvglStackLog >= 30000) {
       lastLvglStackLog = millis();
-      LOG_I("LVGL stack watermark: %u bytes free", uxTaskGetStackHighWaterMark(NULL) * 4);
+      LOG_I("LVGL stack watermark: %u bytes free", uxTaskGetStackHighWaterMark(NULL));
     }
 #endif
 
@@ -245,15 +245,15 @@ void storageTask(void* pvParameters) {
 #if DEBUG_BUILD
       LOG_I("─── Health ─────────────────────────────────");
       LOG_I("Stack free:  safety=%u  motor=%u  control=%u  lvgl=%u",
-            uxTaskGetStackHighWaterMark(safetyHandle) * 4, uxTaskGetStackHighWaterMark(motorHandle) * 4,
-            uxTaskGetStackHighWaterMark(controlHandle) * 4, uxTaskGetStackHighWaterMark(lvglHandle) * 4);
+            uxTaskGetStackHighWaterMark(safetyHandle), uxTaskGetStackHighWaterMark(motorHandle),
+            uxTaskGetStackHighWaterMark(controlHandle), uxTaskGetStackHighWaterMark(lvglHandle));
       LOG_I("Heap: %lu B free   PSRAM: %lu B free", ESP.getFreeHeap(), ESP.getFreePsram());
       lv_mem_monitor_t m;
       lv_mem_monitor_core(&m);
       LOG_I("LVGL: %u%% heap used", (unsigned)m.used_pct);
-      if (uxTaskGetStackHighWaterMark(safetyHandle) * 4 < 256) LOG_E("SAFETY STACK LOW");
-      if (uxTaskGetStackHighWaterMark(motorHandle) * 4 < 512) LOG_E("MOTOR STACK LOW");
-      if (uxTaskGetStackHighWaterMark(lvglHandle) * 4 < 512) LOG_E("LVGL STACK LOW");
+      if (uxTaskGetStackHighWaterMark(safetyHandle) < 256) LOG_E("SAFETY STACK LOW");
+      if (uxTaskGetStackHighWaterMark(motorHandle) < 512) LOG_E("MOTOR STACK LOW");
+      if (uxTaskGetStackHighWaterMark(lvglHandle) < 512) LOG_E("LVGL STACK LOW");
       if (m.used_pct > 80) LOG_E("LVGL HEAP >80%%");
       LOG_I("────────────────────────────────────────────");
 #endif

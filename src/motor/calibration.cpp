@@ -10,7 +10,7 @@ void calibration_init() {
   if (g_settings.calibration_factor < 0.5f || g_settings.calibration_factor > 1.5f) {
     g_settings.calibration_factor = 1.0f;
   }
-  float f = g_settings.calibration_factor;
+  [[maybe_unused]] float f = g_settings.calibration_factor;
   xSemaphoreGive(g_settings_mutex);
   LOG_I("Calibration: factor=%.3f", f);
 }
@@ -18,39 +18,40 @@ void calibration_init() {
 void calibration_set_factor(float factor) {
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   g_settings.calibration_factor = constrain(factor, 0.5f, 1.5f);
-  float f = g_settings.calibration_factor;
+  [[maybe_unused]] float f = g_settings.calibration_factor;
   xSemaphoreGive(g_settings_mutex);
   LOG_I("Calibration factor set to %.3f", f);
 }
 
 float calibration_get_factor() {
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  float f = g_settings.calibration_factor;
+  [[maybe_unused]] float f = g_settings.calibration_factor;
   xSemaphoreGive(g_settings_mutex);
   return f;
 }
 
 long calibration_apply_steps(long steps) {
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  float f = g_settings.calibration_factor;
+  [[maybe_unused]] float f = g_settings.calibration_factor;
   xSemaphoreGive(g_settings_mutex);
   return (long)(steps * f);
 }
 
 float calibration_apply_angle(float angle) {
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  float f = g_settings.calibration_factor;
+  [[maybe_unused]] float f = g_settings.calibration_factor;
   xSemaphoreGive(g_settings_mutex);
   if (f < 1e-6f) return angle;
   return angle / f;
 }
 
-void calibration_save() {
+uint32_t calibration_save() {
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  float f = g_settings.calibration_factor;
+  [[maybe_unused]] float f = g_settings.calibration_factor;
   xSemaphoreGive(g_settings_mutex);
-  storage_save_settings();
-  LOG_I("Calibration saved: factor=%.3f", f);
+  const uint32_t ticket = storage_request_settings_save();
+  LOG_I("Calibration save queued: factor=%.3f", f);
+  return ticket;
 }
 
 bool calibration_validate() {
@@ -60,7 +61,7 @@ bool calibration_validate() {
     xSemaphoreGive(g_settings_mutex);
     return false;
   }
-  float f = g_settings.calibration_factor;
+  [[maybe_unused]] float f = g_settings.calibration_factor;
   xSemaphoreGive(g_settings_mutex);
   LOG_I("Calibration loaded: factor=%.3f", f);
   return true;

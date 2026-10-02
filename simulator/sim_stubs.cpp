@@ -5,6 +5,8 @@
 #include "../src/app_state.h"
 #include "../src/config.h"
 #include "../src/control/control.h"
+#include "../src/control/motion_policy.h"
+#include "../src/storage/save_request.h"
 #include "../src/control/program_executor.h"
 #include "../src/event_log.h"
 #include "../src/motor/acceleration.h"
@@ -54,6 +56,17 @@ static bool s_sliderPriority = false;
 static bool s_pedalEnabled = true;
 static uint32_t s_eventVersion = 0;
 static std::vector<EventLogEntry> s_events;
+static PulseTimeline simPulse;
+static bool simPulseMoving = false, simFault = false, simAlarm = false;
+static bool simStaleInput = false, simRejectMotion = false, simNvsFailure = false;
+static FaultReason simReason = FAULT_NONE;
+static SaveRequest simSettingsSave{200}, simPresetsSave{100};
+static bool sim_motion_allowed() {
+  if (safety_inhibit_motion() || s_state != STATE_IDLE) return false;
+  if (simRejectMotion) { safety_report_motor_fault(FAULT_MOTOR_COMMAND); return false; }
+  return true;
+}
+
 
 static float sim_rpm_cap() {
   float cap = g_settings.max_rpm;
@@ -113,8 +126,15 @@ void simulator_init_state() {
 }
 
 void simulator_tick() {
-  if (s_state == STATE_RUNNING || s_state == STATE_PULSE || s_state == STATE_JOG) {
-    // UI-only simulation: keep status alive without producing motion commands.
+  storage_flush();
+  if (s_state == STATE_PULSE) {
+    const PulseAction action = simPulse.update(millis(), simPulseMoving);
+    if (action == PulseAction::Stop) simPulseMoving = false;
+    if (action == PulseAction::Start) {
+      if (simRejectMotion) safety_report_motor_fault(FAULT_MOTOR_COMMAND);
+      else simPulseMoving = true;
+    }
+    if (action == PulseAction::Complete) s_state = STATE_IDLE;
   }
 }
 
@@ -139,6 +159,7 @@ void dim_update() {}
 void control_init() { s_state = STATE_IDLE; }
 bool control_transition_to(SystemState state) {
   s_state = state;
+  if (state == STATE_IDLE) simReason = FAULT_NONE;
   return true;
 }
 SystemState control_get_state() { return s_state; }
@@ -164,6 +185,7 @@ const char* control_state_name(SystemState state) {
 }
 const char* control_get_state_string() { return control_state_name(s_state); }
 bool control_start_continuous(bool, uint32_t) {
+  if (!sim_motion_allowed()) return false;
   s_state = STATE_RUNNING;
   event_log_add("SIM RUN");
   return true;
@@ -173,12 +195,15 @@ bool control_stop() {
   event_log_add("SIM STOP");
   return true;
 }
-bool control_start_pulse(uint32_t, uint32_t, uint16_t) {
+bool control_start_pulse(uint32_t on, uint32_t off, uint16_t cycles) {
+  if (!sim_motion_allowed()) return false;
+  simPulse.start(millis(), on, off, cycles); simPulseMoving = true;
   s_state = STATE_PULSE;
   event_log_add("SIM PULSE");
   return true;
 }
 bool control_start_step(float angleDeg) {
+  if (!sim_motion_allowed()) return false;
   s_state = STATE_STEP;
   s_stepAccumulated += angleDeg;
   s_stepCount++;
@@ -186,6 +211,7 @@ bool control_start_step(float angleDeg) {
   return true;
 }
 bool control_start_step_sequence(float angleDeg, uint16_t repeats, float) {
+  if (!sim_motion_allowed()) return false;
   s_state = STATE_STEP;
   s_stepAccumulated += angleDeg * repeats;
   s_stepCount += repeats;
@@ -199,11 +225,13 @@ void control_reset_step_accumulator() {
 float control_get_step_accumulated() { return s_stepAccumulated; }
 long control_get_step_count() { return (long)s_stepCount; }
 bool control_start_jog_cw() {
+  if (!sim_motion_allowed()) return false;
   s_direction = DIR_CW;
   s_state = STATE_JOG;
   return true;
 }
 bool control_start_jog_ccw() {
+  if (!sim_motion_allowed()) return false;
   s_direction = DIR_CCW;
   s_state = STATE_JOG;
   return true;
@@ -216,37 +244,13 @@ void control_set_jog_speed(float rpm) { s_jogRpm = constrain(rpm, MIN_RPM, sim_r
 float control_get_jog_speed() { return s_jogRpm; }
 void controlTask(void*) {}
 
-// Program executor
-ProgramExecutorResult program_executor_start_preset(const Preset* preset) {
-  if (!preset) return PROGRAM_EXEC_INVALID_PRESET;
-  s_targetRpm = constrain(preset->rpm, MIN_RPM, sim_rpm_cap());
-  s_direction = (preset->direction == DIR_CCW) ? DIR_CCW : DIR_CW;
-  if (preset->mode == STATE_PULSE)
-    s_state = STATE_PULSE;
-  else if (preset->mode == STATE_STEP)
-    s_state = STATE_STEP;
-  else
-    s_state = STATE_RUNNING;
-  event_log_add("SIM PROGRAM START");
-  return PROGRAM_EXEC_OK;
-}
-const char* program_executor_result_name(ProgramExecutorResult result) {
-  switch (result) {
-    case PROGRAM_EXEC_OK:
-      return "OK";
-    case PROGRAM_EXEC_INVALID_PRESET:
-      return "INVALID_PRESET";
-    case PROGRAM_EXEC_BLOCKED_SAFETY:
-      return "BLOCKED_SAFETY";
-    case PROGRAM_EXEC_BLOCKED_STATE:
-      return "BLOCKED_STATE";
-    case PROGRAM_EXEC_INVALID_MODE:
-      return "INVALID_MODE";
-    case PROGRAM_EXEC_REQUEST_FAILED:
-      return "REQUEST_FAILED";
-    default:
-      return "UNKNOWN";
-  }
+bool control_start_program(const Preset& preset) {
+  speed_set_program_direction_override(preset.direction == DIR_CCW ? DIR_CCW : DIR_CW);
+  speed_set_workpiece_diameter_mm(preset.workpiece_diameter_mm);
+  speed_slider_set(preset.rpm);
+  if (preset.mode == STATE_PULSE) return control_start_pulse(preset.pulse_on_ms, preset.pulse_off_ms, preset.pulse_cycles);
+  if (preset.mode == STATE_STEP) return control_start_step_sequence(preset.step_angle, preset.step_repeats, preset.step_dwell_sec);
+  return control_start_continuous(preset.cont_soft_start, preset.timer_auto_stop ? preset.timer_ms : 0);
 }
 
 // Speed
@@ -276,7 +280,7 @@ float speed_get_actual_rpm() {
 }
 bool speed_using_slider() { return s_sliderPriority; }
 void speed_apply() {}
-Direction speed_get_direction() { return s_directionOverride ? s_directionOverrideValue : s_direction; }
+Direction speed_get_direction() { return speed_resolve_direction(s_directionOverride ? s_directionOverrideValue : s_direction); }
 void speed_set_direction(Direction dir) { s_direction = dir; }
 void speed_set_program_direction_override(Direction dir) {
   s_directionOverride = true;
@@ -308,7 +312,7 @@ bool motor_run_ccw() {
   return true;
 }
 void motor_stop() { s_state = STATE_IDLE; }
-void motor_halt() { s_state = STATE_IDLE; }
+bool motor_halt() { s_state = STATE_IDLE; return true; }
 void motor_disable() {}
 bool motor_is_running() { return s_state == STATE_RUNNING || s_state == STATE_PULSE || s_state == STATE_JOG; }
 uint32_t motor_get_current_hz() { return (uint32_t)(motor_get_step_frequency_hz() + 0.5f); }
@@ -319,8 +323,9 @@ uint32_t motor_milli_hz_for_rpm_calibrated(float rpmWorkpieceCommand) {
   if (hz < START_SPEED) hz = START_SPEED;
   return (uint32_t)(hz * 1000.0f + 0.5f);
 }
-void motor_apply_speed_for_rpm_locked(float rpmWorkpieceCommand) {
+bool motor_apply_speed_for_rpm_locked(float rpmWorkpieceCommand) {
   s_targetRpm = constrain(rpmWorkpieceCommand, MIN_RPM, sim_rpm_cap());
+  return true;
 }
 void motor_set_target_milli_hz(uint32_t) {}
 FastAccelStepper* motor_get_stepper() { return nullptr; }
@@ -338,7 +343,7 @@ void calibration_set_factor(float factor) {
 float calibration_get_factor() { return s_calibrationFactor; }
 long calibration_apply_steps(long steps) { return (long)(steps * s_calibrationFactor + 0.5f); }
 float calibration_apply_angle(float angle) { return angle / s_calibrationFactor; }
-void calibration_save() { storage_save_settings(); }
+uint32_t calibration_save() { return storage_request_settings_save(); }
 bool calibration_validate() { return s_calibrationFactor >= 0.5f && s_calibrationFactor <= 1.5f; }
 void microstep_init() {}
 MicrostepSetting microstep_get() { return (MicrostepSetting)g_settings.microstep; }
@@ -369,20 +374,15 @@ void acceleration_clear_pending() {}
 void safety_init() {}
 void safety_cache_stepper() {}
 void safety_attach_estop() {}
-static bool simFault = false;
-void simulator_set_estop_input(bool active) { simFault = active; }
+void simulator_set_estop_input(bool active) { simFault = active; if (active) simReason = FAULT_ESTOP_PRESSED; }
 bool safety_is_estop_active() { return simFault; }
-bool safety_is_driver_alarm_latched() { return false; }
-bool safety_inhibit_motion() { return false; }
-bool safety_can_reset_from_overlay() { return !simFault; }
+bool safety_is_driver_alarm_latched() { return simAlarm; }
+bool safety_inhibit_motion() { return simFault || simAlarm || simStaleInput || s_state == STATE_ESTOP; }
+bool safety_can_reset_from_overlay() { return !simFault && !simAlarm && !simStaleInput; }
 bool safety_is_estop_locked() { return s_state == STATE_ESTOP; }
-FaultReason safety_get_fault_reason() { return simFault ? FAULT_ESTOP_PRESSED : FAULT_NONE; }
-const char* safety_fault_reason_name(FaultReason reason) { return reason == FAULT_NONE ? "NONE" : "FAULT"; }
-const char* safety_fault_reason_message(FaultReason reason) {
-  return reason == FAULT_NONE ? "No active fault." : "Simulated fault.";
-}
+FaultReason safety_get_fault_reason() { return simReason; }
 void safety_reset_estop() {
-  if (s_state == STATE_ESTOP) s_state = STATE_IDLE;
+  if (safety_can_reset_from_overlay()) control_transition_to(STATE_IDLE);
 }
 bool safety_check_ui_reset() { return false; }
 void safety_init_watchdog() {}
@@ -400,13 +400,13 @@ void preset_clamp_mode_to_mask(Preset* p) {
 }
 void storage_init() {}
 bool storage_load_presets() { return true; }
-bool storage_save_presets() {
-  event_log_add("SIM PRESETS SAVED");
-  return true;
-}
+bool storage_save_presets() { simPresetsSave.request(); return true; }
 bool storage_load_settings() { return true; }
-void storage_save_settings() { event_log_add("SIM SETTINGS SAVED"); }
-void storage_flush() {}
+void storage_save_settings() { simSettingsSave.request(); }
+void storage_flush() {
+  if (simSettingsSave.begin(millis())) simSettingsSave.complete(!simNvsFailure);
+  if (simPresetsSave.begin(millis())) simPresetsSave.complete(!simNvsFailure);
+}
 bool storage_get_preset(uint8_t id, Preset* out) {
   for (const Preset& p : g_presets) {
     if (p.id == id) {
@@ -482,8 +482,11 @@ SpeedInputSource speed_get_input_source() {
 
 void control_renew_jog() {}
 bool control_motion_blocked() { return false; }
-bool speed_pedal_input_healthy() { return true; }
-StorageStatus storage_status() { return STORAGE_SAVED; }
+bool speed_pedal_input_healthy() { return !simStaleInput; }
+StorageStatus storage_status() {
+  if (simSettingsSave.failed() || simPresetsSave.failed()) return STORAGE_ERROR;
+  return simSettingsSave.pending() || simPresetsSave.pending() ? STORAGE_PENDING : STORAGE_SAVED;
+}
 
 bool motor_direction_is_cw() { return speed_get_direction() == DIR_CW; }
 void motor_record_direction(bool) {}
@@ -491,6 +494,46 @@ void motor_record_direction(bool) {}
 bool control_apply_motor_settings(const SystemSettings& settings) {
   if (control_get_state() != STATE_IDLE) return false;
   g_settings = settings;
+  storage_save_settings();
   return true;
 }
 ConfigApplyStatus control_config_status() { return CONFIG_APPLIED; }
+
+Direction speed_resolve_direction(Direction requested) {
+  return g_settings.invert_direction ? (requested == DIR_CW ? DIR_CCW : DIR_CW) : requested;
+}
+uint32_t storage_request_settings_save() { return simSettingsSave.request(); }
+StorageStatus storage_settings_save_status(uint32_t ticket) {
+  if (simSettingsSave.saved(ticket)) return STORAGE_SAVED;
+  return simSettingsSave.failed() ? STORAGE_ERROR : STORAGE_PENDING;
+}
+bool storage_get_nvs_stats(size_t* used, size_t* total) {
+  if (!used || !total) return false;
+  *used = 64; *total = 630; return true;
+}
+bool event_log_try_snapshot(EventLogEntry* out, size_t max, size_t* count, uint32_t* version) {
+  if (!out || !count || !version) return false;
+  *count = event_log_snapshot(out, max); *version = s_eventVersion; return true;
+}
+uint32_t event_log_dropped() { return 0; }
+bool motor_lock() { return true; }
+bool motor_cleanup_pending() { return false; }
+void motor_command_failed() { s_state = STATE_ESTOP; }
+uint32_t motor_stop_timeout_ms() { return 2000; }
+void safety_report_motor_fault(FaultReason reason) { simReason = reason; s_state = STATE_ESTOP; }
+void control_check_stop_deadline(uint32_t) {}
+
+bool simulator_set_scenario(const char* scenario) {
+  simFault = simAlarm = simStaleInput = simRejectMotion = simNvsFailure = false;
+  if (std::strcmp(scenario, "none") == 0) return true;
+  if (std::strcmp(scenario, "estop") == 0) { simFault = true; simReason = FAULT_ESTOP_PRESSED; }
+  else if (std::strcmp(scenario, "driver-alarm") == 0) { simAlarm = true; simReason = FAULT_DRIVER_ALARM; }
+  else if (std::strcmp(scenario, "stale-adc") == 0 || std::strcmp(scenario, "i2c-failure") == 0) {
+    simStaleInput = true; simReason = FAULT_PEDAL_INPUT;
+  }
+  else if (std::strcmp(scenario, "rejected-motion") == 0) { simRejectMotion = true; return true; }
+  else if (std::strcmp(scenario, "nvs-failure") == 0) { simNvsFailure = true; storage_save_settings(); return true; }
+  else return false;
+  s_state = STATE_ESTOP;
+  return true;
+}

@@ -13,6 +13,7 @@
 #include "../../motor/motor.h"
 #include "../../motor/speed.h"
 #include "../../safety/safety.h"
+#include "../../storage/storage.h"
 #include <Arduino.h>
 #include <cmath>
 #include <cstdio>
@@ -59,6 +60,7 @@ static const int STEP_VERIFY_MEASURE = 5;
 static const int STEP_VERIFY_RESULT = 6;
 static const int STEP_SAVE = 7;
 static int calStep = STEP_NONE;
+static uint32_t calibrationSaveTicket = 0;
 static bool s_verifyMoveSawRunning = false;
 
 // Fixed workpiece RPM for calibration MOVE 360 (not Motor Config max).
@@ -190,7 +192,7 @@ static void save_cb(lv_event_t* e) {
     style_result_bar_pass(false);
     return;
   }
-  calibration_save();
+  calibrationSaveTicket = calibration_save();
   calStep = STEP_SAVE;
   screen_calibration_update();
 }
@@ -930,14 +932,17 @@ void screen_calibration_update() {
       lv_obj_add_flag(resultReadyLabel, LV_OBJ_FLAG_HIDDEN);
     }
     if (calStep >= STEP_SAVE) {
-      lv_label_set_text(resultStatusLabel, "RESULT SAVED");
-      lv_obj_set_style_text_color(resultStatusLabel, COL_GREEN, 0);
-      lv_label_set_text(resultDetailLabel, "Stored. MOVE 360 to check or RESTART.");
+      const StorageStatus saved = storage_settings_save_status(calibrationSaveTicket);
+      lv_label_set_text(resultStatusLabel, saved == STORAGE_SAVED ? "RESULT SAVED" :
+                                          saved == STORAGE_ERROR ? "SAVE FAILED" : "SAVING...");
+      lv_obj_set_style_text_color(resultStatusLabel, saved == STORAGE_ERROR ? COL_RED : COL_GREEN, 0);
+      lv_label_set_text(resultDetailLabel, saved == STORAGE_SAVED ? "Stored. MOVE 360 to check or RESTART." :
+                                         saved == STORAGE_ERROR ? "Write failed. Retrying; keep power on." :
+                                         "Writing calibration. Keep power on.");
       lv_obj_set_width(resultDetailLabel, resultW - 36);
-      style_result_bar_pass(true);
+      style_result_bar_pass(saved == STORAGE_SAVED);
     } else if (calStep == STEP_VERIFY_RESULT) {
       const float err = s_verifyMeasuredDeg - kCalCommandedDeg;
-      const float absErr = err < 0.0f ? -err : err;
       const bool pass = calibration_verify_passed();
       char buf[80];
       snprintf(buf, sizeof(buf), "meas %.2f err %+.2f tol %.1f f %.4f", (double)s_verifyMeasuredDeg,

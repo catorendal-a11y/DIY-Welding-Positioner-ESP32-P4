@@ -31,7 +31,6 @@ extern "C" {
   esp_err_t esp_ldo_acquire_channel(const esp_ldo_channel_config_t *config, esp_ldo_channel_handle_t *ret);
 }
 
-static const char* TAG = "display";
 
 // ───────────────────────────────────────────────────────────────────────────────
 // TOUCH CONFIGURATION (GT911 - from JC4880P433C BSP)

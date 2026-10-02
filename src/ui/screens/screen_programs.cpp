@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include "../screens.h"
 #include "../theme.h"
+#include "../value_format.h"
 #include "../../config.h"
 #include "../../storage/storage.h"
 #include "../../control/program_executor.h"
@@ -34,7 +35,7 @@ static void load_preset_cb(lv_event_t* e) {
   snprintf(
       details, sizeof(details),
       "%s\n%s / %.3f RPM / %s\nPart diameter: %.0f mm\nConfirm starts motion. Cancel keeps the motor idle.",
-      p.name, mode, (double)p.rpm, p.direction == DIR_CCW ? "CCW" : "CW",
+      p.name, mode, (double)p.rpm, speed_resolve_direction(p.direction == DIR_CCW ? DIR_CCW : DIR_CW) == DIR_CCW ? "CCW" : "CW",
       (double)(p.workpiece_diameter_mm > 0 ? p.workpiece_diameter_mm : D_EMNE * 1000.0f));
   screen_confirm_create("START PROGRAM", details, start_reviewed_preset, nullptr, SCREEN_MAIN);
 }
@@ -52,6 +53,8 @@ static void new_program_cb(lv_event_t* e) {
 }
 
 static void format_details(char* buf, size_t len, const Preset& p) {
+  char rpm[16];
+  ui_format_rpm(rpm, sizeof(rpm), p.rpm);
   uint8_t mask = p.mode_mask ? p.mode_mask : preset_mode_to_mask(p.mode);
   mask = (uint8_t)(mask & PRESET_MASK_ALL);
 
@@ -68,9 +71,9 @@ static void format_details(char* buf, size_t len, const Preset& p) {
     else if (p.mode == STATE_STEP)
       runC = "S";
     if (p.workpiece_diameter_mm >= 1.0f) {
-      snprintf(buf, len, "[%s] run:%s | %.1f RPM | OD %.0f mm", tags, runC, p.rpm, p.workpiece_diameter_mm);
+      snprintf(buf, len, "[%s] run:%s | %s RPM | OD %.0f mm", tags, runC, rpm, p.workpiece_diameter_mm);
     } else {
-      snprintf(buf, len, "[%s] run:%s | %.1f RPM", tags, runC, p.rpm);
+      snprintf(buf, len, "[%s] run:%s | %s RPM", tags, runC, rpm);
     }
     return;
   }
@@ -92,7 +95,7 @@ static void format_details(char* buf, size_t len, const Preset& p) {
   }
 
   if (p.mode == STATE_PULSE) {
-    snprintf(buf, len, "%s / %.1f RPM / %.1f/%.1fs", mName, p.rpm, p.pulse_on_ms / 1000.0f,
+    snprintf(buf, len, "%s / %s RPM / %.1f/%.1fs", mName, rpm, p.pulse_on_ms / 1000.0f,
              p.pulse_off_ms / 1000.0f);
   } else if (p.mode == STATE_STEP) {
     char od[18] = "";
@@ -100,13 +103,13 @@ static void format_details(char* buf, size_t len, const Preset& p) {
       snprintf(od, sizeof(od), " | OD %.0f", p.workpiece_diameter_mm);
     }
     if (p.step_repeats > 1) {
-      snprintf(buf, len, "%s / %.1f RPM / %.0f deg x%u%s", mName, p.rpm, p.step_angle,
+      snprintf(buf, len, "%s / %s RPM / %.0f deg x%u%s", mName, rpm, p.step_angle,
                (unsigned)p.step_repeats, od);
     } else {
-      snprintf(buf, len, "%s / %.1f RPM / %.0f deg%s", mName, p.rpm, p.step_angle, od);
+      snprintf(buf, len, "%s / %s RPM / %.0f deg%s", mName, rpm, p.step_angle, od);
     }
   } else {
-    snprintf(buf, len, "%s / %.1f RPM", mName, p.rpm);
+    snprintf(buf, len, "%s / %s RPM", mName, rpm);
   }
 }
 

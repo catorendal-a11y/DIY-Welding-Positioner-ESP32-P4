@@ -11,33 +11,6 @@ static void nav_click_cb(lv_event_t* e) {
   screens_show(dest);
 }
 
-static void create_nav_item(lv_obj_t* parent, int y, int rowH, const char* label, ScreenId dest,
-                            bool accentRow) {
-  lv_obj_t* row = lv_obj_create(parent);
-  lv_obj_set_size(row, 776, rowH);
-  lv_obj_set_pos(row, 12, y);
-  lv_obj_set_style_bg_color(row, accentRow ? COL_BG_ACTIVE : COL_BG_ROW, 0);
-  lv_obj_set_style_border_color(row, accentRow ? COL_ACCENT : COL_BORDER_ROW, 0);
-  lv_obj_set_style_border_width(row, accentRow ? 2 : 1, 0);
-  lv_obj_set_style_radius(row, RADIUS_ROW, 0);
-  lv_obj_set_style_pad_all(row, 0, 0);
-  lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_add_event_cb(row, nav_click_cb, LV_EVENT_CLICKED, (void*)(size_t)dest);
-
-  lv_obj_t* lbl = lv_label_create(row);
-  lv_label_set_text(lbl, label);
-  lv_obj_set_style_text_font(lbl, SET_VAL_FONT, 0);
-  lv_obj_set_style_text_color(lbl, accentRow ? COL_ACCENT : COL_TEXT, 0);
-  lv_obj_align(lbl, LV_ALIGN_LEFT_MID, 16, 0);
-
-  lv_obj_t* chevron = lv_label_create(row);
-  lv_label_set_text(chevron, ">");
-  lv_obj_set_style_text_font(chevron, FONT_BTN, 0);
-  lv_obj_set_style_text_color(chevron, accentRow ? COL_ACCENT : SET_CHEVRON_COL, 0);
-  lv_obj_align(chevron, LV_ALIGN_RIGHT_MID, -16, 0);
-}
-
 void screen_settings_create() {
   lv_obj_t* screen = screenRoots[SCREEN_SETTINGS];
   lv_obj_clean(screen);

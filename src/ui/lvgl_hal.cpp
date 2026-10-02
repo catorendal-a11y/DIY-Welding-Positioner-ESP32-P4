@@ -157,7 +157,6 @@ void lvgl_flush_cb(lv_display_t* disp, const lv_area_t* area, uint8_t* px_map) {
 
   // 90° CW rotation: landscape (x, y) → portrait (y, 799-x)
   for (int r = 0; r < H; r++) {
-    int ly = y1 + r;  // landscape y
     for (int c = 0; c < W; c++) {
       int lx = x1 + c;  // landscape x
       // Destination in portrait buffer:

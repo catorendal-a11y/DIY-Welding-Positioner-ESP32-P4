@@ -32,6 +32,7 @@ const char* control_state_name(SystemState s);  // Internal: state enum to strin
 // Continuous mode
 bool control_start_continuous(bool soft_start = false, uint32_t auto_stop_ms = 0);
 bool control_stop();
+void control_check_stop_deadline(uint32_t now); // Safety task, no blocking locks
 bool control_motion_blocked();
 void control_renew_jog();
 enum ConfigApplyStatus { CONFIG_NONE, CONFIG_PENDING, CONFIG_APPLIED, CONFIG_CANCELLED };

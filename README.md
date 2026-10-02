@@ -4,7 +4,7 @@
 
 ### Precision Multi-Mode Welding Rotator for TIG, MIG, and Pipe Welding
 
-**ESP32-P4 &nbsp;&middot;&nbsp; Firmware v2.1.0**
+**ESP32-P4 &nbsp;&middot;&nbsp; Source firmware v2.1.1**
 
 [![PlatformIO CI](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml/badge.svg)](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml)
 [![Latest Release](https://img.shields.io/github/v/release/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4)](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/latest)
@@ -61,9 +61,11 @@ Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Posit
 
 [Implementation details](docs/IMPROVEMENTS_2026-10-01.md) · [V5 integration and upload record](docs/UI_V5_DEPLOYMENT.md) · [Changelog](CHANGELOG.md)
 
-**Current release: v2.1.0, updated 2 October 2026.** V5 identifies the UI design iteration. [Download firmware and read the release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.1.0). Runtime screenshots were captured during V5 integration before the release version update.
+**Current release: v2.1.0, updated 2 October 2026.** V5 identifies the UI design iteration. [Download firmware and read the release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.1.0). Runtime screenshots below were refreshed from the v2.1.1 source simulator; the downloadable stable binaries remain v2.1.0.
 
 ---
+
+The source maintenance update targets **v2.1.1**; the published download above remains **v2.1.0** until a new release is published. It adds bounded motor error handling, precise RPM values on all screens, durable calibration save confirmation and tests of the production motion code. See the [maintenance implementation report](docs/MAINTENANCE_2026-10-02.md) for validation and hardware limits.
 
 ## Quick Navigation
 
@@ -105,7 +107,7 @@ Fast path for builders who already have PlatformIO installed.
 3. **Optional native tests** - pure logic, no hardware required:
 
    ```bash
-   pio test -e native
+   pio test -e native -e native-control
    ```
 
 4. **Optional PC UI simulator** - test the LVGL interface without ESP32 hardware:
@@ -332,7 +334,7 @@ Default environment: `esp32p4-release`. Build output goes to `.pio/build-fw` to 
 | USB-C mirror build | `pio run -e esp32p4-mirror` |
 | Flash release firmware | `pio run --target upload` |
 | Serial monitor | `pio device monitor` |
-| Native tests | `pio test -e native` |
+| Native tests | `pio test -e native -e native-control` |
 | On-device tests | `pio test -e esp32p4-test` |
 
 `COM5` is configured in `platformio.ini`; change `upload_port` / `monitor_port` if Windows assigns another port. Native tests do not need hardware. Use `pio device list` and override the configured port with `--upload-port COM3` (example).
@@ -655,7 +657,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 
 | Local check | Result |
 | --- | --- |
-| Native suites | 403 / 403 passed |
+| Native suites | 419 / 419 passed (native and production-control suites) |
 | LVGL self-test | Passed: navigation, program edits, RPM adjustment and blocked/available reset |
 | Firmware builds | Release, debug and mirror passed |
 | Device upload | Release uploaded to COM3; esptool verified data hash and issued reset |

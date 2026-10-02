@@ -3,6 +3,7 @@
 // Optional ADS1115 pedal ADC on touch I2C (see ENABLE_ADS1115_PEDAL in config.h)
 
 #include "speed.h"
+#include "../control/motion_policy.h"
 #include "../config.h"
 #include "motor.h"
 #include "microstep.h"
@@ -56,13 +57,13 @@ static i2c_master_dev_handle_t s_ads_dev = nullptr;
 static bool ads_i2c_write_reg_timeout(uint8_t reg, uint16_t val, uint32_t timeout_ms) {
   if (!s_ads_dev) return false;
   uint8_t buf[3] = {reg, (uint8_t)(val >> 8), (uint8_t)(val & 0xFF)};
-  return i2c_master_transmit(s_ads_dev, buf, sizeof(buf), pdMS_TO_TICKS(timeout_ms)) == ESP_OK;
+  return i2c_master_transmit(s_ads_dev, buf, sizeof(buf), timeout_ms) == ESP_OK;
 }
 
 static bool ads_i2c_read_reg_timeout(uint8_t reg, uint16_t* out, uint32_t timeout_ms) {
   if (!s_ads_dev || !out) return false;
   uint8_t data[2];
-  esp_err_t e = i2c_master_transmit_receive(s_ads_dev, &reg, 1, data, 2, pdMS_TO_TICKS(timeout_ms));
+  esp_err_t e = i2c_master_transmit_receive(s_ads_dev, &reg, 1, data, 2, timeout_ms);
   if (e != ESP_OK) return false;
   *out = ((uint16_t)data[0] << 8) | data[1];
   return true;
@@ -111,24 +112,37 @@ static bool ads_start_conversion() {
 // Returns true when a fresh value was fetched; *out holds last good value.
 static bool ads_poll_and_start(int16_t* out) {
   const uint32_t now = millis();
-  bool fresh = false;
-  if (s_adsState == ADS_CONVERTING && (now - s_adsStartedMs) >= 9u) {
-    uint16_t raw = 0;
-    if (ads_i2c_read_reg_timeout(ADS_REG_PTR_CONVERT, &raw, ADS_I2C_RUNTIME_TIMEOUT_MS)) {
-      s_adsLastValue = (int16_t)raw;
-      adsSampleMs.store(now);
-      adsSampleValid.store(s_adsLastValue >= 0 && s_adsLastValue <= 28000);
-      fresh = true;
-    }
-    s_adsState = ADS_IDLE;
-  }
+  if (out) *out = s_adsLastValue;
   if (s_adsState == ADS_IDLE) {
     if (ads_start_conversion()) {
       s_adsState = ADS_CONVERTING;
       s_adsStartedMs = now;
     }
+    return false;
   }
-  if (out) *out = s_adsLastValue;
+  if (now - s_adsStartedMs < 9u) return false;
+  uint16_t status = 0;
+  if (!ads_i2c_read_reg_timeout(ADS_REG_PTR_CONFIG, &status, ADS_I2C_RUNTIME_TIMEOUT_MS)) {
+    s_adsState = ADS_IDLE;
+    return false;
+  }
+  if (!(status & ADS_CFG_OS_START)) {
+    if (now - s_adsStartedMs >= 40u) {
+      adsSampleValid.store(false);
+      s_adsState = ADS_IDLE;
+    }
+    return false; // Conversion is busy; never timestamp the previous result as fresh.
+  }
+  uint16_t raw = 0;
+  const bool fresh = ads_i2c_read_reg_timeout(ADS_REG_PTR_CONVERT, &raw, ADS_I2C_RUNTIME_TIMEOUT_MS);
+  s_adsState = ADS_IDLE;
+  if (fresh) {
+    s_adsLastValue = static_cast<int16_t>(raw);
+    adsSampleMs.store(now);
+    adsSampleValid.store(s_adsLastValue >= 0 && s_adsLastValue <= 28000);
+    if (out) *out = s_adsLastValue;
+  }
+  // Start the next conversion on a later poll: at most two 2ms I2C calls here.
   return fresh;
 }
 #endif
@@ -452,10 +466,7 @@ Direction speed_get_direction() {
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   invert = g_settings.invert_direction;
   xSemaphoreGive(g_settings_mutex);
-  if (invert) {
-    dir = (dir == DIR_CW) ? DIR_CCW : DIR_CW;
-  }
-  return dir;
+  return motion_direction_cw(dir == DIR_CW, invert) ? DIR_CW : DIR_CCW;
 }
 
 void speed_set_direction(Direction dir) {
@@ -511,4 +522,11 @@ bool speed_pedal_input_healthy() {
 #else
   return true;  // Explicit switch-only build.
 #endif
+}
+
+Direction speed_resolve_direction(Direction requested) {
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  const bool invert = g_settings.invert_direction;
+  xSemaphoreGive(g_settings_mutex);
+  return motion_direction_cw(requested == DIR_CW, invert) ? DIR_CW : DIR_CCW;
 }

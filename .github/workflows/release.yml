@@ -85,6 +85,8 @@ jobs:
         run: |
           python scripts/package_release.py --version "$RELEASE_TAG" --output release \
             --run-url "$CI_RUN_URL"
+          (cd ci-artifacts/tig-rotator-simulator-windows-x64 && sha256sum -c *.zip.sha256)
+          cp ci-artifacts/tig-rotator-simulator-windows-x64/*.zip* release/
 
       - name: Save build artifacts
         uses: actions/upload-artifact@v7

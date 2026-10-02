@@ -19,7 +19,8 @@ typedef void* TaskHandle_t;
 #define pdMS_TO_TICKS(ms) ((TickType_t)(ms))
 
 struct SimSemaphore {
-  std::recursive_mutex mutex;
+  std::recursive_timed_mutex mutex;
+  bool unavailable = false; // Used only by host fault-injection tests.
 };
 
 typedef SimSemaphore* SemaphoreHandle_t;
@@ -32,9 +33,10 @@ inline SemaphoreHandle_t xSemaphoreCreateMutex() {
   return new SimSemaphore();
 }
 
-inline BaseType_t xSemaphoreTake(SemaphoreHandle_t handle, TickType_t) {
-  if (handle) handle->mutex.lock();
-  return pdTRUE;
+inline BaseType_t xSemaphoreTake(SemaphoreHandle_t handle, TickType_t timeout) {
+  if (!handle || handle->unavailable) return pdFALSE;
+  if (timeout == portMAX_DELAY) { handle->mutex.lock(); return pdTRUE; }
+  return handle->mutex.try_lock_for(std::chrono::milliseconds(timeout)) ? pdTRUE : pdFALSE;
 }
 
 inline BaseType_t xSemaphoreGive(SemaphoreHandle_t handle) {

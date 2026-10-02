@@ -12,6 +12,8 @@ static size_t s_next = 0;
 static size_t s_count = 0;
 static SemaphoreHandle_t s_mutex = nullptr;
 static std::atomic<uint32_t> s_version{0};
+static std::atomic<uint32_t> s_dropped{0};
+uint32_t event_log_dropped() { return s_dropped.load(); }
 
 static bool event_log_lock() { return s_mutex != nullptr && xSemaphoreTake(s_mutex, 0) == pdTRUE; }
 
@@ -31,7 +33,7 @@ void event_log_init() {
 
 void event_log_add(const char* text) {
   if (text == nullptr) return;
-  if (!event_log_lock()) return;
+  if (!event_log_lock()) { s_dropped.fetch_add(1); s_version.fetch_add(1); return; }
 
   EventLogEntry& entry = s_entries[s_next];
   entry.ms = millis();
@@ -58,8 +60,13 @@ void event_log_addf(const char* fmt, ...) {
 }
 
 size_t event_log_snapshot(EventLogEntry* out, size_t max_entries) {
-  if (out == nullptr || max_entries == 0) return 0;
-  if (!event_log_lock()) return 0;
+  size_t count = 0;
+  uint32_t version = 0;
+  event_log_try_snapshot(out, max_entries, &count, &version);
+  return count;
+}
+bool event_log_try_snapshot(EventLogEntry* out, size_t max_entries, size_t* count, uint32_t* version) {
+  if (!out || !max_entries || !count || !version || !event_log_lock()) return false;
 
   size_t n = s_count < max_entries ? s_count : max_entries;
   for (size_t i = 0; i < n; i++) {
@@ -67,8 +74,10 @@ size_t event_log_snapshot(EventLogEntry* out, size_t max_entries) {
     out[i] = s_entries[idx];
   }
 
+  *count = n;
+  *version = s_version.load();
   event_log_unlock();
-  return n;
+  return true;
 }
 
 uint32_t event_log_version() { return s_version.load(std::memory_order_acquire); }

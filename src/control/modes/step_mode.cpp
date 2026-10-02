@@ -1,6 +1,7 @@
 // TIG Rotator Controller - Step Mode (fixed workpiece angle per move)
 
 #include "../control.h"
+#include "../motion_policy.h"
 #include "../../motor/motor.h"
 #include "../../motor/speed.h"
 #include "../../safety/safety.h"
@@ -32,14 +33,17 @@ static bool start_step_move_locked(FastAccelStepper* stepper) {
   if (stepper == nullptr || (safety_inhibit_motion() || control_motion_blocked())) return false;
   accumulatedAngle = 0.0f;
   step_move_start_pos = stepper->getCurrentPosition();
-  motor_apply_speed_for_rpm_locked(speed_get_target_rpm());
+  if (!motor_apply_speed_for_rpm_locked(speed_get_target_rpm())) return false;
   digitalWrite(PIN_ENA, LOW);
   if ((safety_inhibit_motion() || control_motion_blocked())) {
     digitalWrite(PIN_ENA, HIGH);
     return false;
   }
   motor_record_direction(step_sequence_signed_steps >= 0);
-  stepper->move(step_sequence_signed_steps);
+  if (stepper->move(step_sequence_signed_steps) != MOVE_OK) {
+    motor_command_failed();
+    return false;
+  }
   step_move_steps_total = labs(step_sequence_signed_steps);
   step_finish_earliest_ms = millis() + 50u;
   step_waiting_dwell = false;
@@ -77,7 +81,7 @@ void step_execute_sequence(float angle_deg, uint16_t repeats, float dwell_sec) {
 
   LOG_I("Step mode: %.1f deg (%ld steps) x%u dwell=%.1fs", angle_deg, steps, repeats, dwell_sec);
 
-  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
+  if (!motor_lock()) return;
   if ((safety_inhibit_motion() || control_motion_blocked())) {
     xSemaphoreGive(g_stepperMutex);
     return;
@@ -120,7 +124,7 @@ void step_execute_sequence(float angle_deg, uint16_t repeats, float dwell_sec) {
 void step_update() {
   if (control_get_state() != STATE_STEP) return;
 
-  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
+  if (!motor_lock()) return;
   FastAccelStepper* stepper = motor_get_stepper();
   if (step_waiting_dwell) {
     const uint32_t now = millis();
@@ -144,8 +148,7 @@ void step_update() {
 
   if (stepper != nullptr && step_move_steps_total > 0) {
     int32_t p = stepper->getCurrentPosition();
-    int64_t delta = (int64_t)p - (int64_t)step_move_start_pos;
-    int64_t moved = llabs(delta);
+    int64_t moved = motion_position_distance(p, step_move_start_pos);
     if (moved > (int64_t)step_move_steps_total) moved = (int64_t)step_move_steps_total;
     float frac = (float)moved / (float)step_move_steps_total;
     if (frac < 0.0f) frac = 0.0f;
@@ -174,7 +177,7 @@ void step_update() {
         step_waiting_dwell = true;
         step_dwell_until_ms = millis() + step_sequence_dwell_ms;
       } else {
-        xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
+        if (!motor_lock()) return;
         FastAccelStepper* nextStepper = motor_get_stepper();
         if (nextStepper != nullptr) {
           if (!start_step_move_locked(nextStepper)) {

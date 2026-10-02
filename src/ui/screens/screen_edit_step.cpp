@@ -87,10 +87,7 @@ static void update_dir_buttons() {
 // ───────────────────────────────────────────────────────────────────────────────
 // EVENT HANDLERS
 // ───────────────────────────────────────────────────────────────────────────────
-static void back_event_cb(lv_event_t* e) {
-  screen_program_edit_update_ui();
-  screens_show(SCREEN_PROGRAM_EDIT);
-}
+
 
 static void angle_adj_cb(lv_event_t* e) {
   float delta = (float)(intptr_t)lv_event_get_user_data(e);
@@ -106,7 +103,7 @@ static void rpm_adj_cb(lv_event_t* e) {
   editRpm += delta;
   if (editRpm < MIN_RPM) editRpm = MIN_RPM;
   if (editRpm > speed_get_rpm_max()) editRpm = speed_get_rpm_max();
-  if (rpmLabel) lv_label_set_text_fmt(rpmLabel, "%.1f", editRpm);
+  if (rpmLabel) ui_set_rpm(rpmLabel, editRpm);
   update_computed();
 }
 
@@ -169,94 +166,17 @@ static void save_cb(lv_event_t* e) {
 // ───────────────────────────────────────────────────────────────────────────────
 // HELPER: create a -/+ row with value display
 // ───────────────────────────────────────────────────────────────────────────────
-static void create_adj_row(lv_obj_t* parent, int y, const char* titleText, lv_obj_t** valueLabel,
-                           lv_event_cb_t minusCb, lv_event_cb_t plusCb, void* minusData, void* plusData,
-                           const lv_font_t* valueFont, lv_color_t valueColor, int valueW) {
-  const int startX = PAD_X;
-  const int btnW = 48;
-  const int btnH = 36;
-  const int valueGap = 8;
 
-  // Title label
-  lv_obj_t* titleLbl = lv_label_create(parent);
-  lv_label_set_text(titleLbl, titleText);
-  lv_obj_set_style_text_font(titleLbl, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(titleLbl, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(titleLbl, startX, y);
-
-  // Minus button
-  lv_obj_t* minusBtn = lv_button_create(parent);
-  lv_obj_set_size(minusBtn, btnW, btnH);
-  lv_obj_set_pos(minusBtn, startX, y + 14);
-  lv_obj_add_event_cb(minusBtn, minusCb, LV_EVENT_CLICKED, minusData);
-  ui_btn_style_post(minusBtn, UI_BTN_NORMAL);
-
-  lv_obj_t* minusLbl = lv_label_create(minusBtn);
-  lv_label_set_text(minusLbl, "-");
-  lv_obj_set_style_text_font(minusLbl, FONT_MED, 0);
-  lv_obj_set_style_text_color(minusLbl, ui_btn_label_color_post(UI_BTN_NORMAL), 0);
-  lv_obj_center(minusLbl);
-
-  // Value panel
-  lv_obj_t* valuePanel = lv_obj_create(parent);
-  lv_obj_set_size(valuePanel, valueW, btnH);
-  lv_obj_set_pos(valuePanel, startX + btnW + valueGap, y + 14);
-  lv_obj_set_style_bg_color(valuePanel, COL_PANEL_BG, 0);
-  lv_obj_set_style_border_color(valuePanel, COL_BORDER, 0);
-  lv_obj_set_style_border_width(valuePanel, 1, 0);
-  lv_obj_set_style_radius(valuePanel, RADIUS_BTN, 0);
-  lv_obj_set_style_pad_all(valuePanel, 0, 0);
-  lv_obj_remove_flag(valuePanel, LV_OBJ_FLAG_SCROLLABLE);
-
-  *valueLabel = lv_label_create(valuePanel);
-  lv_obj_set_style_text_font(*valueLabel, valueFont, 0);
-  lv_obj_set_style_text_color(*valueLabel, valueColor, 0);
-  lv_obj_center(*valueLabel);
-
-  // Plus button
-  lv_obj_t* plusBtn = lv_button_create(parent);
-  lv_obj_set_size(plusBtn, btnW, btnH);
-  lv_obj_set_pos(plusBtn, startX + btnW + valueGap + valueW + valueGap, y + 14);
-  lv_obj_add_event_cb(plusBtn, plusCb, LV_EVENT_CLICKED, plusData);
-  ui_btn_style_post(plusBtn, UI_BTN_ACCENT);
-
-  lv_obj_t* plusLbl = lv_label_create(plusBtn);
-  lv_label_set_text(plusLbl, "+");
-  lv_obj_set_style_text_font(plusLbl, FONT_MED, 0);
-  lv_obj_set_style_text_color(plusLbl, ui_btn_label_color_post(UI_BTN_ACCENT), 0);
-  lv_obj_center(plusLbl);
-}
 
 // ───────────────────────────────────────────────────────────────────────────────
 // HELPER: create a separator line
 // ───────────────────────────────────────────────────────────────────────────────
-static lv_obj_t* create_separator(lv_obj_t* parent, int y) {
-  lv_obj_t* sep = lv_obj_create(parent);
-  lv_obj_set_size(sep, SCREEN_W - 2 * PAD_X, 1);
-  lv_obj_set_pos(sep, PAD_X, y);
-  lv_obj_set_style_bg_color(sep, COL_BORDER_ROW, 0);
-  lv_obj_set_style_border_width(sep, 0, 0);
-  lv_obj_set_style_pad_all(sep, 0, 0);
-  lv_obj_set_style_radius(sep, 0, 0);
-  lv_obj_remove_flag(sep, LV_OBJ_FLAG_SCROLLABLE);
-  return sep;
-}
+
 
 // ───────────────────────────────────────────────────────────────────────────────
 // HELPER: create a computed info row (label: value)
 // ───────────────────────────────────────────────────────────────────────────────
-static void create_info_row(lv_obj_t* parent, int y, const char* labelText, lv_obj_t** valueLabel) {
-  lv_obj_t* lbl = lv_label_create(parent);
-  lv_label_set_text(lbl, labelText);
-  lv_obj_set_style_text_font(lbl, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(lbl, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(lbl, PAD_X + 200, y);
 
-  *valueLabel = lv_label_create(parent);
-  lv_obj_set_style_text_font(*valueLabel, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(*valueLabel, COL_TEXT, 0);
-  lv_obj_set_pos(*valueLabel, PAD_X + 350, y);
-}
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN CREATE
@@ -282,7 +202,7 @@ void screen_edit_step_create() {
   dirBtns[0] = ui_create_btn(screen, 550, 282, 100, 56, "CW", FONT_BTN, UI_BTN_NORMAL, dir_cb, (void*)0);
   dirBtns[1] = ui_create_btn(screen, 662, 282, 100, 56, "CCW", FONT_BTN, UI_BTN_NORMAL, dir_cb, (void*)1);
   lv_label_set_text_fmt(angleLabel, "%.0f", editAngle);
-  lv_label_set_text_fmt(rpmLabel, "%.3f", editRpm);
+  ui_set_rpm(rpmLabel, editRpm);
   lv_label_set_text_fmt(repeatsLabel, "%d", editRepeats);
   lv_label_set_text_fmt(dwellLabel, "%.1f sec", editDwell);
   ui_create_text(screen, 24, 366, 70, "TOTAL", FONT_SMALL, COL_TEXT_DIM);
@@ -315,7 +235,7 @@ void screen_edit_step_update() {
   if (!screens_is_active(SCREEN_EDIT_STEP)) return;
 
   if (angleLabel) lv_label_set_text_fmt(angleLabel, "%.0f", editAngle);
-  if (rpmLabel) lv_label_set_text_fmt(rpmLabel, "%.1f", editRpm);
+  if (rpmLabel) ui_set_rpm(rpmLabel, editRpm);
   update_diameter_label();
   if (repeatsLabel) lv_label_set_text_fmt(repeatsLabel, "%d", editRepeats);
   if (dwellLabel) lv_label_set_text_fmt(dwellLabel, "%.1f sec", editDwell);

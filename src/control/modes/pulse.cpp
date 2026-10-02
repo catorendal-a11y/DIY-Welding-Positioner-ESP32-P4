@@ -1,111 +1,61 @@
-// TIG Rotator Controller - Pulse Mode
-// Rotate for ON ms, pause for OFF ms, repeat
-
+// Pulse mode: production timing core shared with host tests and simulation.
 #include "../control.h"
+#include "../motion_policy.h"
 #include "../../motor/motor.h"
 #include "../../motor/speed.h"
 #include "../../config.h"
 #include <atomic>
 
-// ───────────────────────────────────────────────────────────────────────────────
-// PULSE MODE STATE
-// ───────────────────────────────────────────────────────────────────────────────
-static std::atomic<uint32_t> pulseOnMs{500};
-static std::atomic<uint32_t> pulseOffMs{500};
-static uint32_t pulseStateStartMs = 0;
-static bool pulseDecelerating = false;
-static std::atomic<bool> pulseIsOn{false};
+static PulseTimeline timeline;
+static std::atomic<uint32_t> pulseOnMs{500}, pulseOffMs{500}, completedCycles{0};
 static std::atomic<uint16_t> pulseCycleLimit{0};
-static std::atomic<uint16_t> pulseCycleCount{0};
+static std::atomic<PulsePhase> publishedPhase{PulsePhase::Complete};
 
-// ───────────────────────────────────────────────────────────────────────────────
-// PULSE MODE ENTRY
-// ───────────────────────────────────────────────────────────────────────────────
+static void publish_pulse() {
+  completedCycles.store(timeline.completed());
+  publishedPhase.store(timeline.phase());
+}
+static bool start_motor() {
+  motor_set_target_milli_hz(motor_milli_hz_for_rpm_calibrated(speed_get_target_rpm()));
+  return speed_get_direction() == DIR_CW ? motor_run_cw() : motor_run_ccw();
+}
 void pulse_start(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
   if (control_get_state() != STATE_IDLE) return;
-
   pulseOnMs = constrain(on_ms, PULSE_MS_MIN, PULSE_MS_MAX);
   pulseOffMs = constrain(off_ms, PULSE_MS_MIN, PULSE_MS_MAX);
   pulseCycleLimit = cycles;
-  pulseCycleCount = 0;
-  pulseIsOn = true;
-  pulseDecelerating = false;
-  pulseStateStartMs = millis();
-
-  LOG_I("Pulse mode: ON=%lu OFF=%lu cycles=%u", pulseOnMs.load(), pulseOffMs.load(), cycles);
-
-  motor_set_target_milli_hz(motor_milli_hz_for_rpm_calibrated(speed_get_target_rpm()));
-
-  bool started = (speed_get_direction() == DIR_CW) ? motor_run_cw() : motor_run_ccw();
-  if (!started) {
-    pulseIsOn = false;
-    LOG_W("Pulse mode: start blocked");
-    return;
-  }
-
-  if (!control_transition_to(STATE_PULSE)) {
-    pulseIsOn = false;
+  timeline.start(millis(), pulseOnMs.load(), pulseOffMs.load(), cycles);
+  if (!start_motor() || !control_transition_to(STATE_PULSE)) {
+    timeline.cancel();
     motor_halt();
   }
+  publish_pulse();
 }
-
-// ───────────────────────────────────────────────────────────────────────────────
-// PULSE MODE UPDATE (called from controlTask)
-// ───────────────────────────────────────────────────────────────────────────────
 void pulse_update() {
   if (control_get_state() != STATE_PULSE) return;
-
-  if (pulseDecelerating) {
-    if (motor_is_running()) return;
-    pulseDecelerating = false;
-    pulseStateStartMs = millis();
-  }
-  uint32_t elapsed = millis() - pulseStateStartMs;
-  uint32_t currentDuration = pulseIsOn ? pulseOnMs.load() : pulseOffMs.load();
-
-  if (elapsed >= currentDuration) {
-    // Toggle state
-    pulseIsOn = !pulseIsOn;
-    pulseStateStartMs = millis();
-
-    if (pulseIsOn) {
-      pulseCycleCount++;
-      if (pulseCycleLimit > 0 && pulseCycleCount >= pulseCycleLimit) {
-        LOG_I("Pulse: cycle limit reached (%u/%u)", pulseCycleCount.load(), pulseCycleLimit.load());
+  const bool moving = motor_is_running();
+  if (control_get_state() != STATE_PULSE) return; // Query may latch a driver fault.
+  const PulseAction action = timeline.update(millis(), moving);
+  switch (action) {
+    case PulseAction::Stop: motor_stop(); break;
+    case PulseAction::Start:
+      if (!start_motor()) {
+        timeline.cancel();
         control_transition_to(STATE_STOPPING);
-        return;
       }
-      motor_set_target_milli_hz(motor_milli_hz_for_rpm_calibrated(speed_get_target_rpm()));
-      bool started = (speed_get_direction() == DIR_CW) ? motor_run_cw() : motor_run_ccw();
-      if (!started) {
-        LOG_W("Pulse: restart blocked");
-        control_transition_to(STATE_STOPPING);
-        return;
-      }
-      LOG_D("Pulse: ON (%u/%u)", pulseCycleCount.load(), pulseCycleLimit.load());
-    } else {
-      motor_stop();
-      pulseDecelerating = true;
-      LOG_D("Pulse: OFF");
-    }
+      break;
+    case PulseAction::Complete: control_transition_to(STATE_STOPPING); break;
+    default: break;
   }
+  publish_pulse();
 }
-
-// ───────────────────────────────────────────────────────────────────────────────
-// PULSE MODE STOP
-// ───────────────────────────────────────────────────────────────────────────────
 void pulse_stop() {
-  if (control_get_state() != STATE_PULSE) return;
-
-  LOG_I("Pulse mode: stop");
-  control_transition_to(STATE_STOPPING);
+  timeline.cancel();
+  publish_pulse();
+  if (control_get_state() == STATE_PULSE) control_transition_to(STATE_STOPPING);
 }
-
-// ───────────────────────────────────────────────────────────────────────────────
-// PULSE PARAMETER GETTERS
-// ───────────────────────────────────────────────────────────────────────────────
-uint32_t pulse_get_on_ms() { return pulseOnMs; }
-uint32_t pulse_get_off_ms() { return pulseOffMs; }
-bool pulse_is_on_phase() { return pulseIsOn; }
-uint16_t pulse_get_cycle_count() { return pulseCycleCount; }
-uint16_t pulse_get_cycle_limit() { return pulseCycleLimit; }
+uint32_t pulse_get_on_ms() { return pulseOnMs.load(); }
+uint32_t pulse_get_off_ms() { return pulseOffMs.load(); }
+bool pulse_is_on_phase() { return publishedPhase.load() == PulsePhase::On; }
+uint32_t pulse_get_cycle_count() { return completedCycles.load(); }
+uint16_t pulse_get_cycle_limit() { return pulseCycleLimit.load(); }

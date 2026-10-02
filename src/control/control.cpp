@@ -53,6 +53,18 @@ static std::atomic<ConfigApplyStatus> configStatus{CONFIG_NONE};
 ConfigApplyStatus control_config_status() { return configStatus.load(); }
 static std::atomic<bool> resetStepPending{false};
 static std::atomic<uint32_t> jogRenewedMs{0};
+static std::atomic<uint32_t> stopRequestedAt{0}, stoppingAt{0}, stoppingBudget{0};
+void control_check_stop_deadline(uint32_t now) {
+  const uint32_t requested = stopRequestedAt.load();
+  const uint32_t stopping = stoppingAt.load();
+  if ((requested && now - (requested - 1u) >= 50u) ||
+      (stopping && control_get_state() == STATE_STOPPING &&
+       now - (stopping - 1u) >= stoppingBudget.load())) {
+    safety_report_motor_fault(FAULT_MOTOR_TIMEOUT);
+    stopRequestedAt.store(0);
+    stoppingAt.store(0);
+  }
+}
 
 bool control_motion_blocked() { return motionGate.blocked(); }
 void control_renew_jog() { jogRenewedMs.store(millis()); }
@@ -174,12 +186,15 @@ bool control_transition_to(SystemState newState) {
 
   switch (newState) {
     case STATE_IDLE:
+      stoppingAt.store(0);
       speed_clear_program_direction_override();
       motor_restore_configured_acceleration();
       break;
     case STATE_RUNNING:
       break;
     case STATE_STOPPING:
+      stoppingBudget.store(motor_stop_timeout_ms());
+      stoppingAt.store(millis() | 1u); // Encodes an even millisecond + 1; never zero across wrap.
       motor_stop();
       break;
     case STATE_ESTOP:
@@ -235,6 +250,8 @@ bool control_start_continuous(bool soft_start, uint32_t auto_stop_ms) {
 }
 
 bool control_stop() {
+  uint32_t none = 0;
+  stopRequestedAt.compare_exchange_strong(none, millis() | 1u);
   motionGate.stop();
   return true;
 }
@@ -316,6 +333,7 @@ static void process_pending_requests() {
   SystemState cur = currentState.load(std::memory_order_acquire);
 
   if (cur == STATE_ESTOP) {
+    stopRequestedAt.store(0);
     clear_pending_motion_requests();
     return;
   }
@@ -325,6 +343,7 @@ static void process_pending_requests() {
   if (motionGate.takeStop()) {
     clear_pending_motion_requests();
     if (is_active_motion_state(cur)) stop_active_mode(cur);
+    stopRequestedAt.store(0);
     return;
   }
   if (cur == STATE_JOG && millis() - jogRenewedMs.load() > 150u) {
@@ -349,6 +368,7 @@ static void process_pending_requests() {
     g_dir_switch_cache.store(cmd.settings.dir_switch_enabled);
     speed_sync_rpm_limits_from_settings();
     motor_apply_settings();
+    if (safety_inhibit_motion()) { configStatus.store(CONFIG_CANCELLED); return; }
     storage_save_settings();
     configStatus.store(CONFIG_APPLIED);
     return;
@@ -401,7 +421,7 @@ void controlTask(void* pvParameters) {
     if (curState == STATE_ESTOP) {
       // Potentially blocking library cleanup never runs in safetyTask.
       if (!faultCleaned) {
-        motor_halt();
+        if (!motor_halt()) { vTaskDelay(pdMS_TO_TICKS(1)); continue; }
         motor_restore_configured_acceleration();
         speed_clear_program_direction_override();
         event_log_addf("FAULT %s", safety_fault_reason_name(safety_get_fault_reason()));

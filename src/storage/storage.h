@@ -105,6 +105,9 @@ extern SemaphoreHandle_t g_nvs_mutex;
 // Core functions
 enum StorageStatus { STORAGE_SAVED, STORAGE_PENDING, STORAGE_ERROR };
 StorageStatus storage_status();
+uint32_t storage_request_settings_save();
+StorageStatus storage_settings_save_status(uint32_t ticket);
+bool storage_get_nvs_stats(size_t* used_entries, size_t* total_entries);
 void storage_init();
 bool storage_load_presets();
 bool storage_save_presets();

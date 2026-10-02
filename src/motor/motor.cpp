@@ -9,6 +9,7 @@
 #include "../app_state.h"  // fatal_halt
 #include "../safety/safety.h"
 #include "../control/control.h"
+#include "../control/motion_policy.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include <FastAccelStepper.h>
@@ -29,6 +30,20 @@ void motor_record_direction(bool cw) { commandedCw.store(cw); }
 // FreeRTOS mutex keeps tick interrupts enabled (prevents IWDT on cross-core contention)
 // ───────────────────────────────────────────────────────────────────────────────
 SemaphoreHandle_t g_stepperMutex = nullptr;
+static std::atomic<bool> cleanupPending{false};
+static std::atomic<uint32_t> configuredAcceleration{7500u};
+bool motor_cleanup_pending() { return cleanupPending.load(); }
+void motor_command_failed() {
+  cleanupPending.store(true);
+  safety_report_motor_fault(FAULT_MOTOR_COMMAND);
+}
+bool motor_lock() {
+  if (g_stepperMutex && xSemaphoreTake(g_stepperMutex, pdMS_TO_TICKS(2)) == pdTRUE) return true;
+  cleanupPending.store(true);
+  safety_report_motor_fault(FAULT_MOTOR_TIMEOUT);
+  return false;
+}
+
 
 // Published by motor_refresh_hz_cache() (motorTask). UI reads Hz/RPM without taking g_stepperMutex.
 static std::atomic<uint32_t> g_stepperMilliHzAbsCached{0};
@@ -119,7 +134,7 @@ void motor_init() {
   xSemaphoreGive(g_settings_mutex);
 
   // Same lock order as motor_apply_settings(): g_settings first, then stepper mutex.
-  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
+  if (!motor_lock()) return;
   // Configure stepper (DIR delay depends on stepper_driver snapshot)
   motor_apply_stepper_dir_timing(motor_dir_delay_us_from_driver(driverKind));
   // NOTE: Do NOT call setEnablePin() — ENA is controlled manually via digitalWrite()
@@ -127,13 +142,14 @@ void motor_init() {
   // FastAccelStepper's setEnablePin conflicts with manual control.
 
   // Set acceleration and start speed
-  stepper->setAcceleration(accelSteps);
+  if (stepper->setAcceleration(accelSteps) != 0) motor_command_failed();
+  configuredAcceleration.store(static_cast<uint32_t>(accelSteps));
   stepper->setLinearAcceleration(200);
-  stepper->setSpeedInHz(START_SPEED);
+  if (stepper->setSpeedInHz(START_SPEED) != 0) motor_command_failed();
   xSemaphoreGive(g_stepperMutex);
 
   LOG_I("FastAccelStepper init OK");
-  LOG_I("  Steps/rev: %u", microstep_get_steps_per_rev());
+  LOG_I("  Steps/rev: %u", static_cast<unsigned>(microstep_get_steps_per_rev()));
   LOG_I("  Accel: %d steps/s2", accelSteps);
   LOG_I("  Start speed: %d Hz", START_SPEED);
 }
@@ -143,7 +159,7 @@ void motor_init() {
 // ───────────────────────────────────────────────────────────────────────────────
 bool motor_run_cw() {
   if (safety_inhibit_motion() || control_motion_blocked()) return false;
-  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
+  if (!motor_lock()) return false;
   if (stepper == nullptr) {
     xSemaphoreGive(g_stepperMutex);
     return false;
@@ -161,7 +177,11 @@ bool motor_run_cw() {
     return false;
   }
   motor_record_direction(true);
-  stepper->runForward();
+  if (stepper->runForward() != MOVE_OK) {
+    motor_command_failed();
+    xSemaphoreGive(g_stepperMutex);
+    return false;
+  }
   xSemaphoreGive(g_stepperMutex);
   LOG_I("Motor: CW");
   return true;
@@ -169,7 +189,7 @@ bool motor_run_cw() {
 
 bool motor_run_ccw() {
   if (safety_inhibit_motion() || control_motion_blocked()) return false;
-  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
+  if (!motor_lock()) return false;
   if (stepper == nullptr) {
     xSemaphoreGive(g_stepperMutex);
     return false;
@@ -185,14 +205,18 @@ bool motor_run_ccw() {
     return false;
   }
   motor_record_direction(false);
-  stepper->runBackward();
+  if (stepper->runBackward() != MOVE_OK) {
+    motor_command_failed();
+    xSemaphoreGive(g_stepperMutex);
+    return false;
+  }
   xSemaphoreGive(g_stepperMutex);
   LOG_I("Motor: CCW");
   return true;
 }
 
 void motor_stop() {
-  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
+  if (!motor_lock()) return;
   if (stepper == nullptr) {
     xSemaphoreGive(g_stepperMutex);
     return;
@@ -202,36 +226,22 @@ void motor_stop() {
   LOG_I("Motor: stopping (smooth decel)");
 }
 
-void motor_halt() {
-  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
-  if (stepper == nullptr) {
-    xSemaphoreGive(g_stepperMutex);
-    return;
-  }
-  stepper->forceStop();
-  digitalWrite(PIN_ENA, HIGH);
+bool motor_halt() {
+  digitalWrite(PIN_ENA, HIGH); // Inhibit before waiting on library cleanup.
+  if (!motor_lock()) return false;
+  if (stepper) stepper->forceStop();
+  cleanupPending.store(false);
   xSemaphoreGive(g_stepperMutex);
-  LOG_I("Motor: HALT");
+  return true;
 }
 
-void motor_disable() {
-  // Safe to call before motor_init(): ENA is the only side effect and is
-  // already driven HIGH at the very top of setup(). Guard against null mutex.
-  if (g_stepperMutex == nullptr) {
-    digitalWrite(PIN_ENA, HIGH);
-    return;
-  }
-  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
-  digitalWrite(PIN_ENA, HIGH);
-  xSemaphoreGive(g_stepperMutex);
-  LOG_I("Motor: disabled");
-}
+void motor_disable() { digitalWrite(PIN_ENA, HIGH); }
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STATUS QUERIES
 // ───────────────────────────────────────────────────────────────────────────────
 bool motor_is_running() {
-  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
+  if (!motor_lock()) return true; // Unknown must never be treated as stopped.
   bool running = (stepper != nullptr) && stepper->isRunning();
   xSemaphoreGive(g_stepperMutex);
   return running;
@@ -243,7 +253,7 @@ float motor_get_step_frequency_hz() {
 
 void motor_refresh_hz_cache(void) {
   uint32_t absMilli = 0;
-  if (g_stepperMutex != nullptr && xSemaphoreTake(g_stepperMutex, portMAX_DELAY) == pdTRUE) {
+  if (g_stepperMutex != nullptr && xSemaphoreTake(g_stepperMutex, 0) == pdTRUE) {
     if (stepper != nullptr) {
       int32_t mhZ = stepper->getCurrentSpeedInMilliHz();
       int64_t a = (int64_t)mhZ;
@@ -256,8 +266,8 @@ void motor_refresh_hz_cache(void) {
       absMilli = (uint32_t)a;
     }
     xSemaphoreGive(g_stepperMutex);
+    g_stepperMilliHzAbsCached.store(absMilli, std::memory_order_release);
   }
-  g_stepperMilliHzAbsCached.store(absMilli, std::memory_order_release);
 }
 
 uint32_t motor_get_current_hz() {
@@ -283,19 +293,20 @@ uint32_t motor_milli_hz_for_rpm_calibrated(float rpm_workpiece_command) {
   return mhz;
 }
 
-void motor_apply_speed_for_rpm_locked(float rpm_workpiece_command) {
-  if (stepper == nullptr) return;
+bool motor_apply_speed_for_rpm_locked(float rpm_workpiece_command) {
+  if (stepper == nullptr) return false;
   uint32_t mhz = motor_milli_hz_for_rpm_calibrated(rpm_workpiece_command);
-  stepper->setSpeedInMilliHz(mhz);
+  if (stepper->setSpeedInMilliHz(mhz) != 0) { motor_command_failed(); return false; }
   stepper->applySpeedAcceleration();
+  return true;
 }
 
 void motor_set_target_milli_hz(uint32_t mhz) {
   if (g_stepperMutex == nullptr) return;
-  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
+  if (!motor_lock()) return;
   if (stepper != nullptr) {
-    stepper->setSpeedInMilliHz(mhz);
-    stepper->applySpeedAcceleration();
+    if (stepper->setSpeedInMilliHz(mhz) != 0) motor_command_failed();
+    else stepper->applySpeedAcceleration();
   }
   xSemaphoreGive(g_stepperMutex);
 }
@@ -309,9 +320,10 @@ void motor_apply_settings() {
   xSemaphoreGive(g_settings_mutex);
   const uint16_t dirDelayUs = motor_dir_delay_us_from_driver(driverKind);
 
-  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
+  if (!motor_lock()) return;
   if (stepper != nullptr) {
-    stepper->setAcceleration(accelSteps);
+    if (stepper->setAcceleration(accelSteps) != 0) motor_command_failed();
+    configuredAcceleration.store(static_cast<uint32_t>(accelSteps));
     stepper->setLinearAcceleration(200);
     motor_apply_stepper_dir_timing(dirDelayUs);
   }
@@ -332,9 +344,10 @@ void motor_apply_soft_start_acceleration() {
   }
 
   if (g_stepperMutex == nullptr) return;
-  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
+  if (!motor_lock()) return;
   if (stepper != nullptr) {
-    stepper->setAcceleration(softAccel);
+    if (stepper->setAcceleration(softAccel) != 0) motor_command_failed();
+    configuredAcceleration.store(softAccel);
     s_temp_accel_applied = true;
   }
   xSemaphoreGive(g_stepperMutex);
@@ -353,9 +366,10 @@ void motor_restore_configured_acceleration() {
     s_temp_accel_applied = false;
     return;
   }
-  xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
+  if (!motor_lock()) return;
   if (stepper != nullptr) {
-    stepper->setAcceleration(configured);
+    if (stepper->setAcceleration(configured) != 0) motor_command_failed();
+    configuredAcceleration.store(configured);
   }
   s_temp_accel_applied = false;
   xSemaphoreGive(g_stepperMutex);
@@ -363,3 +377,7 @@ void motor_restore_configured_acceleration() {
 }
 
 FastAccelStepper* motor_get_stepper() { return stepper; }
+
+uint32_t motor_stop_timeout_ms() {
+  return motion_stop_timeout_ms(g_stepperMilliHzAbsCached.load(), configuredAcceleration.load());
+}

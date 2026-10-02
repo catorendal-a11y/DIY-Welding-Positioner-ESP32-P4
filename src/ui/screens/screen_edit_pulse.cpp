@@ -83,10 +83,7 @@ static void update_computed_info() {
 // ───────────────────────────────────────────────────────────────────────────────
 // EVENT HANDLERS
 // ───────────────────────────────────────────────────────────────────────────────
-static void back_event_cb(lv_event_t* e) {
-  screen_program_edit_update_ui();
-  screens_show(SCREEN_PROGRAM_EDIT);
-}
+
 
 static void on_time_adj_cb(lv_event_t* e) {
   if (!onTimeLabel) return;
@@ -123,7 +120,7 @@ static void rpm_adj_cb(lv_event_t* e) {
     editRpm -= 0.1f;
   if (editRpm < MIN_RPM) editRpm = MIN_RPM;
   if (editRpm > speed_get_rpm_max()) editRpm = speed_get_rpm_max();
-  lv_label_set_text_fmt(rpmLabel, "%.1f", editRpm);
+  ui_set_rpm(rpmLabel, editRpm);
   update_computed_info();
 }
 
@@ -160,17 +157,7 @@ static void save_event_cb(lv_event_t* e) {
 // ───────────────────────────────────────────────────────────────────────────────
 // Helper: create a separator line
 // ───────────────────────────────────────────────────────────────────────────────
-static lv_obj_t* create_separator(lv_obj_t* parent, int16_t y) {
-  lv_obj_t* sep = lv_obj_create(parent);
-  lv_obj_set_size(sep, SCREEN_W, 1);
-  lv_obj_set_pos(sep, 0, y);
-  lv_obj_set_style_bg_color(sep, COL_SEPARATOR, 0);
-  lv_obj_set_style_border_width(sep, 0, 0);
-  lv_obj_set_style_pad_all(sep, 0, 0);
-  lv_obj_set_style_radius(sep, 0, 0);
-  lv_obj_remove_flag(sep, LV_OBJ_FLAG_SCROLLABLE);
-  return sep;
-}
+
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN CREATE — two-column layout per new_ui.svg:
@@ -194,7 +181,7 @@ void screen_edit_pulse_create() {
   cyclesLabel = ui_create_adjust_card(screen, 408, 226, 368, "CYCLES / 0 = continuous", cycles_adj_cb);
   lv_label_set_text_fmt(onTimeLabel, "%.1fs", editOnMs / 1000.0f);
   lv_label_set_text_fmt(offTimeLabel, "%.1fs", editOffMs / 1000.0f);
-  lv_label_set_text_fmt(rpmLabel, "%.3f", editRpm);
+  ui_set_rpm(rpmLabel, editRpm);
   if (editCycles)
     lv_label_set_text_fmt(cyclesLabel, "%d", editCycles);
   else
@@ -237,7 +224,7 @@ void screen_edit_pulse_update() {
   // Update labels
   if (onTimeLabel) lv_label_set_text_fmt(onTimeLabel, "%.1fs", editOnMs / 1000.0f);
   if (offTimeLabel) lv_label_set_text_fmt(offTimeLabel, "%.1fs", editOffMs / 1000.0f);
-  if (rpmLabel) lv_label_set_text_fmt(rpmLabel, "%.1f", editRpm);
+  if (rpmLabel) ui_set_rpm(rpmLabel, editRpm);
   if (cyclesLabel) {
     if (editCycles == 0)
       lv_label_set_text(cyclesLabel, "INF");

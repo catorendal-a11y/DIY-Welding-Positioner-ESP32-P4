@@ -6,18 +6,7 @@
 #include <hal/wdt_hal.h>
 #include "../app_state.h"  // g_estopPending, g_estopTriggerMs, g_uiResetPending
 
-typedef enum {
-  FAULT_NONE = 0,
-  FAULT_ESTOP_PRESSED,
-  FAULT_ESTOP_GLITCH,
-  FAULT_DRIVER_ALARM,
-  FAULT_MOTOR_INIT_FAILED,
-  FAULT_DISPLAY_INIT_FAILED,
-  FAULT_LVGL_INIT_FAILED,
-  FAULT_STORAGE_CORRUPT,
-  FAULT_PEDAL_INPUT,
-  FAULT_WATCHDOG_RESET
-} FaultReason;
+#include "fault_reason.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SAFETY FUNCTIONS
@@ -25,6 +14,7 @@ typedef enum {
 void safety_task_ready(uint32_t bit);
 void safety_register_watchdog();
 void safety_report_input_fault();
+void safety_report_motor_fault(FaultReason reason);
 void safety_init();           // Initialize safety system
 void safety_cache_stepper();  // Cache stepper pointer for ISR (call after motor_init)
 void safety_attach_estop();   // Attach ESTOP interrupt (call after motor_init)

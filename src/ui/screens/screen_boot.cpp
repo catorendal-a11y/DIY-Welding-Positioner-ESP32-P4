@@ -24,42 +24,6 @@ static lv_obj_t* enaValueLabel = nullptr;
 static lv_obj_t* motorValueLabel = nullptr;
 static int currentProgress = 0;
 
-static const char* postNames[] = {"ESP32-P4 core init",  "Display + LVGL", "Touch + storage",
-                                  "DM542T driver check", "Safety inputs",  "Pedal + speed input",
-                                  "Ready handoff"};
-
-static const char* postDetails[] = {"core0/core1", "800x480",  "config loaded", "ENA high",
-                                    "ESTOP/ALM",   "ADC/GPIO", "main screen"};
-
-static lv_obj_t* make_box(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h,
-                          lv_color_t bg, lv_color_t border, lv_coord_t radius, lv_coord_t borderWidth) {
-  lv_obj_t* obj = lv_obj_create(parent);
-  lv_obj_set_size(obj, w, h);
-  lv_obj_set_pos(obj, x, y);
-  lv_obj_set_style_bg_color(obj, bg, 0);
-  lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, 0);
-  lv_obj_set_style_border_color(obj, border, 0);
-  lv_obj_set_style_border_width(obj, borderWidth, 0);
-  lv_obj_set_style_radius(obj, radius, 0);
-  lv_obj_set_style_pad_all(obj, 0, 0);
-  lv_obj_remove_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
-  return obj;
-}
-
-static lv_obj_t* make_label(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, const char* text,
-                            const lv_font_t* font, lv_color_t color, lv_coord_t width = 0) {
-  lv_obj_t* label = lv_label_create(parent);
-  lv_label_set_text(label, text);
-  lv_obj_set_style_text_font(label, font, 0);
-  lv_obj_set_style_text_color(label, color, 0);
-  lv_obj_set_pos(label, x, y);
-  if (width > 0) {
-    lv_obj_set_width(label, width);
-    lv_label_set_long_mode(label, LV_LABEL_LONG_MODE_CLIP);
-  }
-  return label;
-}
-
 static void set_label(lv_obj_t* label, const char* text, lv_color_t color) {
   if (!label) return;
   lv_label_set_text(label, text);

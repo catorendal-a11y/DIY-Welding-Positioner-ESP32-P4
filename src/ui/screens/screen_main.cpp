@@ -1,6 +1,7 @@
 // V5 operating panel. Values are calculated from pulses, not encoder feedback.
 #include "../screens.h"
 #include "../theme.h"
+#include "../value_format.h"
 #include "../../config.h"
 #include "../../motor/speed.h"
 #include "../../motor/motor.h"
@@ -104,8 +105,10 @@ void screen_main_update() {
   float rpm = st == STATE_ESTOP ? 0.0f : moving ? speed_get_actual_rpm() : speed_get_target_rpm();
   float diameter = speed_get_workpiece_diameter_mm();
   if (diameter <= 0) diameter = D_EMNE * 1000.0f;
-  lv_label_set_text_fmt(rpmLabel, rpm < 0.1f ? "%.3f" : "%.2f", (double)rpm);
-  lv_label_set_text(speedCaption, moving ? "01 / CALCULATED SPEED" : "01 / TARGET SPEED");
+  char rpmText[16];
+  ui_format_rpm(rpmText, sizeof(rpmText), rpm);
+  lv_label_set_text(rpmLabel, rpmText);
+  lv_label_set_text(speedCaption, moving ? "01 / ESTIMATED SPEED" : "01 / TARGET SPEED");
   lv_label_set_text_fmt(limitLabel, "MAX %.3f RPM", (double)speed_get_rpm_max());
   lv_bar_set_value(speedBar, (int)(1000.0f * rpm / speed_get_rpm_max()), LV_ANIM_OFF);
   lv_label_set_text_fmt(surfaceLabel, "%.0f mm/min", (double)(rpm * diameter * 3.14159265f));

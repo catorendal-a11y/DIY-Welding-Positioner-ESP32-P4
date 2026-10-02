@@ -14,7 +14,7 @@ void pulse_update();
 uint32_t pulse_get_on_ms();
 uint32_t pulse_get_off_ms();
 bool pulse_is_on_phase();
-uint16_t pulse_get_cycle_count();
+uint32_t pulse_get_cycle_count();
 uint16_t pulse_get_cycle_limit();
 
 void step_execute(float angle_deg);

@@ -21,6 +21,7 @@
 void simulator_init_state();
 void simulator_tick();
 void simulator_set_estop_input(bool active);
+bool simulator_set_scenario(const char* scenario);
 
 static void sim_pump(uint32_t ms) {
   uint32_t start = lv_tick_get();
@@ -441,6 +442,18 @@ static int run_self_test() {
   std::puts("SIM SELFTEST: settings/programs ok");
   if (!sim_test_confirm_and_overlay()) return 6;
   std::puts("SIM SELFTEST: confirm/overlay ok");
+  simulator_set_scenario("nvs-failure");
+  const uint32_t ticket = storage_request_settings_save();
+  sim_pump(600);
+  if (!sim_expect(storage_settings_save_status(ticket) == STORAGE_ERROR, "failed save reported success")) return 7;
+  simulator_set_scenario("none"); sim_pump(1500);
+  if (!sim_expect(storage_settings_save_status(ticket) == STORAGE_SAVED, "save retry did not commit")) return 8;
+  control_transition_to(STATE_IDLE);
+  simulator_set_scenario("rejected-motion");
+  if (!sim_expect(!control_start_continuous() && control_get_state() == STATE_ESTOP,
+                  "rejected motion did not latch fault")) return 9;
+  simulator_set_scenario("none"); control_transition_to(STATE_IDLE);
+  std::puts("SIM SELFTEST: fault scenarios/save generations ok");
   std::puts("SIM SELFTEST: PASS");
   return 0;
 }
@@ -545,9 +558,69 @@ static int run_screenshot_dump(const char* dir) {
   return 0;
 }
 
+static unsigned audit_labels(lv_obj_t* obj, const char* screen) {
+  if (!obj || lv_obj_has_flag(obj, LV_OBJ_FLAG_HIDDEN)) return 0;
+  unsigned failures = 0;
+  if (lv_obj_check_type(obj, &lv_label_class)) {
+    const char* text = lv_label_get_text(obj);
+    const auto mode = lv_label_get_long_mode(obj);
+    lv_point_t measured{};
+    const int32_t width = lv_obj_get_content_width(obj);
+    lv_text_get_size(&measured, text, lv_obj_get_style_text_font(obj, LV_PART_MAIN),
+                    lv_obj_get_style_text_letter_space(obj, LV_PART_MAIN), lv_obj_get_style_text_line_space(obj, LV_PART_MAIN),
+                    mode == LV_LABEL_LONG_MODE_WRAP ? width : LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+    // Explicit ellipsis/scrolling are intentional for operator-supplied text.
+    if (mode == LV_LABEL_LONG_MODE_CLIP && measured.x > width &&
+        lv_obj_get_style_transform_scale_x(obj, LV_PART_MAIN) == 256 &&
+        std::strstr(text, " / ") == nullptr && std::strstr(text, "Dropped ") != text) {
+      std::printf("LAYOUT CLIP %s: width=%ld text=%ld '%s'\n", screen,
+                  static_cast<long>(width), static_cast<long>(measured.x), text);
+      ++failures;
+    }
+    if (measured.y > lv_obj_get_content_height(obj)) {
+      std::printf("LAYOUT HEIGHT %s: '%s'\n", screen, text);
+      ++failures;
+    }
+    lv_obj_t* parent = lv_obj_get_parent(obj);
+    if (parent && !lv_obj_has_flag(parent, LV_OBJ_FLAG_SCROLLABLE)) {
+      lv_area_t bounds{}, parentBounds{};
+      lv_obj_get_coords(obj, &bounds); lv_obj_get_coords(parent, &parentBounds);
+      if (bounds.x1 < parentBounds.x1 || bounds.x2 > parentBounds.x2 ||
+          bounds.y1 < parentBounds.y1 || bounds.y2 > parentBounds.y2) {
+        std::printf("LAYOUT BOUNDS %s: '%s'\n", screen, text);
+        ++failures;
+      }
+    }
+  }
+  for (uint32_t i = 0; i < lv_obj_get_child_count(obj); ++i)
+    failures += audit_labels(lv_obj_get_child(obj, i), screen);
+  return failures;
+}
+static int run_layout_audit() {
+  unsigned failures = 0;
+  speed_slider_set(MIN_RPM);
+  for (int id = SCREEN_MAIN; id < SCREEN_COUNT; ++id) {
+    screens_show(static_cast<ScreenId>(id)); sim_pump(250);
+    lv_obj_update_layout(screenRoots[id]);
+    failures += audit_labels(screenRoots[id], sim_screen_name(static_cast<ScreenId>(id)));
+  }
+  for (const char* scenario : {"estop", "driver-alarm", "stale-adc", "i2c-failure"}) {
+    simulator_set_scenario(scenario); estop_overlay_show(); sim_pump(100);
+    failures += audit_labels(lv_layer_top(), scenario);
+    estop_overlay_hide(); simulator_set_scenario("none"); control_transition_to(STATE_IDLE);
+  }
+  std::printf("LAYOUT AUDIT: %u failures\n", failures);
+  return failures ? 1 : 0;
+}
+#include "build_identity.h"
 int main(int argc, char** argv) {
+  if (argc > 1 && std::strcmp(argv[1], "--build-info") == 0) {
+    std::puts(simulator_build_identity);
+    return 0;
+  }
   bool selfTest = argc > 1 && std::strcmp(argv[1], "--self-test") == 0;
   bool screenshots = argc > 2 && std::strcmp(argv[1], "--screenshots") == 0;
+  bool auditLayout = argc > 1 && std::strcmp(argv[1], "--audit-layout") == 0;
 
   simulator_init_state();
 
@@ -565,6 +638,13 @@ int main(int argc, char** argv) {
   theme_init();
   screens_init();
   screens_show(SCREEN_MAIN);
+  if (argc > 2 && std::strcmp(argv[1], "--scenario") == 0) {
+    if (!simulator_set_scenario(argv[2])) {
+      std::fprintf(stderr, "Unknown scenario: %s\n", argv[2]); return 2;
+    }
+    if (control_get_state() == STATE_ESTOP) estop_overlay_show();
+  }
+  if (auditLayout) return run_layout_audit();
 
   if (selfTest) {
     return run_self_test();

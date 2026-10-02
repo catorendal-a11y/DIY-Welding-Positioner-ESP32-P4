@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include "../screens.h"
 #include "../theme.h"
+#include "../value_format.h"
+#include <cstring>
 #include "../../control/control.h"
 #include "../../motor/speed.h"
 #include "../../storage/storage.h"
@@ -21,7 +23,7 @@ static uint32_t countdownStartMs = 0;
 static int lastDisplayedSec = -1;
 static int lastIdleCountdownSec = -1;
 static int lastArcEndAngle = -1;
-static float lastRpmShown = -1.0f;
+static char lastRpmShown[16] = "";
 static uint32_t pulseStartMs = 0;
 static std::atomic<bool> backPending{false};
 
@@ -46,9 +48,11 @@ static void set_countdown_arc_angle(int endAngle, lv_color_t color) {
 static void update_rpm_label_if_changed() {
   if (!rpmValLbl) return;
   const float rpm = speed_get_target_rpm();
-  if (fabsf(rpm - lastRpmShown) <= 0.049f) return;
-  lastRpmShown = rpm;
-  lv_label_set_text_fmt(rpmValLbl, "%.1f", rpm);
+  char text[16];
+  ui_format_rpm(text, sizeof(text), rpm);
+  if (strcmp(text, lastRpmShown) == 0) return;
+  snprintf(lastRpmShown, sizeof(lastRpmShown), "%s", text);
+  lv_label_set_text(rpmValLbl, text);
 }
 
 static void refresh_start_after_label() {
@@ -152,7 +156,7 @@ void screen_timer_create() {
   lastDisplayedSec = -1;
   lastIdleCountdownSec = -1;
   lastArcEndAngle = -1;
-  lastRpmShown = -1.0f;
+  lastRpmShown[0] = '\0';
 
   ui_create_header(screen, "COUNTDOWN", "DELAY START", nullptr);
 
@@ -217,8 +221,7 @@ void screen_timer_create() {
 
   lv_obj_t* rpmCard = timer_make_info_card(screen, 194, "TARGET RPM", false);
   rpmValLbl = lv_label_create(rpmCard);
-  lv_label_set_text_fmt(rpmValLbl, "%.1f", speed_get_target_rpm());
-  lastRpmShown = speed_get_target_rpm();
+  update_rpm_label_if_changed();
   lv_obj_set_style_text_font(rpmValLbl, FONT_XXL, 0);
   lv_obj_set_style_text_color(rpmValLbl, COL_TEXT, 0);
   lv_obj_set_style_text_align(rpmValLbl, LV_TEXT_ALIGN_RIGHT, 0);
@@ -254,7 +257,7 @@ void screen_timer_invalidate_widgets() {
   lastDisplayedSec = -1;
   lastIdleCountdownSec = -1;
   lastArcEndAngle = -1;
-  lastRpmShown = -1.0f;
+  lastRpmShown[0] = '\0';
 }
 
 void screen_timer_update() {
@@ -323,7 +326,7 @@ void screen_timer_update() {
     int zoom = (pulseElapsed < 150) ? 384 : 256;
 
     if (bigNumberLabel) {
-      char buf[4];
+      char buf[12];
       snprintf(buf, sizeof(buf), "%d", remaining);
       lv_label_set_text(bigNumberLabel, buf);
       lv_obj_set_style_text_color(bigNumberLabel, col, 0);
@@ -348,7 +351,7 @@ void screen_timer_update() {
       lastIdleCountdownSec = countdownSec;
 
       if (bigNumberLabel) {
-        char buf[4];
+        char buf[12];
         snprintf(buf, sizeof(buf), "%d", countdownSec);
         lv_label_set_text(bigNumberLabel, buf);
         lv_obj_set_style_text_color(bigNumberLabel, COL_GREEN, 0);

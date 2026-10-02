@@ -20,6 +20,13 @@ void safety_task_ready(uint32_t bit) { readyTasks.fetch_or(bit); }
 static FastAccelStepper* estopStepper = nullptr;
 static std::atomic<bool> estopResetPending{false};
 static std::atomic<uint8_t> s_faultReason{FAULT_NONE};
+void safety_report_motor_fault(FaultReason reason) {
+  digitalWrite(PIN_ENA, HIGH);
+  estopLocked.store(true);
+  s_faultReason.store(static_cast<uint8_t>(reason));
+  g_wakePending.store(true);
+  control_transition_to(STATE_ESTOP);
+}
 void safety_report_input_fault() {
   digitalWrite(PIN_ENA, HIGH);
   estopLocked.store(true);
@@ -38,7 +45,7 @@ static void safety_set_fault_reason(FaultReason reason) {
 
 static void safety_force_stop_stepper() {
   if (estopStepper == nullptr || g_stepperMutex == nullptr) return;
-  if (xSemaphoreTake(g_stepperMutex, pdMS_TO_TICKS(10)) != pdTRUE) {
+  if (xSemaphoreTake(g_stepperMutex, 0) != pdTRUE) {
     // Motor cleanup is retried by controlTask.
     return;
   }
@@ -47,7 +54,6 @@ static void safety_force_stop_stepper() {
 }
 
 #if DEBUG_BUILD
-static uint32_t g_estopISRCount = 0;
 static uint32_t g_estopConfirmed = 0;
 #endif
 
@@ -129,7 +135,7 @@ bool safety_inhibit_motion() {
 }
 
 bool safety_can_reset_from_overlay() {
-  return readyTasks.load() == 15u && speed_pedal_input_healthy() && (digitalRead(PIN_ESTOP) == HIGH) &&
+  return !motor_cleanup_pending() && readyTasks.load() == 15u && speed_pedal_input_healthy() && (digitalRead(PIN_ESTOP) == HIGH) &&
          !s_driverAlarmLatched.load(std::memory_order_acquire);
 }
 
@@ -137,64 +143,10 @@ bool safety_is_estop_locked() { return estopLocked.load(std::memory_order_acquir
 
 FaultReason safety_get_fault_reason() {
   uint8_t reason = s_faultReason.load(std::memory_order_acquire);
-  if (reason > FAULT_WATCHDOG_RESET) {
+  if (reason > FAULT_MOTOR_TIMEOUT) {
     return FAULT_NONE;
   }
   return (FaultReason)reason;
-}
-
-const char* safety_fault_reason_name(FaultReason reason) {
-  switch (reason) {
-    case FAULT_PEDAL_INPUT:
-      return "PEDAL INPUT";
-    case FAULT_NONE:
-      return "NONE";
-    case FAULT_ESTOP_PRESSED:
-      return "E-STOP";
-    case FAULT_ESTOP_GLITCH:
-      return "E-STOP GLITCH";
-    case FAULT_DRIVER_ALARM:
-      return "DRIVER ALM";
-    case FAULT_MOTOR_INIT_FAILED:
-      return "MOTOR INIT";
-    case FAULT_DISPLAY_INIT_FAILED:
-      return "DISPLAY INIT";
-    case FAULT_LVGL_INIT_FAILED:
-      return "LVGL INIT";
-    case FAULT_STORAGE_CORRUPT:
-      return "STORAGE";
-    case FAULT_WATCHDOG_RESET:
-      return "WATCHDOG";
-    default:
-      return "UNKNOWN";
-  }
-}
-
-const char* safety_fault_reason_message(FaultReason reason) {
-  switch (reason) {
-    case FAULT_PEDAL_INPUT:
-      return "Pedal measurement unavailable; release pedal and restore input";
-    case FAULT_NONE:
-      return "No latched fault";
-    case FAULT_ESTOP_PRESSED:
-      return "Physical E-STOP input is active";
-    case FAULT_ESTOP_GLITCH:
-      return "E-STOP input changed during debounce";
-    case FAULT_DRIVER_ALARM:
-      return "DM542T driver alarm input is active";
-    case FAULT_MOTOR_INIT_FAILED:
-      return "Motor driver init failed";
-    case FAULT_DISPLAY_INIT_FAILED:
-      return "Display init failed";
-    case FAULT_LVGL_INIT_FAILED:
-      return "LVGL init failed";
-    case FAULT_STORAGE_CORRUPT:
-      return "Storage data was invalid";
-    case FAULT_WATCHDOG_RESET:
-      return "Watchdog reset was detected";
-    default:
-      return "Unknown fault";
-  }
 }
 
 void safety_reset_estop() { estopResetPending.store(true, std::memory_order_release); }
@@ -271,6 +223,7 @@ void safetyTask(void* pvParameters) {
     safety_feed_watchdog();
 
     safety_poll_driver_alarm();
+    control_check_stop_deadline(millis());
 
     if (estopResetPending.exchange(false, std::memory_order_acq_rel)) {
       safety_handle_reset();
@@ -295,7 +248,7 @@ void safetyTask(void* pvParameters) {
 
 #if DEBUG_BUILD
             g_estopConfirmed++;
-            LOG_W("ESTOP #%u confirmed", g_estopConfirmed);
+            LOG_W("ESTOP #%u confirmed", static_cast<unsigned>(g_estopConfirmed));
 #else
             LOG_E("ESTOP TRIGGERED — State->ESTOP");
 #endif

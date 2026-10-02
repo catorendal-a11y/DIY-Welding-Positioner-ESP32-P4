@@ -23,7 +23,11 @@ void motor_init();       // Initialize FastAccelStepper
 bool motor_run_cw();   // Run clockwise; false if safety or hardware state blocks start
 bool motor_run_ccw();  // Run counter-clockwise; false if safety or hardware state blocks start
 void motor_stop();     // Smooth deceleration to stop
-void motor_halt();     // Immediate stop (emergency)
+bool motor_halt();     // ENA inhibit immediately; bounded library cleanup, retry if false
+bool motor_lock();     // Bounded stepper access; failure latches a motor timeout
+bool motor_cleanup_pending();
+void motor_command_failed(); // Caller may hold the stepper mutex
+uint32_t motor_stop_timeout_ms();
 void motor_disable();  // Disable motor (ENA HIGH) after stopped
 
 // Status queries
@@ -38,7 +42,7 @@ void motor_refresh_hz_cache(void);
 // Calibrated workpiece RPM -> step rate (MilliHz), floored to START_SPEED so all paths match.
 uint32_t motor_milli_hz_for_rpm_calibrated(float rpm_workpiece_command);
 // Caller must hold g_stepperMutex.
-void motor_apply_speed_for_rpm_locked(float rpm_workpiece_command);
+bool motor_apply_speed_for_rpm_locked(float rpm_workpiece_command);
 // Apply a new target step rate (milliHz) with acceleration. Handles stepper mutex internally.
 // Safe to call from Core 0 tasks (motorTask). No-op if stepper not yet initialized.
 void motor_set_target_milli_hz(uint32_t mhz);

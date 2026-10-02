@@ -82,10 +82,7 @@ static void update_rpm_display() {
 // ───────────────────────────────────────────────────────────────────────────────
 // EVENT HANDLERS
 // ───────────────────────────────────────────────────────────────────────────────
-static void back_event_cb(lv_event_t* e) {
-  screen_program_edit_update_ui();
-  screens_show(SCREEN_PROGRAM_EDIT);
-}
+
 
 static void rpm_adj_cb(lv_event_t* e) {
   intptr_t delta = (intptr_t)lv_event_get_user_data(e);

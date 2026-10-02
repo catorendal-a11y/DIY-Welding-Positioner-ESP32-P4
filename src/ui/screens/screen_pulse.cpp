@@ -144,7 +144,7 @@ static void rpm_adj_cb(lv_event_t* e) {
   float mx = speed_get_rpm_max();
   if (targetRpm < MIN_RPM) targetRpm = MIN_RPM;
   if (targetRpm > mx) targetRpm = mx;
-  lv_label_set_text_fmt(rpmLabel, "%.1f", targetRpm);
+  ui_set_rpm(rpmLabel, targetRpm);
   update_computed_info();
 }
 
@@ -174,7 +174,7 @@ void screen_pulse_create() {
   rpmLabel = ui_create_adjust_card(screen, 536, 94, 240, "TARGET SPEED / RPM", rpm_adj_cb);
   lv_label_set_text_fmt(onTimeLabel, "%.1fs", pulseOnMs / 1000.0f);
   lv_label_set_text_fmt(offTimeLabel, "%.1fs", pulseOffMs / 1000.0f);
-  lv_label_set_text_fmt(rpmLabel, "%.3f", targetRpm);
+  ui_set_rpm(rpmLabel, targetRpm);
   onBar = offBar = rpmBar = nullptr;
   ui_create_text(screen, 24, 238, 500, "CYCLE PREVIEW / continuous repeat", FONT_SUBTITLE, COL_TEXT_DIM);
   lv_obj_t* wave = ui_create_post_card(screen, 24, 270, 500, 88);

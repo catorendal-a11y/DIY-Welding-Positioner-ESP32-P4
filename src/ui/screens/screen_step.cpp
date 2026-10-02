@@ -68,7 +68,7 @@ static void step_clamp_target_rpm(void) {
 static void step_push_rpm_to_speed_and_label(void) {
   step_clamp_target_rpm();
   speed_slider_set(targetRpm);
-  if (rpmLabel) lv_label_set_text_fmt(rpmLabel, "%.2f", (double)targetRpm);
+  if (rpmLabel) ui_set_rpm(rpmLabel, targetRpm);
 }
 
 static void refresh_diameter_summary() {
@@ -451,7 +451,7 @@ void screen_step_create() {
   lv_obj_set_pos(rpmTitle, 24, 14);
 
   rpmLabel = lv_label_create(rpmCard);
-  lv_label_set_text_fmt(rpmLabel, "%.2f", (double)targetRpm);
+  ui_set_rpm(rpmLabel, targetRpm);
   lv_obj_set_style_text_font(rpmLabel, FONT_XXL, 0);
   lv_obj_set_style_text_color(rpmLabel, COL_TEXT, 0);
   lv_obj_set_pos(rpmLabel, 144, 18);

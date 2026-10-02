@@ -4,11 +4,18 @@
 #pragma once
 #include "lvgl.h"
 #include "../storage/storage.h"  // For Preset type
-#include "../app_state.h"        // motorConfigApplyPending and friends
+#include "../app_state.h"        // Cross-core shared state
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
 extern SemaphoreHandle_t g_lvgl_mutex;
+// V3 layout primitive: explicit bounds keep touch-panel text predictable.
+lv_obj_t* ui_create_text(lv_obj_t* parent, int x, int y, int width, const char* text, const lv_font_t* font,
+                         lv_color_t color);
+lv_obj_t* ui_create_adjust_card(lv_obj_t* parent, int x, int y, int width, const char* title,
+                                lv_event_cb_t callback, int step = 1);
+enum UiActionId { UI_ACTION_START = 1, UI_ACTION_STOP, UI_ACTION_DIRECTION };
+void ui_highlight_value_card(lv_obj_t* value);
 void lvgl_lock();
 void lvgl_unlock();
 
@@ -22,43 +29,43 @@ extern lv_obj_t* screenRoots[];
 // ───────────────────────────────────────────────────────────────────────────────
 typedef enum {
   SCREEN_NONE = 0,
-  SCREEN_MAIN,           // Main screen - RPM gauge, start/stop
-  SCREEN_MENU,           // Advanced menu
-  SCREEN_PULSE,          // Pulse mode setup
-  SCREEN_STEP,           // Step mode setup
-  SCREEN_JOG,            // Jog mode
-  SCREEN_TIMER,          // Timer mode setup
-  SCREEN_PROGRAMS,       // Programs list
-  SCREEN_PROGRAM_EDIT,   // Program edit
-  SCREEN_SETTINGS,       // Settings
-  SCREEN_CONFIRM,        // Confirmation dialog
-  SCREEN_BOOT,           // Boot screen
-  SCREEN_EDIT_PULSE,     // Pulse edit (preset quick edit)
-  SCREEN_EDIT_STEP,      // Step edit (preset quick edit)
-  SCREEN_EDIT_CONT,      // Continuous edit (preset quick edit)
-  SCREEN_SYSINFO,      // System info
-  SCREEN_CALIBRATION,   // Motor calibration
-  SCREEN_MOTOR_CONFIG,  // Motor configuration
-  SCREEN_DISPLAY,        // Display settings
-  SCREEN_PEDAL_SETTINGS, // Foot pedal settings and status
-  SCREEN_DIAGNOSTICS,    // Live GPIO/fault diagnostics
-  SCREEN_ABOUT,          // About screen
-  SCREEN_RUN_MODES,      // Pulse / Step / Jog / Timer picker (from menu)
-  SCREEN_COUNT           // MUST be last — total number of screens
+  SCREEN_MAIN,            // Main screen - RPM gauge, start/stop
+  SCREEN_MENU,            // Advanced menu
+  SCREEN_PULSE,           // Pulse mode setup
+  SCREEN_STEP,            // Step mode setup
+  SCREEN_JOG,             // Jog mode
+  SCREEN_TIMER,           // Timer mode setup
+  SCREEN_PROGRAMS,        // Programs list
+  SCREEN_PROGRAM_EDIT,    // Program edit
+  SCREEN_SETTINGS,        // Settings
+  SCREEN_CONFIRM,         // Confirmation dialog
+  SCREEN_BOOT,            // Boot screen
+  SCREEN_EDIT_PULSE,      // Pulse edit (preset quick edit)
+  SCREEN_EDIT_STEP,       // Step edit (preset quick edit)
+  SCREEN_EDIT_CONT,       // Continuous edit (preset quick edit)
+  SCREEN_SYSINFO,         // System info
+  SCREEN_CALIBRATION,     // Motor calibration
+  SCREEN_MOTOR_CONFIG,    // Motor configuration
+  SCREEN_DISPLAY,         // Display settings
+  SCREEN_PEDAL_SETTINGS,  // Foot pedal settings and status
+  SCREEN_DIAGNOSTICS,     // Live GPIO/fault diagnostics
+  SCREEN_ABOUT,           // About screen
+  SCREEN_RUN_MODES,       // Pulse / Step / Jog / Timer picker (from menu)
+  SCREEN_COUNT            // MUST be last — total number of screens
 } ScreenId;
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN MANAGEMENT
 // ───────────────────────────────────────────────────────────────────────────────
-void screens_init();                    // Initialize all screens
-void screens_reinit();                  // Destroy and recreate all screens (theme change)
-void screens_show(ScreenId id);         // Show specific screen (safe from callbacks)
-void screens_request_show(ScreenId id); // Deferred show — processed before lv_timer_handler
-void screens_request_theme_reinit();    // Deferred theme reinit — processed before lv_timer_handler
-void screens_process_pending();         // Execute deferred screen switch (call BEFORE lv_timer_handler)
-ScreenId screens_get_current();         // Get current screen
-bool screens_is_active(ScreenId id);    // Check if screen is active
-void screens_update_current();          // Update current screen (call from lvglTask)
+void screens_init();                     // Initialize all screens
+void screens_reinit();                   // Destroy and recreate all screens (theme change)
+void screens_show(ScreenId id);          // Show specific screen (safe from callbacks)
+void screens_request_show(ScreenId id);  // Deferred show — processed before lv_timer_handler
+void screens_request_theme_reinit();     // Deferred theme reinit — processed before lv_timer_handler
+void screens_process_pending();          // Execute deferred screen switch (call BEFORE lv_timer_handler)
+ScreenId screens_get_current();          // Get current screen
+bool screens_is_active(ScreenId id);     // Check if screen is active
+void screens_update_current();           // Update current screen (call from lvglTask)
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN CREATION FUNCTIONS
@@ -75,9 +82,9 @@ void screen_program_edit_create(int slot);
 void screen_settings_create();
 void screen_boot_create();
 void screen_confirm_create_static();  // Static init
-// If confirm_success_screen is not SCREEN_NONE, that screen is shown after confirm (cancel still uses prior screen).
-void screen_confirm_create(const char* title, const char* message,
-                           void (*on_confirm)(), void (*on_cancel)(),
+// If confirm_success_screen is not SCREEN_NONE, that screen is shown after confirm (cancel still uses prior
+// screen).
+void screen_confirm_create(const char* title, const char* message, void (*on_confirm)(), void (*on_cancel)(),
                            ScreenId confirm_success_screen = SCREEN_NONE);
 void screen_confirm_update();
 
@@ -119,8 +126,6 @@ void screen_edit_cont_update();
 // SCREEN UPDATE FUNCTIONS
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_main_update();
-// After loading a pulse program preset, keep main-screen PULSE quick times in sync.
-void screen_main_set_program_pulse_times(uint32_t on_ms, uint32_t off_ms);
 void screen_pulse_update();
 void screen_step_update();
 void screen_timer_update();
@@ -156,11 +161,7 @@ bool estop_overlay_visible();  // Check if overlay is visible
 // ───────────────────────────────────────────────────────────────────────────────
 // HELPERS — shared widgets (lvglTask only)
 // ───────────────────────────────────────────────────────────────────────────────
-typedef enum {
-  UI_BTN_NORMAL = 0,
-  UI_BTN_ACCENT,
-  UI_BTN_DANGER
-} UiBtnStyle;
+typedef enum { UI_BTN_NORMAL = 0, UI_BTN_ACCENT, UI_BTN_DANGER } UiBtnStyle;
 
 // POST proposal (.card / .run / .danger): apply same chrome as ui_create_btn to an existing button.
 void ui_btn_style_post(lv_obj_t* btn, UiBtnStyle style);
@@ -178,14 +179,15 @@ void ui_add_post_header_accent(lv_obj_t* parent);
 void ui_style_post_warn(lv_obj_t* obj);
 void ui_style_post_ok(lv_obj_t* obj);
 lv_obj_t* ui_create_separator(lv_obj_t* parent, lv_coord_t y);
-lv_obj_t* ui_create_separator_line(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_color_t color);
+lv_obj_t* ui_create_separator_line(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w,
+                                   lv_color_t color);
 void ui_style_post_card(lv_obj_t* obj);
 void ui_style_post_row(lv_obj_t* obj);
 lv_obj_t* ui_create_post_card(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h);
 lv_obj_t* ui_create_post_row(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h);
 lv_obj_t* ui_create_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h,
-                        const char* text, const lv_font_t* label_font, UiBtnStyle style,
-                        lv_event_cb_t cb, void* user_data);
+                        const char* text, const lv_font_t* label_font, UiBtnStyle style, lv_event_cb_t cb,
+                        void* user_data);
 // Compact +/- button: short tap and hold-to-repeat (LV long press + repeat; not LV_EVENT_CLICKED).
 lv_obj_t* ui_create_pm_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, const char* text,
                            const lv_font_t* label_font, UiBtnStyle style, lv_event_cb_t cb, void* user_data);
@@ -193,18 +195,19 @@ lv_obj_t* ui_create_pm_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, const c
 // dark track. Caller still sets size/position/range/value.
 void ui_style_slider(lv_obj_t* slider);
 void ui_create_action_bar(lv_obj_t* parent, lv_coord_t pad_x, lv_coord_t footer_y, lv_coord_t footer_h,
-                          lv_coord_t gap, lv_coord_t left_w, lv_coord_t right_w,
-                          const char* left_text, lv_event_cb_t left_cb,
-                          const char* right_text, UiBtnStyle right_style, lv_event_cb_t right_cb);
-void ui_create_action_bar_three(lv_obj_t* parent, lv_coord_t pad_x, lv_coord_t y, lv_coord_t h, lv_coord_t gap,
-                                lv_coord_t btn_w,
-                                const char* left_text, lv_event_cb_t left_cb, UiBtnStyle left_style,
-                                const char* mid_text, lv_event_cb_t mid_cb, UiBtnStyle mid_style,
-                                const char* right_text, lv_event_cb_t right_cb, UiBtnStyle right_style,
-                                lv_obj_t** out_left_btn, lv_obj_t** out_mid_btn, lv_obj_t** out_right_btn);
+                          lv_coord_t gap, lv_coord_t left_w, lv_coord_t right_w, const char* left_text,
+                          lv_event_cb_t left_cb, const char* right_text, UiBtnStyle right_style,
+                          lv_event_cb_t right_cb);
+void ui_create_action_bar_three(lv_obj_t* parent, lv_coord_t pad_x, lv_coord_t y, lv_coord_t h,
+                                lv_coord_t gap, lv_coord_t btn_w, const char* left_text,
+                                lv_event_cb_t left_cb, UiBtnStyle left_style, const char* mid_text,
+                                lv_event_cb_t mid_cb, UiBtnStyle mid_style, const char* right_text,
+                                lv_event_cb_t right_cb, UiBtnStyle right_style, lv_obj_t** out_left_btn,
+                                lv_obj_t** out_mid_btn, lv_obj_t** out_right_btn);
 
 void screens_set_back_button(lv_obj_t* btn, ScreenId dest);  // Configure back button
-void screens_set_edit_slot(int slot);  // Set slot for SCREEN_PROGRAM_EDIT creation
-Preset* screen_program_edit_get_preset();  // Get current preset being edited
-void screen_program_edit_update_ui();  // Update UI with current preset values
-void screen_program_edit_poll_keyboard(); // Deferred keyboard close (call each LVGL tick while on edit screen)
+void screens_set_edit_slot(int slot);                        // Set slot for SCREEN_PROGRAM_EDIT creation
+Preset* screen_program_edit_get_preset();                    // Get current preset being edited
+void screen_program_edit_update_ui();                        // Update UI with current preset values
+void screen_program_edit_poll_keyboard();  // Deferred keyboard close (call each LVGL tick while on edit
+                                           // screen)

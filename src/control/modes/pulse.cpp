@@ -5,16 +5,18 @@
 #include "../../motor/motor.h"
 #include "../../motor/speed.h"
 #include "../../config.h"
+#include <atomic>
 
 // ───────────────────────────────────────────────────────────────────────────────
 // PULSE MODE STATE
 // ───────────────────────────────────────────────────────────────────────────────
-static uint32_t pulseOnMs = 500;
-static uint32_t pulseOffMs = 500;
+static std::atomic<uint32_t> pulseOnMs{500};
+static std::atomic<uint32_t> pulseOffMs{500};
 static uint32_t pulseStateStartMs = 0;
-static bool pulseIsOn = false;
-static uint16_t pulseCycleLimit = 0;
-static uint16_t pulseCycleCount = 0;
+static bool pulseDecelerating = false;
+static std::atomic<bool> pulseIsOn{false};
+static std::atomic<uint16_t> pulseCycleLimit{0};
+static std::atomic<uint16_t> pulseCycleCount{0};
 
 // ───────────────────────────────────────────────────────────────────────────────
 // PULSE MODE ENTRY
@@ -27,9 +29,10 @@ void pulse_start(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
   pulseCycleLimit = cycles;
   pulseCycleCount = 0;
   pulseIsOn = true;
+  pulseDecelerating = false;
   pulseStateStartMs = millis();
 
-  LOG_I("Pulse mode: ON=%lu OFF=%lu cycles=%u", pulseOnMs, pulseOffMs, cycles);
+  LOG_I("Pulse mode: ON=%lu OFF=%lu cycles=%u", pulseOnMs.load(), pulseOffMs.load(), cycles);
 
   motor_set_target_milli_hz(motor_milli_hz_for_rpm_calibrated(speed_get_target_rpm()));
 
@@ -52,8 +55,13 @@ void pulse_start(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
 void pulse_update() {
   if (control_get_state() != STATE_PULSE) return;
 
+  if (pulseDecelerating) {
+    if (motor_is_running()) return;
+    pulseDecelerating = false;
+    pulseStateStartMs = millis();
+  }
   uint32_t elapsed = millis() - pulseStateStartMs;
-  uint32_t currentDuration = pulseIsOn ? pulseOnMs : pulseOffMs;
+  uint32_t currentDuration = pulseIsOn ? pulseOnMs.load() : pulseOffMs.load();
 
   if (elapsed >= currentDuration) {
     // Toggle state
@@ -63,7 +71,7 @@ void pulse_update() {
     if (pulseIsOn) {
       pulseCycleCount++;
       if (pulseCycleLimit > 0 && pulseCycleCount >= pulseCycleLimit) {
-        LOG_I("Pulse: cycle limit reached (%u/%u)", pulseCycleCount, pulseCycleLimit);
+        LOG_I("Pulse: cycle limit reached (%u/%u)", pulseCycleCount.load(), pulseCycleLimit.load());
         control_transition_to(STATE_STOPPING);
         return;
       }
@@ -74,9 +82,10 @@ void pulse_update() {
         control_transition_to(STATE_STOPPING);
         return;
       }
-      LOG_D("Pulse: ON (%u/%u)", pulseCycleCount, pulseCycleLimit);
+      LOG_D("Pulse: ON (%u/%u)", pulseCycleCount.load(), pulseCycleLimit.load());
     } else {
       motor_stop();
+      pulseDecelerating = true;
       LOG_D("Pulse: OFF");
     }
   }

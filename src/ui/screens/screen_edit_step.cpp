@@ -26,9 +26,9 @@ static lv_obj_t* stepsLabel = nullptr;
 static float editAngle = 90.0f;
 static float editRpm = 2.0f;
 static float editDiameterMm = 0.0f;
-static int editDir = 0;       // 0=CW, 1=CCW
+static int editDir = 0;  // 0=CW, 1=CCW
 static int editRepeats = 1;
-static float editDwell = 0.0f; // seconds
+static float editDwell = 0.0f;  // seconds
 
 // ───────────────────────────────────────────────────────────────────────────────
 // HELPERS
@@ -169,12 +169,9 @@ static void save_cb(lv_event_t* e) {
 // ───────────────────────────────────────────────────────────────────────────────
 // HELPER: create a -/+ row with value display
 // ───────────────────────────────────────────────────────────────────────────────
-static void create_adj_row(lv_obj_t* parent, int y,
-                           const char* titleText, lv_obj_t** valueLabel,
-                           lv_event_cb_t minusCb, lv_event_cb_t plusCb,
-                           void* minusData, void* plusData,
-                           const lv_font_t* valueFont, lv_color_t valueColor,
-                           int valueW) {
+static void create_adj_row(lv_obj_t* parent, int y, const char* titleText, lv_obj_t** valueLabel,
+                           lv_event_cb_t minusCb, lv_event_cb_t plusCb, void* minusData, void* plusData,
+                           const lv_font_t* valueFont, lv_color_t valueColor, int valueW) {
   const int startX = PAD_X;
   const int btnW = 48;
   const int btnH = 36;
@@ -248,8 +245,7 @@ static lv_obj_t* create_separator(lv_obj_t* parent, int y) {
 // ───────────────────────────────────────────────────────────────────────────────
 // HELPER: create a computed info row (label: value)
 // ───────────────────────────────────────────────────────────────────────────────
-static void create_info_row(lv_obj_t* parent, int y, const char* labelText,
-                            lv_obj_t** valueLabel) {
+static void create_info_row(lv_obj_t* parent, int y, const char* labelText, lv_obj_t** valueLabel) {
   lv_obj_t* lbl = lv_label_create(parent);
   lv_label_set_text(lbl, labelText);
   lv_obj_set_style_text_font(lbl, FONT_SMALL, 0);
@@ -268,8 +264,6 @@ static void create_info_row(lv_obj_t* parent, int y, const char* labelText,
 void screen_edit_step_create() {
   lv_obj_t* screen = screenRoots[SCREEN_EDIT_STEP];
   lv_obj_clean(screen);
-  lv_obj_set_style_bg_color(screen, COL_BG, 0);
-
   Preset* p = screen_program_edit_get_preset();
   editAngle = p ? p->step_angle : 90.0f;
   editRpm = p ? p->rpm : 2.0f;
@@ -277,330 +271,31 @@ void screen_edit_step_create() {
   editDir = p ? p->direction : 0;
   editRepeats = p ? p->step_repeats : 1;
   editDwell = p ? p->step_dwell_sec : 0.0f;
-
-  // ── Header bar ──
-  lv_obj_t* header = lv_obj_create(screen);
-  lv_obj_set_size(header, SCREEN_W, HEADER_H);
-  lv_obj_set_pos(header, 0, 0);
-  lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
-  lv_obj_set_style_pad_all(header, 0, 0);
-  lv_obj_set_style_border_width(header, 0, 0);
-  lv_obj_set_style_radius(header, 0, 0);
-  lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
-
-  // [ESC] button at right of header
-  lv_obj_t* escBtn = lv_button_create(header);
-  lv_obj_set_size(escBtn, 60, 24);
-  lv_obj_set_pos(escBtn, SCREEN_W - 60 - PAD_X, 7);
-  ui_btn_style_post(escBtn, UI_BTN_NORMAL);
-  lv_obj_add_event_cb(escBtn, back_event_cb, LV_EVENT_CLICKED, nullptr);
-
-  lv_obj_t* escLbl = lv_label_create(escBtn);
-  lv_label_set_text(escLbl, "[ESC]");
-  lv_obj_set_style_text_font(escLbl, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(escLbl, COL_TEXT_DIM, 0);
-  lv_obj_center(escLbl);
-
-  // Title
-  lv_obj_t* title = lv_label_create(header);
-  lv_label_set_text(title, "EDIT STEP");
-  lv_obj_set_style_text_font(title, FONT_LARGE, 0);
-  lv_obj_set_style_text_color(title, COL_ACCENT, 0);
-  lv_obj_align(title, LV_ALIGN_CENTER, 0, 0);
-
-  ui_add_post_header_accent(screen);
-
-  // ── Content area: scrollable for small screens ──
-  lv_obj_t* content = lv_obj_create(screen);
-  lv_obj_set_size(content, SCREEN_W, SCREEN_H - HEADER_H);
-  lv_obj_set_pos(content, 0, HEADER_H);
-  lv_obj_set_style_bg_color(content, COL_BG, 0);
-  lv_obj_set_style_border_width(content, 0, 0);
-  lv_obj_set_style_pad_all(content, 0, 0);
-  lv_obj_set_style_radius(content, 0, 0);
-  lv_obj_remove_flag(content, LV_OBJ_FLAG_SCROLLABLE);
-
-  int y = 6;
-  ui_create_post_card(content, 12, 4, 776, 58);
-  ui_create_post_card(content, 12, 72, 776, 50);
-  ui_create_post_card(content, 12, 132, 776, 118);
-  ui_create_post_row(content, 12, 260, 776, 72);
-
-  // ── TARGET ANGLE (left half) ──
-  const int leftW = 380;
-  create_adj_row(content, y, "TARGET ANGLE", &angleLabel,
-                 angle_adj_cb, angle_adj_cb,
-                 (void*)(intptr_t)(-1), (void*)(intptr_t)1,
-                 FONT_HUGE, COL_ACCENT, leftW - 120);
-  if (angleLabel) lv_label_set_text_fmt(angleLabel, "%.0f", editAngle);
-
-  // ── RPM (right half, x=400) ──
-  {
-    const int rpmX = 400;
-    const int btnW = 48;
-    const int btnH = 36;
-
-    lv_obj_t* rpmTitle = lv_label_create(content);
-    lv_label_set_text(rpmTitle, "RPM");
-    lv_obj_set_style_text_font(rpmTitle, FONT_SMALL, 0);
-    lv_obj_set_style_text_color(rpmTitle, COL_TEXT_DIM, 0);
-    lv_obj_set_pos(rpmTitle, rpmX, y);
-
-    // Minus
-    lv_obj_t* rpmMinus = lv_button_create(content);
-    lv_obj_set_size(rpmMinus, btnW, btnH);
-    lv_obj_set_pos(rpmMinus, rpmX, y + 14);
-    lv_obj_add_event_cb(rpmMinus, rpm_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)(-1));
-    ui_btn_style_post(rpmMinus, UI_BTN_NORMAL);
-
-    lv_obj_t* rpmMinusLbl = lv_label_create(rpmMinus);
-    lv_label_set_text(rpmMinusLbl, "-");
-    lv_obj_set_style_text_font(rpmMinusLbl, FONT_MED, 0);
-    lv_obj_set_style_text_color(rpmMinusLbl, ui_btn_label_color_post(UI_BTN_NORMAL), 0);
-    lv_obj_center(rpmMinusLbl);
-
-    // Value panel
-    lv_obj_t* rpmPanel = lv_obj_create(content);
-    lv_obj_set_size(rpmPanel, 200, btnH);
-    lv_obj_set_pos(rpmPanel, rpmX + btnW + 8, y + 14);
-    lv_obj_set_style_bg_color(rpmPanel, COL_PANEL_BG, 0);
-    lv_obj_set_style_border_color(rpmPanel, COL_BORDER, 0);
-    lv_obj_set_style_border_width(rpmPanel, 1, 0);
-    lv_obj_set_style_radius(rpmPanel, RADIUS_BTN, 0);
-    lv_obj_set_style_pad_all(rpmPanel, 0, 0);
-    lv_obj_remove_flag(rpmPanel, LV_OBJ_FLAG_SCROLLABLE);
-
-    rpmLabel = lv_label_create(rpmPanel);
-    lv_label_set_text_fmt(rpmLabel, "%.1f", editRpm);
-    lv_obj_set_style_text_font(rpmLabel, FONT_LARGE, 0);
-    lv_obj_set_style_text_color(rpmLabel, COL_TEXT, 0);
-    lv_obj_center(rpmLabel);
-
-    // Plus
-    lv_obj_t* rpmPlus = lv_button_create(content);
-    lv_obj_set_size(rpmPlus, btnW, btnH);
-    lv_obj_set_pos(rpmPlus, rpmX + btnW + 8 + 200 + 8, y + 14);
-    lv_obj_add_event_cb(rpmPlus, rpm_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)1);
-    ui_btn_style_post(rpmPlus, UI_BTN_ACCENT);
-
-    lv_obj_t* rpmPlusLbl = lv_label_create(rpmPlus);
-    lv_label_set_text(rpmPlusLbl, "+");
-    lv_obj_set_style_text_font(rpmPlusLbl, FONT_MED, 0);
-    lv_obj_set_style_text_color(rpmPlusLbl, ui_btn_label_color_post(UI_BTN_ACCENT), 0);
-    lv_obj_center(rpmPlusLbl);
-  }
-
-  y += 58;
-
-  // ── Separator ──
-  create_separator(content, y);
-  y += 6;
-
-  // ── DIRECTION: CW / CCW toggle (170x40 each) ──
-  lv_obj_t* dirTitle = lv_label_create(content);
-  lv_label_set_text(dirTitle, "DIRECTION");
-  lv_obj_set_style_text_font(dirTitle, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(dirTitle, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(dirTitle, PAD_X, y);
-
-  y += 14;
-  {
-    const int dirBtnW = 170;
-    const int dirBtnH = 40;
-    const int dirGap = 10;
-
-    const char* dirTexts[] = {"CW", "CCW"};
-
-    for (int i = 0; i < 2; i++) {
-      dirBtns[i] = lv_button_create(content);
-      lv_obj_set_size(dirBtns[i], dirBtnW, dirBtnH);
-      lv_obj_set_pos(dirBtns[i], PAD_X + i * (dirBtnW + dirGap), y);
-      lv_obj_set_style_radius(dirBtns[i], RADIUS_BTN, 0);
-
-      bool isActive = (i == editDir);
-      ui_btn_style_post(dirBtns[i], isActive ? UI_BTN_ACCENT : UI_BTN_NORMAL);
-
-      lv_obj_add_event_cb(dirBtns[i], dir_cb, LV_EVENT_CLICKED, (void*)(intptr_t)i);
-
-      lv_obj_t* lbl = lv_label_create(dirBtns[i]);
-      lv_label_set_text(lbl, dirTexts[i]);
-      lv_obj_set_style_text_font(lbl, FONT_MED, 0);
-      lv_obj_set_style_text_color(lbl, ui_btn_label_color_post(isActive ? UI_BTN_ACCENT : UI_BTN_NORMAL), 0);
-      lv_obj_center(lbl);
-    }
-  }
-
-  y += 50;
-
-  // ── Separator ──
-  create_separator(content, y);
-  y += 6;
-
-  // ── REPEATS ──
-  create_adj_row(content, y, "PART OD", &diameterLabel,
-                 diameter_adj_cb, diameter_adj_cb,
-                 (void*)(intptr_t)(-1), (void*)(intptr_t)1,
-                 FONT_LARGE, COL_TEXT, 220);
+  ui_create_header(screen, "Step settings", "PROGRAM EDIT", nullptr);
+  angleLabel = ui_create_adjust_card(screen, 24, 86, 240, "ANGLE / degrees", angle_adj_cb);
+  rpmLabel = ui_create_adjust_card(screen, 280, 86, 240, "SPEED / RPM", rpm_adj_cb);
+  diameterLabel = ui_create_adjust_card(screen, 536, 86, 240, "PART DIAMETER", diameter_adj_cb);
+  repeatsLabel = ui_create_adjust_card(screen, 24, 226, 240, "REPEATS", repeats_adj_cb);
+  dwellLabel = ui_create_adjust_card(screen, 280, 226, 240, "DWELL / s", dwell_adj_cb);
+  ui_create_post_card(screen, 536, 226, 240, 124);
+  ui_create_text(screen, 550, 238, 212, "DIRECTION", FONT_NORMAL, COL_TEXT_DIM);
+  dirBtns[0] = ui_create_btn(screen, 550, 282, 100, 56, "CW", FONT_BTN, UI_BTN_NORMAL, dir_cb, (void*)0);
+  dirBtns[1] = ui_create_btn(screen, 662, 282, 100, 56, "CCW", FONT_BTN, UI_BTN_NORMAL, dir_cb, (void*)1);
+  lv_label_set_text_fmt(angleLabel, "%.0f", editAngle);
+  lv_label_set_text_fmt(rpmLabel, "%.3f", editRpm);
+  lv_label_set_text_fmt(repeatsLabel, "%d", editRepeats);
+  lv_label_set_text_fmt(dwellLabel, "%.1f sec", editDwell);
+  ui_create_text(screen, 24, 366, 70, "TOTAL", FONT_SMALL, COL_TEXT_DIM);
+  totalAngleLabel = ui_create_text(screen, 98, 362, 160, "", FONT_SUBTITLE, COL_TEXT);
+  ui_create_text(screen, 280, 366, 72, "EST.", FONT_SMALL, COL_TEXT_DIM);
+  durationLabel = ui_create_text(screen, 356, 362, 160, "", FONT_SUBTITLE, COL_TEXT);
+  ui_create_text(screen, 536, 366, 70, "STEPS", FONT_SMALL, COL_TEXT_DIM);
+  stepsLabel = ui_create_text(screen, 610, 362, 166, "", FONT_SUBTITLE, COL_TEXT);
+  ui_create_btn(screen, 24, 408, 152, 56, "CANCEL", FONT_BTN, UI_BTN_NORMAL, cancel_cb, nullptr);
+  ui_create_btn(screen, 496, 408, 280, 56, "SAVE", FONT_BTN, UI_BTN_ACCENT, save_cb, nullptr);
   update_diameter_label();
-  y += 58;
-
-  create_separator(content, y);
-  y += 6;
-
-  lv_obj_t* repeatsTitle = lv_label_create(content);
-  lv_label_set_text(repeatsTitle, "REPEATS");
-  lv_obj_set_style_text_font(repeatsTitle, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(repeatsTitle, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(repeatsTitle, PAD_X, y);
-
-  {
-    const int repX = 100;
-    const int btnW = 48;
-    const int btnH = 36;
-
-    // Minus
-    lv_obj_t* repMinus = lv_button_create(content);
-    lv_obj_set_size(repMinus, btnW, btnH);
-    lv_obj_set_pos(repMinus, repX, y - 2);
-    lv_obj_add_event_cb(repMinus, repeats_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)(-1));
-    ui_btn_style_post(repMinus, UI_BTN_NORMAL);
-
-    lv_obj_t* repMinusLbl = lv_label_create(repMinus);
-    lv_label_set_text(repMinusLbl, "-");
-    lv_obj_set_style_text_font(repMinusLbl, FONT_MED, 0);
-    lv_obj_set_style_text_color(repMinusLbl, ui_btn_label_color_post(UI_BTN_NORMAL), 0);
-    lv_obj_center(repMinusLbl);
-
-    // Value
-    lv_obj_t* repPanel = lv_obj_create(content);
-    lv_obj_set_size(repPanel, 100, btnH);
-    lv_obj_set_pos(repPanel, repX + btnW + 8, y - 2);
-    lv_obj_set_style_bg_color(repPanel, COL_PANEL_BG, 0);
-    lv_obj_set_style_border_color(repPanel, COL_BORDER, 0);
-    lv_obj_set_style_border_width(repPanel, 1, 0);
-    lv_obj_set_style_radius(repPanel, RADIUS_BTN, 0);
-    lv_obj_set_style_pad_all(repPanel, 0, 0);
-    lv_obj_remove_flag(repPanel, LV_OBJ_FLAG_SCROLLABLE);
-
-    repeatsLabel = lv_label_create(repPanel);
-    lv_label_set_text_fmt(repeatsLabel, "%d", editRepeats);
-    lv_obj_set_style_text_font(repeatsLabel, FONT_LARGE, 0);
-    lv_obj_set_style_text_color(repeatsLabel, COL_TEXT, 0);
-    lv_obj_center(repeatsLabel);
-
-    // Plus
-    lv_obj_t* repPlus = lv_button_create(content);
-    lv_obj_set_size(repPlus, btnW, btnH);
-    lv_obj_set_pos(repPlus, repX + btnW + 8 + 100 + 8, y - 2);
-    lv_obj_add_event_cb(repPlus, repeats_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)1);
-    ui_btn_style_post(repPlus, UI_BTN_ACCENT);
-
-    lv_obj_t* repPlusLbl = lv_label_create(repPlus);
-    lv_label_set_text(repPlusLbl, "+");
-    lv_obj_set_style_text_font(repPlusLbl, FONT_MED, 0);
-    lv_obj_set_style_text_color(repPlusLbl, ui_btn_label_color_post(UI_BTN_ACCENT), 0);
-    lv_obj_center(repPlusLbl);
-  }
-
-  // ── DWELL TIME (right side, x=400) ──
-  {
-    const int dwellX = 400;
-    const int btnW = 48;
-    const int btnH = 36;
-
-    lv_obj_t* dwellTitle = lv_label_create(content);
-    lv_label_set_text(dwellTitle, "DWELL TIME");
-    lv_obj_set_style_text_font(dwellTitle, FONT_SMALL, 0);
-    lv_obj_set_style_text_color(dwellTitle, COL_TEXT_DIM, 0);
-    lv_obj_set_pos(dwellTitle, dwellX, y);
-
-    // Minus
-    lv_obj_t* dwellMinus = lv_button_create(content);
-    lv_obj_set_size(dwellMinus, btnW, btnH);
-    lv_obj_set_pos(dwellMinus, dwellX, y + 14);
-    lv_obj_add_event_cb(dwellMinus, dwell_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)(-1));
-    ui_btn_style_post(dwellMinus, UI_BTN_NORMAL);
-
-    lv_obj_t* dwellMinusLbl = lv_label_create(dwellMinus);
-    lv_label_set_text(dwellMinusLbl, "-");
-    lv_obj_set_style_text_font(dwellMinusLbl, FONT_MED, 0);
-    lv_obj_set_style_text_color(dwellMinusLbl, ui_btn_label_color_post(UI_BTN_NORMAL), 0);
-    lv_obj_center(dwellMinusLbl);
-
-    // Value
-    lv_obj_t* dwellPanel = lv_obj_create(content);
-    lv_obj_set_size(dwellPanel, 200, btnH);
-    lv_obj_set_pos(dwellPanel, dwellX + btnW + 8, y + 14);
-    lv_obj_set_style_bg_color(dwellPanel, COL_PANEL_BG, 0);
-    lv_obj_set_style_border_color(dwellPanel, COL_BORDER, 0);
-    lv_obj_set_style_border_width(dwellPanel, 1, 0);
-    lv_obj_set_style_radius(dwellPanel, RADIUS_BTN, 0);
-    lv_obj_set_style_pad_all(dwellPanel, 0, 0);
-    lv_obj_remove_flag(dwellPanel, LV_OBJ_FLAG_SCROLLABLE);
-
-    dwellLabel = lv_label_create(dwellPanel);
-    lv_label_set_text_fmt(dwellLabel, "%.1f sec", editDwell);
-    lv_obj_set_style_text_font(dwellLabel, FONT_LARGE, 0);
-    lv_obj_set_style_text_color(dwellLabel, COL_TEXT, 0);
-    lv_obj_center(dwellLabel);
-
-    // Plus
-    lv_obj_t* dwellPlus = lv_button_create(content);
-    lv_obj_set_size(dwellPlus, btnW, btnH);
-    lv_obj_set_pos(dwellPlus, dwellX + btnW + 8 + 200 + 8, y + 14);
-    lv_obj_add_event_cb(dwellPlus, dwell_adj_cb, LV_EVENT_CLICKED, (void*)(intptr_t)1);
-    ui_btn_style_post(dwellPlus, UI_BTN_ACCENT);
-
-    lv_obj_t* dwellPlusLbl = lv_label_create(dwellPlus);
-    lv_label_set_text(dwellPlusLbl, "+");
-    lv_obj_set_style_text_font(dwellPlusLbl, FONT_MED, 0);
-    lv_obj_set_style_text_color(dwellPlusLbl, ui_btn_label_color_post(UI_BTN_ACCENT), 0);
-    lv_obj_center(dwellPlusLbl);
-  }
-
-  y += 58;
-
-  // ── Separator ──
-  create_separator(content, y);
-  y += 6;
-
-  // ── COMPUTED VALUES ──
-  lv_obj_t* computedTitle = lv_label_create(content);
-  lv_label_set_text(computedTitle, "COMPUTED");
-  lv_obj_set_style_text_font(computedTitle, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(computedTitle, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(computedTitle, PAD_X, y);
-  y += 16;
-
-  create_info_row(content, y, "TOTAL ANGLE:", &totalAngleLabel);
-  y += 18;
-  create_info_row(content, y, "DURATION:", &durationLabel);
-  y += 18;
-  create_info_row(content, y, "STEPS:", &stepsLabel);
-  y += 24;
-
-  // Populate computed values
+  update_dir_buttons();
   update_computed();
-
-  // ── Separator ──
-  create_separator(content, y);
-  y += 6;
-
-  // ── CANCEL + SAVE buttons ──
-  {
-    const int btnW = BTN_W_ACTION;
-    const int btnH = 40;
-    const int btnGap = 20;
-    const int totalBtnW = btnW * 2 + btnGap;
-    const int btnStartX = (SCREEN_W - totalBtnW) / 2;
-
-    ui_create_btn(content, btnStartX, y, btnW, btnH, "CANCEL", FONT_MED, UI_BTN_NORMAL, cancel_cb,
-                  nullptr);
-    ui_create_btn(content, btnStartX + btnW + btnGap, y, btnW, btnH, "SAVE", FONT_MED, UI_BTN_ACCENT,
-                  save_cb, nullptr);
-  }
-
-  LOG_I("Screen edit step: full edit layout created");
 }
 
 void screen_edit_step_invalidate_widgets() {

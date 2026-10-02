@@ -7,9 +7,11 @@
 #include "esp_system.h"
 #include "freertos/task.h"
 #include "../../onchip_temp.h"
+#include "../../control/control.h"
+#include "../../motor/motor.h"
+#include "../../storage/storage.h"
 #include <cstdio>
 #include <cstring>
-
 
 static lv_obj_t* uptimeLabel = nullptr;
 static lv_obj_t* heapBar = nullptr;
@@ -21,6 +23,7 @@ static lv_obj_t* tempLabel = nullptr;
 static uint32_t bootMs = 0;
 static uint32_t lastTempRead = 0;
 static float cachedTemp = 0.0f;
+static bool tempValid = false;
 static uint32_t lastUptimeSec = UINT32_MAX;
 static uint32_t lastMemoryRead = 0;
 static uint32_t lastCoreRead = 0;
@@ -30,13 +33,19 @@ static uint32_t prevTotalRunTime = 0;
 static uint32_t prevIdleCore0Time = 0;
 static uint32_t prevIdleCore1Time = 0;
 
-static void back_cb(lv_event_t* e) {
-  screens_show(SCREEN_SETTINGS);
-}
+static void back_cb(lv_event_t* e) { screens_show(SCREEN_SETTINGS); }
 
 static void reboot_cb(lv_event_t* e) {
-  screen_confirm_create("REBOOT DEVICE", "Are you sure? All unsaved data will be lost.",
-    []() { esp_restart(); }, nullptr);
+  if (control_get_state() != STATE_IDLE || storage_status() != STORAGE_SAVED) return;
+  screen_confirm_create(
+      "REBOOT DEVICE", "Are you sure? All unsaved data will be lost.",
+      []() {
+        if (control_get_state() == STATE_IDLE && storage_status() == STORAGE_SAVED) {
+          motor_disable();
+          esp_restart();
+        }
+      },
+      nullptr);
 }
 
 static lv_obj_t* make_key_label(lv_obj_t* parent, int x, int y, const char* text, const lv_font_t* font) {
@@ -75,64 +84,31 @@ static lv_obj_t* make_bar(lv_obj_t* parent, int x, int y, int w, int h, lv_color
 void screen_sysinfo_create() {
   lv_obj_t* screen = screenRoots[SCREEN_SYSINFO];
   lv_obj_clean(screen);
-  lv_obj_set_style_bg_color(screen, COL_BG, 0);
-
-  bootMs = millis();
+  bootMs = 0;
   lastUptimeSec = UINT32_MAX;
-  lastMemoryRead = 0;
-  lastTempRead = 0;
-  lastCoreRead = 0;
-
-  ui_create_settings_header(screen, "SYSTEM INFO", "", COL_HDR_MUTED);
-  ui_create_post_card(screen, SYSINFO_CARD_X, SYSINFO_CARD1_Y, SYSINFO_CARD_W, SYSINFO_CARD1_H);
-  ui_create_post_card(screen, SYSINFO_CARD_X, SYSINFO_CARD2_Y, SYSINFO_CARD_W, SYSINFO_CARD2_H);
-  ui_create_post_card(screen, SYSINFO_CARD_X, SYSINFO_CARD3_Y, SYSINFO_CARD_W, SYSINFO_CARD3_H);
-
-  const int yFw = SYSINFO_CARD1_Y + 22;
-  const int yUp = SYSINFO_CARD1_Y + 48;
-  char buf[48];
-  snprintf(buf, sizeof(buf), "%s  %s %s", FW_VERSION, __DATE__, __TIME__);
-  make_key_label(screen, SYSINFO_TEXT_X, yFw, "FIRMWARE", FONT_NORMAL);
-  make_val_label(screen, SYSINFO_VAL_COL, yFw, buf);
-  make_key_label(screen, SYSINFO_TEXT_X, yUp, "UPTIME", FONT_NORMAL);
-  uptimeLabel = make_val_label(screen, SYSINFO_VAL_COL, yUp, "00:00:00");
-
-  lv_obj_t* memTitle = lv_label_create(screen);
-  lv_label_set_text(memTitle, "MEMORY");
-  lv_obj_set_style_text_font(memTitle, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(memTitle, COL_ACCENT, 0);
-  lv_obj_set_pos(memTitle, SYSINFO_TEXT_X, SYSINFO_MEM_TITLE_Y);
-
-  make_key_label(screen, SYSINFO_TEXT_X, SYSINFO_HEAP_KEY_Y, "HEAP", FONT_SMALL);
-  size_t freeHeap = esp_get_free_heap_size();
-  size_t totalHeap = heap_caps_get_total_size(MALLOC_CAP_INTERNAL);
-  int heapPct = totalHeap > 0 ? (int)((uint64_t)freeHeap * 100 / totalHeap) : 0;
-  snprintf(buf, sizeof(buf), "%u KB", (unsigned)(freeHeap / 1024));
-  heapValueLabel = make_val_label(screen, SYSINFO_HEAP_VAL_X, SYSINFO_HEAP_KEY_Y, buf);
-  heapBar = make_bar(screen, SYSINFO_BAR_X, SYSINFO_HEAP_BAR_Y, SYSINFO_BAR_W, SET_BAR_H, COL_GREEN);
-  lv_bar_set_value(heapBar, heapPct, LV_ANIM_OFF);
-
-  make_key_label(screen, SYSINFO_TEXT_X, SYSINFO_PSRAM_KEY_Y, "PSRAM", FONT_SMALL);
-  size_t psramTotal = heap_caps_get_total_size(MALLOC_CAP_SPIRAM);
-  size_t freePsram = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
-  int psramPct = psramTotal > 0 ? (int)((uint64_t)freePsram * 100 / psramTotal) : 0;
-  snprintf(buf, sizeof(buf), "%.1f MB", (double)freePsram / (1024.0 * 1024.0));
-  psramValueLabel = make_val_label(screen, SYSINFO_HEAP_VAL_X, SYSINFO_PSRAM_KEY_Y, buf);
-  psramBar = make_bar(screen, SYSINFO_BAR_X, SYSINFO_PSRAM_BAR_Y, SYSINFO_BAR_W, SET_BAR_H, COL_GREEN);
-  lv_bar_set_value(psramBar, psramPct, LV_ANIM_OFF);
-
-  make_key_label(screen, SYSINFO_TEXT_X, SYSINFO_SYS_ROW_Y, "CPU TEMP", FONT_NORMAL);
-  tempLabel = make_val_label(screen, SYSINFO_VAL_COL, SYSINFO_SYS_ROW_Y, "-- C");
-  make_key_label(screen, SYSINFO_CORE_KEY_X, SYSINFO_SYS_ROW_Y, "CORE LOAD", FONT_NORMAL);
-  coreLoadLabel = make_val_label(screen, SYSINFO_CORE_VAL_X, SYSINFO_SYS_ROW_Y, "-- / --");
-
-  const int gap = 20;
-  ui_create_btn(screen, SYSINFO_CARD_X, SYSINFO_FOOTER_Y, SYSINFO_FOOT_BTN_W, SYSINFO_FOOTER_H, "<  BACK",
-                SET_BTN_FONT, UI_BTN_NORMAL, back_cb, nullptr);
-  ui_create_btn(screen, SYSINFO_CARD_X + SYSINFO_FOOT_BTN_W + gap, SYSINFO_FOOTER_Y, SYSINFO_FOOT_BTN_W,
-                SYSINFO_FOOTER_H, "REBOOT", SET_BTN_FONT, UI_BTN_NORMAL, reboot_cb, nullptr);
-
-  LOG_I("Screen sysinfo: system info screen created");
+  lastMemoryRead = lastTempRead = lastCoreRead = 0;
+  ui_create_header(screen, "System information", "CONTROLLER HEALTH", nullptr);
+  lv_obj_t* fw = ui_create_post_card(screen, 24, 94, 368, 82);
+  ui_create_text(fw, 16, 10, 336, "FIRMWARE", FONT_NORMAL, COL_TEXT_DIM);
+  ui_create_text(fw, 16, 38, 336, FW_VERSION, FONT_XXL, COL_TEXT);
+  lv_obj_t* up = ui_create_post_card(screen, 408, 94, 368, 82);
+  ui_create_text(up, 16, 10, 336, "UPTIME", FONT_NORMAL, COL_TEXT_DIM);
+  uptimeLabel = ui_create_text(up, 16, 38, 336, "00:00:00", FONT_XXL, COL_TEXT);
+  lv_obj_t* mem = ui_create_post_card(screen, 24, 196, 368, 178);
+  ui_create_text(mem, 16, 14, 336, "MEMORY AVAILABLE", FONT_NORMAL, COL_TEXT_DIM);
+  ui_create_text(mem, 16, 50, 110, "Heap", FONT_SUBTITLE, COL_TEXT);
+  heapValueLabel = ui_create_text(mem, 180, 50, 172, "--", FONT_SUBTITLE, COL_TEXT);
+  heapBar = make_bar(mem, 16, 83, 336, 8, COL_GREEN);
+  ui_create_text(mem, 16, 111, 110, "PSRAM", FONT_SUBTITLE, COL_TEXT);
+  psramValueLabel = ui_create_text(mem, 180, 111, 172, "--", FONT_SUBTITLE, COL_TEXT);
+  psramBar = make_bar(mem, 16, 144, 336, 8, COL_GREEN);
+  lv_obj_t* cpu = ui_create_post_card(screen, 408, 196, 368, 178);
+  ui_create_text(cpu, 16, 14, 336, "PROCESSOR", FONT_NORMAL, COL_TEXT_DIM);
+  tempLabel = ui_create_text(cpu, 16, 48, 336, "-- C", FONT_XXL, COL_TEXT);
+  ui_create_text(cpu, 16, 104, 336, "CORE 0 / CORE 1 LOAD", FONT_NORMAL, COL_TEXT_DIM);
+  coreLoadLabel = ui_create_text(cpu, 16, 132, 336, "-- / --", FONT_XL, COL_TEXT);
+  ui_create_btn(screen, 24, 408, 152, 56, "<  BACK", FONT_BTN, UI_BTN_NORMAL, back_cb, nullptr);
+  ui_create_btn(screen, 496, 408, 280, 56, "REBOOT", FONT_BTN, UI_BTN_NORMAL, reboot_cb, nullptr);
 }
 
 void screen_sysinfo_invalidate_widgets() {
@@ -169,7 +145,7 @@ void screen_sysinfo_update() {
     lastMemoryRead = now;
 
     // Heap
-    size_t freeHeap = esp_get_free_heap_size();
+    size_t freeHeap = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
     size_t totalHeap = heap_caps_get_total_size(MALLOC_CAP_INTERNAL);
     int heapPct = totalHeap > 0 ? (int)((uint64_t)freeHeap * 100 / totalHeap) : 0;
     if (heapBar) lv_bar_set_value(heapBar, heapPct, LV_ANIM_OFF);
@@ -187,7 +163,6 @@ void screen_sysinfo_update() {
       snprintf(buf, sizeof(buf), "%.1f MB", (double)freePsram / (1024.0 * 1024.0));
       lv_label_set_text(psramValueLabel, buf);
     }
-
   }
 
   // Core load (update every 2 seconds, delta-based)
@@ -205,8 +180,10 @@ void screen_sysinfo_update() {
       taskCount = uxTaskGetSystemState(taskArray, taskCount, &totalRunTime);
       for (UBaseType_t i = 0; i < taskCount; i++) {
         if (strncmp(taskArray[i].pcTaskName, "IDLE", 4) == 0) {
-          if (taskArray[i].xCoreID == 0) idleCore0Time = taskArray[i].ulRunTimeCounter;
-          else if (taskArray[i].xCoreID == 1) idleCore1Time = taskArray[i].ulRunTimeCounter;
+          if (taskArray[i].xCoreID == 0)
+            idleCore0Time = taskArray[i].ulRunTimeCounter;
+          else if (taskArray[i].xCoreID == 1)
+            idleCore1Time = taskArray[i].ulRunTimeCounter;
         }
       }
       vPortFree(taskArray);
@@ -215,8 +192,8 @@ void screen_sysinfo_update() {
         uint32_t deltaTotal = totalRunTime - prevTotalRunTime;
         uint32_t deltaIdle0 = idleCore0Time - prevIdleCore0Time;
         uint32_t deltaIdle1 = idleCore1Time - prevIdleCore1Time;
-        cachedCore0Pct = 100 - (int)(deltaIdle0 * 100 / deltaTotal);
-        cachedCore1Pct = 100 - (int)(deltaIdle1 * 100 / deltaTotal);
+        cachedCore0Pct = 100 - (int)((uint64_t)deltaIdle0 * 100 / deltaTotal);
+        cachedCore1Pct = 100 - (int)((uint64_t)deltaIdle1 * 100 / deltaTotal);
         if (cachedCore0Pct < 0) cachedCore0Pct = 0;
         if (cachedCore1Pct < 0) cachedCore1Pct = 0;
       }
@@ -231,15 +208,16 @@ void screen_sysinfo_update() {
   }
 
   // Temperature (update every 3 seconds)
-  if (now - lastTempRead >= 3000) {
+  if (!tempValid || now - lastTempRead >= 3000) {
     lastTempRead = now;
     float tsensVal = 0.0f;
-    if (onchip_temp_get_celsius(&tsensVal)) {
+    tempValid = onchip_temp_get_celsius(&tsensVal);
+    if (tempValid) {
       cachedTemp = tsensVal;
     }
   }
   if (tempLabel) {
     snprintf(buf, sizeof(buf), "%.1f C", cachedTemp);
-    lv_label_set_text(tempLabel, buf);
+    lv_label_set_text(tempLabel, tempValid ? buf : "Unavailable");
   }
 }

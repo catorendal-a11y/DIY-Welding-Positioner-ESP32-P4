@@ -1,0 +1,104 @@
+[I] Screens init: creating boot and main screens
+[I] Screens init complete
+[D] Screen show: 1
+SIM SELFTEST: start
+[D] Screen show: 11
+[D] Screen show: 1
+[I] Screen menu: POST-style navigation hub created
+[D] Screen show: 2
+[I] Screen run modes: POST picker created
+[D] Screen show: 22
+[D] Screen show: 3
+[D] Screen show: 4
+[D] Screen show: 5
+[I] Screen countdown: POST layout created
+[D] Screen show: 6
+[D] Screen show: 7
+[I] Screen program edit: V3 layout created slot 0
+[D] Screen show: 8
+[D] Screen show: 14
+[D] Screen show: 12
+[D] Screen show: 13
+[D] Screen show: 9
+[D] Screen show: 17
+[D] Screen show: 16
+[D] Screen show: 18
+[D] Screen show: 19
+[D] Screen show: 20
+[D] Screen show: 15
+[D] Screen show: 21
+[D] Screen show: 10
+[D] Screen show: 1
+[I] Screens init: creating boot and main screens
+[I] Screens init complete
+[D] Screen show: 1
+SIM SELFTEST: screens ok
+[D] Screen show: 1
+SIM SELFTEST: main controls ok
+[D] Screen show: 1
+[I] Screen menu: POST-style navigation hub created
+[D] Screen show: 2
+[I] Screen run modes: POST picker created
+[D] Screen show: 22
+[D] Screen show: 3
+[D] Screen show: 1
+[D] Screen show: 22
+[D] Screen show: 4
+[D] Screen show: 1
+[D] Screen show: 22
+[D] Screen show: 5
+[D] Screen show: 1
+[D] Screen show: 22
+[I] Screen countdown: POST layout created
+[D] Screen show: 6
+[D] Screen show: 1
+SIM SELFTEST: run mode flows ok
+[D] Screen show: 2
+[D] Screen show: 9
+[D] Screen show: 9
+[D] Screen show: 17
+[D] Screen show: 9
+[D] Screen show: 9
+[D] Screen show: 16
+[D] Screen show: 9
+[D] Screen show: 9
+[D] Screen show: 18
+[D] Screen show: 9
+[D] Screen show: 9
+[D] Screen show: 19
+[D] Screen show: 9
+[D] Screen show: 9
+[D] Screen show: 20
+[D] Screen show: 9
+[D] Screen show: 9
+[D] Screen show: 15
+[D] Screen show: 9
+[D] Screen show: 9
+[D] Screen show: 21
+[D] Screen show: 9
+[D] Screen show: 7
+[I] Screen program edit: V3 layout created slot -1
+[D] Screen show: 8
+[D] Screen show: 14
+[I] Screen program edit: V3 layout created slot -1
+[D] Screen show: 8
+[D] Screen show: 12
+[I] Screen program edit: V3 layout created slot -1
+[D] Screen show: 8
+[D] Screen show: 14
+[I] Screen program edit: V3 layout created slot -1
+[D] Screen show: 8
+[D] Screen show: 7
+SIM SELFTEST: settings/programs ok
+[D] Screen show: 1
+[I] Confirm dialog: title='TEST CANCEL'
+[D] Screen show: 10
+[I] Confirm dialog shown
+[D] Screen show: 1
+[I] Confirm dialog: title='TEST CONFIRM'
+[D] Screen show: 10
+[I] Confirm dialog shown
+[D] Screen show: 1
+[E] ESTOP overlay: shown
+SIM SELFTEST: confirm/overlay ok
+SIM SELFTEST: PASS

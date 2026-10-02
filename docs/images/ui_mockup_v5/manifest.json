@@ -1,0 +1,212 @@
+[
+  {
+    "slug": "01_boot",
+    "title": "Startup checks",
+    "screen_id": "SCREEN_BOOT",
+    "note": "Proposed real readiness checks, not a timed progress animation.",
+    "group": "Operate"
+  },
+  {
+    "slug": "02_main_ready",
+    "title": "Main / ready",
+    "screen_id": "SCREEN_MAIN",
+    "note": "Large target RPM, explicit source and surface speed; no suggestion of measured feedback.",
+    "group": "Operate"
+  },
+  {
+    "slug": "03_main_running",
+    "title": "Main / rotating",
+    "screen_id": "SCREEN_MAIN",
+    "note": "Running variant: calculated speed and elapsed time, fixed STOP position.",
+    "group": "Operate"
+  },
+  {
+    "slug": "04_menu",
+    "title": "Navigation menu",
+    "screen_id": "SCREEN_MENU",
+    "note": "Four clear destinations with fixed return to the main operating screen.",
+    "group": "Operate"
+  },
+  {
+    "slug": "05_run_modes",
+    "title": "Run mode selection",
+    "screen_id": "SCREEN_RUN_MODES",
+    "note": "Countdown is labelled as a delayed start rather than a timed-stop mode.",
+    "group": "Operate"
+  },
+  {
+    "slug": "06_jog",
+    "title": "Jog / hold to move",
+    "screen_id": "SCREEN_JOG",
+    "note": "Separated direction pads, slow speed control, prominent release-to-stop instruction.",
+    "group": "Operate"
+  },
+  {
+    "slug": "07_pulse",
+    "title": "Pulse setup",
+    "screen_id": "SCREEN_PULSE",
+    "note": "Readable timing blocks with an explanatory cycle preview.",
+    "group": "Process & safety"
+  },
+  {
+    "slug": "08_step",
+    "title": "Step setup",
+    "screen_id": "SCREEN_STEP",
+    "note": "Angle presets and diameter remain visible; duration excludes acceleration.",
+    "group": "Process & safety"
+  },
+  {
+    "slug": "09_timer",
+    "title": "Countdown / armed",
+    "screen_id": "SCREEN_TIMER",
+    "note": "Explicitly states that countdown starts continuous motion, not a timed stop.",
+    "group": "Process & safety"
+  },
+  {
+    "slug": "10_estop_active",
+    "title": "Emergency stop / active",
+    "screen_id": "ESTOP_OVERLAY",
+    "note": "Blocking fault view; no start action and reset unavailable while input is active.",
+    "group": "Process & safety"
+  },
+  {
+    "slug": "11_estop_clear",
+    "title": "Emergency stop / reset allowed",
+    "screen_id": "ESTOP_OVERLAY",
+    "note": "Clear inputs permit reset to idle only, never automatic restart.",
+    "group": "Process & safety"
+  },
+  {
+    "slug": "12_confirm",
+    "title": "Confirmation dialog",
+    "screen_id": "SCREEN_CONFIRM",
+    "note": "Specific object and consequence; safe cancel action and labelled destructive action.",
+    "group": "Process & safety"
+  },
+  {
+    "slug": "13_programs",
+    "title": "Program library",
+    "screen_id": "SCREEN_PROGRAMS",
+    "note": "Select then review before running; edit is separate from start.",
+    "group": "Programs"
+  },
+  {
+    "slug": "14_program_edit",
+    "title": "Program editor",
+    "screen_id": "SCREEN_PROGRAM_EDIT",
+    "note": "Named program, explicit mode selection and a separate run-configuration editor.",
+    "group": "Programs"
+  },
+  {
+    "slug": "15_edit_cont",
+    "title": "Edit continuous program",
+    "screen_id": "SCREEN_EDIT_CONT",
+    "note": "Speed, direction, soft start and a proposed explicit automatic-stop setting.",
+    "group": "Programs"
+  },
+  {
+    "slug": "16_edit_pulse",
+    "title": "Edit pulse program",
+    "screen_id": "SCREEN_EDIT_PULSE",
+    "note": "All four editable pulse parameters with a derived total-time summary.",
+    "group": "Programs"
+  },
+  {
+    "slug": "17_edit_step",
+    "title": "Edit step program",
+    "screen_id": "SCREEN_EDIT_STEP",
+    "note": "Six parameters at consistent touch sizes; summary explains repeat semantics.",
+    "group": "Programs"
+  },
+  {
+    "slug": "18_programs_empty",
+    "title": "Program library / empty",
+    "screen_id": "SCREEN_PROGRAMS",
+    "note": "Purposeful empty state with one clear next action.",
+    "group": "Programs"
+  },
+  {
+    "slug": "19_settings",
+    "title": "Settings hub",
+    "screen_id": "SCREEN_SETTINGS",
+    "note": "Six touch-sized destinations plus About; no tiny menu rows.",
+    "group": "Setup"
+  },
+  {
+    "slug": "20_motor_config",
+    "title": "Motor configuration",
+    "screen_id": "SCREEN_MOTOR_CONFIG",
+    "note": "Explicit physical DIP-switch match and stopped-motion apply semantics.",
+    "group": "Setup"
+  },
+  {
+    "slug": "21_pedal",
+    "title": "Pedal settings",
+    "screen_id": "SCREEN_PEDAL_SETTINGS",
+    "note": "Proposed release-to-arm and input-failure interlock; requires firmware changes.",
+    "group": "Setup"
+  },
+  {
+    "slug": "22_display",
+    "title": "Display settings",
+    "screen_id": "SCREEN_DISPLAY",
+    "note": "Quiet appearance controls; USB viewing distinguished from remote control.",
+    "group": "Setup"
+  },
+  {
+    "slug": "23_calibration",
+    "title": "Calibration / prepare",
+    "screen_id": "SCREEN_CALIBRATION",
+    "note": "Guided workpiece calibration with diameter and speed visible before movement.",
+    "group": "Setup"
+  },
+  {
+    "slug": "24_calibration_verify",
+    "title": "Calibration / verification",
+    "screen_id": "SCREEN_CALIBRATION",
+    "note": "Measured angle, explicit tolerance and save gate; values are illustrative.",
+    "group": "Setup"
+  },
+  {
+    "slug": "25_diagnostics",
+    "title": "Input diagnostics",
+    "screen_id": "SCREEN_DIAGNOSTICS",
+    "note": "Human-readable signal states beside a timestamped event history.",
+    "group": "Service & input"
+  },
+  {
+    "slug": "26_sysinfo",
+    "title": "System health",
+    "screen_id": "SCREEN_SYSINFO",
+    "note": "Illustrative runtime metrics; restart opens the confirmation screen.",
+    "group": "Service & input"
+  },
+  {
+    "slug": "27_about",
+    "title": "About",
+    "screen_id": "SCREEN_ABOUT",
+    "note": "Compact identity and useful hardware information, without competing with normal operation.",
+    "group": "Service & input"
+  },
+  {
+    "slug": "28_numeric_keypad",
+    "title": "Numeric input",
+    "screen_id": "AUX_NUMERIC_KEYPAD",
+    "note": "Full-size keypad, units, valid range and an explicit apply action.",
+    "group": "Service & input"
+  },
+  {
+    "slug": "29_text_keyboard",
+    "title": "Text input",
+    "screen_id": "AUX_TEXT_KEYBOARD",
+    "note": "Dedicated landscape keyboard with legible keycaps and a visible length limit.",
+    "group": "Service & input"
+  },
+  {
+    "slug": "30_input_fault",
+    "title": "Main / pedal fault",
+    "screen_id": "SCREEN_MAIN",
+    "note": "Proposed non-restarting input fault state with explicit re-arm instruction.",
+    "group": "Service & input"
+  }
+]

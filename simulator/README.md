@@ -21,7 +21,7 @@ The script configures CMake, builds `rotator_simulator.exe`, then starts the
 
 This creates every LVGL screen, runs update loops, clicks key navigation and
 machine-control UI buttons against fake simulator state, and exits non-zero on
-failure.
+failure. The tests include main-screen RPM +/− and both blocked and available fault-reset states. Firmware and simulator share the V5 theme and numeric font.
 
 ## Screen Screenshot Dump
 
@@ -30,7 +30,7 @@ failure.
 ```
 
 This builds the simulator, creates every registered screen, and writes a BMP per
-screen to the requested directory. It is intended for fast UI review before
+screen plus active/resettable fault overlays to the requested directory. It is intended for fast UI review before
 flashing the ESP32-P4. The dump is still simulator output; hardware-only behavior
 such as touch wiring, E-STOP, driver alarm, and real calibration measurement must
 be checked on the device.
@@ -48,7 +48,7 @@ serial path, but reducing mirror traffic is the main speed improvement.
 Flash mirror firmware first:
 
 ```powershell
-& "C:\Users\Rendalsniken\.platformio\penv\Scripts\pio.exe" run -e esp32p4-mirror --target upload
+pio run -e esp32p4-mirror --target upload
 ```
 
 Start the viewer:
@@ -82,7 +82,7 @@ PlatformIO Monitor cannot use COM5 while the viewer is connected.
 If LVGL is missing, run the firmware build once first:
 
 ```powershell
-& "C:\Users\Rendalsniken\.platformio\penv\Scripts\pio.exe" run
+pio run
 ```
 
 ## Safety
@@ -93,3 +93,14 @@ rotator and must not be treated as a machine-control path.
 USB mirror clicks are real UI input on the device. E-STOP, driver alarm, and
 existing firmware safety checks still apply. USB has no direct motor command API
 and disconnect releases remote touch input.
+
+## Linux CI
+
+Install SDL2 development headers, Ninja, CMake and Xvfb, then run:
+
+```sh
+pio pkg install -e esp32p4-release
+cmake -S simulator -B simulator/build -G Ninja
+cmake --build simulator/build --target rotator_simulator
+xvfb-run -a simulator/build/rotator_simulator --self-test
+```

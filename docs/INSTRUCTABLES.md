@@ -28,10 +28,10 @@ Commercial welding rotators cost $500-5000. This controller gives you profession
 - 8 selectable accent color themes
 - Foot pedal support (analog speed + digital start)
 - Direction switch (physical CW/CCW toggle)
-- E-STOP safety with <0.5ms ISR response
+- E-STOP ISR drives ENA HIGH; physical stop latency requires measurement
 - 16 program presets saved to flash storage
 - Dual-core FreeRTOS (real-time motor + UI)
-- 21 active LVGL root screens + E-STOP overlay (settings, diagnostics, pedal settings, system info, calibration, etc.)
+- 22 registered LVGL root screens + E-STOP overlay (settings, diagnostics, pedal settings, system info, calibration, etc.)
 
 ### Demo Video
 
@@ -218,7 +218,7 @@ IMAGE: docs/images/ui_screens.svg
 ### E-STOP Safety
 
 The E-STOP system has two layers:
-1. **ISR (<0.5ms)** — hardware disable via interrupt, motor stops immediately; `g_wakePending` set so a dimmed display wakes
+1. **ISR (latency unmeasured)** — ENA HIGH via interrupt; verify driver response and physical stop time; `g_wakePending` set so a dimmed display wakes
 2. **Task (~5ms debounce)** — state transition to ESTOP, UI shows red overlay (`dim_reset_activity()` when overlay shows)
 
 ---

@@ -1,3 +1,6 @@
+#include "../../src/storage/save_request.h"
+#include "../../src/control/input_policy.h"
+#include "../../src/storage/settings_policy.h"
 // TIG Rotator Controller - Utility and Module Logic Unit Tests
 // Tests storage validation, HAL transforms, sanitization
 // Run: pio test -e native
@@ -133,9 +136,7 @@ void test_settings_countdown_in_range() {
   TEST_ASSERT_EQUAL(10, settings_constrain_countdown(10));
 }
 
-void test_settings_countdown_below() {
-  TEST_ASSERT_EQUAL(1, settings_constrain_countdown(0));
-}
+void test_settings_countdown_below() { TEST_ASSERT_EQUAL(1, settings_constrain_countdown(0)); }
 
 void test_settings_countdown_above() {
   TEST_ASSERT_EQUAL(10, settings_constrain_countdown(11));
@@ -184,30 +185,20 @@ void test_preset_rpm_above() {
   TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.0f, preset_constrain_rpm(5.0f, 0.01f, 3.0f));
 }
 
-void test_preset_pulse_on_in_range() {
-  TEST_ASSERT_EQUAL(500, preset_constrain_pulse_on(500));
-}
+void test_preset_pulse_on_in_range() { TEST_ASSERT_EQUAL(500, preset_constrain_pulse_on(500)); }
 
 void test_preset_pulse_on_below() {
   TEST_ASSERT_EQUAL(100, preset_constrain_pulse_on(0));
   TEST_ASSERT_EQUAL(100, preset_constrain_pulse_on(99));
 }
 
-void test_preset_pulse_on_above() {
-  TEST_ASSERT_EQUAL(10000, preset_constrain_pulse_on(70000));
-}
+void test_preset_pulse_on_above() { TEST_ASSERT_EQUAL(10000, preset_constrain_pulse_on(70000)); }
 
-void test_preset_pulse_off_in_range() {
-  TEST_ASSERT_EQUAL(1000, preset_constrain_pulse_off(1000));
-}
+void test_preset_pulse_off_in_range() { TEST_ASSERT_EQUAL(1000, preset_constrain_pulse_off(1000)); }
 
-void test_preset_pulse_off_below() {
-  TEST_ASSERT_EQUAL(100, preset_constrain_pulse_off(0));
-}
+void test_preset_pulse_off_below() { TEST_ASSERT_EQUAL(100, preset_constrain_pulse_off(0)); }
 
-void test_preset_pulse_off_above() {
-  TEST_ASSERT_EQUAL(10000, preset_constrain_pulse_off(100000));
-}
+void test_preset_pulse_off_above() { TEST_ASSERT_EQUAL(10000, preset_constrain_pulse_off(100000)); }
 
 void test_preset_step_angle_in_range() {
   TEST_ASSERT_FLOAT_WITHIN(0.01f, 90.0f, preset_constrain_step_angle(90.0f));
@@ -230,42 +221,28 @@ void test_preset_workpiece_diameter_default_for_invalid() {
   TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, preset_constrain_workpiece_diameter_mm(30000.0f));
 }
 
-void test_preset_timer_ms_in_range() {
-  TEST_ASSERT_EQUAL(60000, preset_constrain_timer_ms(60000));
-}
+void test_preset_timer_ms_in_range() { TEST_ASSERT_EQUAL(60000, preset_constrain_timer_ms(60000)); }
 
-void test_preset_timer_ms_below() {
-  TEST_ASSERT_EQUAL(1, preset_constrain_timer_ms(0));
-}
+void test_preset_timer_ms_below() { TEST_ASSERT_EQUAL(1, preset_constrain_timer_ms(0)); }
 
-void test_preset_timer_ms_above() {
-  TEST_ASSERT_EQUAL(3600000, preset_constrain_timer_ms(5000000));
-}
+void test_preset_timer_ms_above() { TEST_ASSERT_EQUAL(3600000, preset_constrain_timer_ms(5000000)); }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 4: RECONNECT BACKOFF
 // ═══════════════════════════════════════════════════════════════════════════════
 
-void test_reconnect_backoff_initial() {
-  TEST_ASSERT_EQUAL(60000, reconnect_backoff_interval(30000));
-}
+void test_reconnect_backoff_initial() { TEST_ASSERT_EQUAL(60000, reconnect_backoff_interval(30000)); }
 
-void test_reconnect_backoff_double() {
-  TEST_ASSERT_EQUAL(120000, reconnect_backoff_interval(60000));
-}
+void test_reconnect_backoff_double() { TEST_ASSERT_EQUAL(120000, reconnect_backoff_interval(60000)); }
 
-void test_reconnect_backoff_cap() {
-  TEST_ASSERT_EQUAL(300000, reconnect_backoff_interval(300000));
-}
+void test_reconnect_backoff_cap() { TEST_ASSERT_EQUAL(300000, reconnect_backoff_interval(300000)); }
 
 void test_reconnect_backoff_near_cap() {
   // 200000 < 300000, so it doubles to 400000 (cap applies on NEXT iteration)
   TEST_ASSERT_EQUAL(400000, reconnect_backoff_interval(200000));
 }
 
-void test_reconnect_backoff_reset() {
-  TEST_ASSERT_EQUAL(30000, reconnect_backoff_reset());
-}
+void test_reconnect_backoff_reset() { TEST_ASSERT_EQUAL(30000, reconnect_backoff_reset()); }
 
 void test_reconnect_backoff_sequence() {
   uint32_t interval = 30000;
@@ -289,29 +266,17 @@ void test_reconnect_backoff_sequence() {
 // SECTION 5: TOUCH COORDINATE TRANSFORM
 // ═══════════════════════════════════════════════════════════════════════════════
 
-void test_touch_x_origin() {
-  TEST_ASSERT_EQUAL(799, touch_portrait_to_landscape_x(0));
-}
+void test_touch_x_origin() { TEST_ASSERT_EQUAL(799, touch_portrait_to_landscape_x(0)); }
 
-void test_touch_x_max() {
-  TEST_ASSERT_EQUAL(0, touch_portrait_to_landscape_x(799));
-}
+void test_touch_x_max() { TEST_ASSERT_EQUAL(0, touch_portrait_to_landscape_x(799)); }
 
-void test_touch_x_center() {
-  TEST_ASSERT_EQUAL(399, touch_portrait_to_landscape_x(400));
-}
+void test_touch_x_center() { TEST_ASSERT_EQUAL(399, touch_portrait_to_landscape_x(400)); }
 
-void test_touch_y_origin() {
-  TEST_ASSERT_EQUAL(0, touch_portrait_to_landscape_y(0));
-}
+void test_touch_y_origin() { TEST_ASSERT_EQUAL(0, touch_portrait_to_landscape_y(0)); }
 
-void test_touch_y_max() {
-  TEST_ASSERT_EQUAL(479, touch_portrait_to_landscape_y(479));
-}
+void test_touch_y_max() { TEST_ASSERT_EQUAL(479, touch_portrait_to_landscape_y(479)); }
 
-void test_touch_y_identity() {
-  TEST_ASSERT_EQUAL(200, touch_portrait_to_landscape_y(200));
-}
+void test_touch_y_identity() { TEST_ASSERT_EQUAL(200, touch_portrait_to_landscape_y(200)); }
 
 void test_touch_roundtrip() {
   int px = 200, py = 300;
@@ -367,7 +332,7 @@ void test_flush_rotate_portrait_rect_single_pixel() {
 // =============================================================================
 
 void test_usb_mirror_crc32_known_value() {
-  const uint8_t data[] = {'1','2','3','4','5','6','7','8','9'};
+  const uint8_t data[] = {'1', '2', '3', '4', '5', '6', '7', '8', '9'};
   TEST_ASSERT_EQUAL_HEX32(0xCBF43926u, usb_mirror_crc32(data, sizeof(data)));
 }
 
@@ -413,9 +378,7 @@ void test_usb_mirror_keepalive_timeout() {
   TEST_ASSERT_TRUE(usb_mirror_keepalive_fresh(1000, 2499));
 }
 
-void test_usb_mirror_default_baud_is_4m() {
-  TEST_ASSERT_EQUAL_UINT32(4000000u, USB_MIRROR_DEFAULT_BAUD);
-}
+void test_usb_mirror_default_baud_is_4m() { TEST_ASSERT_EQUAL_UINT32(4000000u, USB_MIRROR_DEFAULT_BAUD); }
 
 void test_usb_mirror_accepts_rle_video_rect() {
   UsbMirrorVideoRect rect{};
@@ -438,10 +401,7 @@ void test_usb_mirror_accepts_rle_video_rect() {
 }
 
 void test_usb_mirror_rle_round_trip_repeated_pixels() {
-  const uint16_t pixels[] = {
-    0x1111, 0x1111, 0x1111, 0x1111,
-    0x2222, 0x2222, 0x2222, 0x3333
-  };
+  const uint16_t pixels[] = {0x1111, 0x1111, 0x1111, 0x1111, 0x2222, 0x2222, 0x2222, 0x3333};
   uint8_t encoded[32];
   size_t encodedLen = 0;
 
@@ -477,6 +437,86 @@ void test_usb_mirror_rle_rejects_truncated_pair() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST RUNNER
 // ═══════════════════════════════════════════════════════════════════════════════
+
+void test_motion_stop_invalidates_pending_start() {
+  MotionGate gate;
+  auto ticket = gate.ticket();
+  TEST_ASSERT_TRUE(gate.valid(ticket));
+  gate.stop();
+  TEST_ASSERT_FALSE(gate.valid(ticket));
+  TEST_ASSERT_TRUE(gate.blocked());
+  TEST_ASSERT_TRUE(gate.takeStop());
+  TEST_ASSERT_FALSE(gate.valid(ticket));
+  TEST_ASSERT_TRUE(gate.valid(gate.ticket()));
+}
+void test_motion_multiple_stops_preserve_latch() {
+  MotionGate gate;
+  gate.stop();
+  auto ticket = gate.ticket();
+  gate.stop();
+  TEST_ASSERT_TRUE(gate.takeStop());
+  TEST_ASSERT_FALSE(gate.valid(ticket));
+  TEST_ASSERT_FALSE(gate.takeStop());
+}
+void test_pedal_requires_release_and_cancels_short_press() {
+  PedalInterlock p;
+  TEST_ASSERT_TRUE(p.update(true, true, true, 0) == PedalEdge::None);
+  p.update(true, true, false, 10);
+  p.update(true, true, false, 60);
+  TEST_ASSERT_TRUE(p.update(true, true, true, 61) == PedalEdge::Start);
+  TEST_ASSERT_TRUE(p.update(true, true, false, 62) == PedalEdge::Stop);
+  TEST_ASSERT_TRUE(p.update(true, true, true, 63) == PedalEdge::None);
+}
+void test_pedal_rearm_after_fault_and_disable() {
+  PedalInterlock p;
+  p.update(true, true, false, 0);
+  p.update(true, true, false, 50);
+  TEST_ASSERT_TRUE(p.update(true, true, true, 51) == PedalEdge::Start);
+  TEST_ASSERT_TRUE(p.update(true, false, true, 52) == PedalEdge::Stop);
+  TEST_ASSERT_TRUE(p.update(true, true, true, 100) == PedalEdge::None);
+  p.update(false, true, false, 150);
+  TEST_ASSERT_TRUE(p.update(true, true, true, 200) == PedalEdge::None);
+}
+void test_input_deadline_and_wraparound() {
+  TEST_ASSERT_FALSE(input_sample_fresh(false, 10, 20));
+  TEST_ASSERT_TRUE(input_sample_fresh(true, 10, 160));
+  TEST_ASSERT_FALSE(input_sample_fresh(true, 10, 161));
+  TEST_ASSERT_TRUE(input_sample_fresh(true, UINT32_MAX - 5, 4));
+}
+void test_dim_timeout_storage_width_and_migration() {
+  TEST_ASSERT_EQUAL(300, settings_dim_seconds(300));
+  TEST_ASSERT_EQUAL(300, settings_dim_seconds(44));
+  TEST_ASSERT_EQUAL(0, settings_dim_seconds(0));
+  TEST_ASSERT_EQUAL(60, settings_dim_seconds(-1));
+  TEST_ASSERT_EQUAL(120, settings_dim_seconds(120));
+}
+
+void test_save_failure_retries_and_clears_error() {
+  SaveRequest save(1000);
+  save.request();
+  TEST_ASSERT_FALSE(save.begin(999));
+  TEST_ASSERT_TRUE(save.begin(1000));
+  TEST_ASSERT_TRUE(save.pending());
+  save.complete(false);
+  TEST_ASSERT_TRUE(save.failed());
+  TEST_ASSERT_FALSE(save.begin(2999));
+  TEST_ASSERT_TRUE(save.begin(3000));
+  save.complete(true);
+  TEST_ASSERT_FALSE(save.pending());
+  TEST_ASSERT_FALSE(save.failed());
+}
+void test_save_request_during_write_survives_completion() {
+  SaveRequest save(500);
+  save.request();
+  TEST_ASSERT_TRUE(save.begin(500));
+  save.request();
+  save.complete(true);
+  TEST_ASSERT_TRUE(save.pending());
+  TEST_ASSERT_TRUE(save.begin(1000));
+  save.complete(true);
+  TEST_ASSERT_FALSE(save.pending());
+}
+
 int main(int argc, char** argv) {
   UNITY_BEGIN();
 
@@ -564,5 +604,13 @@ int main(int argc, char** argv) {
   RUN_TEST(test_usb_mirror_rle_rejects_output_overflow);
   RUN_TEST(test_usb_mirror_rle_rejects_truncated_pair);
 
+  RUN_TEST(test_motion_stop_invalidates_pending_start);
+  RUN_TEST(test_motion_multiple_stops_preserve_latch);
+  RUN_TEST(test_pedal_requires_release_and_cancels_short_press);
+  RUN_TEST(test_pedal_rearm_after_fault_and_disable);
+  RUN_TEST(test_input_deadline_and_wraparound);
+  RUN_TEST(test_dim_timeout_storage_width_and_migration);
+  RUN_TEST(test_save_failure_retries_and_clears_error);
+  RUN_TEST(test_save_request_during_write_survives_completion);
   return UNITY_END();
 }

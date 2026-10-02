@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### V5 integration — 2026-10-02
+
+- Graphite/orange UI across 22 screens, large native numeric font, main RPM +/−, direction selection and a prominent fault overlay with guarded reset.
+- Separate STOP latch and generation checks, bounded JOG renewal, pedal release/freshness interlocks and critical-task readiness gate.
+- Control-task parameter snapshots, retained program drafts, deferred motor configuration and pulse pause timing after motor stop.
+- NVS validation/retries and save status, 300-second dimming persistence, touch release on read failure and bounded USB mirror writes.
+- README preserves the original builder content and adds actual LVGL runtime images, design references and validation evidence. Hardware documentation states input polarity and unmeasured stop latency.
+- Validation: 403 native tests, LVGL simulator self-test, release/debug/mirror builds and verified release upload. Physical motor/safety testing remains pending for this update.
+
 ### Added
 - **Simulator screenshot dump** - `simulator/run.ps1 -Screenshots <dir>` builds the SDL simulator and exports one BMP per registered screen for UI review.
 

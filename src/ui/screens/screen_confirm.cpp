@@ -17,13 +17,9 @@ static lv_obj_t* bodyTitleLabel = nullptr;
 static lv_obj_t* bodyMsgLabel = nullptr;
 static lv_obj_t* dangerBtnLabel = nullptr;
 
-static void confirm_event_cb(lv_event_t* e) {
-  confirmPending.store(true, std::memory_order_release);
-}
+static void confirm_event_cb(lv_event_t* e) { confirmPending.store(true, std::memory_order_release); }
 
-static void cancel_event_cb(lv_event_t* e) {
-  cancelPending.store(true, std::memory_order_release);
-}
+static void cancel_event_cb(lv_event_t* e) { cancelPending.store(true, std::memory_order_release); }
 
 void screen_confirm_update() {
   if (confirmPending.load(std::memory_order_acquire)) {
@@ -31,8 +27,8 @@ void screen_confirm_update() {
     auto cb = onConfirmCallback;
     onConfirmCallback = nullptr;
     onCancelCallback = nullptr;
-    ScreenId dest = (returnScreen > SCREEN_NONE && returnScreen < SCREEN_COUNT)
-                    ? returnScreen : SCREEN_PROGRAMS;
+    ScreenId dest =
+        (returnScreen > SCREEN_NONE && returnScreen < SCREEN_COUNT) ? returnScreen : SCREEN_PROGRAMS;
     if (confirmSuccessScreen > SCREEN_NONE && confirmSuccessScreen < SCREEN_COUNT) {
       dest = confirmSuccessScreen;
     }
@@ -49,8 +45,8 @@ void screen_confirm_update() {
     onConfirmCallback = nullptr;
     onCancelCallback = nullptr;
     confirmSuccessScreen = SCREEN_NONE;
-    ScreenId dest = (returnScreen > SCREEN_NONE && returnScreen < SCREEN_COUNT)
-                    ? returnScreen : SCREEN_PROGRAMS;
+    ScreenId dest =
+        (returnScreen > SCREEN_NONE && returnScreen < SCREEN_COUNT) ? returnScreen : SCREEN_PROGRAMS;
     if (cb) {
       cb();
     }
@@ -60,83 +56,23 @@ void screen_confirm_update() {
 }
 
 void screen_confirm_create_static() {
-  LOG_I("Creating confirm dialog screen...");
-
   lv_obj_t* screen = screenRoots[SCREEN_CONFIRM];
-  if (!screen) {
-    LOG_E("screenRoots[SCREEN_CONFIRM] is NULL!");
-    return;
-  }
-
+  if (!screen) return;
+  lv_obj_clean(screen);
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
-  lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, 0);
-  lv_obj_remove_flag(screen, LV_OBJ_FLAG_SCROLLABLE);
-
-  lv_obj_t* dialogBox = lv_obj_create(screen);
-  lv_obj_set_size(dialogBox, 580, 316);
-  lv_obj_align(dialogBox, LV_ALIGN_CENTER, 0, 0);
-  lv_obj_set_style_bg_color(dialogBox, COL_BG_CARD, 0);
-  lv_obj_set_style_bg_opa(dialogBox, LV_OPA_COVER, 0);
-  lv_obj_set_style_radius(dialogBox, 6, 0);
-  lv_obj_set_style_border_color(dialogBox, COL_BORDER, 0);
-  lv_obj_set_style_border_width(dialogBox, 1, 0);
-  lv_obj_set_style_pad_all(dialogBox, 0, 0);
-  lv_obj_remove_flag(dialogBox, LV_OBJ_FLAG_SCROLLABLE);
-
-  lv_obj_t* headerLbl = lv_label_create(dialogBox);
-  lv_label_set_text(headerLbl, "CONFIRM ACTION");
-  lv_obj_set_style_text_font(headerLbl, FONT_XXL, 0);
-  lv_obj_set_style_text_color(headerLbl, COL_ACCENT, 0);
-  lv_obj_set_style_text_align(headerLbl, LV_TEXT_ALIGN_CENTER, 0);
-  lv_obj_set_width(headerLbl, 540);
-  lv_obj_align(headerLbl, LV_ALIGN_TOP_MID, 0, 20);
-
-  bodyTitleLabel = lv_label_create(dialogBox);
-  lv_label_set_text(bodyTitleLabel, "");
-  lv_obj_set_style_text_font(bodyTitleLabel, FONT_XL, 0);
-  lv_obj_set_style_text_color(bodyTitleLabel, COL_TEXT, 0);
-  lv_obj_set_style_text_align(bodyTitleLabel, LV_TEXT_ALIGN_CENTER, 0);
-  lv_obj_set_width(bodyTitleLabel, 520);
-  lv_obj_align(bodyTitleLabel, LV_ALIGN_TOP_MID, 0, 62);
-
-  bodyMsgLabel = lv_label_create(dialogBox);
-  lv_label_set_text(bodyMsgLabel, "");
-  lv_obj_set_style_text_font(bodyMsgLabel, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(bodyMsgLabel, COL_TEXT_DIM, 0);
-  lv_obj_set_style_text_align(bodyMsgLabel, LV_TEXT_ALIGN_CENTER, 0);
-  lv_obj_set_width(bodyMsgLabel, 520);
+  ui_create_header(screen, "Confirm action", "REVIEW", nullptr);
+  lv_obj_t* dialog = ui_create_post_card(screen, 56, 94, 688, 280);
+  bodyTitleLabel = ui_create_text(dialog, 24, 26, 640, "", FONT_XL, COL_TEXT);
+  lv_label_set_long_mode(bodyTitleLabel, LV_LABEL_LONG_MODE_WRAP);
+  bodyMsgLabel = ui_create_text(dialog, 24, 94, 640, "", FONT_SUBTITLE, COL_TEXT_DIM);
   lv_label_set_long_mode(bodyMsgLabel, LV_LABEL_LONG_MODE_WRAP);
-  lv_obj_align(bodyMsgLabel, LV_ALIGN_TOP_MID, 0, 100);
-
-  lv_obj_t* cancelBtn = lv_button_create(dialogBox);
-  lv_obj_set_size(cancelBtn, 200, 74);
-  lv_obj_set_pos(cancelBtn, 54, 168);
-  ui_btn_style_post(cancelBtn, UI_BTN_NORMAL);
-  lv_obj_add_event_cb(cancelBtn, cancel_event_cb, LV_EVENT_CLICKED, nullptr);
-
-  lv_obj_t* cancelLbl = lv_label_create(cancelBtn);
-  lv_label_set_text(cancelLbl, "CANCEL");
-  lv_obj_set_style_text_font(cancelLbl, FONT_LARGE, 0);
-  lv_obj_set_style_text_color(cancelLbl, ui_btn_label_color_post(UI_BTN_NORMAL), 0);
-  lv_obj_center(cancelLbl);
-
-  lv_obj_t* dangerBtn = lv_button_create(dialogBox);
-  lv_obj_set_size(dangerBtn, 200, 74);
-  lv_obj_set_pos(dangerBtn, 326, 168);
-  ui_btn_style_post(dangerBtn, UI_BTN_DANGER);
-  lv_obj_add_event_cb(dangerBtn, confirm_event_cb, LV_EVENT_CLICKED, nullptr);
-
-  dangerBtnLabel = lv_label_create(dangerBtn);
-  lv_label_set_text(dangerBtnLabel, "CONFIRM");
-  lv_obj_set_style_text_font(dangerBtnLabel, FONT_LARGE, 0);
-  lv_obj_set_style_text_color(dangerBtnLabel, ui_btn_label_color_post(UI_BTN_DANGER), 0);
-  lv_obj_center(dangerBtnLabel);
-
-  LOG_I("Confirm dialog screen created");
+  ui_create_btn(screen, 24, 408, 368, 56, "CANCEL", FONT_BTN, UI_BTN_NORMAL, cancel_event_cb, nullptr);
+  lv_obj_t* confirm =
+      ui_create_btn(screen, 408, 408, 368, 56, "CONFIRM", FONT_BTN, UI_BTN_DANGER, confirm_event_cb, nullptr);
+  dangerBtnLabel = lv_obj_get_child(confirm, 0);
 }
 
-void screen_confirm_create(const char* title, const char* message,
-                           void (*on_confirm)(), void (*on_cancel)(),
+void screen_confirm_create(const char* title, const char* message, void (*on_confirm)(), void (*on_cancel)(),
                            ScreenId confirm_success_screen) {
   LOG_I("Confirm dialog: title='%s'", title ? title : "null");
 

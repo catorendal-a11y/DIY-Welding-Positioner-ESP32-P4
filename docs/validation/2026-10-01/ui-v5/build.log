@@ -1,0 +1,201 @@
+Processing esp32p4-release (platform: https://github.com/pioarduino/platform-espressif32.git#55.03.37; board: esp32-p4; framework: arduino)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/espressif32/esp32-p4.html
+PLATFORM: Espressif 32 (55.3.37+sha.a9fac07) > Espressif ESP32-P4 ES (pre rev.300) generic
+HARDWARE: ESP32P4 360MHz, 320KB RAM, 4MB Flash
+DEBUG: Current (cmsis-dap) External (cmsis-dap, esp-bridge, esp-builtin, esp-prog, iot-bus-jtag, jlink, minimodule, olimex-arm-usb-ocd, olimex-arm-usb-ocd-h, olimex-arm-usb-tiny-h, olimex-jtag-tiny, tumpa)
+PACKAGES:
+ - contrib-piohome @ 3.4.4
+ - framework-arduinoespressif32 @ 3.3.7
+ - framework-arduinoespressif32-libs @ 5.5.0+sha.87912cd291
+ - tool-esptoolpy @ 5.1.2
+ - toolchain-riscv32-esp @ 14.2.0+20251107
+*** Applied include path shortening for 288 framework paths ***
+*** Path length reduced from 36690 to ~11737 characters ***
+*** Estimated savings: 24480 characters ***
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 50 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- FastAccelStepper @ 0.33.14
+|-- lvgl @ 9.5.0+sha.85aa60d
+|-- ArduinoJson @ 7.4.3
+|-- LittleFS @ 3.3.7
+|-- Preferences @ 3.3.7
+|-- esp_lcd_st7701
+|-- esp_lcd_touch
+|-- esp_lcd_touch_gt911
+Building in release mode
+Compiling .pio\build-fw\esp32p4-release\src\ui\screens.cpp.o
+Linking .pio\build-fw\esp32p4-release\fw_1018_8816ed.elf
+                            Memory Type Usage Summary
+┌─────────────────────┬──────────────┬──────────┬────────────────┬───────────────┐
+│ Memory Type/Section │ Used [bytes] │ Used [%] │ Remain [bytes] │ Total [bytes] │
+├─────────────────────┼──────────────┼──────────┼────────────────┼───────────────┤
+│ Flash               │      1001732 │          │                │               │
+│    .text            │       621524 │          │                │               │
+│    .rodata          │       336744 │          │                │               │
+│    .eh_frame        │        42868 │          │                │               │
+│    .init_array      │          340 │          │                │               │
+│    .appdesc         │          256 │          │                │               │
+│ DIRAM               │       113618 │    19.71 │         462846 │        576464 │
+│    .text            │        80814 │    14.02 │                │               │
+│    .bss             │        17964 │     3.12 │                │               │
+│    .data            │        14840 │     2.57 │                │               │
+│ HP core RAM         │          104 │     1.27 │           8088 │          8192 │
+│    .data            │           60 │     0.73 │                │               │
+│    .text            │           44 │     0.54 │                │               │
+│ LP RAM              │            0 │      0.0 │          32768 │         32768 │
+└─────────────────────┴──────────────┴──────────┴────────────────┴───────────────┘
+Total image size: 1097578 bytes (.bin may be padded larger)
+Note: The reported total sizes may be smaller than those in the technical reference manual due to reserved memory and application configuration. The total flash size available for the application is not included by default, as it cannot be reliably determined due to the presence of other data like the bootloader, partition table, and application partition size.
+Retrieving maximum program size .pio\build-fw\esp32p4-release\fw_1018_8816ed.elf
+Checking size .pio\build-fw\esp32p4-release\fw_1018_8816ed.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  10.0% (used 32804 bytes from 327680 bytes)
+Flash: [==        ]  16.1% (used 1053922 bytes from 6553600 bytes)
+Building .pio\build-fw\esp32p4-release\fw_1018_8816ed.bin
+esptool v5.1.2
+Creating ESP32P4 image...
+Merged 4 ELF sections.
+Successfully created ESP32P4 image.
+========================= [SUCCESS] Took 17.54 seconds =========================
+
+Processing esp32p4-debug (platform: https://github.com/pioarduino/platform-espressif32.git#55.03.37; board: esp32-p4; framework: arduino)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/espressif32/esp32-p4.html
+PLATFORM: Espressif 32 (55.3.37+sha.a9fac07) > Espressif ESP32-P4 ES (pre rev.300) generic
+HARDWARE: ESP32P4 360MHz, 320KB RAM, 4MB Flash
+DEBUG: Current (cmsis-dap) External (cmsis-dap, esp-bridge, esp-builtin, esp-prog, iot-bus-jtag, jlink, minimodule, olimex-arm-usb-ocd, olimex-arm-usb-ocd-h, olimex-arm-usb-tiny-h, olimex-jtag-tiny, tumpa)
+PACKAGES:
+ - contrib-piohome @ 3.4.4
+ - framework-arduinoespressif32 @ 3.3.7
+ - framework-arduinoespressif32-libs @ 5.5.0+sha.87912cd291
+ - tool-esptoolpy @ 5.1.2
+ - toolchain-riscv32-esp @ 14.2.0+20251107
+*** Applied include path shortening for 288 framework paths ***
+*** Path length reduced from 36690 to ~11737 characters ***
+*** Estimated savings: 24480 characters ***
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 50 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- FastAccelStepper @ 0.33.14
+|-- lvgl @ 9.5.0+sha.85aa60d
+|-- ArduinoJson @ 7.4.3
+|-- LittleFS @ 3.3.7
+|-- Preferences @ 3.3.7
+|-- esp_lcd_st7701
+|-- esp_lcd_touch
+|-- esp_lcd_touch_gt911
+Building in release mode
+Compiling .pio\build-fw\esp32p4-debug\src\ui\screens.cpp.o
+Linking .pio\build-fw\esp32p4-debug\fw_77c4_885b8b.elf
+                            Memory Type Usage Summary
+┌─────────────────────┬──────────────┬──────────┬────────────────┬───────────────┐
+│ Memory Type/Section │ Used [bytes] │ Used [%] │ Remain [bytes] │ Total [bytes] │
+├─────────────────────┼──────────────┼──────────┼────────────────┼───────────────┤
+│ Flash               │      1031370 │          │                │               │
+│    .text            │       635806 │          │                │               │
+│    .rodata          │       351332 │          │                │               │
+│    .eh_frame        │        43636 │          │                │               │
+│    .init_array      │          340 │          │                │               │
+│    .appdesc         │          256 │          │                │               │
+│ DIRAM               │       113740 │    19.73 │         462724 │        576464 │
+│    .text            │        80880 │    14.03 │                │               │
+│    .bss             │        17972 │     3.12 │                │               │
+│    .data            │        14888 │     2.58 │                │               │
+│ HP core RAM         │          104 │     1.27 │           8088 │          8192 │
+│    .data            │           60 │     0.73 │                │               │
+│    .text            │           44 │     0.54 │                │               │
+│ LP RAM              │            0 │      0.0 │          32768 │         32768 │
+└─────────────────────┴──────────────┴──────────┴────────────────┴───────────────┘
+Total image size: 1127330 bytes (.bin may be padded larger)
+Note: The reported total sizes may be smaller than those in the technical reference manual due to reserved memory and application configuration. The total flash size available for the application is not included by default, as it cannot be reliably determined due to the presence of other data like the bootloader, partition table, and application partition size.
+Retrieving maximum program size .pio\build-fw\esp32p4-debug\fw_77c4_885b8b.elf
+Checking size .pio\build-fw\esp32p4-debug\fw_77c4_885b8b.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  10.0% (used 32860 bytes from 327680 bytes)
+Flash: [==        ]  16.5% (used 1082906 bytes from 6553600 bytes)
+Building .pio\build-fw\esp32p4-debug\fw_77c4_885b8b.bin
+esptool v5.1.2
+Creating ESP32P4 image...
+Merged 4 ELF sections.
+Successfully created ESP32P4 image.
+========================= [SUCCESS] Took 17.98 seconds =========================
+
+Processing esp32p4-mirror (platform: https://github.com/pioarduino/platform-espressif32.git#55.03.37; board: esp32-p4; framework: arduino)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/espressif32/esp32-p4.html
+PLATFORM: Espressif 32 (55.3.37+sha.a9fac07) > Espressif ESP32-P4 ES (pre rev.300) generic
+HARDWARE: ESP32P4 360MHz, 320KB RAM, 4MB Flash
+DEBUG: Current (cmsis-dap) External (cmsis-dap, esp-bridge, esp-builtin, esp-prog, iot-bus-jtag, jlink, minimodule, olimex-arm-usb-ocd, olimex-arm-usb-ocd-h, olimex-arm-usb-tiny-h, olimex-jtag-tiny, tumpa)
+PACKAGES:
+ - contrib-piohome @ 3.4.4
+ - framework-arduinoespressif32 @ 3.3.7
+ - framework-arduinoespressif32-libs @ 5.5.0+sha.87912cd291
+ - tool-esptoolpy @ 5.1.2
+ - toolchain-riscv32-esp @ 14.2.0+20251107
+*** Applied include path shortening for 288 framework paths ***
+*** Path length reduced from 36690 to ~11737 characters ***
+*** Estimated savings: 24480 characters ***
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 50 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- FastAccelStepper @ 0.33.14
+|-- lvgl @ 9.5.0+sha.85aa60d
+|-- ArduinoJson @ 7.4.3
+|-- LittleFS @ 3.3.7
+|-- Preferences @ 3.3.7
+|-- esp_lcd_st7701
+|-- esp_lcd_touch
+|-- esp_lcd_touch_gt911
+Building in release mode
+Compiling .pio\build-fw\esp32p4-mirror\src\ui\screens.cpp.o
+Linking .pio\build-fw\esp32p4-mirror\fw_48a4_88a1ae.elf
+                            Memory Type Usage Summary
+┌─────────────────────┬──────────────┬──────────┬────────────────┬───────────────┐
+│ Memory Type/Section │ Used [bytes] │ Used [%] │ Remain [bytes] │ Total [bytes] │
+├─────────────────────┼──────────────┼──────────┼────────────────┼───────────────┤
+│ Flash               │      1005656 │          │                │               │
+│    .text            │       624672 │          │                │               │
+│    .rodata          │       336832 │          │                │               │
+│    .eh_frame        │        43556 │          │                │               │
+│    .init_array      │          340 │          │                │               │
+│    .appdesc         │          256 │          │                │               │
+│ DIRAM               │       113810 │    19.74 │         462654 │        576464 │
+│    .text            │        80814 │    14.02 │                │               │
+│    .bss             │        18148 │     3.15 │                │               │
+│    .data            │        14848 │     2.58 │                │               │
+│ HP core RAM         │          104 │     1.27 │           8088 │          8192 │
+│    .data            │           60 │     0.73 │                │               │
+│    .text            │           44 │     0.54 │                │               │
+│ LP RAM              │            0 │      0.0 │          32768 │         32768 │
+└─────────────────────┴──────────────┴──────────┴────────────────┴───────────────┘
+Total image size: 1101510 bytes (.bin may be padded larger)
+Note: The reported total sizes may be smaller than those in the technical reference manual due to reserved memory and application configuration. The total flash size available for the application is not included by default, as it cannot be reliably determined due to the presence of other data like the bootloader, partition table, and application partition size.
+Retrieving maximum program size .pio\build-fw\esp32p4-mirror\fw_48a4_88a1ae.elf
+Checking size .pio\build-fw\esp32p4-mirror\fw_48a4_88a1ae.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  10.1% (used 32996 bytes from 327680 bytes)
+Flash: [==        ]  16.1% (used 1057166 bytes from 6553600 bytes)
+Building .pio\build-fw\esp32p4-mirror\fw_48a4_88a1ae.bin
+esptool v5.1.2
+Creating ESP32P4 image...
+Merged 4 ELF sections.
+Successfully created ESP32P4 image.
+========================= [SUCCESS] Took 18.12 seconds =========================
+
+Environment      Status    Duration
+---------------  --------  ------------
+esp32p4-release  SUCCESS   00:00:17.538
+esp32p4-debug    SUCCESS   00:00:17.983
+esp32p4-mirror   SUCCESS   00:00:18.117
+========================= 3 succeeded in 00:00:53.638 =========================

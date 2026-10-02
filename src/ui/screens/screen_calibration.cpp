@@ -28,7 +28,7 @@ static lv_obj_t* kinGeoLabel = nullptr;
 static lv_obj_t* wizardHintLabel = nullptr;
 static lv_obj_t* wizardTrack = nullptr;
 static lv_obj_t* wizardFill = nullptr;
-static lv_obj_t* wizardDots[4] = { nullptr };
+static lv_obj_t* wizardDots[4] = {nullptr};
 static lv_obj_t* measuredFieldBg = nullptr;
 static lv_obj_t* measuredTapLabel = nullptr;
 static lv_obj_t* applyMeasureBtn = nullptr;
@@ -69,7 +69,7 @@ static uint32_t calMoveTimeoutMs = 0;
 static bool calMoveSawStepState = false;
 
 // Screen-space X of wizard dot centers (matches calibration_screen_proposal.svg).
-static const int WIZ_DOT_CX[4] = { 50, 170, 290, 410 };
+static const int WIZ_DOT_CX[4] = {50, 170, 290, 410};
 
 static const float kCalFactorStep = 0.0005f;
 
@@ -106,8 +106,8 @@ static void update_wizard_progress_fill() {
 
 static void measured_refresh_label() {
   if (!measuredTapLabel) return;
-  const bool useVerify = (calStep == STEP_VERIFY_ROTATE || calStep == STEP_VERIFY_MEASURE ||
-                          calStep == STEP_VERIFY_RESULT);
+  const bool useVerify =
+      (calStep == STEP_VERIFY_ROTATE || calStep == STEP_VERIFY_MEASURE || calStep == STEP_VERIFY_RESULT);
   const float v = useVerify ? s_verifyMeasuredDeg : s_measuredDeg;
   if (v > 0.0f) {
     char b[20];
@@ -147,6 +147,7 @@ static void back_cb(lv_event_t* e) {
 }
 
 static void restart_cb(lv_event_t* e) {
+  if (control_get_state() != STATE_IDLE) return;
   (void)e;
   calibration_purge_entry_ui();
   control_stop_jog();
@@ -162,6 +163,7 @@ static void restart_cb(lv_event_t* e) {
 }
 
 static void factor_adj_cb(lv_event_t* e) {
+  if (control_get_state() != STATE_IDLE) return;
   const intptr_t dir = (intptr_t)lv_event_get_user_data(e);
   float f = calibration_get_factor();
   calibration_set_factor(f + (dir > 0 ? kCalFactorStep : -kCalFactorStep));
@@ -218,8 +220,8 @@ static void run_360_cb(lv_event_t* e) {
   const float hz = (float)mhz / 1000.0f;
   const float estSec = (hz > 0.1f) ? ((float)steps / hz) : 999999.0f;
 
-  LOG_I("CAL MOVE360: rpm=%.3f steps=%ld hz=%.1f est=%.1fs factor=%.5f", (double)rpm, (long)steps,
-        (double)hz, (double)estSec, (double)calibration_get_factor());
+  LOG_I("CAL MOVE360: rpm=%.3f steps=%ld hz=%.1f est=%.1fs factor=%.5f", (double)rpm, (long)steps, (double)hz,
+        (double)estSec, (double)calibration_get_factor());
 
   calMoveStartMs = millis();
   calMoveTimeoutMs = (uint32_t)((estSec + 30.0f) * 1000.0f);
@@ -266,7 +268,9 @@ static void cal_stop_motion_cb(lv_event_t* e) {
 static void jog_btn_cb(lv_event_t* e) {
   lv_event_code_t code = lv_event_get_code(e);
   const intptr_t dir = (intptr_t)lv_event_get_user_data(e);
-  if (code == LV_EVENT_PRESSED) {
+  if (code == LV_EVENT_PRESSING) {
+    control_renew_jog();
+  } else if (code == LV_EVENT_PRESSED) {
     if (safety_inhibit_motion()) return;
     if (control_get_state() != STATE_IDLE) return;
     if (dir > 0) {
@@ -352,6 +356,7 @@ static void measured_tap_cb(lv_event_t* e) {
 }
 
 static void apply_measure_cb(lv_event_t* e) {
+  if (control_get_state() != STATE_IDLE) return;
   (void)e;
   if (calStep != STEP_ROTATE) return;
   if (s_measuredDeg < 0.5f) return;
@@ -387,7 +392,7 @@ static void style_result_bar_neutral() {
 static void update_wizard() {
   if (wizardHintLabel) {
     if (calStep >= STEP_SAVE) {
-      lv_label_set_text(wizardHintLabel, "Saved. RESTART or +/- and verify again.");
+      lv_label_set_text(wizardHintLabel, "Save queued. Check status on home screen.");
     } else if (calStep >= STEP_VERIFY_RESULT) {
       lv_label_set_text(wizardHintLabel, "SAVE if PASS, else +/- and verify MOVE.");
     } else if (calStep >= STEP_VERIFY_MEASURE) {
@@ -428,6 +433,15 @@ void screen_calibration_create() {
   snprintf(cap, sizeof(cap), "WROT %s", FW_VERSION);
   ui_create_settings_header(screen, "CALIBRATION", cap, COL_HDR_MUTED);
 
+  lv_obj_t* root = screen;
+  lv_obj_t* body = lv_obj_create(root);
+  lv_obj_set_pos(body, 0, 84);
+  lv_obj_set_size(body, 800, 246);
+  lv_obj_set_style_pad_all(body, 0, 0);
+  lv_obj_set_style_border_width(body, 0, 0);
+  lv_obj_set_style_bg_color(body, COL_BG, 0);
+  lv_obj_set_scroll_dir(body, LV_DIR_VER);
+  screen = body;
   const int topY = CAL_TOP_Y;
   const int topH = CAL_TOP_H;
   const int leftX = CAL_CARD_LEFT;
@@ -679,9 +693,8 @@ void screen_calibration_create() {
 
   const int applyW = 214;
   const int applyX = wizW - wizPad - applyW;
-  applyMeasureBtn =
-      ui_create_btn(measCard, applyX, 12, applyW, CAL_APPLY_MEAS_H, "APPLY MEASUREMENT", FONT_NORMAL,
-                    UI_BTN_ACCENT, apply_measure_cb, nullptr);
+  applyMeasureBtn = ui_create_btn(measCard, applyX, 12, applyW, CAL_APPLY_MEAS_H, "APPLY MEASUREMENT",
+                                  FONT_NORMAL, UI_BTN_ACCENT, apply_measure_cb, nullptr);
 
   lv_obj_t* formCard = ui_create_post_card(screen, rightX, infoY, rightW, infoH);
   lv_obj_remove_flag(formCard, LV_OBJ_FLAG_CLICKABLE);
@@ -705,17 +718,19 @@ void screen_calibration_create() {
   run360Btn = ui_create_btn(screen, ax0, ay, CAL_ACTION_MOVE_W, ah, "MOVE 360", FONT_NORMAL, UI_BTN_ACCENT,
                             run_360_cb, nullptr);
   stopMotionBtn = ui_create_btn(screen, ax0 + CAL_ACTION_MOVE_W + 11, ay, CAL_ACTION_STOP_W, ah, "STOP",
-                                 FONT_NORMAL, UI_BTN_DANGER, cal_stop_motion_cb, nullptr);
+                                FONT_NORMAL, UI_BTN_DANGER, cal_stop_motion_cb, nullptr);
 
-  jogMinusBtn = ui_create_btn(screen, rightX, ay, CAL_JOG_BTN_W, ah, "JOG -", FONT_NORMAL, UI_BTN_NORMAL, nullptr,
-                               nullptr);
+  jogMinusBtn = ui_create_btn(screen, rightX, ay, CAL_JOG_BTN_W, ah, "JOG -", FONT_NORMAL, UI_BTN_NORMAL,
+                              nullptr, nullptr);
   lv_obj_add_event_cb(jogMinusBtn, jog_btn_cb, LV_EVENT_PRESSED, (void*)(intptr_t)-1);
+  lv_obj_add_event_cb(jogMinusBtn, jog_btn_cb, LV_EVENT_PRESSING, nullptr);
   lv_obj_add_event_cb(jogMinusBtn, jog_btn_cb, LV_EVENT_RELEASED, nullptr);
   lv_obj_add_event_cb(jogMinusBtn, jog_btn_cb, LV_EVENT_PRESS_LOST, nullptr);
 
   jogPlusBtn = ui_create_btn(screen, rightX + CAL_JOG_BTN_W + CAL_JOG_GAP, ay, CAL_JOG_BTN_W, ah, "JOG +",
                              FONT_NORMAL, UI_BTN_NORMAL, nullptr, nullptr);
   lv_obj_add_event_cb(jogPlusBtn, jog_btn_cb, LV_EVENT_PRESSED, (void*)(intptr_t)1);
+  lv_obj_add_event_cb(jogPlusBtn, jog_btn_cb, LV_EVENT_PRESSING, nullptr);
   lv_obj_add_event_cb(jogPlusBtn, jog_btn_cb, LV_EVENT_RELEASED, nullptr);
   lv_obj_add_event_cb(jogPlusBtn, jog_btn_cb, LV_EVENT_PRESS_LOST, nullptr);
 
@@ -755,8 +770,21 @@ void screen_calibration_create() {
   lv_obj_set_pos(resultReadyLabel, resultW - 144, 8);
   lv_obj_add_flag(resultReadyLabel, LV_OBJ_FLAG_HIDDEN);
 
-  const int footY = CAL_FOOT_Y;
-  const int footH = CAL_FOOT_H;
+  lv_obj_update_layout(body);
+  for (uint32_t i = 0; i < lv_obj_get_child_count(body); ++i) {
+    lv_obj_t* child = lv_obj_get_child(body, i);
+    lv_obj_set_y(child, lv_obj_get_y(child) - CAL_TOP_Y);
+  }
+  lv_obj_t* actions[] = {run360Btn, stopMotionBtn, jogMinusBtn, jogPlusBtn};
+  for (lv_obj_t* action : actions) {
+    lv_obj_set_parent(action, root);
+    lv_obj_set_y(action, 342);
+  }
+  lv_obj_update_layout(body);
+  lv_obj_scroll_to_y(body, 0, LV_ANIM_OFF);
+  screen = root;
+  const int footY = 408;
+  const int footH = 56;
   const int footGap = 20;
   ui_create_btn(screen, CAL_CARD_LEFT, footY, 180, footH, "<  BACK", SET_BTN_FONT, UI_BTN_NORMAL, back_cb,
                 nullptr);
@@ -971,11 +999,11 @@ void screen_calibration_update() {
   const bool canStart = idle && !safety_inhibit_motion() &&
                         (calStep == STEP_ZERO || calStep == STEP_ROTATE || calStep == STEP_POST_APPLY ||
                          calStep == STEP_VERIFY_RESULT || calStep == STEP_VERIFY_ROTATE);
-  const bool canMeasureUi = idle && !safety_inhibit_motion() &&
-                            (calStep == STEP_ROTATE || calStep == STEP_VERIFY_MEASURE);
-  const bool canApply = idle && !safety_inhibit_motion() && (calStep == STEP_ROTATE) &&
-                        (s_measuredDeg >= 0.5f);
-  const bool canJog = idle && !safety_inhibit_motion();
+  const bool canMeasureUi =
+      idle && !safety_inhibit_motion() && (calStep == STEP_ROTATE || calStep == STEP_VERIFY_MEASURE);
+  const bool canApply =
+      idle && !safety_inhibit_motion() && (calStep == STEP_ROTATE) && (s_measuredDeg >= 0.5f);
+  const bool canJog = (idle || control_get_state() == STATE_JOG) && !safety_inhibit_motion();
 
   if (run360Btn) {
     if (canStart) {

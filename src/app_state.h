@@ -20,30 +20,29 @@
 // ───────────────────────────────────────────────────────────────────────────────
 // Safety (safetyTask on Core 0, ISR on Core 0, UI on Core 1)
 // ───────────────────────────────────────────────────────────────────────────────
-extern std::atomic<bool>     g_estopPending;     // ISR/boot set; safetyTask clears
-extern std::atomic<uint32_t> g_estopTriggerMs;   // safetyTask sets debounce start; 0 = unset
-extern std::atomic<bool>     g_uiResetPending;   // UI (Core 1) set; safetyTask consumes
+extern std::atomic<bool> g_estopPending;        // ISR/boot set; safetyTask clears
+extern std::atomic<uint32_t> g_estopTriggerMs;  // safetyTask sets debounce start; 0 = unset
+extern std::atomic<bool> g_uiResetPending;      // UI (Core 1) set; safetyTask consumes
 
 // ───────────────────────────────────────────────────────────────────────────────
 // Display / input wake (Core 0 sets on activity; Core 1 clears in dim_update)
 // ───────────────────────────────────────────────────────────────────────────────
-extern std::atomic<bool>     g_wakePending;
+extern std::atomic<bool> g_wakePending;
 
 // ───────────────────────────────────────────────────────────────────────────────
 // Storage / flash coordination (storageTask on Core 1 owns the writes)
 // ───────────────────────────────────────────────────────────────────────────────
-extern std::atomic<bool>     g_dir_switch_cache; // cached setting for DIR switch enable
-extern std::atomic<bool>     g_flashWriting;     // storageTask holds true during flash I/O
-extern std::atomic<bool>     g_screenRedraw;     // request full screen invalidate
+extern std::atomic<bool> g_dir_switch_cache;  // cached setting for DIR switch enable
+extern std::atomic<bool> g_flashWriting;      // storageTask holds true during flash I/O
+extern std::atomic<bool> g_screenRedraw;      // request full screen invalidate
 
 // ───────────────────────────────────────────────────────────────────────────────
 // UI → Core 0 requests
 // ───────────────────────────────────────────────────────────────────────────────
-extern std::atomic<bool>     motorConfigApplyPending; // UI touched Motor Config, motorTask re-applies
 
 // ───────────────────────────────────────────────────────────────────────────────
 // Fatal shutdown (use instead of raw ESP.restart() at init failures).
 // Logs the reason with LOG_E (which is compiled into release builds),
-// drains serial, and reboots. Never returns.
+// disables the driver and halts. Never returns.
 // ───────────────────────────────────────────────────────────────────────────────
 [[noreturn]] void fatal_halt(const char* reason);

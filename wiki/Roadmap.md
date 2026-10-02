@@ -33,7 +33,7 @@ This is the previous release; v2.0.9 above is current.
 - [x] RAM event log for START/STOP, pedal, program, state and fault events
 - [x] Pedal Settings screen for GPIO33 arm/disarm and ADS1115 status
 - [x] ProgramExecutor applies direction, workpiece diameter, pulse cycles, step repeats/dwell, soft start and auto-stop timer fields
-- [x] Main START race fix with overwrite command queue and stale STOP cleanup
+- [x] STOP latch and generation-checked starts replace the earlier latest-command overwrite behavior
 - [x] Workpiece diameter stored per STEP preset
 - [x] README, wiki, status and UI SVG documentation sync
 
@@ -54,7 +54,7 @@ This is the previous release; v2.0.9 above is current.
 ## v2.0.4 — main UI, jog, SMP
 
 ### v2.0.4 (2026-04-12)
-- [x] Main screen pot-only RPM gauge (no +/-), larger gauge, centered RPM display
+- [x] V5 orange main speed panel with idle RPM +/−, direction selection and wide START/STOP
 - [x] Jog screen RPM row cleanup (no stray range label; non-overlapping +/-)
 - [x] Control state memory ordering; `programsDirty` atomic; `g_settings_mutex` hardening; `rpm_buttons_enabled` removed
 
@@ -80,7 +80,7 @@ This is the previous release; v2.0.9 above is current.
 - [x] Display/Motor Config UI polish
 
 ### v2.0.0 Features (2026-04-03)
-- [x] 21 active LVGL root screens + E-STOP overlay (settings, diagnostics, pedal settings, system info, calibration, motor config, etc.)
+- [x] 22 registered LVGL root screens + E-STOP overlay (settings, diagnostics, pedal settings, system info, calibration, motor config, etc.)
 - [x] Direction switch (GPIO29, toggle via settings)
 - [x] Foot pedal support (analog speed + digital start)
 - [x] Thread-safe stepper access (FreeRTOS mutex + atomic variables)

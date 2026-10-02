@@ -13,12 +13,7 @@ static size_t s_count = 0;
 static SemaphoreHandle_t s_mutex = nullptr;
 static std::atomic<uint32_t> s_version{0};
 
-static bool event_log_lock() {
-  if (s_mutex == nullptr) {
-    s_mutex = xSemaphoreCreateMutex();
-  }
-  return s_mutex != nullptr && xSemaphoreTake(s_mutex, portMAX_DELAY) == pdTRUE;
-}
+static bool event_log_lock() { return s_mutex != nullptr && xSemaphoreTake(s_mutex, 0) == pdTRUE; }
 
 static void event_log_unlock() {
   if (s_mutex) {
@@ -76,9 +71,7 @@ size_t event_log_snapshot(EventLogEntry* out, size_t max_entries) {
   return n;
 }
 
-uint32_t event_log_version() {
-  return s_version.load(std::memory_order_acquire);
-}
+uint32_t event_log_version() { return s_version.load(std::memory_order_acquire); }
 
 void event_log_clear() {
   if (!event_log_lock()) return;

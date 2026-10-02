@@ -30,7 +30,7 @@ static void back_cb(lv_event_t* e) {
 static lv_obj_t* add_gpio_row(lv_obj_t* panel, int y, const char* key) {
   lv_obj_t* keyLbl = lv_label_create(panel);
   lv_label_set_text(keyLbl, key);
-  lv_obj_set_style_text_font(keyLbl, FONT_SMALL, 0);
+  lv_obj_set_style_text_font(keyLbl, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(keyLbl, COL_TEXT_DIM, 0);
   lv_obj_set_pos(keyLbl, 12, y);
   lv_obj_set_width(keyLbl, 200);
@@ -38,7 +38,7 @@ static lv_obj_t* add_gpio_row(lv_obj_t* panel, int y, const char* key) {
 
   lv_obj_t* valueLbl = lv_label_create(panel);
   lv_label_set_text(valueLbl, "-");
-  lv_obj_set_style_text_font(valueLbl, FONT_SMALL, 0);
+  lv_obj_set_style_text_font(valueLbl, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(valueLbl, COL_TEXT, 0);
   lv_obj_set_pos(valueLbl, 204, y);
   lv_obj_set_width(valueLbl, 144);
@@ -46,9 +46,7 @@ static lv_obj_t* add_gpio_row(lv_obj_t* panel, int y, const char* key) {
   return valueLbl;
 }
 
-static lv_obj_t* add_rt_row(lv_obj_t* panel, int y, const char* key) {
-  return add_gpio_row(panel, y, key);
-}
+static lv_obj_t* add_rt_row(lv_obj_t* panel, int y, const char* key) { return add_gpio_row(panel, y, key); }
 
 static void set_value(lv_obj_t* obj, const char* text, lv_color_t color) {
   if (!obj) return;
@@ -59,7 +57,8 @@ static void set_value(lv_obj_t* obj, const char* text, lv_color_t color) {
   lv_obj_set_style_text_color(obj, color, 0);
 }
 
-static void set_pin_value(lv_obj_t* obj, int pinState, const char* highText, const char* lowText, bool lowIsFault) {
+static void set_pin_value(lv_obj_t* obj, int pinState, const char* highText, const char* lowText,
+                          bool lowIsFault) {
   const bool low = (pinState == LOW);
   const char* text = low ? lowText : highText;
   lv_color_t color = (low && lowIsFault) ? COL_RED : COL_GREEN;
@@ -74,7 +73,7 @@ void screen_diagnostics_create() {
 
   ui_create_settings_header(screen, "DIAGNOSTICS", "LIVE", COL_GREEN);
 
-  lv_obj_t* gpioPanel = ui_create_post_card(screen, 20, 60, 360, 244);
+  lv_obj_t* gpioPanel = ui_create_post_card(screen, 24, 94, 368, 224);
   lv_obj_remove_flag(gpioPanel, LV_OBJ_FLAG_SCROLLABLE);
 
   lv_obj_t* gpioTitle = lv_label_create(gpioPanel);
@@ -84,12 +83,15 @@ void screen_diagnostics_create() {
   lv_obj_set_pos(gpioTitle, 12, 10);
 
   int gy = 38;
-  estopVal = add_gpio_row(gpioPanel, gy, "ESTOP"); gy += 32;
-  almVal = add_gpio_row(gpioPanel, gy, "DRIVER ALM"); gy += 32;
-  dirSwVal = add_gpio_row(gpioPanel, gy, "DIR SWITCH"); gy += 32;
+  estopVal = add_gpio_row(gpioPanel, gy, "ESTOP");
+  gy += 32;
+  almVal = add_gpio_row(gpioPanel, gy, "DRIVER ALM");
+  gy += 32;
+  dirSwVal = add_gpio_row(gpioPanel, gy, "DIR SWITCH");
+  gy += 32;
   pedalSwVal = add_gpio_row(gpioPanel, gy, "PEDAL SW");
 
-  lv_obj_t* rtPanel = ui_create_post_card(screen, 420, 60, 360, 244);
+  lv_obj_t* rtPanel = ui_create_post_card(screen, 424, 94, 368, 224);
   lv_obj_remove_flag(rtPanel, LV_OBJ_FLAG_SCROLLABLE);
 
   lv_obj_t* rtTitle = lv_label_create(rtPanel);
@@ -99,22 +101,25 @@ void screen_diagnostics_create() {
   lv_obj_set_pos(rtTitle, 12, 10);
 
   int ry = 38;
-  stateVal = add_rt_row(rtPanel, ry, "STATE"); ry += 32;
-  targetRpmVal = add_rt_row(rtPanel, ry, "TARGET RPM"); ry += 32;
-  actualRpmVal = add_rt_row(rtPanel, ry, "ACTUAL RPM"); ry += 32;
+  stateVal = add_rt_row(rtPanel, ry, "STATE");
+  ry += 32;
+  targetRpmVal = add_rt_row(rtPanel, ry, "TARGET RPM");
+  ry += 32;
+  actualRpmVal = add_rt_row(rtPanel, ry, "CALC. RPM");
+  ry += 32;
   enaVal = add_rt_row(rtPanel, ry, "ENA");
 
-  lv_obj_t* eventPanel = ui_create_post_card(screen, 20, 326, 760, 46);
+  lv_obj_t* eventPanel = ui_create_post_card(screen, 24, 334, 752, 48);
   lv_obj_remove_flag(eventPanel, LV_OBJ_FLAG_SCROLLABLE);
   eventStripLabel = lv_label_create(eventPanel);
   lv_label_set_text(eventStripLabel, "-");
-  lv_obj_set_style_text_font(eventStripLabel, FONT_SMALL, 0);
+  lv_obj_set_style_text_font(eventStripLabel, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(eventStripLabel, COL_TEXT_DIM, 0);
   lv_obj_set_pos(eventStripLabel, 12, 14);
   lv_obj_set_width(eventStripLabel, 736);
   lv_label_set_long_mode(eventStripLabel, LV_LABEL_LONG_MODE_CLIP);
 
-  ui_create_btn(screen, 20, SET_FOOTER_Y, 180, SET_FOOTER_H, "<  BACK", FONT_SUBTITLE, UI_BTN_NORMAL, back_cb,
+  ui_create_btn(screen, 24, SET_FOOTER_Y, 152, SET_FOOTER_H, "<  BACK", FONT_SUBTITLE, UI_BTN_NORMAL, back_cb,
                 nullptr);
   screen_diagnostics_update();
 }
@@ -165,10 +170,8 @@ void screen_diagnostics_update() {
         if (w > 0) pos += (size_t)w;
       }
       uint32_t sec = ev[i].ms / 1000u;
-      int w = snprintf(line + pos, sizeof(line) - pos, "%02lu:%02lu %s",
-                       (unsigned long)((sec / 60u) % 100u),
-                       (unsigned long)(sec % 60u),
-                       ev[i].text);
+      int w = snprintf(line + pos, sizeof(line) - pos, "%02lu:%02lu %s", (unsigned long)((sec / 60u) % 100u),
+                       (unsigned long)(sec % 60u), ev[i].text);
       if (w > 0) pos += (size_t)w;
       if (pos >= sizeof(line)) break;
     }

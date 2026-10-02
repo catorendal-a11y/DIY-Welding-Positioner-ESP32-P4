@@ -1,0 +1,17 @@
+{
+  "native_tests": {
+    "passed": 403,
+    "total": 403
+  },
+  "ui_self_test": "PASS",
+  "firmware": {
+    "esp32p4-release": "SUCCESS",
+    "esp32p4-debug": "SUCCESS",
+    "esp32p4-mirror": "SUCCESS"
+  },
+  "svg_xml_valid": 31,
+  "runtime_screenshots": 22,
+  "diff_check_exit_code": 0,
+  "hardware_tested": false,
+  "github_actions_executed": false
+}

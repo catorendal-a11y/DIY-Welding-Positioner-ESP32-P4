@@ -124,9 +124,11 @@ Firmware: **LOW** on the ENA GPIO line = **motor enabled**, **HIGH** = disabled 
   - Pin 1 (CCW) -> GND
   - Pin 2 (Wiper) -> `GPIO 49`
   - Pin 3 (CW) -> 3.3V
-- **E-STOP (NC / active LOW on press, matches firmware):**
-  - Wire so that **released (safe) = logic HIGH** and **pressed = logic LOW** on `GPIO 34` (firmware uses `INPUT_PULLUP` and a **FALLING** interrupt).
-  - `src/config.h` notes that some ESP32-P4 strapping guidance applies to GPIO34 — keep leads short; add external pull-up / RC filter per [EMI_MITIGATION.md](EMI_MITIGATION.md) if the line is noisy.
+- **E-STOP conditioned input (active LOW):**
+  - Firmware requires healthy = HIGH and fault = LOW at GPIO34, with a FALLING interrupt.
+  - A bare NC contact to GND with a pull-up has the opposite logic and must not be described as compatible.
+  - Verify a supervised interface for pressed, released, broken wire and power loss using the truth table in [estop_timing.md](estop_timing.md).
+  - Actual ENA/opto polarity and physical stop latency have not been validated by the software tests.
 - **Direction Switch (CW/CCW Toggle):**
   - Pin 1 -> `GPIO 29`
   - Pin 2 -> GND
@@ -154,7 +156,7 @@ Firmware: **LOW** on the ENA GPIO line = **motor enabled**, **HIGH** = disabled 
 | **Gearbox** | NMRV030 + spur, **1:108** total | Tested |
 | **Power Supply** | 36V DC (optimal); 24V DC works | Tested |
 | **Potentiometer** | 10k (LA42DWQ-22) | Tested (ADC range 0-3315) |
-| **E-STOP** | NC Button | Tested |
+| **E-STOP** | Conditioned HIGH-healthy / LOW-fault input | Polarity and broken-wire response require bench verification |
 | **Direction Switch** | SPDT toggle on GPIO 29 | Tested |
 | **Foot Pedal** | Analog pot + momentary switch | Tested |
 | **TIG HF welding** | Shared grounded metal enclosure for ESP32-P4 screen, driver, and PSU | Field tested |

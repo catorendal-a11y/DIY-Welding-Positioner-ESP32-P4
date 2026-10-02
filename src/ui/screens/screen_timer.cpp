@@ -157,8 +157,8 @@ void screen_timer_create() {
   ui_create_header(screen, "COUNTDOWN", "DELAY START", nullptr);
 
   ringCard = lv_obj_create(screen);
-  lv_obj_set_size(ringCard, 296, 296);
-  lv_obj_set_pos(ringCard, 34, 60);
+  lv_obj_set_size(ringCard, 296, 290);
+  lv_obj_set_pos(ringCard, 24, 94);
   lv_obj_set_style_bg_color(ringCard, COL_BG_CARD, 0);
   lv_obj_set_style_border_color(ringCard, COL_BORDER, 0);
   lv_obj_set_style_border_width(ringCard, 1, 0);
@@ -200,7 +200,7 @@ void screen_timer_create() {
   lv_obj_set_width(secCaption, 296);
   lv_obj_align(secCaption, LV_ALIGN_CENTER, 0, 22);
 
-  lv_obj_t* afterCard = timer_make_info_card(screen, 58, "START AFTER", false);
+  lv_obj_t* afterCard = timer_make_info_card(screen, 94, "START AFTER", false);
   startAfterValLbl = lv_label_create(afterCard);
   refresh_start_after_label();
   lv_obj_set_style_text_font(startAfterValLbl, FONT_XXL, 0);
@@ -210,10 +210,12 @@ void screen_timer_create() {
   lv_obj_align(startAfterValLbl, LV_ALIGN_LEFT_MID, 108, 4);
 
   // Keep +/- clear of "%ds" text (was RIGHT + -64: suffix sat under + button)
-  ui_create_btn(afterCard, 268, 22, 52, 44, "-", FONT_SUBTITLE, UI_BTN_NORMAL, sec_adj_cb, (void*)(intptr_t)(-1));
-  ui_create_btn(afterCard, 326, 22, 52, 44, "+", FONT_SUBTITLE, UI_BTN_ACCENT, sec_adj_cb, (void*)(intptr_t)(1));
+  ui_create_btn(afterCard, 268, 22, 52, 44, "-", FONT_SUBTITLE, UI_BTN_NORMAL, sec_adj_cb,
+                (void*)(intptr_t)(-1));
+  ui_create_btn(afterCard, 326, 22, 52, 44, "+", FONT_SUBTITLE, UI_BTN_ACCENT, sec_adj_cb,
+                (void*)(intptr_t)(1));
 
-  lv_obj_t* rpmCard = timer_make_info_card(screen, 162, "TARGET RPM", false);
+  lv_obj_t* rpmCard = timer_make_info_card(screen, 194, "TARGET RPM", false);
   rpmValLbl = lv_label_create(rpmCard);
   lv_label_set_text_fmt(rpmValLbl, "%.1f", speed_get_target_rpm());
   lastRpmShown = speed_get_target_rpm();
@@ -223,7 +225,7 @@ void screen_timer_create() {
   lv_obj_set_width(rpmValLbl, 180);
   lv_obj_align(rpmValLbl, LV_ALIGN_RIGHT_MID, -16, 4);
 
-  lv_obj_t* warnCard = timer_make_info_card(screen, 266, "SAFETY HOLD", true);
+  lv_obj_t* warnCard = timer_make_info_card(screen, 294, "SAFETY HOLD", true);
   warnDetailLbl = lv_label_create(warnCard);
   lv_label_set_text(warnDetailLbl, "Motor remains disabled until zero");
   lv_obj_set_style_text_font(warnDetailLbl, FONT_NORMAL, 0);
@@ -232,11 +234,9 @@ void screen_timer_create() {
   lv_obj_set_width(warnDetailLbl, 348);
   lv_label_set_long_mode(warnDetailLbl, LV_LABEL_LONG_MODE_WRAP);
 
-  ui_create_action_bar_three(screen, 20, 408, 52, 16, 244,
-                             "<  BACK", back_event_cb, UI_BTN_NORMAL,
-                             "> START", start_event_cb, UI_BTN_ACCENT,
-                             "X STOP", stop_event_cb, UI_BTN_DANGER,
-                             nullptr, nullptr, nullptr);
+  ui_create_action_bar_three(screen, 20, 408, 52, 16, 244, "<  BACK", back_event_cb, UI_BTN_NORMAL, "> START",
+                             start_event_cb, UI_BTN_ACCENT, "X STOP", stop_event_cb, UI_BTN_DANGER, nullptr,
+                             nullptr, nullptr);
 
   LOG_I("Screen countdown: POST layout created");
 }

@@ -6,8 +6,9 @@
 #include "speed.h"
 #include "microstep.h"
 #include "../config.h"
-#include "../app_state.h"   // fatal_halt
+#include "../app_state.h"  // fatal_halt
 #include "../safety/safety.h"
+#include "../control/control.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include <FastAccelStepper.h>
@@ -19,6 +20,9 @@
 // ───────────────────────────────────────────────────────────────────────────────
 static FastAccelStepperEngine engine = FastAccelStepperEngine();
 static FastAccelStepper* stepper = nullptr;
+static std::atomic<bool> commandedCw{true};
+bool motor_direction_is_cw() { return commandedCw.load(); }
+void motor_record_direction(bool cw) { commandedCw.store(cw); }
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STEPPER MUTEX — all stepper API calls must hold this
@@ -138,7 +142,7 @@ void motor_init() {
 // MOTOR CONTROL FUNCTIONS
 // ───────────────────────────────────────────────────────────────────────────────
 bool motor_run_cw() {
-  if (safety_inhibit_motion()) return false;
+  if (safety_inhibit_motion() || control_motion_blocked()) return false;
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   if (stepper == nullptr) {
     xSemaphoreGive(g_stepperMutex);
@@ -146,16 +150,17 @@ bool motor_run_cw() {
   }
   // Re-check after mutex: ISR may have asserted ESTOP between outer check and here;
   // never pull ENA LOW if ESTOP is active (would override hardware disable path).
-  if (safety_inhibit_motion()) {
+  if (safety_inhibit_motion() || control_motion_blocked()) {
     xSemaphoreGive(g_stepperMutex);
     return false;
   }
   digitalWrite(PIN_ENA, LOW);
-  if (safety_inhibit_motion()) {
+  if (safety_inhibit_motion() || control_motion_blocked()) {
     digitalWrite(PIN_ENA, HIGH);
     xSemaphoreGive(g_stepperMutex);
     return false;
   }
+  motor_record_direction(true);
   stepper->runForward();
   xSemaphoreGive(g_stepperMutex);
   LOG_I("Motor: CW");
@@ -163,22 +168,23 @@ bool motor_run_cw() {
 }
 
 bool motor_run_ccw() {
-  if (safety_inhibit_motion()) return false;
+  if (safety_inhibit_motion() || control_motion_blocked()) return false;
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
   if (stepper == nullptr) {
     xSemaphoreGive(g_stepperMutex);
     return false;
   }
-  if (safety_inhibit_motion()) {
+  if (safety_inhibit_motion() || control_motion_blocked()) {
     xSemaphoreGive(g_stepperMutex);
     return false;
   }
   digitalWrite(PIN_ENA, LOW);
-  if (safety_inhibit_motion()) {
+  if (safety_inhibit_motion() || control_motion_blocked()) {
     digitalWrite(PIN_ENA, HIGH);
     xSemaphoreGive(g_stepperMutex);
     return false;
   }
+  motor_record_direction(false);
   stepper->runBackward();
   xSemaphoreGive(g_stepperMutex);
   LOG_I("Motor: CCW");
@@ -187,7 +193,10 @@ bool motor_run_ccw() {
 
 void motor_stop() {
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
-  if (stepper == nullptr) { xSemaphoreGive(g_stepperMutex); return; }
+  if (stepper == nullptr) {
+    xSemaphoreGive(g_stepperMutex);
+    return;
+  }
   stepper->stopMove();
   xSemaphoreGive(g_stepperMutex);
   LOG_I("Motor: stopping (smooth decel)");
@@ -195,7 +204,10 @@ void motor_stop() {
 
 void motor_halt() {
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
-  if (stepper == nullptr) { xSemaphoreGive(g_stepperMutex); return; }
+  if (stepper == nullptr) {
+    xSemaphoreGive(g_stepperMutex);
+    return;
+  }
   stepper->forceStop();
   digitalWrite(PIN_ENA, HIGH);
   xSemaphoreGive(g_stepperMutex);
@@ -304,10 +316,8 @@ void motor_apply_settings() {
     motor_apply_stepper_dir_timing(dirDelayUs);
   }
   xSemaphoreGive(g_stepperMutex);
-  LOG_I("Motor: accel=%d driver=%s (DIR delay %u us)",
-        accelSteps,
-        driverKind == STEPPER_DRIVER_DM542T ? "DM542T" : "Standard",
-        (unsigned)dirDelayUs);
+  LOG_I("Motor: accel=%d driver=%s (DIR delay %u us)", accelSteps,
+        driverKind == STEPPER_DRIVER_DM542T ? "DM542T" : "Standard", (unsigned)dirDelayUs);
 }
 
 void motor_apply_soft_start_acceleration() {
@@ -352,6 +362,4 @@ void motor_restore_configured_acceleration() {
   LOG_I("Motor: restored accel=%u", (unsigned)configured);
 }
 
-FastAccelStepper* motor_get_stepper() {
-  return stepper;
-}
+FastAccelStepper* motor_get_stepper() { return stepper; }

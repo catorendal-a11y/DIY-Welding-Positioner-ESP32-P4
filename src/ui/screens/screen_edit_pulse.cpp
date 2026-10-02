@@ -40,12 +40,9 @@ static void update_computed_info() {
   float duty = (cycleSec > 0.0f) ? (onSec / cycleSec * 100.0f) : 0.0f;
   float freq = (cycleSec > 0.0f) ? (1.0f / cycleSec) : 0.0f;
 
-  if (infoDutyLabel)
-    lv_label_set_text_fmt(infoDutyLabel, "DUTY %d%%", (int)(duty + 0.5f));
-  if (infoCycleLabel)
-    lv_label_set_text_fmt(infoCycleLabel, "CYCLE %.1fs", cycleSec);
-  if (infoFreqLabel)
-    lv_label_set_text_fmt(infoFreqLabel, "FREQ %.1fHz", freq);
+  if (infoDutyLabel) lv_label_set_text_fmt(infoDutyLabel, "DUTY %d%%", (int)(duty + 0.5f));
+  if (infoCycleLabel) lv_label_set_text_fmt(infoCycleLabel, "CYCLE %.1fs", cycleSec);
+  if (infoFreqLabel) lv_label_set_text_fmt(infoFreqLabel, "FREQ %.1fHz", freq);
   if (infoTotalLabel) {
     if (editCycles > 0) {
       float totalSec = cycleSec * editCycles;
@@ -62,12 +59,14 @@ static void update_computed_info() {
   const uint32_t pulseSpan = PULSE_MS_MAX - PULSE_MS_MIN;
   if (onBar) {
     int pct = (int)((editOnMs - PULSE_MS_MIN) * 100 / pulseSpan);
-    if (pct < 0) pct = 0; if (pct > 100) pct = 100;
+    if (pct < 0) pct = 0;
+    if (pct > 100) pct = 100;
     lv_bar_set_value(onBar, pct, LV_ANIM_OFF);
   }
   if (offBar) {
     int pct = (int)((editOffMs - PULSE_MS_MIN) * 100 / pulseSpan);
-    if (pct < 0) pct = 0; if (pct > 100) pct = 100;
+    if (pct < 0) pct = 0;
+    if (pct > 100) pct = 100;
     lv_bar_set_value(offBar, pct, LV_ANIM_OFF);
   }
   if (rpmBar) {
@@ -75,7 +74,8 @@ static void update_computed_info() {
     float span = mx - MIN_RPM;
     if (span < 1e-6f) span = 1e-6f;
     int pct = (int)((editRpm - MIN_RPM) * 100.0f / span + 0.5f);
-    if (pct < 0) pct = 0; if (pct > 100) pct = 100;
+    if (pct < 0) pct = 0;
+    if (pct > 100) pct = 100;
     lv_bar_set_value(rpmBar, pct, LV_ANIM_OFF);
   }
 }
@@ -91,8 +91,10 @@ static void back_event_cb(lv_event_t* e) {
 static void on_time_adj_cb(lv_event_t* e) {
   if (!onTimeLabel) return;
   int delta = (int)(intptr_t)lv_event_get_user_data(e);
-  if (delta > 0) editOnMs += (uint32_t)delta;
-  else if (editOnMs > PULSE_MS_MIN) editOnMs -= (uint32_t)(-delta);
+  if (delta > 0)
+    editOnMs += (uint32_t)delta;
+  else if (editOnMs > PULSE_MS_MIN)
+    editOnMs -= (uint32_t)(-delta);
   if (editOnMs < PULSE_MS_MIN) editOnMs = PULSE_MS_MIN;
   if (editOnMs > PULSE_MS_MAX) editOnMs = PULSE_MS_MAX;
   lv_label_set_text_fmt(onTimeLabel, "%.1fs", editOnMs / 1000.0f);
@@ -102,8 +104,10 @@ static void on_time_adj_cb(lv_event_t* e) {
 static void off_time_adj_cb(lv_event_t* e) {
   if (!offTimeLabel) return;
   int delta = (int)(intptr_t)lv_event_get_user_data(e);
-  if (delta > 0) editOffMs += (uint32_t)delta;
-  else if (editOffMs > PULSE_MS_MIN) editOffMs -= (uint32_t)(-delta);
+  if (delta > 0)
+    editOffMs += (uint32_t)delta;
+  else if (editOffMs > PULSE_MS_MIN)
+    editOffMs -= (uint32_t)(-delta);
   if (editOffMs < PULSE_MS_MIN) editOffMs = PULSE_MS_MIN;
   if (editOffMs > PULSE_MS_MAX) editOffMs = PULSE_MS_MAX;
   lv_label_set_text_fmt(offTimeLabel, "%.1fs", editOffMs / 1000.0f);
@@ -113,8 +117,10 @@ static void off_time_adj_cb(lv_event_t* e) {
 static void rpm_adj_cb(lv_event_t* e) {
   if (!rpmLabel) return;
   int delta = (int)(intptr_t)lv_event_get_user_data(e);
-  if (delta > 0) editRpm += 0.1f;
-  else if (editRpm > MIN_RPM) editRpm -= 0.1f;
+  if (delta > 0)
+    editRpm += 0.1f;
+  else if (editRpm > MIN_RPM)
+    editRpm -= 0.1f;
   if (editRpm < MIN_RPM) editRpm = MIN_RPM;
   if (editRpm > speed_get_rpm_max()) editRpm = speed_get_rpm_max();
   lv_label_set_text_fmt(rpmLabel, "%.1f", editRpm);
@@ -175,241 +181,32 @@ static lv_obj_t* create_separator(lv_obj_t* parent, int16_t y) {
 void screen_edit_pulse_create() {
   lv_obj_t* screen = screenRoots[SCREEN_EDIT_PULSE];
   lv_obj_clean(screen);
-  lv_obj_set_style_bg_color(screen, COL_BG, 0);
-
   Preset* p = screen_program_edit_get_preset();
   editOnMs = p ? p->pulse_on_ms : 500;
   editOffMs = p ? p->pulse_off_ms : 300;
   editRpm = p ? p->rpm : 1.2f;
   editCycles = p ? p->pulse_cycles : 0;
-
-  // ── Header bar ──
-  lv_obj_t* header = lv_obj_create(screen);
-  lv_obj_set_size(header, SCREEN_W, HEADER_H);
-  lv_obj_set_pos(header, 0, 0);
-  lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
-  lv_obj_set_style_pad_all(header, 0, 0);
-  lv_obj_set_style_border_width(header, 0, 0);
-  lv_obj_set_style_radius(header, 0, 0);
-  lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
-
-  // Title
-  lv_obj_t* title = lv_label_create(header);
-  lv_label_set_text(title, "EDIT PULSE");
-  lv_obj_set_style_text_font(title, FONT_MED, 0);
-  lv_obj_set_style_text_color(title, COL_ACCENT, 0);
-  lv_obj_set_pos(title, 12, 11);
-
-  // [ESC] button at right of header
-  lv_obj_t* escBtn = lv_button_create(header);
-  lv_obj_set_size(escBtn, 60, 24);
-  lv_obj_set_pos(escBtn, SCREEN_W - 60 - PAD_X, 7);
-  ui_btn_style_post(escBtn, UI_BTN_NORMAL);
-  lv_obj_add_event_cb(escBtn, back_event_cb, LV_EVENT_CLICKED, nullptr);
-
-  lv_obj_t* escLbl = lv_label_create(escBtn);
-  lv_label_set_text(escLbl, "[ESC]");
-  lv_obj_set_style_text_font(escLbl, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(escLbl, COL_TEXT_DIM, 0);
-  lv_obj_center(escLbl);
-
-  ui_add_post_header_accent(screen);
-
-  // ── Layout constants (must fit 800px wide: old right col + bar + 2×btn ended at x=816) ──
-  const int edge = 16;
-  const int gapMid = 16;
-  const int colW = (SCREEN_W - 2 * edge - gapMid) / 2;  // 376
-  const int colLeftX = edge;
-  const int colRightX = edge + colW + gapMid;           // 408
-  const int btnW = BTN_W_PM;   // 44
-  const int btnH = BTN_H_PM;   // 30
-  const int btnGap = 8;
-  const int btnRowW = btnW + btnGap + btnW;
-  const int barW = colW - 20 - btnRowW;               // 260 → right + ends at 784
-  const int barH = 3;
-
-  // ════════════════════════════════════════════════════════════════════════════════
-  // ON TIME — left column (y=40)
-  // ════════════════════════════════════════════════════════════════════════════════
-  ui_create_post_card(screen, colLeftX - 4, 46, colW, 104);
-  ui_create_post_card(screen, colRightX - 4, 46, colW, 104);
-  ui_create_post_card(screen, colLeftX - 4, 186, colW, 104);
-  ui_create_post_card(screen, colRightX - 4, 186, colW, 104);
-  ui_create_post_row(screen, 16, 318, 768, 38);
-
-  const int onY = 46;
-
-  lv_obj_t* onTitle = lv_label_create(screen);
-  lv_label_set_text(onTitle, "ON TIME");
-  lv_obj_set_style_text_font(onTitle, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(onTitle, COL_ACCENT, 0);
-  lv_obj_set_pos(onTitle, colLeftX, onY);
-
-  onTimeLabel = lv_label_create(screen);
+  ui_create_header(screen, "Pulse settings", "PROGRAM EDIT", nullptr);
+  onTimeLabel = ui_create_adjust_card(screen, 24, 86, 368, "ROTATE FOR / s", on_time_adj_cb, 100);
+  ui_highlight_value_card(onTimeLabel);
+  offTimeLabel = ui_create_adjust_card(screen, 408, 86, 368, "PAUSE FOR / s", off_time_adj_cb, 100);
+  rpmLabel = ui_create_adjust_card(screen, 24, 226, 368, "TARGET SPEED / RPM", rpm_adj_cb);
+  cyclesLabel = ui_create_adjust_card(screen, 408, 226, 368, "CYCLES / 0 = continuous", cycles_adj_cb);
   lv_label_set_text_fmt(onTimeLabel, "%.1fs", editOnMs / 1000.0f);
-  lv_obj_set_style_text_font(onTimeLabel, FONT_XXL, 0);
-  lv_obj_set_style_text_color(onTimeLabel, COL_ACCENT, 0);
-  lv_obj_set_pos(onTimeLabel, colLeftX + 80, onY);
-
-  // Progress bar
-  onBar = lv_bar_create(screen);
-  lv_obj_set_size(onBar, barW, barH);
-  lv_obj_set_pos(onBar, colLeftX, onY + 38);
-  lv_obj_set_style_bg_color(onBar, COL_GAUGE_BG, 0);
-  lv_obj_set_style_bg_opa(onBar, LV_OPA_COVER, 0);
-  lv_obj_set_style_border_width(onBar, 0, 0);
-  lv_obj_set_style_radius(onBar, 1, 0);
-  lv_bar_set_range(onBar, 0, 100);
-  lv_obj_set_style_bg_color(onBar, COL_ACCENT, LV_PART_INDICATOR);
-  lv_obj_set_style_radius(onBar, 1, LV_PART_INDICATOR);
-
-  // -/+ buttons
-  ui_create_pm_btn(screen, colLeftX + barW + 20, onY + 24, "-", FONT_XL, UI_BTN_NORMAL, on_time_adj_cb,
-                   (void*)(intptr_t)-100);
-  ui_create_pm_btn(screen, colLeftX + barW + 20 + btnW + btnGap, onY + 24, "+", FONT_XL, UI_BTN_ACCENT,
-                     on_time_adj_cb, (void*)(intptr_t)100);
-
-  // ════════════════════════════════════════════════════════════════════════════════
-  // OFF TIME — right column (y=40)
-  // ════════════════════════════════════════════════════════════════════════════════
-  lv_obj_t* offTitle = lv_label_create(screen);
-  lv_label_set_text(offTitle, "OFF TIME");
-  lv_obj_set_style_text_font(offTitle, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(offTitle, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(offTitle, colRightX, onY);
-
-  offTimeLabel = lv_label_create(screen);
   lv_label_set_text_fmt(offTimeLabel, "%.1fs", editOffMs / 1000.0f);
-  lv_obj_set_style_text_font(offTimeLabel, FONT_XXL, 0);
-  lv_obj_set_style_text_color(offTimeLabel, COL_TEXT, 0);
-  lv_obj_set_pos(offTimeLabel, colRightX + 100, onY);
-
-  // Progress bar
-  offBar = lv_bar_create(screen);
-  lv_obj_set_size(offBar, barW, barH);
-  lv_obj_set_pos(offBar, colRightX, onY + 38);
-  lv_obj_set_style_bg_color(offBar, COL_GAUGE_BG, 0);
-  lv_obj_set_style_bg_opa(offBar, LV_OPA_COVER, 0);
-  lv_obj_set_style_border_width(offBar, 0, 0);
-  lv_obj_set_style_radius(offBar, 1, 0);
-  lv_bar_set_range(offBar, 0, 100);
-  lv_obj_set_style_bg_color(offBar, COL_TEXT, LV_PART_INDICATOR);
-  lv_obj_set_style_radius(offBar, 1, LV_PART_INDICATOR);
-
-  // -/+ buttons
-  ui_create_pm_btn(screen, colRightX + barW + 20, onY + 24, "-", FONT_XL, UI_BTN_NORMAL, off_time_adj_cb,
-                   (void*)(intptr_t)-100);
-  ui_create_pm_btn(screen, colRightX + barW + 20 + btnW + btnGap, onY + 24, "+", FONT_XL, UI_BTN_ACCENT,
-                     off_time_adj_cb, (void*)(intptr_t)100);
-
-  // ════════════════════════════════════════════════════════════════════════════════
-  // Separator at y=166
-  // ════════════════════════════════════════════════════════════════════════════════
-  create_separator(screen, 172);
-
-  // ════════════════════════════════════════════════════════════════════════════════
-  // RPM — left column (y=180)
-  // ════════════════════════════════════════════════════════════════════════════════
-  const int rpmY = 186;
-
-  lv_obj_t* rpmTitle = lv_label_create(screen);
-  lv_label_set_text(rpmTitle, "RPM");
-  lv_obj_set_style_text_font(rpmTitle, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(rpmTitle, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(rpmTitle, colLeftX, rpmY);
-
-  rpmLabel = lv_label_create(screen);
-  lv_label_set_text_fmt(rpmLabel, "%.1f", editRpm);
-  lv_obj_set_style_text_font(rpmLabel, FONT_XXL, 0);
-  lv_obj_set_style_text_color(rpmLabel, COL_TEXT, 0);
-  lv_obj_set_pos(rpmLabel, colLeftX + 50, rpmY);
-
-  // Progress bar
-  rpmBar = lv_bar_create(screen);
-  lv_obj_set_size(rpmBar, barW, barH);
-  lv_obj_set_pos(rpmBar, colLeftX, rpmY + 38);
-  lv_obj_set_style_bg_color(rpmBar, COL_GAUGE_BG, 0);
-  lv_obj_set_style_bg_opa(rpmBar, LV_OPA_COVER, 0);
-  lv_obj_set_style_border_width(rpmBar, 0, 0);
-  lv_obj_set_style_radius(rpmBar, 1, 0);
-  lv_bar_set_range(rpmBar, 0, 100);
-  lv_obj_set_style_bg_color(rpmBar, COL_ACCENT, LV_PART_INDICATOR);
-  lv_obj_set_style_radius(rpmBar, 1, LV_PART_INDICATOR);
-
-  // -/+ buttons
-  ui_create_pm_btn(screen, colLeftX + barW + 20, rpmY + 24, "-", FONT_XL, UI_BTN_NORMAL, rpm_adj_cb,
-                   (void*)(intptr_t)-1);
-  ui_create_pm_btn(screen, colLeftX + barW + 20 + btnW + btnGap, rpmY + 24, "+", FONT_XL, UI_BTN_ACCENT,
-                     rpm_adj_cb, (void*)(intptr_t)1);
-
-  // Range hint
-  lv_obj_t* rpmHint = lv_label_create(screen);
-  char hintBuf[16];
-  snprintf(hintBuf, sizeof(hintBuf), "%.3f-%.3f", (double)MIN_RPM, (double)speed_get_rpm_max());
-  lv_label_set_text(rpmHint, hintBuf);
-  lv_obj_set_style_text_font(rpmHint, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(rpmHint, COL_TEXT_VDIM, 0);
-  lv_obj_set_pos(rpmHint, colLeftX + barW + 20 + btnRowW + 4, rpmY + 28);
-
-  // ════════════════════════════════════════════════════════════════════════════════
-  // CYCLES — right column (y=180)
-  // ════════════════════════════════════════════════════════════════════════════════
-  lv_obj_t* cyclesTitle = lv_label_create(screen);
-  lv_label_set_text(cyclesTitle, "CYCLES");
-  lv_obj_set_style_text_font(cyclesTitle, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(cyclesTitle, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(cyclesTitle, colRightX, rpmY);
-
-  cyclesLabel = lv_label_create(screen);
-  lv_label_set_text(cyclesLabel, "INF");
-  lv_obj_set_style_text_font(cyclesLabel, FONT_XXL, 0);
-  lv_obj_set_style_text_color(cyclesLabel, COL_TEXT, 0);
-  lv_obj_set_pos(cyclesLabel, colRightX + 70, rpmY);
-
-  // -/+ buttons
-  ui_create_pm_btn(screen, colRightX + barW + 20, rpmY + 24, "-", FONT_XL, UI_BTN_NORMAL, cycles_adj_cb,
-                   (void*)(intptr_t)-1);
-  ui_create_pm_btn(screen, colRightX + barW + 20 + btnW + btnGap, rpmY + 24, "+", FONT_XL, UI_BTN_ACCENT,
-                     cycles_adj_cb, (void*)(intptr_t)1);
-
-  // ════════════════════════════════════════════════════════════════════════════════
-  // Separator at y=304
-  // ════════════════════════════════════════════════════════════════════════════════
-  create_separator(screen, 310);
-
-  // ════════════════════════════════════════════════════════════════════════════════
-  // Computed info line (y=320)
-  // ════════════════════════════════════════════════════════════════════════════════
-  const int infoY = 326;
-
-  infoDutyLabel = lv_label_create(screen);
-  lv_obj_set_style_text_font(infoDutyLabel, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(infoDutyLabel, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(infoDutyLabel, 20, infoY);
-
-  infoCycleLabel = lv_label_create(screen);
-  lv_obj_set_style_text_font(infoCycleLabel, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(infoCycleLabel, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(infoCycleLabel, 200, infoY);
-
-  infoFreqLabel = lv_label_create(screen);
-  lv_obj_set_style_text_font(infoFreqLabel, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(infoFreqLabel, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(infoFreqLabel, 380, infoY);
-
-  infoTotalLabel = lv_label_create(screen);
-  lv_obj_set_style_text_font(infoTotalLabel, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(infoTotalLabel, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(infoTotalLabel, 560, infoY);
-
+  lv_label_set_text_fmt(rpmLabel, "%.3f", editRpm);
+  if (editCycles)
+    lv_label_set_text_fmt(cyclesLabel, "%d", editCycles);
+  else
+    lv_label_set_text(cyclesLabel, "INF");
+  onBar = offBar = rpmBar = nullptr;
+  infoDutyLabel = ui_create_text(screen, 24, 366, 176, "", FONT_NORMAL, COL_TEXT_DIM);
+  infoCycleLabel = ui_create_text(screen, 216, 366, 176, "", FONT_NORMAL, COL_TEXT_DIM);
+  infoFreqLabel = ui_create_text(screen, 408, 366, 176, "", FONT_NORMAL, COL_TEXT_DIM);
+  infoTotalLabel = ui_create_text(screen, 600, 366, 176, "", FONT_NORMAL, COL_TEXT_DIM);
+  ui_create_btn(screen, 24, 408, 152, 56, "CANCEL", FONT_BTN, UI_BTN_NORMAL, cancel_event_cb, nullptr);
+  ui_create_btn(screen, 496, 408, 280, 56, "SAVE", FONT_BTN, UI_BTN_ACCENT, save_event_cb, nullptr);
   update_computed_info();
-
-  ui_create_btn(screen, 120, 406, 260, BTN_H_ACTION, "CANCEL", FONT_SUBTITLE, UI_BTN_NORMAL,
-                cancel_event_cb, nullptr);
-  ui_create_btn(screen, 420, 406, 260, BTN_H_ACTION, "SAVE", FONT_SUBTITLE, UI_BTN_ACCENT,
-                save_event_cb, nullptr);
-
-  LOG_I("Screen edit pulse: v2.0 two-column layout created");
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -435,19 +232,12 @@ void screen_edit_pulse_update() {
   Preset* p = screen_program_edit_get_preset();
   if (!p) return;
 
-  // Sync local state from preset
-  editOnMs = p->pulse_on_ms;
-  editOffMs = p->pulse_off_ms;
-  editRpm = p->rpm;
-  editCycles = p->pulse_cycles;
+  // Draft is loaded on entry. Preserve edits until SAVE or CANCEL.
 
   // Update labels
-  if (onTimeLabel)
-    lv_label_set_text_fmt(onTimeLabel, "%.1fs", editOnMs / 1000.0f);
-  if (offTimeLabel)
-    lv_label_set_text_fmt(offTimeLabel, "%.1fs", editOffMs / 1000.0f);
-  if (rpmLabel)
-    lv_label_set_text_fmt(rpmLabel, "%.1f", editRpm);
+  if (onTimeLabel) lv_label_set_text_fmt(onTimeLabel, "%.1fs", editOnMs / 1000.0f);
+  if (offTimeLabel) lv_label_set_text_fmt(offTimeLabel, "%.1fs", editOffMs / 1000.0f);
+  if (rpmLabel) lv_label_set_text_fmt(rpmLabel, "%.1f", editRpm);
   if (cyclesLabel) {
     if (editCycles == 0)
       lv_label_set_text(cyclesLabel, "INF");

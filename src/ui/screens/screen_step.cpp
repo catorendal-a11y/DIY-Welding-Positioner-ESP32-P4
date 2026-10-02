@@ -42,13 +42,19 @@ static bool diaClosePending = false;
 // ───────────────────────────────────────────────────────────────────────────────
 static void purge_diameter_overlay_async() {
   if (diaKb) {
-    lv_obj_t* old = diaKb; diaKb = nullptr; lv_obj_delete_async(old);
+    lv_obj_t* old = diaKb;
+    diaKb = nullptr;
+    lv_obj_delete_async(old);
   }
   if (diaTa) {
-    lv_obj_t* old = diaTa; diaTa = nullptr; lv_obj_delete_async(old);
+    lv_obj_t* old = diaTa;
+    diaTa = nullptr;
+    lv_obj_delete_async(old);
   }
   if (diaHint) {
-    lv_obj_t* old = diaHint; diaHint = nullptr; lv_obj_delete_async(old);
+    lv_obj_t* old = diaHint;
+    diaHint = nullptr;
+    lv_obj_delete_async(old);
   }
   diaClosePending = false;
 }
@@ -124,9 +130,21 @@ static void update_info_panel() {
 // ───────────────────────────────────────────────────────────────────────────────
 static void back_event_cb(lv_event_t* e) {
   purge_diameter_overlay_async();
-  if (customNumpad) { lv_obj_t* old = customNumpad; customNumpad = nullptr; lv_obj_delete_async(old); }
-  if (customTa) { lv_obj_t* old = customTa; customTa = nullptr; lv_obj_delete_async(old); }
-  if (customHint) { lv_obj_t* old = customHint; customHint = nullptr; lv_obj_delete_async(old); }
+  if (customNumpad) {
+    lv_obj_t* old = customNumpad;
+    customNumpad = nullptr;
+    lv_obj_delete_async(old);
+  }
+  if (customTa) {
+    lv_obj_t* old = customTa;
+    customTa = nullptr;
+    lv_obj_delete_async(old);
+  }
+  if (customHint) {
+    lv_obj_t* old = customHint;
+    customHint = nullptr;
+    lv_obj_delete_async(old);
+  }
   screens_show(SCREEN_MAIN);
 }
 
@@ -181,7 +199,7 @@ static void diameter_keyboard_cb(lv_event_t* e) {
     if (diaTa) {
       const char* txt = lv_textarea_get_text(diaTa);
       float mm = step_parse_first_float(txt);
-      if (mm >= 1.0f && mm <= 20000.0f) {
+      if (control_get_state() == STATE_IDLE && mm >= 1.0f && mm <= 20000.0f) {
         speed_set_workpiece_diameter_mm(mm);
         refresh_diameter_summary();
         update_info_panel();
@@ -194,6 +212,7 @@ static void diameter_keyboard_cb(lv_event_t* e) {
 }
 
 static void diameter_btn_cb(lv_event_t* e) {
+  if (control_get_state() != STATE_IDLE) return;
   (void)e;
   if (diaKb) return;
   if (customNumpad) {
@@ -558,15 +577,39 @@ void screen_step_invalidate_widgets() {
 
 void screen_step_update() {
   if (numpadClosePending) {
-    if (customNumpad) { lv_obj_t* old = customNumpad; customNumpad = nullptr; lv_obj_delete_async(old); }
-    if (customTa) { lv_obj_t* old = customTa; customTa = nullptr; lv_obj_delete_async(old); }
-    if (customHint) { lv_obj_t* old = customHint; customHint = nullptr; lv_obj_delete_async(old); }
+    if (customNumpad) {
+      lv_obj_t* old = customNumpad;
+      customNumpad = nullptr;
+      lv_obj_delete_async(old);
+    }
+    if (customTa) {
+      lv_obj_t* old = customTa;
+      customTa = nullptr;
+      lv_obj_delete_async(old);
+    }
+    if (customHint) {
+      lv_obj_t* old = customHint;
+      customHint = nullptr;
+      lv_obj_delete_async(old);
+    }
     numpadClosePending = false;
   }
   if (diaClosePending) {
-    if (diaKb) { lv_obj_t* old = diaKb; diaKb = nullptr; lv_obj_delete_async(old); }
-    if (diaTa) { lv_obj_t* old = diaTa; diaTa = nullptr; lv_obj_delete_async(old); }
-    if (diaHint) { lv_obj_t* old = diaHint; diaHint = nullptr; lv_obj_delete_async(old); }
+    if (diaKb) {
+      lv_obj_t* old = diaKb;
+      diaKb = nullptr;
+      lv_obj_delete_async(old);
+    }
+    if (diaTa) {
+      lv_obj_t* old = diaTa;
+      diaTa = nullptr;
+      lv_obj_delete_async(old);
+    }
+    if (diaHint) {
+      lv_obj_t* old = diaHint;
+      diaHint = nullptr;
+      lv_obj_delete_async(old);
+    }
     diaClosePending = false;
   }
   if (!screens_is_active(SCREEN_STEP)) return;

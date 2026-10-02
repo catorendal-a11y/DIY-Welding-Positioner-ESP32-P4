@@ -11,7 +11,8 @@ static void nav_click_cb(lv_event_t* e) {
   screens_show(dest);
 }
 
-static void create_nav_item(lv_obj_t* parent, int y, int rowH, const char* label, ScreenId dest, bool accentRow) {
+static void create_nav_item(lv_obj_t* parent, int y, int rowH, const char* label, ScreenId dest,
+                            bool accentRow) {
   lv_obj_t* row = lv_obj_create(parent);
   lv_obj_set_size(row, 776, rowH);
   lv_obj_set_pos(row, 12, y);
@@ -40,30 +41,23 @@ static void create_nav_item(lv_obj_t* parent, int y, int rowH, const char* label
 void screen_settings_create() {
   lv_obj_t* screen = screenRoots[SCREEN_SETTINGS];
   lv_obj_clean(screen);
-  lv_obj_set_style_bg_color(screen, COL_BG, 0);
-
-  ui_create_settings_header(screen, "SETTINGS", "SYSTEM CONFIG", COL_HDR_MUTED);
-
-  const int rowH = 44;
-  const int rowY0 = SET_HEADER_H + 10;
-  const int rowGap = 5;
-
-  create_nav_item(screen, rowY0 + (rowH + rowGap) * 0, rowH, "Motor Configuration", SCREEN_MOTOR_CONFIG, false);
-  create_nav_item(screen, rowY0 + (rowH + rowGap) * 1, rowH, "Calibration", SCREEN_CALIBRATION, false);
-  create_nav_item(screen, rowY0 + (rowH + rowGap) * 2, rowH, "Display Settings", SCREEN_DISPLAY, true);
-  create_nav_item(screen, rowY0 + (rowH + rowGap) * 3, rowH, "Pedal Settings", SCREEN_PEDAL_SETTINGS, false);
-  create_nav_item(screen, rowY0 + (rowH + rowGap) * 4, rowH, "Diagnostics", SCREEN_DIAGNOSTICS, false);
-  create_nav_item(screen, rowY0 + (rowH + rowGap) * 5, rowH, "System Info", SCREEN_SYSINFO, false);
-  create_nav_item(screen, rowY0 + (rowH + rowGap) * 6, rowH, "About", SCREEN_ABOUT, false);
-
-  ui_create_btn(screen, 20, SET_FOOTER_Y, 200, SET_FOOTER_H, "<  BACK", FONT_SUBTITLE, UI_BTN_NORMAL, back_event_cb,
-                nullptr);
-
-  lv_obj_t* versionLbl = lv_label_create(screen);
-  lv_label_set_text(versionLbl, FW_VERSION);
-  lv_obj_set_style_text_font(versionLbl, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(versionLbl, COL_TEXT_VDIM, 0);
-  lv_obj_set_style_text_align(versionLbl, LV_TEXT_ALIGN_CENTER, 0);
-  lv_obj_set_width(versionLbl, 240);
-  lv_obj_align(versionLbl, LV_ALIGN_BOTTOM_MID, 0, -14);
+  ui_create_header(screen, "Settings", "SYSTEM CONFIG", nullptr);
+  const char* names[] = {"Motor Configuration", "Calibration", "Pedal Settings",
+                         "Display Settings",    "Diagnostics", "System Info"};
+  const char* details[] = {"Drive and motion",      "Angle accuracy",    "Input and control",
+                           "Screen and USB mirror", "Inputs and faults", "Health and firmware"};
+  const ScreenId targets[] = {SCREEN_MOTOR_CONFIG, SCREEN_CALIBRATION, SCREEN_PEDAL_SETTINGS,
+                              SCREEN_DISPLAY,      SCREEN_DIAGNOSTICS, SCREEN_SYSINFO};
+  for (int i = 0; i < 6; ++i) {
+    lv_obj_t* card = lv_button_create(screen);
+    lv_obj_set_pos(card, 24 + (i % 2) * 384, 94 + (i / 2) * 92);
+    lv_obj_set_size(card, 368, 76);
+    ui_nav_card_btn_style(card, false);
+    lv_obj_add_event_cb(card, nav_click_cb, LV_EVENT_CLICKED, (void*)(intptr_t)targets[i]);
+    ui_create_text(card, 18, 12, 330, names[i], FONT_LARGE, COL_TEXT);
+    ui_create_text(card, 18, 44, 330, details[i], FONT_SUBTITLE, COL_TEXT_DIM);
+  }
+  ui_create_btn(screen, 24, 408, 152, 56, "<  BACK", FONT_BTN, UI_BTN_NORMAL, back_event_cb, nullptr);
+  ui_create_btn(screen, 496, 408, 280, 56, "About", FONT_BTN, UI_BTN_NORMAL, nav_click_cb,
+                (void*)(intptr_t)SCREEN_ABOUT);
 }

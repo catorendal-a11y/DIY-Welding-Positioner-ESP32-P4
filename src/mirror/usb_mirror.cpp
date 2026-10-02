@@ -53,8 +53,16 @@ static bool keepalive_fresh_now() {
 
 static bool serial_write_all(const uint8_t* data, size_t len) {
   if (!data && len > 0) return false;
+  const uint32_t started = millis();
   while (len > 0) {
-    size_t written = Serial.write(data, len);
+    if (millis() - started > 100u || !Serial) return false;
+    const int available = Serial.availableForWrite();
+    if (available <= 0) {
+      vTaskDelay(pdMS_TO_TICKS(1));
+      continue;
+    }
+    const size_t chunk = len < (size_t)available ? len : (size_t)available;
+    size_t written = Serial.write(data, chunk);
     if (written == 0) {
       vTaskDelay(pdMS_TO_TICKS(1));
       continue;
@@ -95,8 +103,7 @@ static bool send_video_chunk(const MirrorChunk& chunk) {
       maxEncodedLen = USB_MIRROR_MAX_CHUNK_PAYLOAD;
     }
 
-    bool encoded = usb_mirror_encode_rgb565_rle((const uint16_t*)chunk.pixels,
-                                                (size_t)chunk.pixelBytes / 2u,
+    bool encoded = usb_mirror_encode_rgb565_rle((const uint16_t*)chunk.pixels, (size_t)chunk.pixelBytes / 2u,
                                                 g_txCompress, maxEncodedLen, encodedLen);
     if (encoded && encodedLen > 0u && encodedLen < chunk.pixelBytes) {
       rect.format = USB_MIRROR_FORMAT_RGB565_RLE;
@@ -140,7 +147,11 @@ static void drain_ready_queue_once() {
   if (xQueueReceive(g_readyQueue, &index, 0) != pdTRUE) return;
 
   if (g_connected.load(std::memory_order_acquire) && keepalive_fresh_now()) {
-    send_video_chunk(g_chunks[index]);
+    if (!send_video_chunk(g_chunks[index])) {
+      g_connected.store(false);
+      g_armed.store(false);
+      pointer_release();
+    }
   }
   free_chunk(index);
 }
@@ -190,8 +201,8 @@ static void handle_packet(const UsbMirrorHeader& h, const uint8_t* payload) {
   }
 }
 
-static void parser_reset(uint8_t& magicPos, uint8_t& headerPos, uint8_t& payloadPos,
-                         uint32_t& payloadLen, UsbMirrorHeader& header) {
+static void parser_reset(uint8_t& magicPos, uint8_t& headerPos, uint8_t& payloadPos, uint32_t& payloadLen,
+                         UsbMirrorHeader& header) {
   magicPos = 0;
   headerPos = 0;
   payloadPos = 0;
@@ -265,15 +276,21 @@ static void parse_serial_input() {
 void usb_mirror_begin() {
   if (g_ready.load(std::memory_order_acquire)) return;
 
+  Serial.setTxTimeoutMs(2);
+
   g_chunks = (MirrorChunk*)heap_caps_calloc(MIRROR_CHUNK_COUNT, sizeof(MirrorChunk),
                                             MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-  g_txCompress = (uint8_t*)heap_caps_malloc(USB_MIRROR_MAX_CHUNK_PAYLOAD,
-                                            MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+  g_txCompress =
+      (uint8_t*)heap_caps_malloc(USB_MIRROR_MAX_CHUNK_PAYLOAD, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
   g_freeQueue = xQueueCreate(MIRROR_CHUNK_COUNT, sizeof(uint8_t));
   g_readyQueue = xQueueCreate(MIRROR_CHUNK_COUNT, sizeof(uint8_t));
 
   if (!g_chunks || !g_freeQueue || !g_readyQueue) {
     LOG_E("USB mirror init failed");
+    if (g_chunks) heap_caps_free(g_chunks);
+    if (g_txCompress) heap_caps_free(g_txCompress);
+    if (g_freeQueue) vQueueDelete(g_freeQueue);
+    if (g_readyQueue) vQueueDelete(g_readyQueue);
     g_chunks = nullptr;
     g_txCompress = nullptr;
     g_freeQueue = nullptr;
@@ -286,8 +303,7 @@ void usb_mirror_begin() {
   }
 
   g_ready.store(true, std::memory_order_release);
-  LOG_I("USB mirror ready: %u chunks x %u bytes", MIRROR_CHUNK_COUNT,
-        (unsigned)USB_MIRROR_MAX_CHUNK_PAYLOAD);
+  LOG_I("USB mirror ready: %u chunks x %u bytes", MIRROR_CHUNK_COUNT, (unsigned)USB_MIRROR_MAX_CHUNK_PAYLOAD);
 }
 
 void usbMirrorTask(void* pvParameters) {
@@ -303,6 +319,14 @@ void usbMirrorTask(void* pvParameters) {
     }
 
     drain_ready_queue_once();
+    static uint32_t lastResync = 0, seenDrops = 0;
+    const uint32_t drops = g_dropCount.load();
+    if (drops != seenDrops && millis() - lastResync > 1000u && g_readyQueue &&
+        uxQueueMessagesWaiting(g_readyQueue) == 0) {
+      seenDrops = drops;
+      lastResync = millis();
+      g_screenRedraw.store(true);
+    }
     vTaskDelay(pdMS_TO_TICKS(1));
   }
 }
@@ -375,13 +399,11 @@ void usb_mirror_read_pointer(lv_indev_data_t* data) {
   data->point.x = (lv_coord_t)g_pointerX.load(std::memory_order_acquire);
   data->point.y = (lv_coord_t)g_pointerY.load(std::memory_order_acquire);
   data->state = (g_pointerState.load(std::memory_order_acquire) == USB_MIRROR_POINTER_PRESSED)
-                  ? LV_INDEV_STATE_PRESSED
-                  : LV_INDEV_STATE_RELEASED;
+                    ? LV_INDEV_STATE_PRESSED
+                    : LV_INDEV_STATE_RELEASED;
 }
 
-bool usb_mirror_is_armed() {
-  return g_armed.load(std::memory_order_acquire);
-}
+bool usb_mirror_is_armed() { return g_armed.load(std::memory_order_acquire); }
 
 void usb_mirror_set_armed(bool armed) {
   g_armed.store(armed, std::memory_order_release);
@@ -392,35 +414,25 @@ bool usb_mirror_is_connected() {
   return g_connected.load(std::memory_order_acquire) && keepalive_fresh_now();
 }
 
-uint32_t usb_mirror_drop_count() {
-  return g_dropCount.load(std::memory_order_acquire);
-}
+uint32_t usb_mirror_drop_count() { return g_dropCount.load(std::memory_order_acquire); }
 
 #else
 
 void usb_mirror_begin() {}
 void usbMirrorTask(void*) {}
 
-bool usb_mirror_enqueue_rect(const lv_area_t*, const uint8_t*) {
-  return false;
-}
+bool usb_mirror_enqueue_rect(const lv_area_t*, const uint8_t*) { return false; }
 
 void usb_mirror_read_pointer(lv_indev_data_t* data) {
   if (data) data->state = LV_INDEV_STATE_RELEASED;
 }
 
-bool usb_mirror_is_armed() {
-  return false;
-}
+bool usb_mirror_is_armed() { return false; }
 
 void usb_mirror_set_armed(bool) {}
 
-bool usb_mirror_is_connected() {
-  return false;
-}
+bool usb_mirror_is_connected() { return false; }
 
-uint32_t usb_mirror_drop_count() {
-  return 0;
-}
+uint32_t usb_mirror_drop_count() { return 0; }
 
 #endif

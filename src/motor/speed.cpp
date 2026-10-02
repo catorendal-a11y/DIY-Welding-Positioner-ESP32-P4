@@ -10,6 +10,8 @@
 #include "../storage/storage.h"
 #include "../control/control.h"
 #include <atomic>
+#include "../control/input_policy.h"
+#include "../safety/safety.h"
 #if ENABLE_ADS1115_PEDAL
 #include "../ui/display.h"
 #include "driver/i2c_master.h"
@@ -22,7 +24,8 @@ static_assert(std::atomic<float>::is_always_lock_free,
               "std::atomic<float> must be lock-free for inter-core RPM sharing");
 
 // Same total as docs/images/motor.worm.svg: "Total Ratio 1:108" = 108 motor revs per 1 output rev.
-static_assert((int)(60.0f * 72.0f / 40.0f + 0.5f) == 108, "GEAR_RATIO must match motor.worm.svg (1:108 = 60*72/40)");
+static_assert((int)(60.0f * 72.0f / 40.0f + 0.5f) == 108,
+              "GEAR_RATIO must match motor.worm.svg (1:108 = 60*72/40)");
 
 #if ENABLE_ADS1115_PEDAL
 // Full 7-bit address probe on touch I2C: LOG_I is stripped in release; Serial is not.
@@ -32,27 +35,27 @@ static_assert((int)(60.0f * 72.0f / 40.0f + 0.5f) == 108, "GEAR_RATIO must match
 #endif
 
 #define ADS_REG_PTR_CONVERT 0x00
-#define ADS_REG_PTR_CONFIG  0x01
-#define ADS_REG_PTR_LOTH    0x02
-#define ADS_REG_PTR_HITH    0x03
-#define ADS_I2C_INIT_TIMEOUT_MS    80
+#define ADS_REG_PTR_CONFIG 0x01
+#define ADS_REG_PTR_LOTH 0x02
+#define ADS_REG_PTR_HITH 0x03
+#define ADS_I2C_INIT_TIMEOUT_MS 80
 #define ADS_I2C_RUNTIME_TIMEOUT_MS 2
 
-#define ADS_CFG_CQUE_1CONV    0x0000
-#define ADS_CFG_CLAT_NONLAT   0x0000
-#define ADS_CFG_CPOL_ACTVLOW  0x0000
-#define ADS_CFG_CMODE_TRAD    0x0000
-#define ADS_CFG_MODE_SINGLE   0x0100
-#define ADS_CFG_PGA_4_096V    0x0200
-#define ADS_CFG_DR_128SPS     0x0080
-#define ADS_CFG_MUX_SINGLE_0  0x4000
-#define ADS_CFG_OS_START      0x8000
+#define ADS_CFG_CQUE_1CONV 0x0000
+#define ADS_CFG_CLAT_NONLAT 0x0000
+#define ADS_CFG_CPOL_ACTVLOW 0x0000
+#define ADS_CFG_CMODE_TRAD 0x0000
+#define ADS_CFG_MODE_SINGLE 0x0100
+#define ADS_CFG_PGA_4_096V 0x0200
+#define ADS_CFG_DR_128SPS 0x0080
+#define ADS_CFG_MUX_SINGLE_0 0x4000
+#define ADS_CFG_OS_START 0x8000
 
 static i2c_master_dev_handle_t s_ads_dev = nullptr;
 
 static bool ads_i2c_write_reg_timeout(uint8_t reg, uint16_t val, uint32_t timeout_ms) {
   if (!s_ads_dev) return false;
-  uint8_t buf[3] = { reg, (uint8_t)(val >> 8), (uint8_t)(val & 0xFF) };
+  uint8_t buf[3] = {reg, (uint8_t)(val >> 8), (uint8_t)(val & 0xFF)};
   return i2c_master_transmit(s_ads_dev, buf, sizeof(buf), pdMS_TO_TICKS(timeout_ms)) == ESP_OK;
 }
 
@@ -68,8 +71,9 @@ static bool ads_i2c_read_reg_timeout(uint8_t reg, uint16_t* out, uint32_t timeou
 // Synchronous blocking read — used only at init. Do not call from motorTask.
 static int16_t ads_read_channel0_blocking() {
   if (!s_ads_dev) return 0;
-  uint16_t config = ADS_CFG_CQUE_1CONV | ADS_CFG_CLAT_NONLAT | ADS_CFG_CPOL_ACTVLOW | ADS_CFG_CMODE_TRAD
-      | ADS_CFG_MODE_SINGLE | ADS_CFG_PGA_4_096V | ADS_CFG_DR_128SPS | ADS_CFG_MUX_SINGLE_0 | ADS_CFG_OS_START;
+  uint16_t config = ADS_CFG_CQUE_1CONV | ADS_CFG_CLAT_NONLAT | ADS_CFG_CPOL_ACTVLOW | ADS_CFG_CMODE_TRAD |
+                    ADS_CFG_MODE_SINGLE | ADS_CFG_PGA_4_096V | ADS_CFG_DR_128SPS | ADS_CFG_MUX_SINGLE_0 |
+                    ADS_CFG_OS_START;
   if (!ads_i2c_write_reg_timeout(ADS_REG_PTR_CONFIG, config, ADS_I2C_INIT_TIMEOUT_MS)) return 0;
   if (!ads_i2c_write_reg_timeout(ADS_REG_PTR_HITH, 0x8000, ADS_I2C_INIT_TIMEOUT_MS)) return 0;
   if (!ads_i2c_write_reg_timeout(ADS_REG_PTR_LOTH, 0, ADS_I2C_INIT_TIMEOUT_MS)) return 0;
@@ -91,12 +95,15 @@ enum AdsState : uint8_t { ADS_IDLE, ADS_CONVERTING };
 static AdsState s_adsState = ADS_IDLE;
 static uint32_t s_adsStartedMs = 0;
 static int16_t s_adsLastValue = 0;
+static std::atomic<uint32_t> adsSampleMs{0};
+static std::atomic<bool> adsSampleValid{false};
 
 // Kick off a new conversion (non-blocking). Returns false on I2C error.
 static bool ads_start_conversion() {
   if (!s_ads_dev) return false;
-  uint16_t config = ADS_CFG_CQUE_1CONV | ADS_CFG_CLAT_NONLAT | ADS_CFG_CPOL_ACTVLOW | ADS_CFG_CMODE_TRAD
-      | ADS_CFG_MODE_SINGLE | ADS_CFG_PGA_4_096V | ADS_CFG_DR_128SPS | ADS_CFG_MUX_SINGLE_0 | ADS_CFG_OS_START;
+  uint16_t config = ADS_CFG_CQUE_1CONV | ADS_CFG_CLAT_NONLAT | ADS_CFG_CPOL_ACTVLOW | ADS_CFG_CMODE_TRAD |
+                    ADS_CFG_MODE_SINGLE | ADS_CFG_PGA_4_096V | ADS_CFG_DR_128SPS | ADS_CFG_MUX_SINGLE_0 |
+                    ADS_CFG_OS_START;
   return ads_i2c_write_reg_timeout(ADS_REG_PTR_CONFIG, config, ADS_I2C_RUNTIME_TIMEOUT_MS);
 }
 
@@ -104,10 +111,14 @@ static bool ads_start_conversion() {
 // Returns true when a fresh value was fetched; *out holds last good value.
 static bool ads_poll_and_start(int16_t* out) {
   const uint32_t now = millis();
+  bool fresh = false;
   if (s_adsState == ADS_CONVERTING && (now - s_adsStartedMs) >= 9u) {
     uint16_t raw = 0;
     if (ads_i2c_read_reg_timeout(ADS_REG_PTR_CONVERT, &raw, ADS_I2C_RUNTIME_TIMEOUT_MS)) {
       s_adsLastValue = (int16_t)raw;
+      adsSampleMs.store(now);
+      adsSampleValid.store(s_adsLastValue >= 0 && s_adsLastValue <= 28000);
+      fresh = true;
     }
     s_adsState = ADS_IDLE;
   }
@@ -118,11 +129,11 @@ static bool ads_poll_and_start(int16_t* out) {
     }
   }
   if (out) *out = s_adsLastValue;
-  return s_adsState == ADS_IDLE;  // Unused for now; informational.
+  return fresh;
 }
 #endif
 
-#define IIR_ALPHA       0.1f
+#define IIR_ALPHA 0.1f
 #define SLIDER_TIMEOUT_MS 1000
 
 static std::atomic<float> adcFiltered{2047.5f};
@@ -169,18 +180,14 @@ void speed_set_workpiece_diameter_mm(float mm_od) {
   }
 }
 
-float speed_get_workpiece_diameter_mm(void) {
-  return g_workpiece_od_mm.load(std::memory_order_relaxed);
-}
+float speed_get_workpiece_diameter_mm(void) { return g_workpiece_od_mm.load(std::memory_order_relaxed); }
 
 // Workpiece <-> motor (no slip at roller contact):
 //   v = pi * d_emne * f_wp = pi * D_RULLE * f_out  =>  f_out = f_wp * (d_emne / D_RULLE).
 //   steps_per_gear_output_rev = spr * GEAR_RATIO (one 360° on 72T output).
 //   steps per workpiece rev = steps_per_gear_output_rev * (d_emne / D_RULLE).
 // Forward Hz: rpm_workpiece * steps_per_workpiece_rev / 60. Inverse: speed_get_actual_rpm.
-float speed_steps_per_gear_output_rev(void) {
-  return (float)microstep_get_steps_per_rev() * GEAR_RATIO;
-}
+float speed_steps_per_gear_output_rev(void) { return (float)microstep_get_steps_per_rev() * GEAR_RATIO; }
 
 float rpmToStepHz(float rpm_workpiece) {
   const float d_m = effective_emne_d_m();
@@ -189,9 +196,7 @@ float rpmToStepHz(float rpm_workpiece) {
 }
 
 // Command-side calibration (same factor intent as calibration_apply_steps on angleToSteps).
-float rpmToStepHzCalibrated(float rpm_command) {
-  return rpmToStepHz(rpm_command * calibration_get_factor());
-}
+float rpmToStepHzCalibrated(float rpm_command) { return rpmToStepHz(rpm_command * calibration_get_factor()); }
 
 long angleToSteps(float degrees) {
   return angleToStepsForDiameter(degrees, speed_get_workpiece_diameter_mm());
@@ -258,8 +263,9 @@ void speed_init() {
       s_ads_dev = nullptr;
     }
     if (!ads1115Connected) {
-      LOG_E("ADS1115: no device at 0x48-0x4B on touch I2C - check V,G to 3V3/GND; S,D to GPIO7/8; "
-            "pot wiper to pad 0 (AIN0). Scan showed other devices only.");
+      LOG_E(
+          "ADS1115: no device at 0x48-0x4B on touch I2C - check V,G to 3V3/GND; S,D to GPIO7/8; "
+          "pot wiper to pad 0 (AIN0). Scan showed other devices only.");
     }
   }
 #endif
@@ -285,8 +291,8 @@ void speed_init() {
   pedalEnabled.store(pedalPersist, std::memory_order_release);
 
   LOG_I("Speed control init: pot=%.0f pedal=%.0f ads=%d pedal_on=%d",
-        adcFiltered.load(std::memory_order_acquire), pedalFiltered,
-        (int)ads1115Connected, (int)pedalEnabled.load(std::memory_order_acquire));
+        adcFiltered.load(std::memory_order_acquire), pedalFiltered, (int)ads1115Connected,
+        (int)pedalEnabled.load(std::memory_order_acquire));
 }
 
 void speed_sync_rpm_limits_from_settings() {
@@ -305,9 +311,7 @@ void speed_sync_rpm_limits_from_settings() {
   if (ct > cap) cachedTargetRpm.store(cap, std::memory_order_relaxed);
 }
 
-float speed_get_rpm_max() {
-  return rpmMaxUi.load(std::memory_order_acquire);
-}
+float speed_get_rpm_max() { return rpmMaxUi.load(std::memory_order_acquire); }
 
 void speed_update_adc() {
   bool pedalSettingsTick = pedalApplyPending.exchange(false, std::memory_order_acq_rel);
@@ -326,12 +330,12 @@ void speed_update_adc() {
 #if ENABLE_ADS1115_PEDAL
   if (pedalEnabled.load(std::memory_order_acquire) && ads1115Connected) {
     int16_t adsVal = 0;
-    ads_poll_and_start(&adsVal);  // non-blocking; returns last known value
+    const bool fresh = ads_poll_and_start(&adsVal);
     float pedalAdc = (float)adsVal * ADS1115_TO_ADC_SCALE;
-    if (pedalSettingsTick) {
+    if (fresh && pedalSettingsTick) {
       pedalFiltered = pedalAdc;
       lastPotAdc.store(filtered, std::memory_order_release);
-    } else {
+    } else if (fresh) {
       pedalFiltered = IIR_ALPHA * pedalAdc + (1.0f - IIR_ALPHA) * pedalFiltered;
     }
   }
@@ -357,13 +361,9 @@ void speed_slider_set(float rpm) {
   cachedTargetRpm.store(r, std::memory_order_release);
 }
 
-void speed_set_slider_priority(bool on) {
-  sliderPriorityOverride.store(on, std::memory_order_release);
-}
+void speed_set_slider_priority(bool on) { sliderPriorityOverride.store(on, std::memory_order_release); }
 
-float speed_get_target_rpm() {
-  return cachedTargetRpm.load(std::memory_order_acquire);
-}
+float speed_get_target_rpm() { return cachedTargetRpm.load(std::memory_order_acquire); }
 
 float speed_get_actual_rpm() {
   // Hz from motor_refresh_hz_cache() (no g_stepperMutex — safe from lvglTask).
@@ -381,18 +381,25 @@ bool speed_using_slider() {
   return (millis() - lastSliderMs.load(std::memory_order_acquire) < SLIDER_TIMEOUT_MS);
 }
 
+static std::atomic<SpeedInputSource> inputSource{SPEED_SOURCE_POT};
+SpeedInputSource speed_get_input_source() { return inputSource.load(std::memory_order_acquire); }
+
 void speed_apply() {
   const SystemState state = control_get_state();
   const bool liveSpeedState = (state == STATE_RUNNING || state == STATE_PULSE);
   const bool motorRunning = liveSpeedState && motor_is_running();
 
-  bool usePedal = speed_pedal_analog_available() && pedalFiltered > 100.0f && pedalFiltered < 3900.0f;
+  const bool usePedal = speed_get_pedal_enabled() && ENABLE_ADS1115_PEDAL;
+  if (usePedal && !speed_pedal_input_healthy()) {
+    cachedTargetRpm.store(MIN_RPM);
+    if (state != STATE_IDLE && state != STATE_ESTOP) safety_report_input_fault();
+    return;
+  }
   float activeAdc = usePedal ? pedalFiltered : adcFiltered.load(std::memory_order_acquire);
   float adc = constrain(activeAdc, 0.0f, 4095.0f);
   float normalized = (3315.0f - adc) / 3315.0f;
   normalized = constrain(normalized, 0.0f, 1.0f);
-  float snapMax = motorRunning ? (float)POT_ADC_SNAP_MAX_RPM_RUNNING
-                               : (float)POT_ADC_SNAP_MAX_RPM;
+  float snapMax = motorRunning ? (float)POT_ADC_SNAP_MAX_RPM_RUNNING : (float)POT_ADC_SNAP_MAX_RPM;
   if (snapMax > 0.0f && adc <= snapMax) {
     normalized = 1.0f;
   }
@@ -402,13 +409,12 @@ void speed_apply() {
   bool active = buttonsActive.load(std::memory_order_acquire);
   float srpm = sliderRPM.load(std::memory_order_relaxed);
 
-  if (sliderPriorityOverride.load(std::memory_order_acquire)) {
+  if (sliderPriorityOverride.load(std::memory_order_acquire) || programDirectionOverrideActive.load()) {
     cachedTargetRpm.store(srpm, std::memory_order_relaxed);
   } else if (active) {
     float lastAdc = lastPotAdc.load(std::memory_order_relaxed);
     float adcDelta = fabsf(activeAdc - lastAdc);
-    float rpmDelta = fabsf(pot_rpm - srpm);
-    if (adcDelta > 200.0f || rpmDelta > POT_SLIDER_OVERRIDE_RPM_DELTA) {
+    if (adcDelta > 200.0f) {
       buttonsActive.store(false, std::memory_order_release);
       sliderRPM.store(pot_rpm, std::memory_order_relaxed);
       cachedTargetRpm.store(pot_rpm, std::memory_order_relaxed);
@@ -419,10 +425,17 @@ void speed_apply() {
     cachedTargetRpm.store(pot_rpm, std::memory_order_relaxed);
   }
 
+  const bool uiSource = programDirectionOverrideActive.load() ||
+                        sliderPriorityOverride.load(std::memory_order_acquire) ||
+                        buttonsActive.load(std::memory_order_acquire);
+  inputSource.store(uiSource   ? SPEED_SOURCE_UI
+                    : usePedal ? SPEED_SOURCE_PEDAL
+                               : SPEED_SOURCE_POT,
+                    std::memory_order_release);
+
   if (!motorRunning) return;
 
-  uint32_t mhz = motor_milli_hz_for_rpm_calibrated(
-      cachedTargetRpm.load(std::memory_order_relaxed));
+  uint32_t mhz = motor_milli_hz_for_rpm_calibrated(cachedTargetRpm.load(std::memory_order_relaxed));
   motor_set_target_milli_hz(mhz);
 }
 
@@ -469,13 +482,9 @@ void speed_set_pedal_enabled(bool enabled) {
   pedalApplyPending.store(true, std::memory_order_release);
 }
 
-bool speed_get_pedal_enabled() {
-  return pedalEnabled.load(std::memory_order_acquire);
-}
+bool speed_get_pedal_enabled() { return pedalEnabled.load(std::memory_order_acquire); }
 
-bool speed_pedal_switch_enabled() {
-  return pedalEnabled.load(std::memory_order_acquire);
-}
+bool speed_pedal_switch_enabled() { return pedalEnabled.load(std::memory_order_acquire); }
 
 bool speed_pedal_analog_available() {
 #if ENABLE_ADS1115_PEDAL
@@ -485,14 +494,21 @@ bool speed_pedal_analog_available() {
 #endif
 }
 
-bool speed_pedal_connected() {
-  return speed_pedal_switch_enabled();
-}
+bool speed_pedal_connected() { return speed_pedal_switch_enabled(); }
 
 bool speed_ads1115_pedal_present(void) {
 #if ENABLE_ADS1115_PEDAL
   return ads1115Connected;
 #else
   return false;
+#endif
+}
+
+bool speed_pedal_input_healthy() {
+  if (!speed_get_pedal_enabled()) return true;
+#if ENABLE_ADS1115_PEDAL
+  return input_sample_fresh(adsSampleValid.load(), adsSampleMs.load(), millis());
+#else
+  return true;  // Explicit switch-only build.
 #endif
 }

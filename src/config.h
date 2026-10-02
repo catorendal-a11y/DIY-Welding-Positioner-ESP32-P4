@@ -8,19 +8,18 @@
 // GPIO HEADER PINS (2×13 pin header)
 // Available GPIOs: 28–35, 49–52 (see board pin diagram)
 // ───────────────────────────────────────────────────────────────────────────────
-#define PIN_STEP        50   // Step pulse output (FastAccelStepper RMT)
-#define PIN_DIR         51   // Direction: CW=HIGH, CCW=LOW
-#define PIN_ENA         52   // Enable: Active LOW (typical PUL/DIR driver when wired same)
-#define PIN_ESTOP       34   // Emergency Stop: Active LOW, NC contact
-                            // NOTE: GPIO34 is a strapping pin (JTAG source control).
-                            // Default eFuse config ignores GPIO34, so ESTOP is safe.
-                            // GPIO34 has NO internal pull resistors — external pull-up
-                            // from NC contact is required.
-#define PIN_DIR_SWITCH  29   // CW/CCW direction switch (INPUT_PULLUP, LOW=CCW, HIGH=CW)
-#define PIN_POT         49   // ADC — Potentiometer speed input (ADC2_CH0)
-#define PIN_PEDAL_SW    33   // Foot pedal start switch (INPUT_PULLUP, LOW=pressed)
-#define PIN_DRIVER_ALM  32   // DM542T ALM fault (INPUT_PULLUP; LOW = driver alarm, open-drain to GND)
-#define ADS1115_ADDR    0x48 // ADS1115 I2C address when ENABLE_ADS1115_PEDAL is 1
+#define PIN_STEP 50  // Step pulse output (FastAccelStepper RMT)
+#define PIN_DIR 51   // Direction: CW=HIGH, CCW=LOW
+#define PIN_ENA 52   // Enable: Active LOW (typical PUL/DIR driver when wired same)
+#define PIN_ESTOP \
+  34                       // Conditioned input: HIGH=healthy, LOW=fault.
+                           // A bare NC-to-GND loop has the opposite polarity.
+                           // See docs/HARDWARE_SETUP.md before wiring.
+#define PIN_DIR_SWITCH 29  // CW/CCW direction switch (INPUT_PULLUP, LOW=CCW, HIGH=CW)
+#define PIN_POT 49         // ADC — Potentiometer speed input (ADC2_CH0)
+#define PIN_PEDAL_SW 33    // Foot pedal start switch (INPUT_PULLUP, LOW=pressed)
+#define PIN_DRIVER_ALM 32  // DM542T ALM fault (INPUT_PULLUP; LOW = driver alarm, open-drain to GND)
+#define ADS1115_ADDR 0x48  // ADS1115 I2C address when ENABLE_ADS1115_PEDAL is 1
 #ifndef ENABLE_ADS1115_PEDAL
 #define ENABLE_ADS1115_PEDAL 0  // 1 = probe touch I2C bus for ADS1115 pedal ADC (SDA7/SCL8)
 #endif
@@ -36,42 +35,42 @@
 //
 // I2C for touch + optional ADS1115 (same bus in display.cpp / speed.cpp)
 // JC4880P443 JP1: pin 23 = I2C_SDA, pin 25 = I2C_SCL (odd row) - do not use pins 24/26 (C6 nets)
-#define PIN_TOUCH_SDA    7   // I2C SDA -> GPIO7
-#define PIN_TOUCH_SCL    8   // I2C SCL -> GPIO8
-#define TOUCH_ADDR_GT911 0x5D // GT911 default I2C address
+#define PIN_TOUCH_SDA 7        // I2C SDA -> GPIO7
+#define PIN_TOUCH_SCL 8        // I2C SCL -> GPIO8
+#define TOUCH_ADDR_GT911 0x5D  // GT911 default I2C address
 
 // MIPI-DSI lane configuration — actual hardware settings live in display.cpp
 // (esp_lcd_dsi_bus_config_t). These macros are informational/reference only.
-#define MIPI_DSI_LANE_NUM       2           // 2-lane MIPI-DSI
-#define MIPI_DSI_LANE_BITRATE_MBPS 500u     // Matches display.cpp bus_cfg.lane_bit_rate_mbps
+#define MIPI_DSI_LANE_NUM 2              // 2-lane MIPI-DSI
+#define MIPI_DSI_LANE_BITRATE_MBPS 500u  // Matches display.cpp bus_cfg.lane_bit_rate_mbps
 
 // Display resolution
 // Physical panel: 480x800 portrait
 // Logical (LVGL): 800x480 landscape (manual rotation in flush callback)
-#define DISPLAY_H_RES   800   // Logical landscape width
-#define DISPLAY_V_RES   480   // Logical landscape height
+#define DISPLAY_H_RES 800         // Logical landscape width
+#define DISPLAY_V_RES 480         // Logical landscape height
 #define DISPLAY_H_RES_NATIVE 480  // Physical panel width (portrait)
 #define DISPLAY_V_RES_NATIVE 800  // Physical panel height (portrait)
 
 // ───────────────────────────────────────────────────────────────────────────────
 // MOTOR & MECHANICAL PARAMETERS
 // ───────────────────────────────────────────────────────────────────────────────
-// DM542T: DIP microstep must match Motor Config (default 1/16 = 3200 pulses/rev). See docs/HARDWARE_SETUP.md §3.
-// Workpiece RPM: pot/slider span MIN_RPM .. speed_get_rpm_max() (max stored in NVS, Motor Config).
-#define MIN_RPM         0.001f    // Minimum workpiece RPM (pot CCW / clamp floor)
-#define MAX_RPM         3.0f      // Absolute ceiling for Max RPM setting and firmware clamp
+// DM542T: DIP microstep must match Motor Config (default 1/16 = 3200 pulses/rev). See docs/HARDWARE_SETUP.md
+// §3. Workpiece RPM: pot/slider span MIN_RPM .. speed_get_rpm_max() (max stored in NVS, Motor Config).
+#define MIN_RPM 0.001f  // Minimum workpiece RPM (pot CCW / clamp floor)
+#define MAX_RPM 3.0f    // Absolute ceiling for Max RPM setting and firmware clamp
 
 // Saved as g_settings.stepper_driver — must match screen + motor.cpp
 #define STEPPER_DRIVER_STANDARD 0u  // PUL/DIR without extra DIR holdoff
-#define STEPPER_DRIVER_DM542T   1u
+#define STEPPER_DRIVER_DM542T 1u
 
 // GEAR & ROLLER SYSTEM
 // Stage 1: NMRV030 worm gearbox, 60:1 motor to worm-wheel shaft.
 // Stage 2: spur m=1.5, 40T (on worm shaft) drives 72T output => x1.8 (see docs/images/motor.worm.svg).
 // Total 1:108 per docs/images/motor.worm.svg (NMRV 60:1 * spur 72/40) = 108 motor rev / 1 out rev.
-#define GEAR_RATIO      (60.0f * 72.0f / 40.0f)   // = 108
-#define D_EMNE          0.300f    // Workpiece diameter: 300mm
-#define D_RULLE         0.080f    // Roller diameter: 80mm
+#define GEAR_RATIO (60.0f * 72.0f / 40.0f)  // = 108
+#define D_EMNE 0.300f                       // Workpiece diameter: 300mm
+#define D_RULLE 0.080f                      // Roller diameter: 80mm
 // Kinematics (speed.cpp): base = steps for one full turn of gearbox OUTPUT (72T shaft):
 //   steps_per_gear_output_rev = microstep_steps_per_rev * GEAR_RATIO
 //   e.g. 1/16 (3200 spr): 3200 * 108 = 345600 steps/rev output; 345600/360 = 960 steps/deg on output.
@@ -82,19 +81,19 @@
 // SPEED CHARACTERISTICS
 // Hz — minimum step frequency when RPM maps lower (motor_milli_hz_for_rpm_calibrated).
 // MIN_RPM with default D_EMNE/D_RULLE and 3200 spr is ~22 Hz, so keep this below that.
-#define START_SPEED     20
+#define START_SPEED 20
 
 // Pot ADC (PIN_POT): ref 3315 matches MIN-RPM end of travel (see speed.cpp).
 // Snap band (0 = off): if > 0, ADC at/below this maps to RPM ceiling (EMI helper; hurts top-end precision).
-#define POT_ADC_SNAP_MAX_RPM           0
-#define POT_ADC_SNAP_MAX_RPM_RUNNING   0
+#define POT_ADC_SNAP_MAX_RPM 0
+#define POT_ADC_SNAP_MAX_RPM_RUNNING 0
 // After +/- buttons, pot must move 200 ADC counts OR change mapped RPM by this
 // much to take over (else user at pot end stop cannot override a lower slider value).
-#define POT_SLIDER_OVERRIDE_RPM_DELTA  0.04f
+#define POT_SLIDER_OVERRIDE_RPM_DELTA 0.04f
 
 // Pulse timing limits used by control, storage and UI.
-#define PULSE_MS_MIN    100u
-#define PULSE_MS_MAX    10000u
+#define PULSE_MS_MIN 100u
+#define PULSE_MS_MAX 10000u
 
 // ───────────────────────────────────────────────────────────────────────────────
 // BUILD CONFIGURATION
@@ -103,7 +102,7 @@
 //   env:esp32p4-debug   → DEBUG_BUILD=1  (verbose serial logging)
 //   env:esp32p4-release → DEBUG_BUILD=0  (silent, max performance)
 #ifndef DEBUG_BUILD
-  #define DEBUG_BUILD   0    // Default to production (silent) if not set by build
+#define DEBUG_BUILD 0  // Default to production (silent) if not set by build
 #endif
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -111,15 +110,21 @@
 // ───────────────────────────────────────────────────────────────────────────────
 // LOG_E is always compiled in — errors must be diagnosable in the field.
 // LOG_W/I/D are debug-only for quiet production serial output.
-#define LOG_E(f,...) Serial.printf("[E] " f "\n", ##__VA_ARGS__)
+#define LOG_E(f, ...) Serial.printf("[E] " f "\n", ##__VA_ARGS__)
 #if DEBUG_BUILD
-  #define LOG_D(f,...) Serial.printf("[D] " f "\n", ##__VA_ARGS__)
-  #define LOG_I(f,...) Serial.printf("[I] " f "\n", ##__VA_ARGS__)
-  #define LOG_W(f,...) Serial.printf("[W] " f "\n", ##__VA_ARGS__)
+#define LOG_D(f, ...) Serial.printf("[D] " f "\n", ##__VA_ARGS__)
+#define LOG_I(f, ...) Serial.printf("[I] " f "\n", ##__VA_ARGS__)
+#define LOG_W(f, ...) Serial.printf("[W] " f "\n", ##__VA_ARGS__)
 #else
-  #define LOG_D(...) do{}while(0)
-  #define LOG_I(...) do{}while(0)
-  #define LOG_W(...) do{}while(0)
+#define LOG_D(...) \
+  do {             \
+  } while (0)
+#define LOG_I(...) \
+  do {             \
+  } while (0)
+#define LOG_W(...) \
+  do {             \
+  } while (0)
 #endif
 
 // ───────────────────────────────────────────────────────────────────────────────

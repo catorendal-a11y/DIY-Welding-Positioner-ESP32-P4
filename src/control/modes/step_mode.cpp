@@ -6,15 +6,16 @@
 #include "../../safety/safety.h"
 #include "../../config.h"
 #include <cstdlib>
+#include <atomic>
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STEP MODE STATE
 // ───────────────────────────────────────────────────────────────────────────────
-static float stepCurrentAngle = 10.0f;  // Default 10 degrees
+static std::atomic<float> stepCurrentAngle{10.0f};  // Default 10 degrees
 // During STATE_STEP: degrees of travel completed in the *current* move (from stepper position).
 // After each new step_execute: reset to 0, then ramps to stepCurrentAngle.
-static float accumulatedAngle = 0.0f;
-static long stepsTaken = 0;  // Completed step moves (increment when move finishes)
+static std::atomic<float> accumulatedAngle{0.0f};
+static std::atomic<long> stepsTaken{0};  // Completed step moves (increment when move finishes)
 static int32_t step_move_start_pos = 0;
 static long step_move_steps_total = 0;
 // controlTask calls step_update() in the same loop iteration as step_execute(); FastAccelStepper
@@ -28,15 +29,16 @@ static bool step_waiting_dwell = false;
 static uint32_t step_dwell_until_ms = 0;
 
 static bool start_step_move_locked(FastAccelStepper* stepper) {
-  if (stepper == nullptr || safety_inhibit_motion()) return false;
+  if (stepper == nullptr || (safety_inhibit_motion() || control_motion_blocked())) return false;
   accumulatedAngle = 0.0f;
   step_move_start_pos = stepper->getCurrentPosition();
   motor_apply_speed_for_rpm_locked(speed_get_target_rpm());
   digitalWrite(PIN_ENA, LOW);
-  if (safety_inhibit_motion()) {
+  if ((safety_inhibit_motion() || control_motion_blocked())) {
     digitalWrite(PIN_ENA, HIGH);
     return false;
   }
+  motor_record_direction(step_sequence_signed_steps >= 0);
   stepper->move(step_sequence_signed_steps);
   step_move_steps_total = labs(step_sequence_signed_steps);
   step_finish_earliest_ms = millis() + 50u;
@@ -49,9 +51,7 @@ void step_execute_sequence(float angle_deg, uint16_t repeats, float dwell_sec);
 // ───────────────────────────────────────────────────────────────────────────────
 // STEP MODE EXECUTE
 // ───────────────────────────────────────────────────────────────────────────────
-void step_execute(float angle_deg) {
-  step_execute_sequence(angle_deg, 1, 0.0f);
-}
+void step_execute(float angle_deg) { step_execute_sequence(angle_deg, 1, 0.0f); }
 
 void step_execute_sequence(float angle_deg, uint16_t repeats, float dwell_sec) {
   if (control_get_state() != STATE_IDLE) return;
@@ -78,7 +78,7 @@ void step_execute_sequence(float angle_deg, uint16_t repeats, float dwell_sec) {
   LOG_I("Step mode: %.1f deg (%ld steps) x%u dwell=%.1fs", angle_deg, steps, repeats, dwell_sec);
 
   xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
-  if (safety_inhibit_motion()) {
+  if ((safety_inhibit_motion() || control_motion_blocked())) {
     xSemaphoreGive(g_stepperMutex);
     return;
   }
@@ -153,8 +153,7 @@ void step_update() {
     accumulatedAngle = frac * stepCurrentAngle;
   }
   const uint32_t now = millis();
-  const bool past_grace =
-      (step_finish_earliest_ms == 0u) || ((int32_t)(now - step_finish_earliest_ms) >= 0);
+  const bool past_grace = (step_finish_earliest_ms == 0u) || ((int32_t)(now - step_finish_earliest_ms) >= 0);
   bool motion_idle = (stepper != nullptr && !stepper->isRunning());
   bool done = false;
   if (step_move_steps_total > 0) {
@@ -165,10 +164,10 @@ void step_update() {
   xSemaphoreGive(g_stepperMutex);
 
   if (done) {
-    accumulatedAngle = stepCurrentAngle;
+    accumulatedAngle = stepCurrentAngle.load();
     stepsTaken++;
     step_sequence_completed++;
-    LOG_D("Step complete: %.1f deg", stepCurrentAngle);
+    LOG_D("Step complete: %.1f deg", stepCurrentAngle.load());
     if (step_sequence_completed < step_sequence_target_repeats && stepper != nullptr) {
       if (step_sequence_dwell_ms > 0u) {
         digitalWrite(PIN_ENA, HIGH);

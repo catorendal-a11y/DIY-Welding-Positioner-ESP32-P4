@@ -16,13 +16,15 @@
 
 <br>
 
-<img src="https://raw.githubusercontent.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/1e613d4ebf6fad8be8cec4baac7e45d750d8d661/docs/images/main_screen.svg" width="800" alt="TIG Rotator Controller — Main Screen">
+<img src="docs/images/ui_runtime_v5/01_MAIN.png" width="800" alt="V5 main screen — actual LVGL simulator capture">
 
-<img src="docs/images/ui_screens.svg" width="800" alt="TIG Rotator Controller — All Screens">
+<img src="docs/images/ui_runtime_v5/overview.png" width="1000" alt="V5 runtime screen overview">
+
+<sub>Actual LVGL simulator captures with example data. Hardware photos and demo below show the existing build.</sub>
 
 <br>
 
-Open-source controller for a stepper-driven welding positioner / pipe rotator, with a glove-safe touch UI, real-time motor tasking, persistent presets, foot pedal support, and hardwired E-STOP behavior.
+Open-source controller for a stepper-driven welding positioner / pipe rotator, with a touch UI designed for workshop use, real-time motor tasking, persistent presets, foot pedal support, and hardwired E-STOP behavior.
 
 Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/wiki) for getting started, hardware setup, troubleshooting, architecture, and roadmap.
 
@@ -42,6 +44,24 @@ Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Posit
 </div>
 
 <br>
+
+---
+
+## What changed
+
+- Dark graphite/orange UI, larger text, rounded controls and a native 104 px bold numeric font.
+- Large speed panel, CW/CCW selection, main-screen RPM +/− adjustment and a fixed wide START/STOP area. The physical direction switch retains priority when enabled.
+- More visible red stop controls and a full-screen fault overlay with input state and guarded reset.
+- STOP has a separate latch and invalidates pending starts. Start requests no longer overwrite stop requests.
+- Pedal control requires stable release before arming. Stale/failed active pedal data blocks motion instead of silently selecting the panel potentiometer.
+- Touch read errors release input; JOG requires regular UI renewal. Motion is blocked until critical tasks are ready.
+- Program drafts survive navigation. Program parameters and motor configuration are applied through the control task.
+- Failed NVS writes stay pending and retry; UI reports pending/failed saves. Five-minute dimming stores correctly.
+- Pulse pause timing begins after the motor library reports stopped. USB mirror writes have bounded waits and release remote input on failure.
+
+[Implementation details](docs/FORBEDRINGER_2026-10-01.md) · [V5 integration and upload record](docs/UI_V5_DEPLOYMENT.md) · [Changelog](CHANGELOG.md)
+
+**Current source: V5 UI integration, updated 2 October 2026.** The firmware version string remains `v2.0.9`; V5 identifies the UI design iteration.
 
 ---
 
@@ -120,12 +140,12 @@ Single-axis welding positioner firmware for a NEMA 23 / DM542T-style stepper rot
 | Controller | GUITION JC4880P443C ESP32-P4 4.3" MIPI-DSI touch board |
 | Motion | NEMA 23 stepper through PUL/DIR driver or DM542T |
 | Drivetrain | NMRV030 60:1 worm stage plus 72/40 spur stage, total 1:108 |
-| Speed | Main potentiometer, optional ADS1115 pedal pot, saved presets |
-| UI | LVGL 9, 800x480 landscape, glove-safe welding workflow, PC simulator screenshots |
-| Safety | NC E-STOP on GPIO34, DM542T ALM input, ENA forced safe in ISR |
+| Speed | Main potentiometer, main-screen RPM +/−, optional ADS1115 pedal pot, saved presets |
+| UI | LVGL 9, 800x480 landscape, V5 graphite/orange styling, PC simulator screenshots |
+| Safety | GPIO34 HIGH healthy / LOW fault, DM542T ALM input, ENA HIGH disable assumption |
 | Storage | NVS JSON settings + up to 16 presets |
 
-The main screen is deliberately pot-driven: there are no main-screen RPM +/- buttons. Jog has its own touch +/- controls for setup movement.
+The V5 main screen adds RPM +/− controls beside the panel potentiometer input. Speed adjustment and direction selection are blocked during motion. The physical direction switch retains priority when enabled. Jog has its own touch +/− controls for setup movement.
 
 ---
 
@@ -145,10 +165,10 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 
 | Area | What matters |
 |:---|:---|
-| **Welding workflow** | Continuous, Jog, Pulse, Step, and Countdown modes with pot-driven main RPM and Jog +/- setup control |
+| **Welding workflow** | Continuous, Jog, Pulse, Step, and Countdown modes with panel-pot/main RPM +/− control and Jog +/− setup control |
 | **Presets** | 16 NVS-backed jobs with RPM, direction, workpiece diameter, pulse cycles, step repeats/dwell, soft-start, and auto-stop fields |
 | **Industrial inputs** | E-STOP, DM542T ALM, direction switch, foot pedal switch, optional ADS1115 pedal speed input |
-| **Touch HMI** | LVGL 9, 800x480 landscape, dark/light neutral UI, 8 accent colors, diagnostics, system info, motor config, calibration, display settings |
+| **Touch HMI** | LVGL 9, 800x480 landscape, V5 dark graphite/orange styling, dark/light mode, 8 accent colors, diagnostics, system info, motor config, calibration, display settings |
 | **Motor control** | FastAccelStepper RMT pulses, milli-Hz RPM commands, acceleration tuning, microstepping, calibration, direction invert |
 | **Safety model** | ISR disables ENA, state machine latches faults, start paths re-check E-STOP/ALM after ENA LOW, dimmed display wakes on fault |
 | **Robustness** | Dual-core FreeRTOS split, mutex-protected stepper API, `std::atomic` cross-core flags, debounced NVS writes |
@@ -162,14 +182,14 @@ Most DIY welding rotator projects stop at "turn a stepper at a set speed." This 
 | Compared With | Typical Limitation | This Project |
 |:---|:---|:---|
 | Basic Arduino stepper sketch | Single loop, no UI state machine, limited fault handling | Dual-core FreeRTOS with separate motor, control, safety, UI, and storage tasks |
-| Generic CNC / GRBL controller | Optimized for G-code, not glove-safe welding workflow | Purpose-built TIG rotator UI with Continuous, Jog, Pulse, Step, Timer, presets, and foot pedal support |
+| Generic CNC / GRBL controller | Optimized for G-code rather than a dedicated welding workflow | Purpose-built TIG rotator UI with Continuous, Jog, Pulse, Step, Timer, presets, and foot pedal support |
 | Cheap speed-controller modules | Pot-only control, no saved jobs, weak diagnostics | NVS presets, workpiece diameter fields, diagnostics screen, event log, and display/system info |
 | Open-bench ESP32 projects | Often unstable near HF-start TIG welding | Field-tested with TIG after moving ESP32-P4 screen, DM542T driver, and PSU into one grounded metal enclosure |
 | Simple E-STOP input | Software polling or unsafe enable assumptions | GPIO34 ISR forces ENA HIGH, state machine latches fault, and motion-start paths re-check E-STOP/ALM after ENA LOW |
 | Display demos | Pretty screen but no realtime motor isolation | LVGL 9 UI isolated to Core 1; FastAccelStepper and safety-critical logic stay on Core 0 |
 | Fixed motor configs | Hardcoded microstep/speed assumptions | Touch-configurable microstepping, acceleration, direction invert, max RPM clamp, calibration, and storage validation |
 
-The practical difference: this is not just a rotating table demo. It is firmware for a welding positioner that has been tested against the real failure modes of TIG HF start, noisy wiring, stalled UI, blocked starts, and unsafe motor enable timing.
+The project combines dedicated welding modes, input diagnostics and documented enclosure experience from TIG HF testing. The latest software changes have native and simulator coverage; physical motor and safety checks for this update remain bench work.
 
 ---
 
@@ -179,7 +199,7 @@ The practical difference: this is not just a rotating table demo. It is firmware
 2. Verify the main screen appears, touch responds, and E-STOP is released.
 3. Set driver current and microstep DIP switches to match **Settings > Motor Config**.
 4. Turn on the motor supply after STEP/DIR/ENA and E-STOP wiring are checked.
-5. Use the main potentiometer to set workpiece RPM, then press **START** for continuous mode.
+5. Use the main potentiometer or the idle-screen **+ / −** controls to set workpiece RPM, then press **START** for continuous mode.
 6. Use **JOG** for manual positioning, **PULSE** for tack cycles, **STEP** for indexed rotation, or **TIMER** for countdown start.
 7. Use the E-STOP as the first response to unsafe motion. The red overlay only resets after the physical fault is cleared.
 
@@ -187,7 +207,17 @@ The practical difference: this is not just a rotating table demo. It is firmware
 
 ## UI Screens
 
-The UI is built from 21 active `ScreenId` roots plus a separate full-screen E-STOP overlay. The full visual map is in `docs/images/ui_screens.svg`; the table below maps the firmware registry.
+The UI is built from **22 registered screen types** plus a separate full-screen fault overlay. The table below maps the firmware registry.
+
+![Emergency-stop overlay](docs/images/ui_runtime_v5/ESTOP_ACTIVE.png)
+
+Simulated active fault: the physical input must be cleared before reset is available. Reset returns to idle and requires a new START.
+
+### Design reference
+
+[V5 SVG proposals](docs/images/ui_mockup_v5/all_screens.svg) · [Design bundle](docs/images/ui_mockup_v5.zip) · [Readability review](docs/images/ui_mockup_v5/READABILITY_REVIEW.md) · [Previous UI map](docs/images/ui_screens.svg)
+
+The 30 design views cover all 22 screen types, additional states and keyboards. The SVG audit measured 581 text elements at 800 × 480. Those results apply to the mockups; actual firmware captures are shown above. Calibration, step and countdown retain some existing controls and layouts; see the [integration notes](docs/UI_V5_DEPLOYMENT.md).
 
 <details>
 <summary><b>ScreenId registry</b></summary>
@@ -195,8 +225,9 @@ The UI is built from 21 active `ScreenId` roots plus a separate full-screen E-ST
 | Screen | `ScreenId` | Description |
 |:---|:---|:---|
 | **Boot** | `SCREEN_BOOT` | Startup splash / transition to main |
-| **Main** | `SCREEN_MAIN` | Large RPM gauge (pot-driven), start/stop, mode quick-access (no main-screen RPM +/-) |
+| **Main** | `SCREEN_MAIN` | Large orange RPM panel, idle RPM +/−, CW/CCW and wide START/STOP |
 | **Menu** | `SCREEN_MENU` | Advanced mode selection and settings |
+| **Run Modes** | `SCREEN_RUN_MODES` | Pulse / Step / Jog / Timer selection |
 | **Jog** | `SCREEN_JOG` | Touch-and-hold rotation for manual positioning (has its own RPM +/-) |
 | **Pulse** | `SCREEN_PULSE` | ON/OFF cycle for tack welding |
 | **Step** | `SCREEN_STEP` | Rotate exact angle, then stop |
@@ -239,7 +270,7 @@ controlTask  (pri 3, 4 KB)
 |:---|:---|
 | **Task Isolation** | UI rendering cannot block motor pulse generation |
 | **Hardware Timers** | RMT peripheral for jitter-free micro-stepping |
-| **Fail-Safe** | E-STOP ISR cuts ENA pin in <0.5 ms; motion-start paths re-check E-STOP/ALM after ENA LOW and disable again if unsafe |
+| **Fail-Safe** | E-STOP ISR drives ENA HIGH; stop latency requires measurement; motion-start paths re-check E-STOP/ALM after ENA LOW and disable again if unsafe |
 | **Thread Safety** | FreeRTOS mutex on stepper access, atomic cross-core variables, pending-flag patterns |
 | **Live Speed** | `applySpeedAcceleration()` for immediate RPM changes during rotation |
 
@@ -264,6 +295,8 @@ controlTask  (pri 3, 4 KB)
   <img src="docs/images/Wiring_diagram.v2.svg" width="800" alt="Wiring Diagram">
 </div>
 
+**Input contract:** Firmware expects GPIO34 HIGH when healthy and LOW when faulted. A bare NC contact to GND produces the opposite behavior and is incompatible. ENA HIGH is assumed to disable the driver. Verify the assembled interface against [Hardware Setup](docs/HARDWARE_SETUP.md); the illustration above is a legacy reference.
+
 ### Pinout
 
 <div align="center">
@@ -280,7 +313,7 @@ controlTask  (pri 3, 4 KB)
 | **GPIO 52** | ENABLE (Output) | Active LOW to driver ENA |
 | **GPIO 49** | POT (ADC Input) | 10k speed potentiometer (ADC2_CH0, 11 dB attenuation, ref range 0-3315) |
 | **GPIO 29** | DIR SWITCH (Input) | CW/CCW toggle, `INPUT_PULLUP` (LOW = CCW, HIGH = CW) |
-| **GPIO 34** | E-STOP (Input, ISR) | NC contact, active LOW, `FALLING` edge, 3-sample boot de-floating (no internal pull-up on ESP32-P4 — add external pull-up for long/noisy leads) |
+| **GPIO 34** | E-STOP (Input, ISR) | HIGH = healthy, LOW = fault, `FALLING` interrupt; verify interface polarity and cable-break response |
 | **GPIO 33** | PEDAL SW (Input) | Foot pedal switch, `INPUT_PULLUP`, active LOW |
 | **GPIO 32** | DRIVER ALM (Input) | DM542T alarm input, `INPUT_PULLUP`, open-drain active LOW |
 | GPIO 7 / 8 | Touch I2C | GT911 @ 0x5D + ADS1115 pedal ADC @ 0x48-0x4B when `ENABLE_ADS1115_PEDAL=1` |
@@ -302,7 +335,9 @@ Default environment: `esp32p4-release`. Build output goes to `.pio/build-fw` to 
 | Native tests | `pio test -e native` |
 | On-device tests | `pio test -e esp32p4-test` |
 
-`COM5` is configured in `platformio.ini`; change `upload_port` / `monitor_port` if Windows assigns another port. Native tests do not need hardware.
+`COM5` is configured in `platformio.ini`; change `upload_port` / `monitor_port` if Windows assigns another port. Native tests do not need hardware. Use `pio device list` and override the configured port with `--upload-port COM3` (example).
+
+Pinned dependencies: pioarduino `55.03.37`, LVGL `v9.5.0`, FastAccelStepper `0.33.14`, ArduinoJson `7.4.3`.
 
 ---
 
@@ -328,11 +363,11 @@ Export screenshots of every registered screen:
 .\simulator\run.ps1 -Screenshots artifacts\sim_screens
 ```
 
-The screenshot dump writes `*.bmp` files for all simulator screens. Use it for UI review before flashing, especially after layout or theme changes.
+The screenshot dump writes `*.bmp` files for all registered simulator screens and active/resettable fault overlays. Use it for UI review before flashing, especially after layout or theme changes.
 
 This is not live device mirroring and it cannot control motor hardware. Real E-STOP, driver alarm, ENA polarity, touch, and motor behavior still need bench testing on the actual controller.
 
-Requirements: CMake, Ninja, MSYS2 MinGW SDL2, and PlatformIO dependencies already installed. See [simulator/README.md](simulator/README.md).
+Linux CI also runs the SDL simulator via Xvfb; build the `rotator_simulator` target. Windows requirements: CMake, Ninja, MSYS2 MinGW SDL2, and PlatformIO dependencies already installed. See [simulator/README.md](simulator/README.md).
 
 ---
 
@@ -481,6 +516,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - **Load order:** settings load before presets, so preset RPM values are clamped against the saved **Max RPM** setting. Invalid persisted microstep values are sanitized to the safe default `1/16`.
 - **Display / UI:** the settings blob includes e.g. **`color_scheme`** (`0` = dark neutral palette, `1` = light), **`accent_color`** (0–7), brightness and dim-timeout fields — see `SystemSettings` / `storage.cpp` for the authoritative list.
 - **Saves** run on **Core 1** in `storageTask`: debounced **~500 ms** after preset changes and **~1 s** after settings changes (`storage_flush()`). UI code sets a pending flag; it does not write flash directly.
+- **Write failures:** failed saves remain pending and retry with backoff; the UI shows pending/error state. Changes arriving during a write remain queued for another save. Dimming timeout uses a 16-bit field so 300 seconds persists correctly.
 - **Flash cache:** NVS commits can disable the flash cache briefly. The firmware sets `g_flashWriting` so the UI can avoid glitches during writes; PSRAM code/rodata mitigations still apply (`CONFIG_SPIRAM_FETCH_INSTRUCTIONS`, `CONFIG_SPIRAM_RODATA` in sdkconfig).
 
 **Troubleshooting**
@@ -495,7 +531,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - [ ] Display boots successfully
 - [ ] Touch input responds correctly
 - [ ] Motor rotates at target RPM
-- [ ] E-STOP halts motion immediately
+- [ ] E-STOP disables the driver; measure physical stop response and verify cable-break behavior
 - [ ] Direction switch toggles CW/CCW
 - [ ] Potentiometer controls speed
 - [ ] All 5 welding modes tested
@@ -512,7 +548,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 
 | Hazard | Precaution |
 |:---|:---|
-| **E-STOP** | NC contact hardware interrupt cuts motor enable in <0.5 ms |
+| **E-STOP** | GPIO34 LOW triggers ENA HIGH and a latched fault; verify electrical polarity and measure physical stop latency |
 | **Dim + fault** | If the panel has dimmed on timeout, E-STOP still wakes the backlight so the red overlay is visible (`g_wakePending` / `dim_reset_activity()`) |
 | **Power Sequencing** | Never power motor without driver connected to coils |
 | **Motor Coils** | Never connect/disconnect coils while driver is powered |
@@ -539,7 +575,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 <details>
 <summary><b>Main START does not always start motor</b></summary>
 
-- Current control logic uses a single overwrite command queue, so the latest START/STOP command wins and stale STOP requests cannot block a later START
+- STOP has a separate latch and invalidates pending starts. A new explicit START is required after STOP is processed; inspect fault, task-readiness and pedal state if motion stays blocked.
 - Go to **Settings > Diagnostics** and verify `MOTION BLOCK = NO`, `ESTOP GPIO34 = HIGH OK`, `DM542T ALM GPIO32 = HIGH OK`, and `ENA GPIO52 = HIGH DISABLED` while idle
 - The Diagnostics event log shows the last START/STOP, pedal, program and fault events, so you can see whether the UI requested motion or safety blocked it
 - If a foot pedal is connected, use **Settings > Pedal Settings** to confirm `GPIO33 switch` changes between `HIGH OPEN` and `LOW PRESSED`
@@ -575,7 +611,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 <details>
 <summary><b>ESTOP triggered at power-on with button released</b></summary>
 
-- GPIO 34 has **no internal pull-up** on ESP32-P4; a disconnected or long-wired ESTOP line can float at boot
+- Verify that the E-STOP interface outputs HIGH when healthy and LOW when faulted. A bare NC contact to GND is incompatible with this polarity. Check wiring and cable-break behavior against the hardware guide.
 - v2.0.5+ samples `PIN_ESTOP` three times with 500 µs spacing (requires 2/3 LOW before treating as pressed); serial log will show `Safety init: ESTOP=PRESSED (low samples X/3)`
 - If you still see false boot ESTOPs, add an **external 10 kΩ pull-up to 3V3** on GPIO 34 and/or shorten/shield the E-STOP wiring (see `docs/EMI_MITIGATION.md`)
 
@@ -613,6 +649,22 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 
 ---
 
+## Validation status
+
+| Local check | Result |
+| --- | --- |
+| Native suites | 403 / 403 passed |
+| LVGL self-test | Passed: navigation, program edits, RPM adjustment and blocked/available reset |
+| Firmware builds | Release, debug and mirror passed |
+| Device upload | Release uploaded to COM3; esptool verified data hash and issued reset |
+| Physical motor/safety testing | Not performed as part of this update |
+
+[Validation logs](docs/validation/2026-10-01/ui-v5/) record local runs. Native tests include direct production-policy tests, but older tests also model behavior separately; simulator hardware is stubbed. CI runs native tests, three firmware variants and SDL navigation checks. The badge links to the current GitHub result.
+
+---
+
+---
+
 ## Documentation Map
 
 | Document | Use It For |
@@ -622,6 +674,9 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 | [docs/SAFETY_SYSTEM.md](docs/SAFETY_SYSTEM.md) | E-STOP behavior, watchdog model, safety assumptions |
 | [docs/PROJECT_IMPLEMENTATION.md](docs/PROJECT_IMPLEMENTATION.md) | RTOS architecture, storage, display pipeline, known workarounds |
 | [docs/INSTRUCTABLES.md](docs/INSTRUCTABLES.md) | Builder-friendly article content and assembly flow |
+| [docs/UI_V5_DEPLOYMENT.md](docs/UI_V5_DEPLOYMENT.md) | V5 UI implementation, screenshots and device upload evidence |
+| [docs/FORBEDRINGER_2026-10-01.md](docs/FORBEDRINGER_2026-10-01.md) | Code improvements, checks and remaining bench work |
+| [docs/estop_timing.md](docs/estop_timing.md) | Physical E-STOP measurement procedure |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Fork, build, test, and pull-request workflow |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Contributor Covenant (community standards for GitHub / contributors) |
 | [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/wiki) | Public builder guide with clone/build, hardware setup, troubleshooting, architecture, and roadmap |
@@ -664,7 +719,7 @@ src/
     lvgl_hal.cpp              Flush callback (manual 90° rotation), dim, touch polling
     theme.cpp/h               Runtime neutral palettes (dark/light), accent themes, `COL_HDR_MUTED`, fonts, layout constants
     screens.cpp/h             Screen management, lazy creation, g_lvgl_mutex
-    screens/                  screen_*.cpp (21 active ScreenId roots + ESTOP overlay module)
+    screens/                  screen_*.cpp (22 registered ScreenId roots + ESTOP overlay module)
 test/
   test_logic/               Native Unity tests (no hardware required)
   test_device_*/            On-device integration tests (require ESP32-P4)
@@ -678,7 +733,7 @@ simulator/                  Windows SDL2 LVGL simulator and automated UI smoke t
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+MIT License — see [LICENSE](LICENSE) for details. Dependencies retain their own licenses, including the [SIL OFL license for the Montserrat numeric font](src/ui/fonts/OFL-Montserrat.txt).
 
 ---
 

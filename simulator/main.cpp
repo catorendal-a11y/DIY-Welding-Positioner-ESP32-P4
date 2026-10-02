@@ -15,11 +15,12 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <direct.h>
+#include <filesystem>
 #include <vector>
 
 void simulator_init_state();
 void simulator_tick();
+void simulator_set_estop_input(bool active);
 
 static void sim_pump(uint32_t ms) {
   uint32_t start = lv_tick_get();
@@ -27,6 +28,7 @@ static void sim_pump(uint32_t ms) {
     screens_process_pending();
     simulator_tick();
     screens_update_current();
+    estop_overlay_update();
     uint32_t waitMs = lv_timer_handler();
     if (waitMs == LV_NO_TIMER_READY || waitMs > 10) {
       waitMs = 5;
@@ -37,30 +39,54 @@ static void sim_pump(uint32_t ms) {
 
 static const char* sim_screen_name(ScreenId id) {
   switch (id) {
-    case SCREEN_NONE: return "NONE";
-    case SCREEN_MAIN: return "MAIN";
-    case SCREEN_MENU: return "MENU";
-    case SCREEN_PULSE: return "PULSE";
-    case SCREEN_STEP: return "STEP";
-    case SCREEN_JOG: return "JOG";
-    case SCREEN_TIMER: return "TIMER";
-    case SCREEN_PROGRAMS: return "PROGRAMS";
-    case SCREEN_PROGRAM_EDIT: return "PROGRAM_EDIT";
-    case SCREEN_SETTINGS: return "SETTINGS";
-    case SCREEN_CONFIRM: return "CONFIRM";
-    case SCREEN_BOOT: return "BOOT";
-    case SCREEN_EDIT_PULSE: return "EDIT_PULSE";
-    case SCREEN_EDIT_STEP: return "EDIT_STEP";
-    case SCREEN_EDIT_CONT: return "EDIT_CONT";
-    case SCREEN_SYSINFO: return "SYSINFO";
-    case SCREEN_CALIBRATION: return "CALIBRATION";
-    case SCREEN_MOTOR_CONFIG: return "MOTOR_CONFIG";
-    case SCREEN_DISPLAY: return "DISPLAY";
-    case SCREEN_PEDAL_SETTINGS: return "PEDAL_SETTINGS";
-    case SCREEN_DIAGNOSTICS: return "DIAGNOSTICS";
-    case SCREEN_ABOUT: return "ABOUT";
-    case SCREEN_RUN_MODES: return "RUN_MODES";
-    case SCREEN_COUNT: return "COUNT";
+    case SCREEN_NONE:
+      return "NONE";
+    case SCREEN_MAIN:
+      return "MAIN";
+    case SCREEN_MENU:
+      return "MENU";
+    case SCREEN_PULSE:
+      return "PULSE";
+    case SCREEN_STEP:
+      return "STEP";
+    case SCREEN_JOG:
+      return "JOG";
+    case SCREEN_TIMER:
+      return "TIMER";
+    case SCREEN_PROGRAMS:
+      return "PROGRAMS";
+    case SCREEN_PROGRAM_EDIT:
+      return "PROGRAM_EDIT";
+    case SCREEN_SETTINGS:
+      return "SETTINGS";
+    case SCREEN_CONFIRM:
+      return "CONFIRM";
+    case SCREEN_BOOT:
+      return "BOOT";
+    case SCREEN_EDIT_PULSE:
+      return "EDIT_PULSE";
+    case SCREEN_EDIT_STEP:
+      return "EDIT_STEP";
+    case SCREEN_EDIT_CONT:
+      return "EDIT_CONT";
+    case SCREEN_SYSINFO:
+      return "SYSINFO";
+    case SCREEN_CALIBRATION:
+      return "CALIBRATION";
+    case SCREEN_MOTOR_CONFIG:
+      return "MOTOR_CONFIG";
+    case SCREEN_DISPLAY:
+      return "DISPLAY";
+    case SCREEN_PEDAL_SETTINGS:
+      return "PEDAL_SETTINGS";
+    case SCREEN_DIAGNOSTICS:
+      return "DIAGNOSTICS";
+    case SCREEN_ABOUT:
+      return "ABOUT";
+    case SCREEN_RUN_MODES:
+      return "RUN_MODES";
+    case SCREEN_COUNT:
+      return "COUNT";
   }
   return "UNKNOWN";
 }
@@ -70,9 +96,7 @@ static bool sim_fail(const char* msg) {
   return false;
 }
 
-static bool sim_expect(bool condition, const char* msg) {
-  return condition ? true : sim_fail(msg);
-}
+static bool sim_expect(bool condition, const char* msg) { return condition ? true : sim_fail(msg); }
 
 static lv_obj_t* sim_clickable_ancestor(lv_obj_t* obj) {
   obj = lv_obj_get_parent(obj);
@@ -103,8 +127,7 @@ static lv_obj_t* sim_find_label_target(lv_obj_t* obj, const char* text, bool con
     const char* labelText = lv_label_get_text(obj);
     bool match = false;
     if (labelText) {
-      match = contains ? (std::strstr(labelText, text) != nullptr)
-                       : (std::strcmp(labelText, text) == 0);
+      match = contains ? (std::strstr(labelText, text) != nullptr) : (std::strcmp(labelText, text) == 0);
     }
     if (match) {
       lv_obj_t* target = buttonOnly ? sim_button_ancestor(obj) : sim_clickable_ancestor(obj);
@@ -132,7 +155,8 @@ static bool sim_send_label_event(const char* text, lv_event_code_t event, bool c
   lv_obj_t* target = sim_find_active_label_target(text, contains);
   if (!target) {
     char buf[128];
-    std::snprintf(buf, sizeof(buf), "label target not found: %s on %s", text, sim_screen_name(screens_get_current()));
+    std::snprintf(buf, sizeof(buf), "label target not found: %s on %s", text,
+                  sim_screen_name(screens_get_current()));
     return sim_fail(buf);
   }
   lv_obj_send_event(target, event, nullptr);
@@ -152,8 +176,8 @@ static bool sim_show_and_check(ScreenId id) {
   sim_pump(80);
   if (screens_get_current() != id) {
     char buf[128];
-    std::snprintf(buf, sizeof(buf), "screen switch failed: wanted %s got %s",
-                  sim_screen_name(id), sim_screen_name(screens_get_current()));
+    std::snprintf(buf, sizeof(buf), "screen switch failed: wanted %s got %s", sim_screen_name(id),
+                  sim_screen_name(screens_get_current()));
     return sim_fail(buf);
   }
   if (!screenRoots[id]) {
@@ -186,11 +210,11 @@ static bool sim_click_back_to(ScreenId expected) {
 
 static bool sim_test_all_screens_create_update() {
   const ScreenId ids[] = {
-    SCREEN_BOOT, SCREEN_MAIN, SCREEN_MENU, SCREEN_RUN_MODES, SCREEN_PULSE,
-    SCREEN_STEP, SCREEN_JOG, SCREEN_TIMER, SCREEN_PROGRAMS, SCREEN_PROGRAM_EDIT,
-    SCREEN_EDIT_CONT, SCREEN_EDIT_PULSE, SCREEN_EDIT_STEP, SCREEN_SETTINGS,
-    SCREEN_MOTOR_CONFIG, SCREEN_CALIBRATION, SCREEN_DISPLAY, SCREEN_PEDAL_SETTINGS,
-    SCREEN_DIAGNOSTICS, SCREEN_SYSINFO, SCREEN_ABOUT, SCREEN_CONFIRM,
+      SCREEN_BOOT,        SCREEN_MAIN,       SCREEN_MENU,           SCREEN_RUN_MODES,   SCREEN_PULSE,
+      SCREEN_STEP,        SCREEN_JOG,        SCREEN_TIMER,          SCREEN_PROGRAMS,    SCREEN_PROGRAM_EDIT,
+      SCREEN_EDIT_CONT,   SCREEN_EDIT_PULSE, SCREEN_EDIT_STEP,      SCREEN_SETTINGS,    SCREEN_MOTOR_CONFIG,
+      SCREEN_CALIBRATION, SCREEN_DISPLAY,    SCREEN_PEDAL_SETTINGS, SCREEN_DIAGNOSTICS, SCREEN_SYSINFO,
+      SCREEN_ABOUT,       SCREEN_CONFIRM,
   };
 
   for (ScreenId id : ids) {
@@ -203,27 +227,36 @@ static bool sim_test_all_screens_create_update() {
   return sim_expect(screens_get_current() == SCREEN_MAIN, "theme reinit did not restore current screen");
 }
 
+static lv_obj_t* sim_find_action(lv_obj_t* root, UiActionId id) {
+  if (lv_obj_get_user_data(root) == (void*)(uintptr_t)id) return root;
+  for (uint32_t i = 0; i < lv_obj_get_child_count(root); ++i)
+    if (lv_obj_t* result = sim_find_action(lv_obj_get_child(root, i), id)) return result;
+  return nullptr;
+}
+static bool sim_click_action(UiActionId id) {
+  lv_obj_t* target = sim_find_action(lv_screen_active(), id);
+  if (!target || lv_obj_has_state(target, LV_STATE_DISABLED) || lv_obj_has_flag(target, LV_OBJ_FLAG_HIDDEN))
+    return sim_fail("action unavailable");
+  lv_obj_send_event(target, LV_EVENT_CLICKED, nullptr);
+  sim_pump(60);
+  return true;
+}
+
 static bool sim_test_main_controls() {
   if (!sim_show_and_check(SCREEN_MAIN)) return false;
-
-  if (!sim_click_label("> START")) return false;
-  if (!sim_expect(control_get_state() == STATE_RUNNING, "main START did not enter RUNNING")) return false;
-  if (!sim_click_label("X STOP")) return false;
-  if (!sim_expect(control_get_state() == STATE_IDLE, "main STOP did not return IDLE")) return false;
-
-  if (!sim_send_label_event("JOG", LV_EVENT_PRESSED)) return false;
-  if (!sim_expect(control_get_state() == STATE_JOG, "main JOG press did not enter JOG")) return false;
-  if (!sim_send_label_event("JOG", LV_EVENT_RELEASED)) return false;
-  if (!sim_expect(control_get_state() == STATE_IDLE, "main JOG release did not stop")) return false;
-
+  float rpmBefore = speed_get_target_rpm();
+  if (!sim_click_label("+")) return false;
+  if (!sim_expect(speed_get_target_rpm() > rpmBefore, "RPM plus did not increase speed")) return false;
+  if (!sim_click_label("-")) return false;
+  if (!sim_click_action(UI_ACTION_START)) return false;
+  if (!sim_expect(control_get_state() == STATE_RUNNING, "START did not run")) return false;
+  if (!sim_click_action(UI_ACTION_STOP)) return false;
+  if (!sim_expect(control_get_state() == STATE_IDLE, "STOP did not stop")) return false;
+  g_dir_switch_cache.store(false);
+  sim_pump(250);
   Direction before = speed_get_direction();
-  if (!sim_click_label("CW")) return false;
-  if (!sim_expect(speed_get_direction() != before, "direction toggle did not change direction")) return false;
-
-  if (!sim_click_label("PULSE")) return false;
-  if (!sim_expect(control_get_state() == STATE_PULSE, "main PULSE did not enter PULSE")) return false;
-  if (!sim_click_label("X STOP")) return false;
-  return sim_expect(control_get_state() == STATE_IDLE, "STOP after PULSE did not return IDLE");
+  if (!sim_click_action(UI_ACTION_DIRECTION)) return false;
+  return sim_expect(speed_get_direction() != before, "direction did not change");
 }
 
 static bool sim_test_navigation_flows() {
@@ -232,10 +265,12 @@ static bool sim_test_navigation_flows() {
   if (!sim_expect(screens_get_current() == SCREEN_MENU, "MENU button did not open menu")) return false;
 
   if (!sim_click_label("RUN MODES")) return false;
-  if (!sim_expect(screens_get_current() == SCREEN_RUN_MODES, "RUN MODES did not open run mode picker")) return false;
+  if (!sim_expect(screens_get_current() == SCREEN_RUN_MODES, "RUN MODES did not open run mode picker"))
+    return false;
 
   if (!sim_click_label("PULSE")) return false;
-  if (!sim_expect(screens_get_current() == SCREEN_PULSE, "run mode PULSE did not open pulse screen")) return false;
+  if (!sim_expect(screens_get_current() == SCREEN_PULSE, "run mode PULSE did not open pulse screen"))
+    return false;
   if (!sim_click_label("> START")) return false;
   if (!sim_expect(control_get_state() == STATE_PULSE, "pulse START did not enter PULSE")) return false;
   if (!sim_click_label("[] STOP")) return false;
@@ -244,7 +279,8 @@ static bool sim_test_navigation_flows() {
 
   if (!sim_show_and_check(SCREEN_RUN_MODES)) return false;
   if (!sim_click_label("STEP")) return false;
-  if (!sim_expect(screens_get_current() == SCREEN_STEP, "run mode STEP did not open step screen")) return false;
+  if (!sim_expect(screens_get_current() == SCREEN_STEP, "run mode STEP did not open step screen"))
+    return false;
   if (!sim_click_label("> STEP")) return false;
   if (!sim_expect(control_get_state() == STATE_STEP, "step button did not enter STEP")) return false;
   if (!sim_click_label("X STOP")) return false;
@@ -262,13 +298,16 @@ static bool sim_test_navigation_flows() {
 
   if (!sim_show_and_check(SCREEN_RUN_MODES)) return false;
   if (!sim_click_label("3-2-1")) return false;
-  if (!sim_expect(screens_get_current() == SCREEN_TIMER, "run mode timer did not open timer screen")) return false;
+  if (!sim_expect(screens_get_current() == SCREEN_TIMER, "run mode timer did not open timer screen"))
+    return false;
   g_settings.countdown_seconds = 1;
   if (!sim_click_label("> START")) return false;
-  sim_pump(1400);
-  if (!sim_expect(screens_get_current() == SCREEN_MAIN, "timer countdown did not return to main")) return false;
-  if (!sim_expect(control_get_state() == STATE_RUNNING, "timer countdown did not start RUNNING")) return false;
-  if (!sim_click_label("X STOP")) return false;
+  sim_pump(3400);
+  if (!sim_expect(screens_get_current() == SCREEN_MAIN, "timer countdown did not return to main"))
+    return false;
+  if (!sim_expect(control_get_state() == STATE_RUNNING, "timer countdown did not start RUNNING"))
+    return false;
+  if (!sim_click_action(UI_ACTION_STOP)) return false;
   if (!sim_expect(control_get_state() == STATE_IDLE, "timer STOP did not return IDLE")) return false;
 
   return true;
@@ -284,13 +323,13 @@ static bool sim_test_settings_and_programs() {
     ScreenId dest;
   };
   const NavCase settingsCases[] = {
-    {"Motor Configuration", SCREEN_MOTOR_CONFIG},
-    {"Calibration", SCREEN_CALIBRATION},
-    {"Display Settings", SCREEN_DISPLAY},
-    {"Pedal Settings", SCREEN_PEDAL_SETTINGS},
-    {"Diagnostics", SCREEN_DIAGNOSTICS},
-    {"System Info", SCREEN_SYSINFO},
-    {"About", SCREEN_ABOUT},
+      {"Motor Configuration", SCREEN_MOTOR_CONFIG},
+      {"Calibration", SCREEN_CALIBRATION},
+      {"Display Settings", SCREEN_DISPLAY},
+      {"Pedal Settings", SCREEN_PEDAL_SETTINGS},
+      {"Diagnostics", SCREEN_DIAGNOSTICS},
+      {"System Info", SCREEN_SYSINFO},
+      {"About", SCREEN_ABOUT},
   };
 
   for (const NavCase& c : settingsCases) {
@@ -302,12 +341,40 @@ static bool sim_test_settings_and_programs() {
 
   if (!sim_show_and_check(SCREEN_PROGRAMS)) return false;
   if (!sim_click_label("+ NEW")) return false;
-  if (!sim_expect(screens_get_current() == SCREEN_PROGRAM_EDIT, "+ NEW did not open program edit")) return false;
+  if (!sim_expect(screens_get_current() == SCREEN_PROGRAM_EDIT, "+ NEW did not open program edit"))
+    return false;
   if (!sim_click_label("CONT -", true)) return false;
-  if (!sim_expect(screens_get_current() == SCREEN_EDIT_CONT, "mode settings did not open continuous edit")) return false;
+  if (!sim_expect(screens_get_current() == SCREEN_EDIT_CONT, "mode settings did not open continuous edit"))
+    return false;
+  float previousRpm = screen_program_edit_get_preset()->rpm;
+  if (!sim_click_label("+")) return false;
+  sim_pump(450);
+  if (!sim_click_label("SAVE")) return false;
+  if (!sim_expect(screen_program_edit_get_preset()->rpm > previousRpm,
+                  "CONT edits were overwritten by periodic update"))
+    return false;
+  screens_show(SCREEN_EDIT_PULSE);
+  const uint32_t previousOn = screen_program_edit_get_preset()->pulse_on_ms;
+  if (!sim_click_label("+")) return false;
+  sim_pump(450);
+  if (!sim_click_label("SAVE")) return false;
+  if (!sim_expect(screen_program_edit_get_preset()->pulse_on_ms > previousOn,
+                  "PULSE edits were overwritten by periodic update"))
+    return false;
+  screens_show(SCREEN_EDIT_CONT);
+  Preset* draft = screen_program_edit_get_preset();
+  const uint8_t draftId = draft->id;
+  std::snprintf(draft->name, sizeof(draft->name), "Retained draft");
+  draft->pulse_on_ms = 1234;
   if (!sim_click_back_to(SCREEN_PROGRAM_EDIT)) return false;
+  draft = screen_program_edit_get_preset();
+  if (!sim_expect(std::strcmp(draft->name, "Retained draft") == 0 && draft->pulse_on_ms == 1234 &&
+                      draft->id == draftId,
+                  "program draft lost on return"))
+    return false;
   if (!sim_click_label("CANCEL")) return false;
-  if (!sim_expect(screens_get_current() == SCREEN_PROGRAMS, "program edit cancel did not return programs")) return false;
+  if (!sim_expect(screens_get_current() == SCREEN_PROGRAMS, "program edit cancel did not return programs"))
+    return false;
 
   return true;
 }
@@ -315,13 +382,9 @@ static bool sim_test_settings_and_programs() {
 static bool s_confirmHit = false;
 static bool s_cancelHit = false;
 
-static void sim_confirm_cb() {
-  s_confirmHit = true;
-}
+static void sim_confirm_cb() { s_confirmHit = true; }
 
-static void sim_cancel_cb() {
-  s_cancelHit = true;
-}
+static void sim_cancel_cb() { s_cancelHit = true; }
 
 static bool sim_test_confirm_and_overlay() {
   if (!sim_show_and_check(SCREEN_MAIN)) return false;
@@ -341,10 +404,24 @@ static bool sim_test_confirm_and_overlay() {
   if (!sim_click_label("CONFIRM")) return false;
   sim_pump(80);
   if (!sim_expect(s_confirmHit, "confirm callback did not run")) return false;
-  if (!sim_expect(screens_get_current() == SCREEN_MAIN, "confirm success did not return to main")) return false;
+  if (!sim_expect(screens_get_current() == SCREEN_MAIN, "confirm success did not return to main"))
+    return false;
 
+  simulator_set_estop_input(true);
+  g_uiResetPending.store(false);
   estop_overlay_show();
-  sim_pump(40);
+  sim_pump(300);
+  lv_obj_t* blockedReset = sim_find_label_target(lv_layer_top(), "RESET BLOCKED - INPUT ACTIVE", false, true);
+  if (!sim_expect(blockedReset && lv_obj_has_state(blockedReset, LV_STATE_DISABLED),
+                  "fault reset must be disabled"))
+    return false;
+  lv_obj_send_event(blockedReset, LV_EVENT_CLICKED, nullptr);
+  if (!sim_expect(!g_uiResetPending.load(), "unsafe reset was requested")) return false;
+  simulator_set_estop_input(false);
+  sim_pump(300);
+  lv_obj_t* readyReset = sim_find_label_target(lv_layer_top(), "RESET TO IDLE", false, true);
+  if (!sim_expect(readyReset && !lv_obj_has_state(readyReset, LV_STATE_DISABLED), "safe reset unavailable"))
+    return false;
   if (!sim_expect(estop_overlay_visible(), "ESTOP overlay did not show")) return false;
   estop_overlay_hide();
   sim_pump(40);
@@ -420,14 +497,14 @@ static bool sim_write_bmp_argb8888(const char* path, const lv_draw_buf_t* buf) {
 
 static int run_screenshot_dump(const char* dir) {
   if (!dir || !dir[0]) return 2;
-  _mkdir(dir);
+  std::filesystem::create_directories(dir);
 
   const ScreenId ids[] = {
-    SCREEN_BOOT, SCREEN_MAIN, SCREEN_MENU, SCREEN_RUN_MODES, SCREEN_PULSE,
-    SCREEN_STEP, SCREEN_JOG, SCREEN_TIMER, SCREEN_PROGRAMS, SCREEN_PROGRAM_EDIT,
-    SCREEN_EDIT_CONT, SCREEN_EDIT_PULSE, SCREEN_EDIT_STEP, SCREEN_SETTINGS,
-    SCREEN_MOTOR_CONFIG, SCREEN_CALIBRATION, SCREEN_DISPLAY, SCREEN_PEDAL_SETTINGS,
-    SCREEN_DIAGNOSTICS, SCREEN_SYSINFO, SCREEN_ABOUT, SCREEN_CONFIRM,
+      SCREEN_BOOT,        SCREEN_MAIN,       SCREEN_MENU,           SCREEN_RUN_MODES,   SCREEN_PULSE,
+      SCREEN_STEP,        SCREEN_JOG,        SCREEN_TIMER,          SCREEN_PROGRAMS,    SCREEN_PROGRAM_EDIT,
+      SCREEN_EDIT_CONT,   SCREEN_EDIT_PULSE, SCREEN_EDIT_STEP,      SCREEN_SETTINGS,    SCREEN_MOTOR_CONFIG,
+      SCREEN_CALIBRATION, SCREEN_DISPLAY,    SCREEN_PEDAL_SETTINGS, SCREEN_DIAGNOSTICS, SCREEN_SYSINFO,
+      SCREEN_ABOUT,       SCREEN_CONFIRM,
   };
 
   for (ScreenId id : ids) {
@@ -449,6 +526,22 @@ static int run_screenshot_dump(const char* dir) {
     std::printf("SCREENSHOT: %s\n", path);
   }
 
+  screens_show(SCREEN_MAIN);
+  for (bool active : {true, false}) {
+    simulator_set_estop_input(active);
+    estop_overlay_show();
+    sim_pump(300);
+    lv_refr_now(nullptr);
+    lv_draw_buf_t* shot = lv_snapshot_take(lv_layer_top(), LV_COLOR_FORMAT_ARGB8888);
+    if (!shot) return 4;
+    char path[512];
+    std::snprintf(path, sizeof(path), "%s/ESTOP_%s.bmp", dir, active ? "ACTIVE" : "RESET");
+    bool ok = sim_write_bmp_argb8888(path, shot);
+    lv_draw_buf_destroy(shot);
+    if (!ok) return 5;
+    estop_overlay_hide();
+  }
+  simulator_set_estop_input(false);
   return 0;
 }
 

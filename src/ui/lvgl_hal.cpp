@@ -36,7 +36,7 @@ void dim_reset_activity() {
 }
 
 void dim_update() {
-  uint8_t dimSec = 0;
+  uint16_t dimSec = 0;
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   dimSec = g_settings.dim_timeout;
   xSemaphoreGive(g_settings_mutex);
@@ -66,25 +66,23 @@ void dim_update() {
 // ───────────────────────────────────────────────────────────────────────────────
 static esp_timer_handle_t lvgl_tick_timer;
 
-static void IRAM_ATTR lvgl_tick_cb(void* arg) {
-  lv_tick_inc(1);
-}
+static void IRAM_ATTR lvgl_tick_cb(void* arg) { lv_tick_inc(1); }
 
 // ───────────────────────────────────────────────────────────────────────────────
 // LVGL BUFFERS - PSRAM (full frame, double buffered)
 // LVGL renders at 800x480 landscape, flush callback rotates to 480x800 portrait
 // ───────────────────────────────────────────────────────────────────────────────
-static uint8_t *buf1 = nullptr;
-static uint8_t *buf2 = nullptr;
+static uint8_t* buf1 = nullptr;
+static uint8_t* buf2 = nullptr;
 static size_t buf_bytes = 0;
 
 // Pre-allocated rotation scratch buffer (PSRAM)
 // Full frame: 800 × 480 = 384000 pixels × 2 bytes = 768000 bytes
-static uint16_t *rot_buf = nullptr;
+static uint16_t* rot_buf = nullptr;
 static size_t rot_buf_pixels = 0;
 
 void lvgl_alloc_buffers() {
-  buf_bytes = DISPLAY_H_RES * DISPLAY_V_RES * 2;  // 800 × 480 × 2 = 768000
+  buf_bytes = DISPLAY_H_RES * DISPLAY_V_RES * 2;   // 800 × 480 × 2 = 768000
   rot_buf_pixels = DISPLAY_H_RES * DISPLAY_V_RES;  // 384000 pixels
 
   buf1 = (uint8_t*)heap_caps_aligned_calloc(64, 1, buf_bytes, MALLOC_CAP_SPIRAM);
@@ -101,8 +99,8 @@ void lvgl_alloc_buffers() {
     rot_buf = nullptr;
     return;
   }
-  LOG_I("LVGL buffers OK: 2x%u bytes draw + %u bytes rotation (PSRAM)",
-        (unsigned)buf_bytes, (unsigned)(rot_buf_pixels * 2));
+  LOG_I("LVGL buffers OK: 2x%u bytes draw + %u bytes rotation (PSRAM)", (unsigned)buf_bytes,
+        (unsigned)(rot_buf_pixels * 2));
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -116,7 +114,7 @@ void lvgl_alloc_buffers() {
 //   Portrait width = H, Portrait height = W
 //   pixel rotation: rot_buf[(x2-x)*H + (y-y1)] = src_buf[(y-y1)*W + (x-x1)]
 // ───────────────────────────────────────────────────────────────────────────────
-void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
+void lvgl_flush_cb(lv_display_t* disp, const lv_area_t* area, uint8_t* px_map) {
   if (!display_panel || !px_map || !area || !rot_buf) {
     lv_display_flush_ready(disp);
     return;
@@ -151,11 +149,11 @@ void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
     return;
   }
 
-  uint16_t *src = (uint16_t*)px_map;
+  uint16_t* src = (uint16_t*)px_map;
 
-  #if ENABLE_USB_UI_MIRROR
+#if ENABLE_USB_UI_MIRROR
   usb_mirror_enqueue_rect(area, px_map);
-  #endif
+#endif
 
   // 90° CW rotation: landscape (x, y) → portrait (y, 799-x)
   for (int r = 0; r < H; r++) {
@@ -172,10 +170,10 @@ void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
   }
 
   // Portrait rectangle coordinates
-  int px1 = y1;          // portrait x start
-  int py1 = 799 - x2;    // portrait y start
-  int px2 = y2;          // portrait x end
-  int py2 = 799 - x1;    // portrait y end
+  int px1 = y1;        // portrait x start
+  int py1 = 799 - x2;  // portrait y start
+  int px2 = y2;        // portrait x end
+  int py2 = 799 - x1;  // portrait y end
 
   esp_lcd_panel_draw_bitmap(display_panel, px1, py1, px2 + 1, py2 + 1, rot_buf);
   lv_display_flush_ready(disp);
@@ -186,23 +184,26 @@ void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
 // Touch is 480x800 portrait, but LVGL sees 800x480 landscape
 // So we swap x/y to match the landscape orientation
 // ───────────────────────────────────────────────────────────────────────────────
-void lvgl_touchpad_read_cb(lv_indev_t *indev_drv, lv_indev_data_t *data) {
+void lvgl_touchpad_read_cb(lv_indev_t* indev_drv, lv_indev_data_t* data) {
   if (display_touch == nullptr) {
     data->state = LV_INDEV_STATE_RELEASED;
     return;
   }
 
-  esp_lcd_touch_read_data(display_touch);
+  if (esp_lcd_touch_read_data(display_touch) != ESP_OK) {
+    data->state = LV_INDEV_STATE_RELEASED;
+    return;
+  }
 
   uint16_t touch_x[1];
   uint16_t touch_y[1];
   uint16_t touch_strength[1];
-  uint8_t  touch_cnt = 0;
+  uint8_t touch_cnt = 0;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-  bool touched = esp_lcd_touch_get_coordinates(display_touch,
-                    touch_x, touch_y, touch_strength, &touch_cnt, 1);
+  bool touched =
+      esp_lcd_touch_get_coordinates(display_touch, touch_x, touch_y, touch_strength, &touch_cnt, 1);
 #pragma GCC diagnostic pop
 
   if (touched && touch_cnt > 0) {
@@ -257,7 +258,7 @@ void lvgl_hal_init() {
   // Logical resolution is 800x480 landscape (NO LVGL rotation)
   // Flush callback handles rotation to 480x800 physical panel
   // ─────────────────────────────────────────────────────────────────────────
-  lv_display_t *disp = lv_display_create(DISPLAY_H_RES, DISPLAY_V_RES);
+  lv_display_t* disp = lv_display_create(DISPLAY_H_RES, DISPLAY_V_RES);
   lv_display_set_color_format(disp, LV_COLOR_FORMAT_RGB565);
   lv_display_set_buffers(disp, buf1, buf2, buf_bytes, LV_DISPLAY_RENDER_MODE_PARTIAL);
   lv_display_set_flush_cb(disp, lvgl_flush_cb);
@@ -278,28 +279,26 @@ void lvgl_hal_init() {
   // ─────────────────────────────────────────────────────────────────────────
   // REGISTER INPUT DEVICE (GT911 touch)
   // ─────────────────────────────────────────────────────────────────────────
-  lv_indev_t *indev = lv_indev_create();
+  lv_indev_t* indev = lv_indev_create();
   lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
   lv_indev_set_read_cb(indev, lvgl_touchpad_read_cb);
 
   LOG_I("LVGL touch input registered (GT911, manual coordinate swap)");
 
-  #if ENABLE_USB_UI_MIRROR
-  lv_indev_t *mirrorIndev = lv_indev_create();
+#if ENABLE_USB_UI_MIRROR
+  lv_indev_t* mirrorIndev = lv_indev_create();
   lv_indev_set_type(mirrorIndev, LV_INDEV_TYPE_POINTER);
   lv_indev_set_read_cb(mirrorIndev, lvgl_usb_mirror_read_cb);
   LOG_I("LVGL USB mirror input registered");
-  #endif
+#endif
 
   // ─────────────────────────────────────────────────────────────────────────
   // CREATE 1MS TICK TIMER
   // ─────────────────────────────────────────────────────────────────────────
-  const esp_timer_create_args_t tick_timer_args = {
-    .callback = &lvgl_tick_cb,
-    .arg = nullptr,
-    .dispatch_method = esp_timer_dispatch_t::ESP_TIMER_TASK,
-    .name = "lvgl_tick"
-  };
+  const esp_timer_create_args_t tick_timer_args = {.callback = &lvgl_tick_cb,
+                                                   .arg = nullptr,
+                                                   .dispatch_method = esp_timer_dispatch_t::ESP_TIMER_TASK,
+                                                   .name = "lvgl_tick"};
 
   esp_timer_create(&tick_timer_args, &lvgl_tick_timer);
   esp_timer_start_periodic(lvgl_tick_timer, 1000);  // 1ms = 1000us

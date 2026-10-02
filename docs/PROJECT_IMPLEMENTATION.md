@@ -69,7 +69,7 @@
 - **Cross-core**: Shared RPM variables use `std::atomic<float>` with explicit `.load(memory_order_*)` / `.store(...)`. All cross-core atomic flags are declared in `src/app_state.h` / defined in `src/app_state.cpp` (single source of truth).
 - **Stepper mutex**: `g_stepperMutex` (`SemaphoreHandle_t`, FreeRTOS mutex) protects all stepper calls — uses `xSemaphoreTake`/`xSemaphoreGive`, keeps interrupts enabled during cross-core contention. Non-motor modules should call `motor_set_target_milli_hz()` instead of taking the mutex directly (it wraps `setSpeedInMilliHz` + `applySpeedAcceleration`).
 - **Motion-start guard**: start paths check `safety_inhibit_motion()` before ENA is enabled and again immediately after `digitalWrite(PIN_ENA, LOW)`. If E-STOP/ALM appears in that final window, ENA is driven HIGH and no run/move command is issued.
-- **Control command queue**: START/STOP/JOG/program requests are sent as a single overwrite command to `controlTask`, so the latest operator command wins and parameters cannot be mixed across requests.
+- **Control dispatch**: START/JOG/program requests carry parameter snapshots and a generation. STOP uses a separate latch and invalidates pending starts; release also cancels queued JOG. Control-task dispatch rechecks motion interlocks.
 - **Pending-flag pattern**: UI `.store()`s atomic flags with `memory_order_release` for non-motion flags; motorTask/controlTask `.load()`s them with `memory_order_acquire` and executes within the owning task cycle.
 - **Non-blocking pedal ADC**: When `ENABLE_ADS1115_PEDAL=1`, `motorTask` uses a state-machine (`ads_poll_and_start()` in `src/motor/speed.cpp`) that starts a single-shot conversion in one tick and reads the result in a later tick. Runtime I2C transactions use a short timeout; the longer timeout is reserved for `speed_init()` probe/init.
 
@@ -77,11 +77,11 @@
 
 ## 4. Safety System
 
-- **E-STOP**: GPIO 34, NC contact, INPUT_PULLUP, hardware ISR
+- **E-STOP**: GPIO34 HIGH healthy / LOW fault, INPUT_PULLUP, FALLING ISR; a bare NC contact to GND is incompatible with this input polarity. See HARDWARE_SETUP.md.
 - **ISR**: GPIO register write (ENA HIGH) + `g_estopPending.store(true, std::memory_order_release)` + `g_wakePending.store(true, ...)` (NO function calls — flash may be disabled)
-- **Boot sampling**: `safety_init()` takes 3 samples of `PIN_ESTOP` with 500 µs spacing after `INPUT_PULLUP` + 2 ms settle, requires ≥2/3 LOW (mitigates floating GPIO34 at power-on — this pin has no internal pull-up on ESP32-P4)
+- **Boot sampling**: `safety_init()` takes 3 samples of `PIN_ESTOP` with 500 µs spacing after `INPUT_PULLUP` + 2 ms settle, requires ≥2/3 LOW (mitigates floating GPIO34 at power-on — verify the electrical interface independently)
 - **Debounce**: 5ms in safetyTask before STATE_ESTOP transition; `g_estopTriggerMs` is set by `safetyTask` on the debounced edge (not by the ISR)
-- **Stepper API safety**: safetyTask disables ENA first and only calls FastAccelStepper `forceStop()` while holding `g_stepperMutex`; no unsynchronized stepper access is used in ALM/E-STOP paths.
+- **Stepper API safety**: ENA is disabled first. Driver-alarm handling attempts bounded cleanup under `g_stepperMutex`; controlTask performs fault cleanup and retries when needed. E-STOP state publication does not wait for control-task cleanup.
 - **CAS transitions**: `control_transition_to()` uses `compare_exchange_strong` for race-free state changes
 - **UI reset**: `g_uiResetPending.store(true, std::memory_order_release)` from UI, processed in controlTask on Core 0
 - **Overlay**: lvglTask auto-shows/hides ESTOP overlay based on current state
@@ -106,7 +106,7 @@
 
 ## 6. UI Screen System
 
-- **21 active `ScreenId` root screens** with lazy creation (only boot, main, confirm created at init) plus separate **E-STOP overlay** (`screen_estop_overlay.cpp`)
+- **22 registered `ScreenId` root screens** with lazy creation (only boot, main, confirm created at init) plus separate **E-STOP overlay** (`screen_estop_overlay.cpp`)
 - **Screen management**: `screens_show()` dispatches create/update, tracks `screenCreated[]` array
 - **Reinit**: `screens_reinit()` destroys all screens + ESTOP overlay, restores boot/main/confirm
 - **Keyboard**: Deferred cleanup pattern — set flag in callback, cleanup in next update cycle

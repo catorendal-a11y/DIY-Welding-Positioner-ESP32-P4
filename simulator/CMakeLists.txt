@@ -47,6 +47,7 @@ add_executable(rotator_simulator
   sim_stubs.cpp
   "${PROJECT_ROOT}/src/app_state.cpp"
   "${PROJECT_ROOT}/src/ui/theme.cpp"
+  "${PROJECT_ROOT}/src/ui/fonts/rotator_digits_104.c"
   "${PROJECT_ROOT}/src/ui/screens.cpp"
   ${UI_SCREEN_SOURCES}
   ${LVGL_SOURCES}

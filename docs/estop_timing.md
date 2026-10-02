@@ -12,11 +12,21 @@
 - **ENA pin**: GPIO 52 (output; **HIGH** = driver disabled for this firmware’s opto wiring).
 - **Pull-up**: Firmware enables `INPUT_PULLUP` on GPIO 34. For long/noisy leads, prefer an **external** pull-up and optional RC per [EMI_MITIGATION.md](EMI_MITIGATION.md) (see also `PIN_ESTOP` notes in `src/config.h`).
 
-**Example topology (one valid arrangement — confirm against your NC routing):**
+**Firmware input contract (physical wiring still requires verification):**
 
-```
-  3.3V (pull-up)──[GPIO 34]── … NC ESTOP chain … ──[GND / open on fault]
-```
+| Condition | GPIO34 required | Firmware action |
+| --- | --- | --- |
+| Healthy, released | HIGH | Start allowed only after task readiness and other interlocks |
+| E-STOP activated | LOW | ENA HIGH immediately, latched motion fault |
+| E-STOP input cable broken | Must be mapped to LOW by external supervision | Same latched fault |
+| Controller power absent | External hardware must establish the driver-safe state | Software cannot guarantee outputs |
+
+A pull-up with a bare NC contact to GND produces LOW when healthy and HIGH
+when open. **That circuit is incompatible with the retained active-LOW firmware.**
+Use a verified, supervised interface that meets the table, or deliberately change
+the input contract and retest every safety path. Do not infer wiring from a pin name.
+ENA HIGH=disabled is an unverified assumption for the user's actual driver/opto wiring.
+The former NC-to-GND example was removed because it contradicted the firmware.
 
 **Optional RC filter** (EMI-prone environments):
 
@@ -24,7 +34,7 @@
   [GPIO 34]──[100 nF ceramic]──[GND]
 ```
 
-RC time constant: ~1 ms. Blocks TIG HF glitches and contact bounce.
+The time constant depends on the actual pull resistance and wiring. Measure the resulting input delay and noise response on the assembled machine.
 
 ---
 
@@ -38,7 +48,7 @@ RC time constant: ~1 ms. Blocks TIG HF glitches and contact bounce.
 
 ## Implementation (reference)
 
-### Layer 1: ISR (< ~0.5 ms)
+### Layer 1: ISR (latency to be measured)
 
 ```cpp
 void IRAM_ATTR estopISR() {
@@ -50,13 +60,13 @@ void IRAM_ATTR estopISR() {
 
 (No `digitalWrite`, no stepper calls, no `millis()` in ISR — matches `src/safety/safety.cpp`. Flags are declared in `src/app_state.h`.)
 
-### Layer 2: State transition (< ~5 ms)
+### Layer 2: State transition (latency requires measurement)
 
-`safetyTask` acquire-loads `g_estopPending`, debounces it, records `g_estopTriggerMs` on the debounced edge, then calls `control_transition_to(STATE_ESTOP)` via CAS.
+`safetyTask` acquire-loads `g_estopPending`, debounces it, records `g_estopTriggerMs` on the debounced edge, then publishes `STATE_ESTOP` without waiting for motor cleanup. Cleanup runs in controlTask.
 
 ### Layer 2b: Boot-time sampling
 
-`safety_init()` samples `PIN_ESTOP` 3× with 500 µs spacing after `INPUT_PULLUP` + 2 ms settle; requires ≥2/3 LOW to treat ESTOP as pressed. GPIO34 has no internal pull-up on ESP32-P4, so this avoids false power-on ESTOPs from a floating line.
+`safety_init()` samples `PIN_ESTOP` 3× with 500 µs spacing after `INPUT_PULLUP` + 2 ms settle; requires ≥2/3 LOW to treat ESTOP as pressed. Startup sampling does not replace input conditioning or cable-break supervision.
 
 ### Layer 3: UI overlay
 

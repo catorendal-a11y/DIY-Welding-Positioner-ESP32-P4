@@ -1,0 +1,272 @@
+[
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 21,
+    "screen": "01_boot"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 22,
+    "screen": "02_main_ready"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 22,
+    "screen": "03_main_running"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 20,
+    "screen": "04_menu"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 16,
+    "screen": "05_run_modes"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 15,
+    "screen": "06_jog"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 23,
+    "screen": "07_pulse"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 25,
+    "screen": "08_step"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 17,
+    "screen": "09_timer"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 12,
+    "screen": "10_estop_active"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 12,
+    "screen": "11_estop_clear"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 10,
+    "screen": "12_confirm"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 18,
+    "screen": "13_programs"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 17,
+    "screen": "14_program_edit"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 17,
+    "screen": "15_edit_cont"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 20,
+    "screen": "16_edit_pulse"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 26,
+    "screen": "17_edit_step"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 9,
+    "screen": "18_programs_empty"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 23,
+    "screen": "19_settings"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 20,
+    "screen": "20_motor_config"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 16,
+    "screen": "21_pedal"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 16,
+    "screen": "22_display"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 23,
+    "screen": "23_calibration"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 21,
+    "screen": "24_calibration_verify"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 25,
+    "screen": "25_diagnostics"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 18,
+    "screen": "26_sysinfo"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 14,
+    "screen": "27_about"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 24,
+    "screen": "28_numeric_keypad"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 36,
+    "screen": "29_text_keyboard"
+  },
+  {
+    "outside": [],
+    "overlap": [],
+    "lowContrast": [],
+    "container": [],
+    "minimumFont": 14,
+    "textCount": 23,
+    "screen": "30_input_fault"
+  }
+]

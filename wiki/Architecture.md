@@ -113,11 +113,11 @@ Preset vector access protected by `g_presets_mutex` semaphore. Copy-based API: `
 ### `src/safety/` — Emergency Stop
 
 Two-layer ESTOP architecture:
-1. **ISR layer (<0.5ms):** GPIO 34 interrupt sets ENA HIGH via direct register write + sets `g_estopPending.store(true, std::memory_order_release)` + `g_wakePending.store(true, ...)` (NO function calls — flash may be disabled during NVS writes)
-2. **Task layer (<5ms):** `safetyTask` debounces and transitions to STATE_ESTOP; stores `g_estopTriggerMs` on the debounced rising edge
+1. **ISR layer (latency unmeasured):** GPIO 34 interrupt sets ENA HIGH via direct register write + sets `g_estopPending.store(true, std::memory_order_release)` + `g_wakePending.store(true, ...)` (NO function calls — flash may be disabled during NVS writes)
+2. **Task layer:** `safetyTask` debounces and transitions to STATE_ESTOP; stores `g_estopTriggerMs` on the debounced fault edge
 3. **UI layer:** `lvglTask` shows/hides red overlay based on current state
 4. **Reset:** UI sets `g_uiResetPending.store(true, ...)`, Core 0 processes via `controlTask`
-5. **Boot sampling:** `safety_init()` takes 3 samples of `PIN_ESTOP` with 500 µs spacing after `INPUT_PULLUP` + 2 ms settle, requires ≥2/3 LOW before treating ESTOP as pressed (GPIO34 has no internal pull-up)
+5. **Boot sampling:** `safety_init()` takes 3 samples of `PIN_ESTOP` with 500 µs spacing after `INPUT_PULLUP` + 2 ms settle, requires ≥2/3 LOW before treating ESTOP as pressed (startup sampling does not verify wiring continuity)
 
 All shared flags (`g_estopPending`, `g_estopTriggerMs`, `g_uiResetPending`, `g_wakePending`) are declared in `src/app_state.h` / defined in `src/app_state.cpp` — single source of truth.
 
@@ -139,9 +139,9 @@ All shared flags (`g_estopPending`, `g_estopTriggerMs`, `g_uiResetPending`, `g_w
 | `lvgl_hal.cpp` | LVGL display driver, flush callback, dim control |
 | `screens.cpp` | Screen registry, lazy creation, show/hide management |
 | `theme.h` / `theme.cpp` | Color palette: runtime **`g_col_*`** from **`NEUT_DARK`/`NEUT_LIGHT`** via `theme_sync_colors()` (`color_scheme` in settings); **`COL_HDR_MUTED`** for header secondary labels; fonts; layout constants (**`MAIN_GAUGE_*`**, **`MAIN_RPM_*`**, **`JOG_RPM_*`**, settings `SET_*`, etc.) |
-| `screens/` | `screen_*.cpp` — 21 active `ScreenId` roots + ESTOP overlay module |
+| `screens/` | `screen_*.cpp` — 22 registered `ScreenId` roots + ESTOP overlay module |
 
-**v2.0.4 layout notes:** Main screen semicircular RPM gauge and stacked RPM labels are driven from `theme.h` constants; jog RPM row and right-aligned +/- use **`JOG_RPM_*`**. Main screen has **no** RPM +/- buttons (pot-only on that screen).
+**V5 layout:** Large orange main speed panel with a native 104 px numeric font, idle RPM +/− controls, CW/CCW selection and wide START/STOP. Shared graphite/orange styles apply across all 22 screens; calibration and some instrument controls retain their existing layout.
 
 **USB mirror note:** mirror builds use LVGL partial rendering so `lvgl_hal.cpp`
 streams dirty RGB565 rectangles to the Windows viewer instead of repeatedly
@@ -172,7 +172,7 @@ UI (Core 1)                         Motor (Core 0)
 ─────────────                        ─────────────
 speed_slider_set(rpm)  ──────────>  speed_get_target_rpm() reads atomic
 pot / pedal update     ──────────>  speed_apply() computes and applies speed
-control_start_continuous() ──────>  controlTask receives overwrite MotionCommand
+control_start_continuous() ──────>  controlTask receives generation-checked MotionCommand
                                         motor_set_target_milli_hz() wraps stepper mutex
 ```
 

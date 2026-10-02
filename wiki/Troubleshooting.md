@@ -25,13 +25,13 @@
 ### Speed not changing during rotation
 - Ensure firmware is v2.0.2 or newer (includes `applySpeedAcceleration()` fix)
 - Check that potentiometer ADC reads change in debug log
-- **v2.0.4+:** On the **main** screen, RPM is adjusted with the **potentiometer only** — there are no **+/-** touch buttons there. Use **Jog** (or load a program) for touch-based RPM tweaks where the UI provides them.
+- V5 adds idle-screen RPM **+ / −** controls. During rotation, these controls are blocked; the potentiometer remains available according to the selected speed source.
 
-### Main screen: missing +/- buttons (v2.0.4+)
-- **By design:** touchscreen **+/-** for workpiece RPM were removed from `SCREEN_MAIN` to simplify pot-only operation. Jog RPM still has **+/-** on `SCREEN_JOG`.
+### Main screen: RPM +/− controls
+- V5 restores main-screen RPM +/− controls. If they are disabled, check motion and fault state. Older firmware had a pot-only main screen.
 
 ### Main START sometimes does not start
-- Current firmware uses a single overwrite command queue, so the latest START/STOP request wins and stale STOP requests cannot swallow the next START.
+- STOP uses a separate latch and invalidates pending starts. Check task readiness, fault and pedal state; a new explicit START is required after STOP is processed.
 - Open **Settings > Diagnostics** and verify `MOTION BLOCK = NO`, `ESTOP GPIO34 = HIGH OK`, and `DM542T ALM GPIO32 = HIGH OK`.
 - Check the Diagnostics event log for the latest START/STOP, pedal, program and fault entries; it shows whether motion was requested or blocked.
 - If using a foot pedal, open **Settings > Pedal Settings** and verify GPIO33 changes between `HIGH OPEN` and `LOW PRESSED`.
@@ -120,7 +120,7 @@
 - If pot doesn't reach 0 RPM, calibrate ADC reference in `speed.cpp`
 
 ### Buttons don't change RPM during rotation
-- Main-screen RPM is pot-only by design; Jog and program/edit flows have their own touch controls where applicable.
+- Main-screen RPM +/− is available only while idle and safe. Jog and program/edit flows retain their own controls.
 - UI callbacks never call `speed_apply()` directly. Core 0 applies live speed via `motor_set_target_milli_hz()`, which wraps stepper speed and acceleration under the motor mutex.
 
 ### RPM gauge doesn't show below 0.1
@@ -138,12 +138,12 @@
 - If motor moves on boot, check for hardware wiring issue with ENA pin
 
 ### E-STOP reset doesn't work
-- Tap the red overlay to dismiss — sets `g_uiResetPending.store(true, std::memory_order_release)` (declared in `src/app_state.h`)
+- Clear the physical fault, then press **RESET TO IDLE**. The reset button stays disabled while inputs are unsafe; reset never starts motion.
 - `controlTask` on Core 0 processes the reset via `safety_check_ui_reset()`
 - State transitions use CAS pattern to prevent race conditions
 
 ### ESTOP triggered at power-on even though the button isn't pressed
-- GPIO34 has **no internal pull-up** on ESP32-P4 and can float during boot if the E-STOP loop is disconnected or long-wired
+- Verify HIGH healthy / LOW fault at GPIO34. A bare NC contact to GND has opposite polarity; startup sampling does not prove circuit continuity.
 - v2.0.5+: `safety_init()` samples `PIN_ESTOP` three times with 500 µs spacing after `INPUT_PULLUP` + 2 ms settle, and requires ≥2/3 LOW before treating ESTOP as pressed. If you still see "ESTOP=PRESSED (low samples X/3)" with the button released, add an **external pull-up** to 3V3 (e.g. 10 kΩ) on the E-STOP input and/or shorten/shield the wiring (see `EMI_MITIGATION.md`).
 
 ## Keyboard Crash

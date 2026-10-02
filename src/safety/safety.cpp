@@ -1,10 +1,11 @@
 // TIG Rotator Controller - Safety System Implementation
-// ESTOP ISR with < 1ms response, hardware watchdog
+// ESTOP direct GPIO action and hardware watchdog; latency requires bench measurement.
 
 #include "safety.h"
 #include "../config.h"
 #include "../event_log.h"
 #include "../motor/motor.h"
+#include "../motor/speed.h"
 #include "../control/control.h"
 #include <esp_task_wdt.h>
 
@@ -13,9 +14,18 @@
 // Cross-core atomics live in src/app_state.cpp (see app_state.h).
 // ───────────────────────────────────────────────────────────────────────────────
 static std::atomic<bool> estopLocked{false};
+static std::atomic<uint32_t> readyTasks{0};
+void safety_task_ready(uint32_t bit) { readyTasks.fetch_or(bit); }
+
 static FastAccelStepper* estopStepper = nullptr;
 static std::atomic<bool> estopResetPending{false};
 static std::atomic<uint8_t> s_faultReason{FAULT_NONE};
+void safety_report_input_fault() {
+  digitalWrite(PIN_ENA, HIGH);
+  estopLocked.store(true);
+  s_faultReason.store(FAULT_PEDAL_INPUT);
+  control_transition_to(STATE_ESTOP);
+}
 
 // DM542T ALM: open-drain active LOW on fault; INPUT_PULLUP on PIN_DRIVER_ALM.
 static std::atomic<bool> s_driverAlarmLatched{false};
@@ -23,16 +33,13 @@ static uint16_t s_almLowMs = 0;
 static uint16_t s_almHighMs = 0;
 
 static void safety_set_fault_reason(FaultReason reason) {
-  uint8_t prev = s_faultReason.exchange((uint8_t)reason, std::memory_order_acq_rel);
-  if (prev != (uint8_t)reason && reason != FAULT_NONE) {
-    event_log_addf("FAULT %s", safety_fault_reason_name(reason));
-  }
+  s_faultReason.store((uint8_t)reason, std::memory_order_release);
 }
 
 static void safety_force_stop_stepper() {
   if (estopStepper == nullptr || g_stepperMutex == nullptr) return;
   if (xSemaphoreTake(g_stepperMutex, pdMS_TO_TICKS(10)) != pdTRUE) {
-    LOG_W("Safety: stepper mutex busy; ENA already disabled");
+    // Motor cleanup is retried by controlTask.
     return;
   }
   estopStepper->forceStop();
@@ -40,7 +47,7 @@ static void safety_force_stop_stepper() {
 }
 
 #if DEBUG_BUILD
-static uint32_t g_estopISRCount  = 0;
+static uint32_t g_estopISRCount = 0;
 static uint32_t g_estopConfirmed = 0;
 #endif
 
@@ -59,7 +66,7 @@ void safety_cache_stepper() {
 
 // ───────────────────────────────────────────────────────────────────────────────
 // ESTOP INTERRUPT SERVICE ROUTINE
-// Layer 1: < 0.5 ms response — Direct hardware action only.
+// Layer 1: direct hardware action only; no measured latency is asserted.
 // Invariants:
 //   - No flash access (millis/forceStop/LOG_*) — cache may be disabled during
 //     LittleFS/NVS writes, would crash IWDT.
@@ -77,8 +84,8 @@ void IRAM_ATTR estopISR() {
 // ───────────────────────────────────────────────────────────────────────────────
 void safety_init() {
   // Configure ESTOP pin as input with pull-up.
-  // GPIO34 has NO internal pulls on ESP32-P4 — we rely on the external NC
-  // contact pull-up. Sample a few times to reject startup glitches.
+  // Input conditioning must match the active-LOW interface in HARDWARE_SETUP.
+  // Sample at startup; this is not a wiring continuity test.
   pinMode(PIN_ESTOP, INPUT_PULLUP);
   delay(2);
   uint8_t lowCount = 0;
@@ -87,8 +94,7 @@ void safety_init() {
     delayMicroseconds(500);
   }
   bool estopPressed = (lowCount >= 2);
-  LOG_I("Safety init: ESTOP=%s (low samples %u/3)",
-        estopPressed ? "PRESSED" : "OK", (unsigned)lowCount);
+  LOG_I("Safety init: ESTOP=%s (low samples %u/3)", estopPressed ? "PRESSED" : "OK", (unsigned)lowCount);
 
   if (estopPressed) {
     LOG_W("ESTOP pressed at boot — system locked");
@@ -112,26 +118,22 @@ void safety_attach_estop() {
 // ───────────────────────────────────────────────────────────────────────────────
 // ESTOP STATUS FUNCTIONS
 // ───────────────────────────────────────────────────────────────────────────────
-bool safety_is_estop_active() {
-  return (digitalRead(PIN_ESTOP) == LOW);
-}
+bool safety_is_estop_active() { return (digitalRead(PIN_ESTOP) == LOW); }
 
-bool safety_is_driver_alarm_latched() {
-  return s_driverAlarmLatched.load(std::memory_order_acquire);
-}
+bool safety_is_driver_alarm_latched() { return s_driverAlarmLatched.load(std::memory_order_acquire); }
 
 bool safety_inhibit_motion() {
-  return safety_is_estop_active() || s_driverAlarmLatched.load(std::memory_order_acquire);
+  return readyTasks.load() != 15u || estopLocked.load() || g_estopPending.load() ||
+         !speed_pedal_input_healthy() || safety_is_estop_active() ||
+         s_driverAlarmLatched.load(std::memory_order_acquire);
 }
 
 bool safety_can_reset_from_overlay() {
-  return (digitalRead(PIN_ESTOP) == HIGH) &&
+  return readyTasks.load() == 15u && speed_pedal_input_healthy() && (digitalRead(PIN_ESTOP) == HIGH) &&
          !s_driverAlarmLatched.load(std::memory_order_acquire);
 }
 
-bool safety_is_estop_locked() {
-  return estopLocked.load(std::memory_order_acquire);
-}
+bool safety_is_estop_locked() { return estopLocked.load(std::memory_order_acquire); }
 
 FaultReason safety_get_fault_reason() {
   uint8_t reason = s_faultReason.load(std::memory_order_acquire);
@@ -143,37 +145,59 @@ FaultReason safety_get_fault_reason() {
 
 const char* safety_fault_reason_name(FaultReason reason) {
   switch (reason) {
-    case FAULT_NONE: return "NONE";
-    case FAULT_ESTOP_PRESSED: return "E-STOP";
-    case FAULT_ESTOP_GLITCH: return "E-STOP GLITCH";
-    case FAULT_DRIVER_ALARM: return "DRIVER ALM";
-    case FAULT_MOTOR_INIT_FAILED: return "MOTOR INIT";
-    case FAULT_DISPLAY_INIT_FAILED: return "DISPLAY INIT";
-    case FAULT_LVGL_INIT_FAILED: return "LVGL INIT";
-    case FAULT_STORAGE_CORRUPT: return "STORAGE";
-    case FAULT_WATCHDOG_RESET: return "WATCHDOG";
-    default: return "UNKNOWN";
+    case FAULT_PEDAL_INPUT:
+      return "PEDAL INPUT";
+    case FAULT_NONE:
+      return "NONE";
+    case FAULT_ESTOP_PRESSED:
+      return "E-STOP";
+    case FAULT_ESTOP_GLITCH:
+      return "E-STOP GLITCH";
+    case FAULT_DRIVER_ALARM:
+      return "DRIVER ALM";
+    case FAULT_MOTOR_INIT_FAILED:
+      return "MOTOR INIT";
+    case FAULT_DISPLAY_INIT_FAILED:
+      return "DISPLAY INIT";
+    case FAULT_LVGL_INIT_FAILED:
+      return "LVGL INIT";
+    case FAULT_STORAGE_CORRUPT:
+      return "STORAGE";
+    case FAULT_WATCHDOG_RESET:
+      return "WATCHDOG";
+    default:
+      return "UNKNOWN";
   }
 }
 
 const char* safety_fault_reason_message(FaultReason reason) {
   switch (reason) {
-    case FAULT_NONE: return "No latched fault";
-    case FAULT_ESTOP_PRESSED: return "Physical E-STOP input is active";
-    case FAULT_ESTOP_GLITCH: return "E-STOP input changed during debounce";
-    case FAULT_DRIVER_ALARM: return "DM542T driver alarm input is active";
-    case FAULT_MOTOR_INIT_FAILED: return "Motor driver init failed";
-    case FAULT_DISPLAY_INIT_FAILED: return "Display init failed";
-    case FAULT_LVGL_INIT_FAILED: return "LVGL init failed";
-    case FAULT_STORAGE_CORRUPT: return "Storage data was invalid";
-    case FAULT_WATCHDOG_RESET: return "Watchdog reset was detected";
-    default: return "Unknown fault";
+    case FAULT_PEDAL_INPUT:
+      return "Pedal measurement unavailable; release pedal and restore input";
+    case FAULT_NONE:
+      return "No latched fault";
+    case FAULT_ESTOP_PRESSED:
+      return "Physical E-STOP input is active";
+    case FAULT_ESTOP_GLITCH:
+      return "E-STOP input changed during debounce";
+    case FAULT_DRIVER_ALARM:
+      return "DM542T driver alarm input is active";
+    case FAULT_MOTOR_INIT_FAILED:
+      return "Motor driver init failed";
+    case FAULT_DISPLAY_INIT_FAILED:
+      return "Display init failed";
+    case FAULT_LVGL_INIT_FAILED:
+      return "LVGL init failed";
+    case FAULT_STORAGE_CORRUPT:
+      return "Storage data was invalid";
+    case FAULT_WATCHDOG_RESET:
+      return "Watchdog reset was detected";
+    default:
+      return "Unknown fault";
   }
 }
 
-void safety_reset_estop() {
-  estopResetPending.store(true, std::memory_order_release);
-}
+void safety_reset_estop() { estopResetPending.store(true, std::memory_order_release); }
 
 static void safety_handle_reset() {
   if (safety_can_reset_from_overlay()) {
@@ -201,7 +225,7 @@ bool safety_check_ui_reset() {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// SAFETY TASK — Layer 2: State transition within 5 ms
+// SAFETY TASK — Layer 2: scheduled state transition (latency requires bench measurement)
 // ───────────────────────────────────────────────────────────────────────────────
 static void safety_poll_driver_alarm(void) {
   const bool low = (digitalRead(PIN_DRIVER_ALM) == LOW);
@@ -235,10 +259,11 @@ static void safety_poll_driver_alarm(void) {
 
 void safetyTask(void* pvParameters) {
   LOG_I("Safety task started on Core %d", xPortGetCoreID());
-  esp_task_wdt_add(NULL);  // Register with watchdog (BUG-03 fix)
+  safety_register_watchdog();
 
   // Attach ESTOP interrupt here (after all other init is complete)
   safety_attach_estop();
+  safety_task_ready(1u);
 
   TickType_t t = xTaskGetTickCount();
   for (;;) {
@@ -268,12 +293,12 @@ void safetyTask(void* pvParameters) {
             control_transition_to(STATE_ESTOP);
             estopLocked.store(true, std::memory_order_release);
 
-            #if DEBUG_BUILD
+#if DEBUG_BUILD
             g_estopConfirmed++;
             LOG_W("ESTOP #%u confirmed", g_estopConfirmed);
-            #else
+#else
             LOG_E("ESTOP TRIGGERED — State->ESTOP");
-            #endif
+#endif
           }
         } else {
           LOG_W("ESTOP edge released during debounce - locking out");
@@ -299,14 +324,20 @@ void safety_init_watchdog() {
   // ESP32-P4 watchdog reconfiguration (ESP-IDF 5.x API)
   // Arduino framework already inits the watchdog, so we reconfigure it
   esp_task_wdt_config_t wdt_cfg = {
-    .timeout_ms       = 5000,
-    .idle_core_mask   = 0,        // Don't watch idle tasks
-    .trigger_panic    = true,     // Panic on timeout
+      .timeout_ms = 5000,
+      .idle_core_mask = 0,    // Don't watch idle tasks
+      .trigger_panic = true,  // Panic on timeout
   };
-  esp_task_wdt_reconfigure(&wdt_cfg);
+  esp_err_t result = esp_task_wdt_reconfigure(&wdt_cfg);
+  if (result == ESP_ERR_INVALID_STATE) result = esp_task_wdt_init(&wdt_cfg);
+  if (result != ESP_OK) fatal_halt("watchdog configuration failed");
   LOG_I("Watchdog reconfigured: 5000ms timeout, panic on timeout");
 }
 
 void safety_feed_watchdog() {
-  esp_task_wdt_reset();
+  if (esp_task_wdt_reset() != ESP_OK) fatal_halt("watchdog feed failed");
+}
+
+void safety_register_watchdog() {
+  if (esp_task_wdt_add(nullptr) != ESP_OK) fatal_halt("watchdog registration failed");
 }

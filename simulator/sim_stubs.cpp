@@ -137,24 +137,47 @@ void dim_update() {}
 
 // Control
 void control_init() { s_state = STATE_IDLE; }
-bool control_transition_to(SystemState state) { s_state = state; return true; }
+bool control_transition_to(SystemState state) {
+  s_state = state;
+  return true;
+}
 SystemState control_get_state() { return s_state; }
 const char* control_state_name(SystemState state) {
   switch (state) {
-    case STATE_IDLE: return "IDLE";
-    case STATE_RUNNING: return "RUNNING";
-    case STATE_PULSE: return "PULSE";
-    case STATE_STEP: return "STEP";
-    case STATE_JOG: return "JOG";
-    case STATE_STOPPING: return "STOPPING";
-    case STATE_ESTOP: return "ESTOP";
-    default: return "UNKNOWN";
+    case STATE_IDLE:
+      return "IDLE";
+    case STATE_RUNNING:
+      return "RUNNING";
+    case STATE_PULSE:
+      return "PULSE";
+    case STATE_STEP:
+      return "STEP";
+    case STATE_JOG:
+      return "JOG";
+    case STATE_STOPPING:
+      return "STOPPING";
+    case STATE_ESTOP:
+      return "ESTOP";
+    default:
+      return "UNKNOWN";
   }
 }
 const char* control_get_state_string() { return control_state_name(s_state); }
-bool control_start_continuous(bool, uint32_t) { s_state = STATE_RUNNING; event_log_add("SIM RUN"); return true; }
-bool control_stop() { s_state = STATE_IDLE; event_log_add("SIM STOP"); return true; }
-bool control_start_pulse(uint32_t, uint32_t, uint16_t) { s_state = STATE_PULSE; event_log_add("SIM PULSE"); return true; }
+bool control_start_continuous(bool, uint32_t) {
+  s_state = STATE_RUNNING;
+  event_log_add("SIM RUN");
+  return true;
+}
+bool control_stop() {
+  s_state = STATE_IDLE;
+  event_log_add("SIM STOP");
+  return true;
+}
+bool control_start_pulse(uint32_t, uint32_t, uint16_t) {
+  s_state = STATE_PULSE;
+  event_log_add("SIM PULSE");
+  return true;
+}
 bool control_start_step(float angleDeg) {
   s_state = STATE_STEP;
   s_stepAccumulated += angleDeg;
@@ -169,12 +192,26 @@ bool control_start_step_sequence(float angleDeg, uint16_t repeats, float) {
   event_log_add("SIM STEP SEQ");
   return true;
 }
-void control_reset_step_accumulator() { s_stepAccumulated = 0.0f; s_stepCount = 0; }
+void control_reset_step_accumulator() {
+  s_stepAccumulated = 0.0f;
+  s_stepCount = 0;
+}
 float control_get_step_accumulated() { return s_stepAccumulated; }
 long control_get_step_count() { return (long)s_stepCount; }
-bool control_start_jog_cw() { s_direction = DIR_CW; s_state = STATE_JOG; return true; }
-bool control_start_jog_ccw() { s_direction = DIR_CCW; s_state = STATE_JOG; return true; }
-bool control_stop_jog() { if (s_state == STATE_JOG) s_state = STATE_IDLE; return true; }
+bool control_start_jog_cw() {
+  s_direction = DIR_CW;
+  s_state = STATE_JOG;
+  return true;
+}
+bool control_start_jog_ccw() {
+  s_direction = DIR_CCW;
+  s_state = STATE_JOG;
+  return true;
+}
+bool control_stop_jog() {
+  if (s_state == STATE_JOG) s_state = STATE_IDLE;
+  return true;
+}
 void control_set_jog_speed(float rpm) { s_jogRpm = constrain(rpm, MIN_RPM, sim_rpm_cap()); }
 float control_get_jog_speed() { return s_jogRpm; }
 void controlTask(void*) {}
@@ -184,21 +221,31 @@ ProgramExecutorResult program_executor_start_preset(const Preset* preset) {
   if (!preset) return PROGRAM_EXEC_INVALID_PRESET;
   s_targetRpm = constrain(preset->rpm, MIN_RPM, sim_rpm_cap());
   s_direction = (preset->direction == DIR_CCW) ? DIR_CCW : DIR_CW;
-  if (preset->mode == STATE_PULSE) s_state = STATE_PULSE;
-  else if (preset->mode == STATE_STEP) s_state = STATE_STEP;
-  else s_state = STATE_RUNNING;
+  if (preset->mode == STATE_PULSE)
+    s_state = STATE_PULSE;
+  else if (preset->mode == STATE_STEP)
+    s_state = STATE_STEP;
+  else
+    s_state = STATE_RUNNING;
   event_log_add("SIM PROGRAM START");
   return PROGRAM_EXEC_OK;
 }
 const char* program_executor_result_name(ProgramExecutorResult result) {
   switch (result) {
-    case PROGRAM_EXEC_OK: return "OK";
-    case PROGRAM_EXEC_INVALID_PRESET: return "INVALID_PRESET";
-    case PROGRAM_EXEC_BLOCKED_SAFETY: return "BLOCKED_SAFETY";
-    case PROGRAM_EXEC_BLOCKED_STATE: return "BLOCKED_STATE";
-    case PROGRAM_EXEC_INVALID_MODE: return "INVALID_MODE";
-    case PROGRAM_EXEC_REQUEST_FAILED: return "REQUEST_FAILED";
-    default: return "UNKNOWN";
+    case PROGRAM_EXEC_OK:
+      return "OK";
+    case PROGRAM_EXEC_INVALID_PRESET:
+      return "INVALID_PRESET";
+    case PROGRAM_EXEC_BLOCKED_SAFETY:
+      return "BLOCKED_SAFETY";
+    case PROGRAM_EXEC_BLOCKED_STATE:
+      return "BLOCKED_STATE";
+    case PROGRAM_EXEC_INVALID_MODE:
+      return "INVALID_MODE";
+    case PROGRAM_EXEC_REQUEST_FAILED:
+      return "REQUEST_FAILED";
+    default:
+      return "UNKNOWN";
   }
 }
 
@@ -231,10 +278,16 @@ bool speed_using_slider() { return s_sliderPriority; }
 void speed_apply() {}
 Direction speed_get_direction() { return s_directionOverride ? s_directionOverrideValue : s_direction; }
 void speed_set_direction(Direction dir) { s_direction = dir; }
-void speed_set_program_direction_override(Direction dir) { s_directionOverride = true; s_directionOverrideValue = dir; }
+void speed_set_program_direction_override(Direction dir) {
+  s_directionOverride = true;
+  s_directionOverrideValue = dir;
+}
 void speed_clear_program_direction_override() { s_directionOverride = false; }
 bool speed_program_direction_override_active() { return s_directionOverride; }
-void speed_set_pedal_enabled(bool enabled) { s_pedalEnabled = enabled; g_settings.pedal_enabled = enabled; }
+void speed_set_pedal_enabled(bool enabled) {
+  s_pedalEnabled = enabled;
+  g_settings.pedal_enabled = enabled;
+}
 bool speed_get_pedal_enabled() { return s_pedalEnabled; }
 bool speed_pedal_switch_enabled() { return s_pedalEnabled; }
 bool speed_pedal_analog_available() { return false; }
@@ -244,8 +297,16 @@ bool speed_ads1115_pedal_present(void) { return false; }
 // Motor
 void motor_gpio_init() {}
 void motor_init() {}
-bool motor_run_cw() { s_direction = DIR_CW; s_state = STATE_RUNNING; return true; }
-bool motor_run_ccw() { s_direction = DIR_CCW; s_state = STATE_RUNNING; return true; }
+bool motor_run_cw() {
+  s_direction = DIR_CW;
+  s_state = STATE_RUNNING;
+  return true;
+}
+bool motor_run_ccw() {
+  s_direction = DIR_CCW;
+  s_state = STATE_RUNNING;
+  return true;
+}
 void motor_stop() { s_state = STATE_IDLE; }
 void motor_halt() { s_state = STATE_IDLE; }
 void motor_disable() {}
@@ -258,7 +319,9 @@ uint32_t motor_milli_hz_for_rpm_calibrated(float rpmWorkpieceCommand) {
   if (hz < START_SPEED) hz = START_SPEED;
   return (uint32_t)(hz * 1000.0f + 0.5f);
 }
-void motor_apply_speed_for_rpm_locked(float rpmWorkpieceCommand) { s_targetRpm = constrain(rpmWorkpieceCommand, MIN_RPM, sim_rpm_cap()); }
+void motor_apply_speed_for_rpm_locked(float rpmWorkpieceCommand) {
+  s_targetRpm = constrain(rpmWorkpieceCommand, MIN_RPM, sim_rpm_cap());
+}
 void motor_set_target_milli_hz(uint32_t) {}
 FastAccelStepper* motor_get_stepper() { return nullptr; }
 void motor_apply_settings() {}
@@ -282,11 +345,15 @@ MicrostepSetting microstep_get() { return (MicrostepSetting)g_settings.microstep
 void microstep_set(MicrostepSetting setting) { g_settings.microstep = setting; }
 const char* microstep_get_string() {
   switch (g_settings.microstep) {
-    case MICROSTEP_4: return "1/4";
-    case MICROSTEP_8: return "1/8";
-    case MICROSTEP_32: return "1/32";
+    case MICROSTEP_4:
+      return "1/4";
+    case MICROSTEP_8:
+      return "1/8";
+    case MICROSTEP_32:
+      return "1/32";
     case MICROSTEP_16:
-    default: return "1/16";
+    default:
+      return "1/16";
   }
 }
 uint32_t microstep_get_steps_per_rev() { return (uint32_t)g_settings.microstep * 200u; }
@@ -302,19 +369,21 @@ void acceleration_clear_pending() {}
 void safety_init() {}
 void safety_cache_stepper() {}
 void safety_attach_estop() {}
-bool safety_is_estop_active() { return false; }
+static bool simFault = false;
+void simulator_set_estop_input(bool active) { simFault = active; }
+bool safety_is_estop_active() { return simFault; }
 bool safety_is_driver_alarm_latched() { return false; }
 bool safety_inhibit_motion() { return false; }
-bool safety_can_reset_from_overlay() { return true; }
+bool safety_can_reset_from_overlay() { return !simFault; }
 bool safety_is_estop_locked() { return s_state == STATE_ESTOP; }
-FaultReason safety_get_fault_reason() { return FAULT_NONE; }
-const char* safety_fault_reason_name(FaultReason reason) {
-  return reason == FAULT_NONE ? "NONE" : "FAULT";
-}
+FaultReason safety_get_fault_reason() { return simFault ? FAULT_ESTOP_PRESSED : FAULT_NONE; }
+const char* safety_fault_reason_name(FaultReason reason) { return reason == FAULT_NONE ? "NONE" : "FAULT"; }
 const char* safety_fault_reason_message(FaultReason reason) {
   return reason == FAULT_NONE ? "No active fault." : "Simulated fault.";
 }
-void safety_reset_estop() { if (s_state == STATE_ESTOP) s_state = STATE_IDLE; }
+void safety_reset_estop() {
+  if (s_state == STATE_ESTOP) s_state = STATE_IDLE;
+}
 bool safety_check_ui_reset() { return false; }
 void safety_init_watchdog() {}
 void safety_feed_watchdog() {}
@@ -331,7 +400,10 @@ void preset_clamp_mode_to_mask(Preset* p) {
 }
 void storage_init() {}
 bool storage_load_presets() { return true; }
-bool storage_save_presets() { event_log_add("SIM PRESETS SAVED"); return true; }
+bool storage_save_presets() {
+  event_log_add("SIM PRESETS SAVED");
+  return true;
+}
 bool storage_load_settings() { return true; }
 void storage_save_settings() { event_log_add("SIM SETTINGS SAVED"); }
 void storage_flush() {}
@@ -346,8 +418,9 @@ bool storage_get_preset(uint8_t id, Preset* out) {
 }
 bool storage_delete_preset(uint8_t id) {
   auto oldSize = g_presets.size();
-  g_presets.erase(std::remove_if(g_presets.begin(), g_presets.end(),
-                  [id](const Preset& p) { return p.id == id; }), g_presets.end());
+  g_presets.erase(
+      std::remove_if(g_presets.begin(), g_presets.end(), [id](const Preset& p) { return p.id == id; }),
+      g_presets.end());
   return g_presets.size() != oldSize;
 }
 void storage_get_usage(size_t* used, size_t* total) {
@@ -361,7 +434,10 @@ void storage_format() {
 void storageTask(void*) {}
 
 // Event log
-void event_log_init() { s_events.clear(); s_eventVersion++; }
+void event_log_init() {
+  s_events.clear();
+  s_eventVersion++;
+}
 void event_log_add(const char* text) {
   EventLogEntry entry = {};
   entry.ms = millis();
@@ -388,7 +464,10 @@ size_t event_log_snapshot(EventLogEntry* out, size_t maxEntries) {
   return n;
 }
 uint32_t event_log_version() { return s_eventVersion; }
-void event_log_clear() { s_events.clear(); s_eventVersion++; }
+void event_log_clear() {
+  s_events.clear();
+  s_eventVersion++;
+}
 
 // Temperature
 void onchip_temp_init() {}
@@ -396,3 +475,22 @@ bool onchip_temp_get_celsius(float* outC) {
   if (outC) *outC = 42.0f;
   return true;
 }
+
+SpeedInputSource speed_get_input_source() {
+  return speed_using_slider() ? SPEED_SOURCE_UI : SPEED_SOURCE_POT;
+}
+
+void control_renew_jog() {}
+bool control_motion_blocked() { return false; }
+bool speed_pedal_input_healthy() { return true; }
+StorageStatus storage_status() { return STORAGE_SAVED; }
+
+bool motor_direction_is_cw() { return speed_get_direction() == DIR_CW; }
+void motor_record_direction(bool) {}
+
+bool control_apply_motor_settings(const SystemSettings& settings) {
+  if (control_get_state() != STATE_IDLE) return false;
+  g_settings = settings;
+  return true;
+}
+ConfigApplyStatus control_config_status() { return CONFIG_APPLIED; }

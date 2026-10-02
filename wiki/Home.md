@@ -10,11 +10,11 @@ Release **v2.0.8** was the previous version-alignment release; behaviour also in
 
 All core features tested and confirmed working on real hardware:
 
-- Motor rotation with live RPM adjustment (potentiometer + foot pedal; main screen has no RPM +/-)
+- Motor rotation with live RPM adjustment (potentiometer + foot pedal; V5 main screen has idle RPM +/− controls)
 - All 5 welding modes (Continuous, Jog, Pulse, Step, Timer)
-- Hardware E-STOP with <0.5ms response + UI reset
+- E-STOP input disables ENA and latches a fault; explicit guarded UI reset
 - 16 program preset save/load (NVS JSON blobs; legacy LittleFS migration on first boot if needed)
-- 21 active LVGL root screens (`ScreenId`) plus E-STOP overlay; settings, diagnostics, pedal settings, system info, calibration
+- 22 registered LVGL root screens (`ScreenId`) plus E-STOP overlay; settings, diagnostics, pedal settings, system info, calibration
 - USB-C live mirror for the real device UI, plus simulator screenshot export for all screens
 - Direction switch (GPIO29), foot pedal support
 - 8 accent color themes, dark or light UI mode (Display UI MODE), brightness control, dim timeout

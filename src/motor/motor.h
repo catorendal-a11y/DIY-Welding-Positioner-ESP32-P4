@@ -16,18 +16,20 @@ extern SemaphoreHandle_t g_stepperMutex;
 // ───────────────────────────────────────────────────────────────────────────────
 // FUNCTION DECLARATIONS
 // ───────────────────────────────────────────────────────────────────────────────
-void motor_gpio_init();   // Configure GPIO pins — ENA must be HIGH before calling
-void motor_init();        // Initialize FastAccelStepper
+void motor_gpio_init();  // Configure GPIO pins — ENA must be HIGH before calling
+void motor_init();       // Initialize FastAccelStepper
 
 // Motor control functions (must be called from Core 0 only)
-bool motor_run_cw();      // Run clockwise; false if safety or hardware state blocks start
-bool motor_run_ccw();     // Run counter-clockwise; false if safety or hardware state blocks start
-void motor_stop();        // Smooth deceleration to stop
-void motor_halt();        // Immediate stop (emergency)
-void motor_disable();     // Disable motor (ENA HIGH) after stopped
+bool motor_run_cw();   // Run clockwise; false if safety or hardware state blocks start
+bool motor_run_ccw();  // Run counter-clockwise; false if safety or hardware state blocks start
+void motor_stop();     // Smooth deceleration to stop
+void motor_halt();     // Immediate stop (emergency)
+void motor_disable();  // Disable motor (ENA HIGH) after stopped
 
 // Status queries
 bool motor_is_running();
+bool motor_direction_is_cw();
+void motor_record_direction(bool cw);  // Called only when issuing a motion command.
 uint32_t motor_get_current_hz();       // Rounded Hz from UI cache (see motor_refresh_hz_cache)
 // Step frequency magnitude (Hz), sub-Hz; lock-free read of cache (~5ms fresh, motorTask updates).
 float motor_get_step_frequency_hz();
@@ -41,9 +43,9 @@ void motor_apply_speed_for_rpm_locked(float rpm_workpiece_command);
 // Safe to call from Core 0 tasks (motorTask). No-op if stepper not yet initialized.
 void motor_set_target_milli_hz(uint32_t mhz);
 FastAccelStepper* motor_get_stepper();  // Get stepper instance (caller must hold g_stepperMutex)
-void motor_apply_settings();  // Apply acceleration from g_settings
+void motor_apply_settings();            // Apply acceleration from g_settings
 void motor_apply_soft_start_acceleration();
 void motor_restore_configured_acceleration();
 
 // FreeRTOS task
-void motorTask(void* pvParameters);    // Motor speed update task (Core 0, priority 4)
+void motorTask(void* pvParameters);  // Motor speed update task (Core 0, priority 4)

@@ -90,8 +90,6 @@ static lv_obj_t* idleToggleLbl = nullptr;
 static lv_obj_t* statusLabel = nullptr;
 static SystemState lastStatusState = (SystemState)-1;
 
-// motorConfigApplyPending is defined in src/app_state.cpp.
-
 static lv_obj_t* motor_cfg_post_row(lv_obj_t* screen, int x, int y, int w, int h) {
   lv_obj_t* row = lv_obj_create(screen);
   lv_obj_set_size(row, w, h);
@@ -201,6 +199,7 @@ static void idle_toggle_cb(lv_event_t* e) {
 }
 
 static lv_timer_t* saveNavTimer = nullptr;
+static bool saveRequested = false;
 
 static void save_nav_timer_cb(lv_timer_t* timer) {
   saveNavTimer = nullptr;
@@ -224,23 +223,24 @@ static void save_apply_cb(lv_event_t* e) {
   if (mi < kMaxRpmMilliMin) mi = kMaxRpmMilliMin;
   if (mi > kMaxRpmMilliMax) mi = kMaxRpmMilliMax;
   float maxRpmVal = mi / 1000.0f;
+  SystemSettings request;
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  g_settings.microstep = microOptions[selectedMicro];
-  g_settings.acceleration = (uint32_t)accelVal;
-  g_settings.max_rpm = maxRpmVal;
-  g_settings.dir_switch_enabled = dirSwitchEnabled;
-  g_settings.invert_direction = invertDir;
+  request = g_settings;
   xSemaphoreGive(g_settings_mutex);
-  g_dir_switch_cache.store(dirSwitchEnabled, std::memory_order_release);
-  storage_save_settings();
-  motorConfigApplyPending.store(true, std::memory_order_release);
+  request.microstep = microOptions[selectedMicro];
+  request.acceleration = accelVal;
+  request.max_rpm = maxRpmVal;
+  request.dir_switch_enabled = dirSwitchEnabled;
+  request.invert_direction = invertDir;
+  if (!control_apply_motor_settings(request)) {
+    if (saveFeedbackLabel) lv_label_set_text(saveFeedbackLabel, "Apply blocked / try when idle");
+    return;
+  }
   if (saveFeedbackLabel) {
-    lv_label_set_text(saveFeedbackLabel, "Settings saved!");
+    lv_label_set_text(saveFeedbackLabel, "Save queued");
     lv_obj_set_style_text_color(saveFeedbackLabel, COL_GREEN, 0);
   }
-  if (saveNavTimer) lv_timer_delete(saveNavTimer);
-  saveNavTimer = lv_timer_create(save_nav_timer_cb, 800, nullptr);
-  lv_timer_set_repeat_count(saveNavTimer, 1);
+  saveRequested = true;
 }
 
 void screen_motor_config_create() {
@@ -263,8 +263,8 @@ void screen_motor_config_create() {
 
   ui_create_settings_header(screen, "MOTOR CONFIG", "DM542T", COL_HDR_MUTED);
 
-  const int ROW_X = 20;
-  const int ROW_W = 760;
+  const int ROW_X = 24;
+  const int ROW_W = 752;
   const int ROW_H = 54;
   const int ROW_GAP = 8;
   int y = HEADER_H + 22;
@@ -286,12 +286,13 @@ void screen_motor_config_create() {
 
   MicrostepSetting currentMicro = microstep_get();
   selectedMicro = 0;
+  for (int i = 0; i < kMicroOptionCount; ++i)
+    if (microOptions[i] == currentMicro) selectedMicro = i;
   const int microBtnW = 96;
   const int microBtnH = 36;
   const int microBtnY = (ROW_H - microBtnH) / 2;
   const int microBtnGap = 8;
-  const int microBtn0X =
-      ROW_W - 8 - kMicroOptionCount * microBtnW - (kMicroOptionCount - 1) * microBtnGap;
+  const int microBtn0X = ROW_W - 8 - kMicroOptionCount * microBtnW - (kMicroOptionCount - 1) * microBtnGap;
   for (int i = 0; i < kMicroOptionCount; i++) {
     if (microOptions[i] == currentMicro) selectedMicro = i;
 
@@ -334,11 +335,10 @@ void screen_motor_config_create() {
   lv_obj_add_event_cb(maxRpmSlider, max_rpm_slider_cb, LV_EVENT_VALUE_CHANGED, nullptr);
   motor_config_max_rpm_sync_ui(motorMaxRpmMilliUi);
 
-  lv_obj_t* maxRpmMinus = ui_create_pm_btn(maxRpmRow, ROW_W - BTN_W_PM - 8 - BTN_W_PM - 8, 8, "-", FONT_NORMAL,
-                                           UI_BTN_NORMAL, max_rpm_pm_cb, (void*)(intptr_t)-1);
-  lv_obj_t* maxRpmPlus =
-      ui_create_pm_btn(maxRpmRow, ROW_W - BTN_W_PM - 8, 8, "+", FONT_NORMAL, UI_BTN_ACCENT, max_rpm_pm_cb,
-                       (void*)(intptr_t)1);
+  lv_obj_t* maxRpmMinus = ui_create_pm_btn(maxRpmRow, ROW_W - BTN_W_PM - 8 - BTN_W_PM - 8, 8, "-",
+                                           FONT_NORMAL, UI_BTN_NORMAL, max_rpm_pm_cb, (void*)(intptr_t)-1);
+  lv_obj_t* maxRpmPlus = ui_create_pm_btn(maxRpmRow, ROW_W - BTN_W_PM - 8, 8, "+", FONT_NORMAL, UI_BTN_ACCENT,
+                                          max_rpm_pm_cb, (void*)(intptr_t)1);
   lv_obj_move_foreground(maxRpmMinus);
   lv_obj_move_foreground(maxRpmPlus);
 
@@ -368,36 +368,12 @@ void screen_motor_config_create() {
 
   lv_obj_t* accelMinus = ui_create_pm_btn(accelRow, ROW_W - BTN_W_PM - 8 - BTN_W_PM - 8, 8, "-", FONT_NORMAL,
                                           UI_BTN_NORMAL, accel_pm_cb, (void*)(intptr_t)-1);
-  lv_obj_t* accelPlus =
-      ui_create_pm_btn(accelRow, ROW_W - BTN_W_PM - 8, 8, "+", FONT_NORMAL, UI_BTN_ACCENT, accel_pm_cb,
-                       (void*)(intptr_t)1);
+  lv_obj_t* accelPlus = ui_create_pm_btn(accelRow, ROW_W - BTN_W_PM - 8, 8, "+", FONT_NORMAL, UI_BTN_ACCENT,
+                                         accel_pm_cb, (void*)(intptr_t)1);
   lv_obj_move_foreground(accelMinus);
   lv_obj_move_foreground(accelPlus);
 
   y += accelRowH + ROW_GAP;
-
-  lv_obj_t* warnBar = lv_obj_create(screen);
-  lv_obj_set_size(warnBar, ROW_W, ROW_H);
-  lv_obj_set_pos(warnBar, ROW_X, y);
-  ui_style_post_warn(warnBar);
-  lv_obj_remove_flag(warnBar, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_remove_flag(warnBar, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
-
-  lv_obj_t* warnKey = lv_label_create(warnBar);
-  lv_label_set_text(warnKey, "APPLY SAFELY");
-  lv_obj_set_style_text_font(warnKey, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(warnKey, COL_YELLOW, 0);
-  lv_obj_set_pos(warnKey, 22, 18);
-
-  lv_obj_t* warnDetail = lv_label_create(warnBar);
-  lv_label_set_text(warnDetail, "Changes queued for motor task");
-  lv_obj_set_style_text_font(warnDetail, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(warnDetail, COL_TEXT, 0);
-  lv_obj_set_pos(warnDetail, 200, 18);
-  lv_obj_set_width(warnDetail, 540);
-  lv_label_set_long_mode(warnDetail, LV_LABEL_LONG_MODE_CLIP);
-
-  y += ROW_H + ROW_GAP;
 
   lv_obj_t* toggleRow = lv_obj_create(screen);
   lv_obj_set_size(toggleRow, ROW_W, 50);
@@ -468,14 +444,18 @@ void screen_motor_config_create() {
   lv_obj_set_style_text_color(saveFeedbackLabel, COL_GREEN, 0);
   lv_obj_align(saveFeedbackLabel, LV_ALIGN_RIGHT_MID, -8, 0);
 
-  const int footerY = 428;
-  const int footerH = 46;
+  const int footerY = 408;
+  const int footerH = 56;
   ui_create_btn(screen, 20, footerY, 246, footerH, "< BACK", FONT_NORMAL, UI_BTN_NORMAL, back_cb, nullptr);
-  ui_create_btn(screen, 534, footerY, 246, footerH, "SAVE & APPLY", FONT_NORMAL, UI_BTN_ACCENT, save_apply_cb, nullptr);
+  ui_create_btn(screen, 534, footerY, 246, footerH, "SAVE & APPLY", FONT_NORMAL, UI_BTN_ACCENT, save_apply_cb,
+                nullptr);
 }
 
 void screen_motor_config_invalidate_widgets() {
-  for (int i = 0; i < kMicroOptionCount; i++) { microBtns[i] = nullptr; microLabels[i] = nullptr; }
+  for (int i = 0; i < kMicroOptionCount; i++) {
+    microBtns[i] = nullptr;
+    microLabels[i] = nullptr;
+  }
   microSummaryLbl = nullptr;
   accelValueLabel = nullptr;
   maxRpmValueLabel = nullptr;
@@ -493,6 +473,19 @@ void screen_motor_config_invalidate_widgets() {
 }
 
 void screen_motor_config_update() {
+  if (saveRequested && saveFeedbackLabel) {
+    const ConfigApplyStatus applied = control_config_status();
+    if (applied == CONFIG_PENDING || applied == CONFIG_CANCELLED) {
+      lv_label_set_text(saveFeedbackLabel,
+                        applied == CONFIG_PENDING ? "Apply queued" : "Apply cancelled / retry");
+      return;
+    }
+    const StorageStatus status = storage_status();
+    lv_label_set_text(saveFeedbackLabel, status == STORAGE_ERROR     ? "SAVE FAILED / retry"
+                                         : status == STORAGE_PENDING ? "Saving..."
+                                                                     : "Saved");
+    lv_obj_set_style_text_color(saveFeedbackLabel, status == STORAGE_ERROR ? COL_RED : COL_GREEN, 0);
+  }
   if (!statusLabel) return;
   SystemState state = control_get_state();
   if (state == lastStatusState) return;

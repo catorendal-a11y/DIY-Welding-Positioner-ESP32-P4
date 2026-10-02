@@ -13,6 +13,7 @@
 #include "motor/microstep.h"
 #include "motor/calibration.h"
 #include "control/control.h"
+#include "control/input_policy.h"
 #include "event_log.h"
 #include "mirror/usb_mirror.h"
 
@@ -28,18 +29,16 @@
 #include "onchip_temp.h"
 
 // Cross-module externs now declared in their respective headers:
-//   motorConfigApplyPending  -> screens.h
 //   g_estopPending, etc.     -> safety.h
 //   speed_get_pedal_enabled  -> speed.h
-
 
 // ───────────────────────────────────────────────────────────────────────────────
 // TASK HANDLES — for health monitoring (FIX-09)
 // ───────────────────────────────────────────────────────────────────────────────
-TaskHandle_t safetyHandle  = nullptr;
-TaskHandle_t motorHandle   = nullptr;
+TaskHandle_t safetyHandle = nullptr;
+TaskHandle_t motorHandle = nullptr;
 TaskHandle_t controlHandle = nullptr;
-TaskHandle_t lvglHandle    = nullptr;
+TaskHandle_t lvglHandle = nullptr;
 TaskHandle_t storageHandle = nullptr;
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -76,15 +75,16 @@ void lvglTask(void* pvParameters) {
   }
   lvgl_unlock();
 
-  boot_step(30, "TOUCH + STORAGE",    100);
+  boot_step(30, "TOUCH + STORAGE", 100);
   boot_step(50, "MOTOR DRIVER CHECK", 100);
-  boot_step(70, "SAFETY INPUTS",      100);
+  boot_step(70, "SAFETY INPUTS", 100);
   boot_step(90, "PEDAL + SPEED INPUT", 100);
-  boot_step(100, "READY HANDOFF",      50);
+  boot_step(100, "READY HANDOFF", 50);
 
   lvgl_lock();
   screens_show(SCREEN_MAIN);
   lvgl_unlock();
+  safety_task_ready(8u);
 
   for (;;) {
     screens_process_pending();
@@ -136,13 +136,13 @@ void lvglTask(void* pvParameters) {
     // Outside LVGL mutex: backlight dim uses GT911 read — must not nest with lv_indev touch read
     dim_update();
 
-    #if DEBUG_BUILD
+#if DEBUG_BUILD
     static uint32_t lastLvglStackLog = 0;
     if (millis() - lastLvglStackLog >= 30000) {
       lastLvglStackLog = millis();
       LOG_I("LVGL stack watermark: %u bytes free", uxTaskGetStackHighWaterMark(NULL) * 4);
     }
-    #endif
+#endif
 
     // Sleep until next LVGL tick hint; cap so we still poll touch/input regularly.
     // After a heavy frame, add a short pause so other tasks/ISRs on this core get CPU (helps IWDT margins).
@@ -161,25 +161,27 @@ void lvglTask(void* pvParameters) {
 // Motor control task (Core 0, priority 4) — updates speed every 5ms, ADC every 20ms
 void motorTask(void* pvParameters) {
   LOG_I("Motor task started on Core %d", xPortGetCoreID());
-  esp_task_wdt_add(NULL);
+  safety_register_watchdog();
   uint8_t adcCycle = 0;
-  static bool pedalSwWasPressed = false;
+  PedalInterlock pedal;
+  bool pedalOwnsMotion = false;
+  safety_task_ready(2u);
   TickType_t t = xTaskGetTickCount();
 
-  #if DEBUG_BUILD
+#if DEBUG_BUILD
   int32_t motorLoopUs = 0;
   int32_t motorMaxUs = 0;
   int32_t motorMinUs = INT32_MAX;
   uint32_t motorJitterCount = 0;
   uint32_t lastJitterLog = 0;
-  #endif
+#endif
 
   for (;;) {
-    esp_task_wdt_reset();
+    safety_feed_watchdog();
 
-    #if DEBUG_BUILD
+#if DEBUG_BUILD
     int32_t loopStart = (int32_t)esp_timer_get_time();
-    #endif
+#endif
 
     speed_apply();
     if (++adcCycle >= 4) {
@@ -187,34 +189,23 @@ void motorTask(void* pvParameters) {
       adcCycle = 0;
     }
 
-    if (acceleration_has_pending_apply()) {
+    if (control_get_state() == STATE_IDLE && acceleration_has_pending_apply()) {
       acceleration_clear_pending();
       motor_apply_settings();
     }
 
-    if (motorConfigApplyPending.load(std::memory_order_acquire)) {
-      motorConfigApplyPending.store(false, std::memory_order_release);
-      microstep_init();
-      acceleration_init();
-      speed_sync_rpm_limits_from_settings();
-      motor_apply_settings();
+    const bool safe = !safety_inhibit_motion() && control_get_state() != STATE_ESTOP;
+    const PedalEdge edge =
+        pedal.update(speed_get_pedal_enabled(), safe, digitalRead(PIN_PEDAL_SW) == LOW, millis());
+    if (edge == PedalEdge::Start && control_get_state() == STATE_IDLE) {
+      pedalOwnsMotion = control_start_continuous();
+    } else if (edge == PedalEdge::Stop && pedalOwnsMotion) {
+      control_stop();  // Includes a START that has not reached controlTask yet.
+      pedalOwnsMotion = false;
     }
+    if (!safe) pedalOwnsMotion = false;
 
-    if (speed_pedal_connected()) {
-      bool swPressed = (digitalRead(PIN_PEDAL_SW) == LOW);
-      if (swPressed && !pedalSwWasPressed) {
-        event_log_add("PEDAL DOWN");
-        if (control_get_state() == STATE_IDLE) control_start_continuous();
-      } else if (!swPressed && pedalSwWasPressed) {
-        event_log_add("PEDAL UP");
-        if (control_get_state() == STATE_RUNNING) control_stop();
-      }
-      pedalSwWasPressed = swPressed;
-    } else {
-      pedalSwWasPressed = false;
-    }
-
-    #if DEBUG_BUILD
+#if DEBUG_BUILD
     int32_t loopEnd = (int32_t)esp_timer_get_time();
     motorLoopUs = loopEnd - loopStart;
     if (motorLoopUs > motorMaxUs) motorMaxUs = motorLoopUs;
@@ -224,13 +215,13 @@ void motorTask(void* pvParameters) {
     uint32_t now = millis();
     if (now - lastJitterLog >= 30000) {
       lastJitterLog = now;
-      LOG_I("Motor jitter (5ms loop): avg=%ldus min=%ldus max=%ldus samples=%lu",
-            motorLoopUs, motorMinUs, motorMaxUs, (unsigned long)motorJitterCount);
+      LOG_I("Motor jitter (5ms loop): avg=%ldus min=%ldus max=%ldus samples=%lu", motorLoopUs, motorMinUs,
+            motorMaxUs, (unsigned long)motorJitterCount);
       motorMaxUs = 0;
       motorMinUs = INT32_MAX;
       motorJitterCount = 0;
     }
-    #endif
+#endif
 
     motor_refresh_hz_cache();
 
@@ -251,23 +242,21 @@ void storageTask(void* pvParameters) {
     // Health monitoring every 30 seconds (FIX-09)
     if (millis() - lastHealthCheck >= 30000) {
       lastHealthCheck = millis();
-      #if DEBUG_BUILD
+#if DEBUG_BUILD
       LOG_I("─── Health ─────────────────────────────────");
       LOG_I("Stack free:  safety=%u  motor=%u  control=%u  lvgl=%u",
-          uxTaskGetStackHighWaterMark(safetyHandle)  * 4,
-          uxTaskGetStackHighWaterMark(motorHandle)   * 4,
-          uxTaskGetStackHighWaterMark(controlHandle) * 4,
-          uxTaskGetStackHighWaterMark(lvglHandle)    * 4);
-      LOG_I("Heap: %lu B free   PSRAM: %lu B free",
-          ESP.getFreeHeap(), ESP.getFreePsram());
-      lv_mem_monitor_t m; lv_mem_monitor_core(&m);
+            uxTaskGetStackHighWaterMark(safetyHandle) * 4, uxTaskGetStackHighWaterMark(motorHandle) * 4,
+            uxTaskGetStackHighWaterMark(controlHandle) * 4, uxTaskGetStackHighWaterMark(lvglHandle) * 4);
+      LOG_I("Heap: %lu B free   PSRAM: %lu B free", ESP.getFreeHeap(), ESP.getFreePsram());
+      lv_mem_monitor_t m;
+      lv_mem_monitor_core(&m);
       LOG_I("LVGL: %u%% heap used", (unsigned)m.used_pct);
-      if (uxTaskGetStackHighWaterMark(safetyHandle)  * 4 < 256) LOG_E("SAFETY STACK LOW");
-      if (uxTaskGetStackHighWaterMark(motorHandle)   * 4 < 512) LOG_E("MOTOR STACK LOW");
-      if (uxTaskGetStackHighWaterMark(lvglHandle)    * 4 < 512) LOG_E("LVGL STACK LOW");
-      if (m.used_pct > 80)                                      LOG_E("LVGL HEAP >80%%");
+      if (uxTaskGetStackHighWaterMark(safetyHandle) * 4 < 256) LOG_E("SAFETY STACK LOW");
+      if (uxTaskGetStackHighWaterMark(motorHandle) * 4 < 512) LOG_E("MOTOR STACK LOW");
+      if (uxTaskGetStackHighWaterMark(lvglHandle) * 4 < 512) LOG_E("LVGL STACK LOW");
+      if (m.used_pct > 80) LOG_E("LVGL HEAP >80%%");
       LOG_I("────────────────────────────────────────────");
-      #endif
+#endif
     }
 
     vTaskDelayUntil(&t, pdMS_TO_TICKS(100));
@@ -282,7 +271,7 @@ void setup() {
   // CRITICAL SAFETY: ENA MUST BE HIGH BEFORE ANYTHING ELSE
   // ─────────────────────────────────────────────────────────────────────────
   pinMode(PIN_ENA, OUTPUT);
-  digitalWrite(PIN_ENA, HIGH);           // MOTOR OFF — cannot move
+  digitalWrite(PIN_ENA, HIGH);  // MOTOR OFF — cannot move
 
   // Foot pedal switch: active LOW, INPUT_PULLUP. Configured early so a stuck
   // pedal cannot be read as "pressed" during motorTask init.
@@ -292,9 +281,9 @@ void setup() {
   Serial.begin(USB_MIRROR_SERIAL_BAUD);
   delay(100);
 
-  #if ENABLE_USB_UI_MIRROR
+#if ENABLE_USB_UI_MIRROR
   usb_mirror_begin();
-  #endif
+#endif
 
   LOG_I("BOOT OK — ENA=HIGH (motor disabled)");
   LOG_I("TIG Rotator Controller %s", FW_VERSION);
@@ -302,8 +291,8 @@ void setup() {
   event_log_init();
 
   // Memory verification
-  LOG_I("Flash: %lu MB", ESP.getFlashChipSize() / (1024*1024));
-  LOG_I("PSRAM: %lu MB", ESP.getPsramSize() / (1024*1024));
+  LOG_I("Flash: %lu MB", ESP.getFlashChipSize() / (1024 * 1024));
+  LOG_I("PSRAM: %lu MB", ESP.getPsramSize() / (1024 * 1024));
 
   // Initialize safety system (ESTOP, watchdog)
   safety_init();
@@ -343,14 +332,20 @@ void setup() {
   // ESP32-P4 HP cores: Core 0 and Core 1 (RISC-V dual-core @ 360 MHz)
   // Task handles for health monitoring (FIX-09)
   // ─────────────────────────────────────────────────────────────────────────
-  xTaskCreatePinnedToCore(safetyTask,  "safety",  4096,  nullptr, 5, &safetyHandle,  0);
-  xTaskCreatePinnedToCore(motorTask,   "motor",   5120,  nullptr, 4, &motorHandle,   0);
-  xTaskCreatePinnedToCore(controlTask, "control", 4096,  nullptr, 3, &controlHandle, 0);
-  xTaskCreatePinnedToCore(lvglTask,    "lvgl",    65536, nullptr, 2, &lvglHandle,    1);  // 64KB: LVGL 9 rotation + arc rendering needs large stack
-  xTaskCreatePinnedToCore(storageTask, "storage", 12288, nullptr, 1, &storageHandle, 1);
-  #if ENABLE_USB_UI_MIRROR
-  xTaskCreatePinnedToCore(usbMirrorTask, "usbMirror", 8192, nullptr, 1, nullptr, 1);
-  #endif
+  if (xTaskCreatePinnedToCore(safetyTask, "safety", 4096, nullptr, 5, &safetyHandle, 0) != pdPASS)
+    fatal_halt("task allocation failed");
+  if (xTaskCreatePinnedToCore(motorTask, "motor", 5120, nullptr, 4, &motorHandle, 0) != pdPASS)
+    fatal_halt("task allocation failed");
+  if (xTaskCreatePinnedToCore(controlTask, "control", 4096, nullptr, 3, &controlHandle, 0) != pdPASS)
+    fatal_halt("task allocation failed");
+  if (xTaskCreatePinnedToCore(lvglTask, "lvgl", 65536, nullptr, 2, &lvglHandle, 1) != pdPASS)
+    fatal_halt("task allocation failed");  // 64KB: LVGL 9 rotation + arc rendering needs large stack
+  if (xTaskCreatePinnedToCore(storageTask, "storage", 12288, nullptr, 1, &storageHandle, 1) != pdPASS)
+    fatal_halt("task allocation failed");
+#if ENABLE_USB_UI_MIRROR
+  if (xTaskCreatePinnedToCore(usbMirrorTask, "usbMirror", 8192, nullptr, 1, nullptr, 1) != pdPASS)
+    fatal_halt("task allocation failed");
+#endif
 
   LOG_I("All FreeRTOS tasks started");
   LOG_I("System ready — ESP32-P4 + MIPI-DSI display");
@@ -359,6 +354,4 @@ void setup() {
 // ───────────────────────────────────────────────────────────────────────────────
 // MAIN LOOP
 // ───────────────────────────────────────────────────────────────────────────────
-void loop() {
-  vTaskDelay(portMAX_DELAY);
-}
+void loop() { vTaskDelay(portMAX_DELAY); }

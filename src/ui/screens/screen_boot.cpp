@@ -24,25 +24,12 @@ static lv_obj_t* enaValueLabel = nullptr;
 static lv_obj_t* motorValueLabel = nullptr;
 static int currentProgress = 0;
 
-static const char* postNames[] = {
-  "ESP32-P4 core init",
-  "Display + LVGL",
-  "Touch + storage",
-  "DM542T driver check",
-  "Safety inputs",
-  "Pedal + speed input",
-  "Ready handoff"
-};
+static const char* postNames[] = {"ESP32-P4 core init",  "Display + LVGL", "Touch + storage",
+                                  "DM542T driver check", "Safety inputs",  "Pedal + speed input",
+                                  "Ready handoff"};
 
-static const char* postDetails[] = {
-  "core0/core1",
-  "800x480",
-  "config loaded",
-  "ENA high",
-  "ESTOP/ALM",
-  "ADC/GPIO",
-  "main screen"
-};
+static const char* postDetails[] = {"core0/core1", "800x480",  "config loaded", "ENA high",
+                                    "ESTOP/ALM",   "ADC/GPIO", "main screen"};
 
 static lv_obj_t* make_box(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h,
                           lv_color_t bg, lv_color_t border, lv_coord_t radius, lv_coord_t borderWidth) {
@@ -165,103 +152,36 @@ void screen_boot_set_progress(int percent, const char* message) {
   refresh_pin_status();
 }
 
-void screen_boot_increment(int delta) {
-  screen_boot_set_progress(currentProgress + delta, nullptr);
-}
+void screen_boot_increment(int delta) { screen_boot_set_progress(currentProgress + delta, nullptr); }
 
 void screen_boot_create() {
   lv_obj_t* screen = screenRoots[SCREEN_BOOT];
-  lv_obj_set_style_bg_color(screen, COL_BG, 0);
-  lv_obj_remove_flag(screen, LV_OBJ_FLAG_SCROLLABLE);
-
-  make_box(screen, 0, 0, SCREEN_W, BOOT_HEADER_H, COL_BG_HEADER, COL_BG_HEADER, 0, 0);
-  ui_create_separator_line(screen, 0, BOOT_HEADER_H, SCREEN_W, COL_BORDER);
-  ui_add_post_header_accent(screen);
-  make_label(screen, 16, 9, "TIG-ROTATOR", FONT_BTN, COL_ACCENT);
-  make_label(screen, 178, 12, "BOOT POST", FONT_NORMAL, COL_GREEN);
-  make_label(screen, 646, 5, "FW", FONT_TINY, COL_TEXT_DIM);
-  make_label(screen, 670, 5, FW_VERSION, FONT_TINY, COL_TEXT);
-  make_label(screen, 646, 21, "MODE", FONT_TINY, COL_TEXT_DIM);
-  make_label(screen, 690, 21, "SAFE INIT", FONT_TINY, COL_GREEN);
-
-  make_box(screen, BOOT_PAD, BOOT_TITLE_Y, SCREEN_W - BOOT_PAD * 2, BOOT_TITLE_H,
-           COL_BG_CARD_ALT, COL_BORDER, RADIUS_CARD, 1);
-  make_label(screen, 32, 67, "SYSTEM STARTUP", FONT_TINY, COL_TEXT_DIM);
-  statusLabel = make_label(screen, 32, 87, "RUNNING HARDWARE CHECKS", FONT_XL, COL_GREEN, 480);
-  make_box(screen, 612, 66, 144, 28, COL_BG_ROW, COL_GREEN, 14, 1);
-  lv_obj_t* motorSafeLabel = make_label(screen, 624, 73, "MOTOR DISABLED", FONT_TINY, COL_GREEN, 120);
-  lv_obj_set_style_text_align(motorSafeLabel, LV_TEXT_ALIGN_CENTER, 0);
-
-  make_box(screen, BOOT_LEFT_X, BOOT_LEFT_Y, BOOT_LEFT_W, BOOT_LEFT_H,
-           COL_BG_CARD_ALT, COL_BORDER, RADIUS_CARD, 1);
-  make_label(screen, 32, 140, "POWER-ON SELF TEST", FONT_NORMAL, COL_ACCENT);
-  ui_create_separator_line(screen, 32, 162, 424, COL_BORDER);
-
-  for (int i = 0; i < 7; i++) {
-    const lv_coord_t y = BOOT_ROW_Y + i * BOOT_ROW_GAP;
-    postRows[i] = make_box(screen, BOOT_ROW_X, y, BOOT_ROW_W, BOOT_ROW_H,
-                           COL_BG_DIM, COL_BORDER_ROW, RADIUS_BTN, 1);
-    postStateLabels[i] = make_label(screen, 44, y + 5, "WAIT", FONT_TINY, COL_TEXT_VDIM, 38);
-    make_label(screen, 84, y + 5, postNames[i], FONT_TINY, COL_TEXT, 220);
-    postDetailLabels[i] = make_label(screen, 344, y + 5, postDetails[i], FONT_TINY, COL_TEXT_DIM, 100);
-  }
-
-  make_box(screen, BOOT_RIGHT_X, BOOT_RIGHT_Y, BOOT_RIGHT_W, BOOT_RIGHT_H,
-           COL_BG_CARD_ALT, COL_BORDER, RADIUS_CARD, 1);
-  make_label(screen, 504, 140, "LIVE MACHINE STATUS", FONT_NORMAL, COL_ACCENT);
-  ui_create_separator_line(screen, 504, 162, 264, COL_BORDER);
-
-  make_label(screen, 504, 184, "ESTOP", FONT_TINY, COL_TEXT_DIM);
-  estopValueLabel = make_label(screen, 650, 184, "--", FONT_TINY, COL_GREEN, 92);
-  lv_obj_set_style_text_align(estopValueLabel, LV_TEXT_ALIGN_CENTER, 0);
-
-  make_label(screen, 504, 216, "DRIVER ALM", FONT_TINY, COL_TEXT_DIM);
-  almValueLabel = make_label(screen, 650, 216, "--", FONT_TINY, COL_GREEN, 92);
-  lv_obj_set_style_text_align(almValueLabel, LV_TEXT_ALIGN_CENTER, 0);
-
-  make_label(screen, 504, 248, "ENABLE PIN", FONT_TINY, COL_TEXT_DIM);
-  enaValueLabel = make_label(screen, 650, 248, "--", FONT_TINY, COL_YELLOW, 92);
-  lv_obj_set_style_text_align(enaValueLabel, LV_TEXT_ALIGN_CENTER, 0);
-
-  make_label(screen, 504, 280, "MOTOR STATE", FONT_TINY, COL_TEXT_DIM);
-  motorValueLabel = make_label(screen, 650, 280, "--", FONT_TINY, COL_TEXT, 120);
-
-  make_label(screen, 504, 312, "RPM RANGE", FONT_TINY, COL_TEXT_DIM);
-  char rpmBuf[32];
-  snprintf(rpmBuf, sizeof(rpmBuf), "%.3f - %.3f", (double)MIN_RPM, (double)speed_get_rpm_max());
-  make_label(screen, 650, 312, rpmBuf, FONT_TINY, COL_TEXT, 120);
-
-  make_label(screen, 504, 344, "GEAR RATIO", FONT_TINY, COL_TEXT_DIM);
-  char gearBuf[24];
-  snprintf(gearBuf, sizeof(gearBuf), "%.0f:1", (double)GEAR_RATIO);
-  make_label(screen, 650, 344, gearBuf, FONT_TINY, COL_TEXT, 80);
-
-  make_box(screen, BOOT_BOTTOM_X, BOOT_BOTTOM_Y, BOOT_BOTTOM_W, BOOT_BOTTOM_H,
-           COL_BG_CARD_ALT, COL_BORDER, RADIUS_CARD, 1);
-  stepLabel = make_label(screen, 32, 407, "STEP 0/7", FONT_TINY, COL_TEXT_DIM);
-  stepNameLabel = make_label(screen, 104, 407, "BOOT SEQUENCE", FONT_TINY, COL_ACCENT, 360);
-  percentLabel = make_label(screen, 700, 407, "0%", FONT_TINY, COL_TEXT_DIM, 68);
-  lv_obj_set_style_text_align(percentLabel, LV_TEXT_ALIGN_RIGHT, 0);
-
+  lv_obj_clean(screen);
+  ui_create_header(screen, "TIG / ROTATOR", "STARTUP", nullptr);
+  ui_create_text(screen, 24, 100, 360, "Preparing the", FONT_XXL, COL_TEXT);
+  ui_create_text(screen, 24, 142, 360, "next weld.", FONT_XXL, COL_TEXT);
+  ui_create_text(screen, 24, 204, 368, "Initializing the operator interface.", FONT_SUBTITLE, COL_TEXT_DIM);
+  ui_create_text(screen, 24, 238, 368, "Motion starts only on a new request.", FONT_SUBTITLE, COL_TEXT_DIM);
+  statusLabel = ui_create_text(screen, 24, 294, 368, "Starting...", FONT_SUBTITLE, COL_ACCENT);
   progressBar = lv_bar_create(screen);
-  lv_obj_set_size(progressBar, BOOT_PROGRESS_W, BOOT_PROGRESS_H);
-  lv_obj_set_pos(progressBar, BOOT_PROGRESS_X, BOOT_PROGRESS_Y);
+  lv_obj_set_pos(progressBar, 24, 336);
+  lv_obj_set_size(progressBar, 368, 8);
   lv_bar_set_range(progressBar, 0, 100);
-  lv_bar_set_value(progressBar, 0, LV_ANIM_OFF);
-  lv_obj_set_style_base_dir(progressBar, LV_BASE_DIR_LTR, 0);
-  lv_obj_set_style_pad_all(progressBar, 0, 0);
-  lv_obj_set_style_bg_color(progressBar, COL_GAUGE_BG, LV_PART_MAIN);
-  lv_obj_set_style_radius(progressBar, 0, LV_PART_MAIN);
   lv_obj_set_style_bg_color(progressBar, COL_ACCENT, LV_PART_INDICATOR);
-  lv_obj_set_style_radius(progressBar, 0, LV_PART_INDICATOR);
-
-  lastLogLabel = make_label(screen, 32, 448, "> ENA kept HIGH until safe idle", FONT_NORMAL, COL_TEXT, 720);
-
-  refresh_pin_status();
-  screen_boot_set_progress(0, "WAITING FOR BOOT SEQUENCE");
-  LOG_I("Screen boot: industrial POST layout created");
+  percentLabel = ui_create_text(screen, 24, 358, 368, "0%", FONT_SUBTITLE, COL_TEXT_DIM);
+  const char* keys[] = {"E-STOP INPUT", "DRIVER ALARM", "ENABLE OUTPUT", "MOTOR OUTPUT"};
+  lv_obj_t** vals[] = {&estopValueLabel, &almValueLabel, &enaValueLabel, &motorValueLabel};
+  for (int i = 0; i < 4; ++i) {
+    lv_obj_t* card = ui_create_post_card(screen, 424, 94 + i * 72, 352, 60);
+    ui_create_text(card, 16, 8, 320, keys[i], FONT_NORMAL, COL_TEXT_DIM);
+    *vals[i] = ui_create_text(card, 16, 30, 320, "--", FONT_SUBTITLE, COL_TEXT);
+  }
+  stepLabel = stepNameLabel = lastLogLabel = nullptr;
+  for (int i = 0; i < 7; ++i) postRows[i] = postStateLabels[i] = postDetailLabels[i] = nullptr;
+  ui_create_text(screen, 24, 430, 752,
+                 "Live input levels shown at right. Startup progress is not a hardware self-test.",
+                 FONT_NORMAL, COL_TEXT_DIM);
+  screen_boot_set_progress(0, "Starting interface");
 }
 
-void screen_boot_update(int percent, const char* status) {
-  screen_boot_set_progress(percent, status);
-}
+void screen_boot_update(int percent, const char* status) { screen_boot_set_progress(percent, status); }

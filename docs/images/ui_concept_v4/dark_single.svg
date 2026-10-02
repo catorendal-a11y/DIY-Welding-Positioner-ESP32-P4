@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480" viewBox="0 0 800 480">
+<title>ARC — Dark operator screen</title>
+<defs>
+ <radialGradient id="dial"><stop stop-color="#172838"/><stop offset="1" stop-color="#0B1119"/></radialGradient>
+ <linearGradient id="start" x2="1" y2="1"><stop stop-color="#70ECFF"/><stop offset="1" stop-color="#369CFF"/></linearGradient>
+ <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="0.7" fill="#344251"/></pattern>
+</defs>
+<rect width="800" height="480" fill="#080C12"/>
+<rect x="0" y="65" width="450" height="337" fill="url(#grid)" opacity=".4"/>
+<path d="M0 64H800M450 64V400M0 400H800" stroke="#24303D"/>
+<g font-family="Bahnschrift, Segoe UI, sans-serif">
+ <path d="M24 42L38 20H49L35 42ZM43 42L57 20H68L54 42Z" fill="#66DFFF"/>
+ <text x="82" y="39" fill="#EFF6FD" font-size="25" font-weight="700" letter-spacing="3">ARC</text>
+ <text x="174" y="37" fill="#8B9BAE" font-size="12" letter-spacing="2">POSITIONER / 01</text>
+ <circle cx="651" cy="31" r="4" fill="#8AE0B6"/>
+ <text x="665" y="36" fill="#8AE0B6" font-size="13" font-weight="600" letter-spacing="1">READY TO RUN</text>
+
+ <text x="24" y="93" fill="#8295AA" font-size="11" letter-spacing="2">01 / ROTATION CONTROL</text>
+ <circle cx="228" cy="245" r="132" fill="url(#dial)"/>
+ <circle cx="228" cy="245" r="127" fill="none" stroke="#243342" stroke-width="1"/>
+ <circle cx="228" cy="245" r="113" fill="none" stroke="#4B647B" stroke-width="5" stroke-dasharray="1 10" opacity=".6"/>
+ <path d="M133 318A120 120 0 1 1 323 318" fill="none" stroke="#20313F" stroke-width="8"/>
+ <path d="M133 318A120 120 0 0 1 228 125" fill="none" stroke="#66DFFF" stroke-width="8"/>
+ <circle cx="228" cy="125" r="7" fill="#B2F4FF"/>
+ <text x="228" y="195" text-anchor="middle" fill="#8DADC0" font-size="12" letter-spacing="3">TARGET SPEED</text>
+ <text x="228" y="267" text-anchor="middle" fill="#F1F7FF" font-size="72" font-weight="600" letter-spacing="-3">0.500</text>
+ <text x="228" y="296" text-anchor="middle" fill="#66DFFF" font-size="17" letter-spacing="5">RPM</text>
+ <text x="122" y="349" fill="#718499" font-size="12">0.00</text>
+ <text x="300" y="349" fill="#718499" font-size="12">1.00</text>
+ <path d="M181 355H275" stroke="#344454"/>
+ <text x="228" y="380" text-anchor="middle" fill="#B3C5D4" font-size="13">PANEL DIAL ACTIVE</text>
+
+ <text x="478" y="103" fill="#66DFFF" font-size="11" letter-spacing="2">OPERATING MODE</text>
+ <text x="476" y="144" fill="#F1F7FF" font-size="34" font-weight="600">Continuous</text>
+ <text x="478" y="168" fill="#8C9DAF" font-size="14">Manual rotation · no auto-stop</text>
+ <path d="M478 189H774" stroke="#253340"/>
+ <text x="478" y="216" fill="#8194A7" font-size="11" letter-spacing="1.5">SURFACE SPEED</text>
+ <text x="477" y="255" fill="#EDF4FC" font-size="37" font-weight="500">471</text>
+ <text x="554" y="253" fill="#9EB1C3" font-size="16">mm/min</text>
+ <text x="478" y="278" fill="#718499" font-size="12">Calculated · Ø 300 mm workpiece</text>
+ <rect x="478" y="300" width="296" height="76" rx="4" fill="#121E2B"/>
+ <path d="M501 340A13 13 0 1 1 522 349M522 339V350H511" fill="none" stroke="#66DFFF" stroke-width="2"/>
+ <text x="548" y="328" fill="#829AAF" font-size="10" letter-spacing="2">DIRECTION</text>
+ <text x="548" y="355" fill="#E9F3FF" font-size="21" font-weight="600">CLOCKWISE</text>
+
+ <rect x="20" y="417" width="126" height="46" rx="4" fill="#141E2A"/>
+ <text x="83" y="446" text-anchor="middle" fill="#B9CADA" font-size="14" font-weight="600">SETUP</text>
+ <rect x="156" y="417" width="160" height="46" rx="4" fill="#141E2A"/>
+ <text x="236" y="446" text-anchor="middle" fill="#B9CADA" font-size="14" font-weight="600">PROGRAMS</text>
+ <rect x="326" y="417" width="116" height="46" rx="4" fill="#141E2A"/>
+ <text x="384" y="446" text-anchor="middle" fill="#B9CADA" font-size="14" font-weight="600">MODES</text>
+ <path d="M478 417H780V450L767 463H478Z" fill="url(#start)"/>
+ <path d="M501 431L515 440L501 449Z" fill="#071420"/>
+ <text x="536" y="447" fill="#071420" font-size="20" font-weight="700" letter-spacing="1">START ROTATION</text>
+</g>
+</svg>

@@ -45,14 +45,10 @@ static void update_computed_info() {
   // Step pulse rate matches motorTask (roller + gear + microstep + calibration)
   float stepsPerSec = rpmToStepHzCalibrated(targetRpm);
 
-  if (infoDutyLabel)
-    lv_label_set_text_fmt(infoDutyLabel, "DUTY %d%%", (int)(duty + 0.5f));
-  if (infoCycleLabel)
-    lv_label_set_text_fmt(infoCycleLabel, "CYCLE %.1fs", cycleSec);
-  if (infoFreqLabel)
-    lv_label_set_text_fmt(infoFreqLabel, "FREQ %.1fHz", freq);
-  if (infoStepsLabel)
-    lv_label_set_text_fmt(infoStepsLabel, "STEPS/S %d", (int)(stepsPerSec + 0.5f));
+  if (infoDutyLabel) lv_label_set_text_fmt(infoDutyLabel, "DUTY %d%%", (int)(duty + 0.5f));
+  if (infoCycleLabel) lv_label_set_text_fmt(infoCycleLabel, "CYCLE %.1fs", cycleSec);
+  if (infoFreqLabel) lv_label_set_text_fmt(infoFreqLabel, "FREQ %.1fHz", freq);
+  if (infoStepsLabel) lv_label_set_text_fmt(infoStepsLabel, "STEPS/S %d", (int)(stepsPerSec + 0.5f));
 
   // Update progress bars (range 0-100)
   const uint32_t pulseSpan = PULSE_MS_MAX - PULSE_MS_MIN;
@@ -101,11 +97,11 @@ static void update_waveform() {
   for (int i = 0; i < WAVE_CYCLES; i++) {
     if (!waveLines[i]) continue;
     int cx = margin + i * cycleW;
-    wavePts[i][0] = { (lv_value_precise_t)(cx), (lv_value_precise_t)(lowY) };
-    wavePts[i][1] = { (lv_value_precise_t)(cx), (lv_value_precise_t)(highY) };
-    wavePts[i][2] = { (lv_value_precise_t)(cx + onW), (lv_value_precise_t)(highY) };
-    wavePts[i][3] = { (lv_value_precise_t)(cx + onW), (lv_value_precise_t)(lowY) };
-    wavePts[i][4] = { (lv_value_precise_t)(cx + cycleW), (lv_value_precise_t)(lowY) };
+    wavePts[i][0] = {(lv_value_precise_t)(cx), (lv_value_precise_t)(lowY)};
+    wavePts[i][1] = {(lv_value_precise_t)(cx), (lv_value_precise_t)(highY)};
+    wavePts[i][2] = {(lv_value_precise_t)(cx + onW), (lv_value_precise_t)(highY)};
+    wavePts[i][3] = {(lv_value_precise_t)(cx + onW), (lv_value_precise_t)(lowY)};
+    wavePts[i][4] = {(lv_value_precise_t)(cx + cycleW), (lv_value_precise_t)(lowY)};
     lv_line_set_points(waveLines[i], wavePts[i], 5);
   }
 }
@@ -117,8 +113,10 @@ static void back_event_cb(lv_event_t* e) { screens_show(SCREEN_MAIN); }
 
 static void on_time_adj_cb(lv_event_t* e) {
   int delta = (intptr_t)lv_event_get_user_data(e);
-  if (delta > 0) pulseOnMs += 100;
-  else if (pulseOnMs > PULSE_MS_MIN) pulseOnMs -= 100;
+  if (delta > 0)
+    pulseOnMs += 100;
+  else if (pulseOnMs > PULSE_MS_MIN)
+    pulseOnMs -= 100;
   if (pulseOnMs > PULSE_MS_MAX) pulseOnMs = PULSE_MS_MAX;
   lv_label_set_text_fmt(onTimeLabel, "%.1fs", pulseOnMs / 1000.0f);
   update_computed_info();
@@ -127,8 +125,10 @@ static void on_time_adj_cb(lv_event_t* e) {
 
 static void off_time_adj_cb(lv_event_t* e) {
   int delta = (intptr_t)lv_event_get_user_data(e);
-  if (delta > 0) pulseOffMs += 100;
-  else if (pulseOffMs > PULSE_MS_MIN) pulseOffMs -= 100;
+  if (delta > 0)
+    pulseOffMs += 100;
+  else if (pulseOffMs > PULSE_MS_MIN)
+    pulseOffMs -= 100;
   if (pulseOffMs > PULSE_MS_MAX) pulseOffMs = PULSE_MS_MAX;
   lv_label_set_text_fmt(offTimeLabel, "%.1fs", pulseOffMs / 1000.0f);
   update_computed_info();
@@ -137,8 +137,10 @@ static void off_time_adj_cb(lv_event_t* e) {
 
 static void rpm_adj_cb(lv_event_t* e) {
   int delta = (intptr_t)lv_event_get_user_data(e);
-  if (delta > 0) targetRpm += 0.1f;
-  else if (targetRpm > MIN_RPM) targetRpm -= 0.1f;
+  if (delta > 0)
+    targetRpm += 0.1f;
+  else if (targetRpm > MIN_RPM)
+    targetRpm -= 0.1f;
   float mx = speed_get_rpm_max();
   if (targetRpm < MIN_RPM) targetRpm = MIN_RPM;
   if (targetRpm > mx) targetRpm = mx;
@@ -156,9 +158,7 @@ static void start_event_cb(lv_event_t* e) {
   }
 }
 
-static void stop_event_cb(lv_event_t* e) {
-  control_stop();
-}
+static void stop_event_cb(lv_event_t* e) { control_stop(); }
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN CREATE — matching new_ui.svg: header, 3 parameter rows, info line,
@@ -166,275 +166,34 @@ static void stop_event_cb(lv_event_t* e) {
 // ───────────────────────────────────────────────────────────────────────────────
 void screen_pulse_create() {
   lv_obj_t* screen = screenRoots[SCREEN_PULSE];
-  lv_obj_set_style_bg_color(screen, COL_BG, 0);
-
-  ui_create_header(screen, "PULSE MODE", "CYCLE SETUP", nullptr);
-
-  // ── Parameter row layout constants ──
-  const int secLabelX = 20;
-  const int valX = 160;
-  const int barX = 240;
-  const int barW = 340;
-  const int barH = 3;
-  const int btnMinusX = 600;
-  const int btnPlusX = 652;
-
-  int rowCardY[] = {50, 130, 210};
-  for (int i = 0; i < 3; i++) {
-    lv_obj_t* rowCard = lv_obj_create(screen);
-    lv_obj_set_size(rowCard, 768, 66);
-    lv_obj_set_pos(rowCard, 16, rowCardY[i]);
-    lv_obj_set_style_bg_color(rowCard, COL_BG_CARD, 0);
-    lv_obj_set_style_border_color(rowCard, COL_BORDER_ROW, 0);
-    lv_obj_set_style_border_width(rowCard, 1, 0);
-    lv_obj_set_style_radius(rowCard, RADIUS_CARD, 0);
-    lv_obj_set_style_pad_all(rowCard, 0, 0);
-    lv_obj_remove_flag(rowCard, LV_OBJ_FLAG_SCROLLABLE);
-  }
-
-  // ════════════════════════════════════════════════════════════════════════════════
-  // ON TIME section (y=56)
-  // ════════════════════════════════════════════════════════════════════════════════
-  const int onY = 56;
-
-  lv_obj_t* onTitle = lv_label_create(screen);
-  lv_label_set_text(onTitle, "ON TIME");
-  lv_obj_set_style_text_font(onTitle, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(onTitle, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(onTitle, secLabelX, onY);
-
-  onTimeLabel = lv_label_create(screen);
+  lv_obj_clean(screen);
+  ui_create_header(screen, "Pulse rotation", "CYCLE SETUP", nullptr);
+  onTimeLabel = ui_create_adjust_card(screen, 24, 94, 240, "ROTATE FOR / s", on_time_adj_cb);
+  ui_highlight_value_card(onTimeLabel);
+  offTimeLabel = ui_create_adjust_card(screen, 280, 94, 240, "PAUSE FOR / s", off_time_adj_cb);
+  rpmLabel = ui_create_adjust_card(screen, 536, 94, 240, "TARGET SPEED / RPM", rpm_adj_cb);
   lv_label_set_text_fmt(onTimeLabel, "%.1fs", pulseOnMs / 1000.0f);
-  lv_obj_set_style_text_font(onTimeLabel, FONT_LARGE, 0);
-  lv_obj_set_style_text_color(onTimeLabel, COL_ACCENT, 0);
-  lv_obj_set_pos(onTimeLabel, valX, onY);
-
-  // Progress bar
-  onBar = lv_bar_create(screen);
-  lv_obj_set_size(onBar, barW, barH);
-  lv_obj_set_pos(onBar, barX, onY + 8);
-  lv_obj_set_style_bg_color(onBar, COL_GAUGE_BG, 0);
-  lv_obj_set_style_bg_opa(onBar, LV_OPA_COVER, 0);
-  lv_obj_set_style_border_width(onBar, 0, 0);
-  lv_obj_set_style_radius(onBar, 1, 0);
-  lv_bar_set_range(onBar, 0, 100);
-  // Indicator style
-  lv_obj_set_style_bg_color(onBar, COL_ACCENT, LV_PART_INDICATOR);
-  lv_obj_set_style_radius(onBar, 1, LV_PART_INDICATOR);
-
-  ui_create_pm_btn(screen, btnMinusX, onY - 2, "-", FONT_XL, UI_BTN_NORMAL, on_time_adj_cb,
-                    (void*)(intptr_t)-1);
-  ui_create_pm_btn(screen, btnPlusX, onY - 2, "+", FONT_XL, UI_BTN_ACCENT, on_time_adj_cb,
-                    (void*)(intptr_t)1);
-
-  // Range hint
-  lv_obj_t* onHint = lv_label_create(screen);
-  lv_label_set_text(onHint, "0.1-10.0s");
-  lv_obj_set_style_text_font(onHint, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(onHint, COL_TEXT_VDIM, 0);
-  lv_obj_set_pos(onHint, 710, onY);
-
-  // ════════════════════════════════════════════════════════════════════════════════
-  // OFF TIME section (y=136)
-  // ════════════════════════════════════════════════════════════════════════════════
-  const int offY = 136;
-
-  lv_obj_t* offTitle = lv_label_create(screen);
-  lv_label_set_text(offTitle, "OFF TIME");
-  lv_obj_set_style_text_font(offTitle, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(offTitle, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(offTitle, secLabelX, offY);
-
-  offTimeLabel = lv_label_create(screen);
   lv_label_set_text_fmt(offTimeLabel, "%.1fs", pulseOffMs / 1000.0f);
-  lv_obj_set_style_text_font(offTimeLabel, FONT_LARGE, 0);
-  lv_obj_set_style_text_color(offTimeLabel, COL_TEXT, 0);
-  lv_obj_set_pos(offTimeLabel, valX, offY);
-
-  // Progress bar
-  offBar = lv_bar_create(screen);
-  lv_obj_set_size(offBar, barW, barH);
-  lv_obj_set_pos(offBar, barX, offY + 8);
-  lv_obj_set_style_bg_color(offBar, COL_GAUGE_BG, 0);
-  lv_obj_set_style_bg_opa(offBar, LV_OPA_COVER, 0);
-  lv_obj_set_style_border_width(offBar, 0, 0);
-  lv_obj_set_style_radius(offBar, 1, 0);
-  lv_bar_set_range(offBar, 0, 100);
-  lv_obj_set_style_bg_color(offBar, COL_TEXT, LV_PART_INDICATOR);
-  lv_obj_set_style_radius(offBar, 1, LV_PART_INDICATOR);
-
-  // -/+ buttons
-  ui_create_pm_btn(screen, btnMinusX, offY - 2, "-", FONT_XL, UI_BTN_NORMAL, off_time_adj_cb,
-                    (void*)(intptr_t)-1);
-  ui_create_pm_btn(screen, btnPlusX, offY - 2, "+", FONT_XL, UI_BTN_ACCENT, off_time_adj_cb,
-                    (void*)(intptr_t)1);
-
-  // Range hint
-  lv_obj_t* offHint = lv_label_create(screen);
-  lv_label_set_text(offHint, "0.1-10.0s");
-  lv_obj_set_style_text_font(offHint, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(offHint, COL_TEXT_VDIM, 0);
-  lv_obj_set_pos(offHint, 710, offY);
-
-  // ════════════════════════════════════════════════════════════════════════════════
-  // RPM section (y=216)
-  // ════════════════════════════════════════════════════════════════════════════════
-  const int rpmY = 216;
-
-  lv_obj_t* rpmTitle = lv_label_create(screen);
-  lv_label_set_text(rpmTitle, "RPM");
-  lv_obj_set_style_text_font(rpmTitle, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(rpmTitle, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(rpmTitle, secLabelX, rpmY);
-
-  rpmLabel = lv_label_create(screen);
-  lv_label_set_text_fmt(rpmLabel, "%.1f", targetRpm);
-  lv_obj_set_style_text_font(rpmLabel, FONT_LARGE, 0);
-  lv_obj_set_style_text_color(rpmLabel, COL_TEXT, 0);
-  lv_obj_set_pos(rpmLabel, valX, rpmY);
-
-  // Progress bar
-  rpmBar = lv_bar_create(screen);
-  lv_obj_set_size(rpmBar, barW, barH);
-  lv_obj_set_pos(rpmBar, barX, rpmY + 8);
-  lv_obj_set_style_bg_color(rpmBar, COL_GAUGE_BG, 0);
-  lv_obj_set_style_bg_opa(rpmBar, LV_OPA_COVER, 0);
-  lv_obj_set_style_border_width(rpmBar, 0, 0);
-  lv_obj_set_style_radius(rpmBar, 1, 0);
-  lv_bar_set_range(rpmBar, 0, 100);
-  lv_obj_set_style_bg_color(rpmBar, COL_ACCENT, LV_PART_INDICATOR);
-  lv_obj_set_style_radius(rpmBar, 1, LV_PART_INDICATOR);
-
-  // -/+ buttons
-  ui_create_pm_btn(screen, btnMinusX, rpmY - 2, "-", FONT_XL, UI_BTN_NORMAL, rpm_adj_cb,
-                    (void*)(intptr_t)-1);
-  ui_create_pm_btn(screen, btnPlusX, rpmY - 2, "+", FONT_XL, UI_BTN_ACCENT, rpm_adj_cb,
-                    (void*)(intptr_t)1);
-
-  // Range hint
-  lv_obj_t* rpmHint = lv_label_create(screen);
-  char rpmHintBuf[24];
-  snprintf(rpmHintBuf, sizeof(rpmHintBuf), "%.3f-%.3f", (double)MIN_RPM, (double)speed_get_rpm_max());
-  lv_label_set_text(rpmHint, rpmHintBuf);
-  lv_obj_set_style_text_font(rpmHint, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(rpmHint, COL_TEXT_VDIM, 0);
-  lv_obj_set_pos(rpmHint, 710, rpmY);
-
-  // ════════════════════════════════════════════════════════════════════════════════
-  // Computed info line (y=284)
-  // ════════════════════════════════════════════════════════════════════════════════
-  const int infoY = 284;
-
-  infoDutyLabel = lv_label_create(screen);
-  lv_obj_set_style_text_font(infoDutyLabel, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(infoDutyLabel, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(infoDutyLabel, 20, infoY);
-
-  infoCycleLabel = lv_label_create(screen);
-  lv_obj_set_style_text_font(infoCycleLabel, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(infoCycleLabel, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(infoCycleLabel, 170, infoY);
-
-  infoFreqLabel = lv_label_create(screen);
-  lv_obj_set_style_text_font(infoFreqLabel, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(infoFreqLabel, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(infoFreqLabel, 340, infoY);
-
-  infoStepsLabel = lv_label_create(screen);
-  lv_obj_set_style_text_font(infoStepsLabel, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(infoStepsLabel, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(infoStepsLabel, 510, infoY);
-
-  update_computed_info();
-
-  // ════════════════════════════════════════════════════════════════════════════════
-  // Waveform preview (y=330..456, dark box with square wave lines)
-  // ════════════════════════════════════════════════════════════════════════════════
-  const int waveY = 330;
-  const int waveH = 88;
-  const int waveW = 500;
-
-  lv_obj_t* waveBox = lv_obj_create(screen);
-  lv_obj_set_size(waveBox, waveW, waveH);
-  lv_obj_set_pos(waveBox, 10, waveY);
-  lv_obj_set_style_bg_color(waveBox, COL_BG_CARD, 0);
-  lv_obj_set_style_border_width(waveBox, 1, 0);
-  lv_obj_set_style_border_color(waveBox, COL_BORDER_ROW, 0);
-  lv_obj_set_style_radius(waveBox, RADIUS_CARD, 0);
-  lv_obj_set_style_pad_all(waveBox, 0, 0);
-  lv_obj_remove_flag(waveBox, LV_OBJ_FLAG_SCROLLABLE);
-
-  // Draw simple square wave using line objects
-  // Wave represents on/off pattern — 3 cycles across the box
-  float onSec = pulseOnMs / 1000.0f;
-  float offSec = pulseOffMs / 1000.0f;
-  float cycleSec = onSec + offSec;
-  float duty = (cycleSec > 0) ? (onSec / cycleSec) : 0.5f;
-
-  const int margin = 20;
-  const int usableW = waveW - margin * 2;
-  const int cycleW = usableW / WAVE_CYCLES;
-  const int onW = (int)(cycleW * duty);
-  const int highY = 25;
-  const int lowY = waveH - 25;
-
-  // POST proposal (ui_screens.svg): dim baseline under waveform polyline
-  lv_obj_t* waveBaseline = lv_obj_create(waveBox);
-  lv_obj_set_size(waveBaseline, usableW, 1);
-  lv_obj_set_pos(waveBaseline, margin, lowY);
-  lv_obj_set_style_bg_color(waveBaseline, COL_BORDER, 0);
-  lv_obj_set_style_bg_opa(waveBaseline, LV_OPA_50, 0);
-  lv_obj_set_style_border_width(waveBaseline, 0, 0);
-  lv_obj_set_style_radius(waveBaseline, 0, 0);
-  lv_obj_set_style_pad_all(waveBaseline, 0, 0);
-  lv_obj_remove_flag(waveBaseline, LV_OBJ_FLAG_SCROLLABLE);
-
-  for (int i = 0; i < WAVE_CYCLES; i++) {
-    int cx = margin + i * cycleW;
-
-    // Populate static point array for this cycle
-    wavePts[i][0] = { (lv_value_precise_t)(cx), (lv_value_precise_t)(lowY) };
-    wavePts[i][1] = { (lv_value_precise_t)(cx), (lv_value_precise_t)(highY) };
-    wavePts[i][2] = { (lv_value_precise_t)(cx + onW), (lv_value_precise_t)(highY) };
-    wavePts[i][3] = { (lv_value_precise_t)(cx + onW), (lv_value_precise_t)(lowY) };
-    wavePts[i][4] = { (lv_value_precise_t)(cx + cycleW), (lv_value_precise_t)(lowY) };
-
-    lv_obj_t* cycleLine = lv_line_create(waveBox);
-    lv_line_set_points(cycleLine, wavePts[i], 5);
-    lv_obj_set_style_line_color(cycleLine, COL_ACCENT, 0);
-    lv_obj_set_style_line_width(cycleLine, 2, 0);
-    lv_obj_remove_flag(cycleLine, LV_OBJ_FLAG_CLICKABLE);
-    waveLines[i] = cycleLine;  // Store for later update
+  lv_label_set_text_fmt(rpmLabel, "%.3f", targetRpm);
+  onBar = offBar = rpmBar = nullptr;
+  ui_create_text(screen, 24, 238, 500, "CYCLE PREVIEW / continuous repeat", FONT_SUBTITLE, COL_TEXT_DIM);
+  lv_obj_t* wave = ui_create_post_card(screen, 24, 270, 500, 88);
+  for (int i = 0; i < WAVE_CYCLES; ++i) {
+    waveLines[i] = lv_line_create(wave);
+    lv_obj_set_style_line_color(waveLines[i], COL_ACCENT, 0);
+    lv_obj_set_style_line_width(waveLines[i], 3, 0);
   }
-
-  // ON/OFF labels inside waveform box
-  lv_obj_t* onTag = lv_label_create(waveBox);
-  lv_label_set_text(onTag, "ON");
-  lv_obj_set_style_text_font(onTag, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(onTag, COL_ACCENT, 0);
-  lv_obj_set_pos(onTag, 5, highY - 12);
-
-  lv_obj_t* offTag = lv_label_create(waveBox);
-  lv_label_set_text(offTag, "OFF");
-  lv_obj_set_style_text_font(offTag, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(offTag, COL_TEXT_VDIM, 0);
-  lv_obj_set_pos(offTag, 5, lowY - 2);
-
-  const int botY = 428;
-  const int botH = 48;
-  const int botBtnW = 256;
-  const int botGap = 8;
-  const int botX = 8;
-
-  lv_obj_t* backBarBtn = nullptr;
-  ui_create_action_bar_three(screen, botX, botY, botH, botGap, botBtnW,
-                              "<  BACK", back_event_cb, UI_BTN_NORMAL,
-                              "> START", start_event_cb, UI_BTN_ACCENT,
-                              "[] STOP", stop_event_cb, UI_BTN_DANGER,
-                              &backBarBtn, &startBtn, &stopBtn);
-  (void)backBarBtn;
-
-  LOG_I("Screen pulse: v2.0 layout created");
+  infoDutyLabel = ui_create_text(screen, 548, 272, 228, "", FONT_SUBTITLE, COL_TEXT);
+  infoCycleLabel = ui_create_text(screen, 548, 302, 228, "", FONT_SUBTITLE, COL_TEXT_DIM);
+  infoFreqLabel = ui_create_text(screen, 548, 332, 228, "", FONT_SUBTITLE, COL_TEXT_DIM);
+  infoStepsLabel = nullptr;
+  ui_create_btn(screen, 24, 408, 152, 56, "<  BACK", FONT_BTN, UI_BTN_NORMAL, back_event_cb, nullptr);
+  startBtn =
+      ui_create_btn(screen, 192, 408, 272, 56, "> START", FONT_BTN, UI_BTN_ACCENT, start_event_cb, nullptr);
+  stopBtn =
+      ui_create_btn(screen, 480, 408, 296, 56, "[] STOP", FONT_BTN, UI_BTN_DANGER, stop_event_cb, nullptr);
+  update_computed_info();
+  update_waveform();
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -467,10 +226,10 @@ void screen_pulse_update() {
   if (!startLbl) return;
   if (state == STATE_PULSE) {
     lv_label_set_text(startLbl, "[] STOP");
-    lv_obj_set_style_text_color(startLbl, COL_ACCENT, 0);
+    lv_obj_set_style_text_color(startLbl, ui_btn_label_color_post(UI_BTN_ACCENT), 0);
   } else {
     lv_label_set_text(startLbl, "> START");
-    lv_obj_set_style_text_color(startLbl, COL_ACCENT, 0);
+    lv_obj_set_style_text_color(startLbl, ui_btn_label_color_post(UI_BTN_ACCENT), 0);
   }
 
   // Refresh computed info

@@ -13,6 +13,41 @@ extern TaskHandle_t lvglHandle;
 
 SemaphoreHandle_t g_lvgl_mutex = nullptr;
 
+lv_obj_t* ui_create_text(lv_obj_t* parent, int x, int y, int width, const char* text, const lv_font_t* font,
+                         lv_color_t color) {
+  lv_obj_t* label = lv_label_create(parent);
+  lv_label_set_text(label, text);
+  lv_obj_set_pos(label, x, y);
+  lv_obj_set_width(label, width);
+  lv_label_set_long_mode(label, LV_LABEL_LONG_MODE_DOTS);
+  lv_obj_set_style_text_font(label, font, 0);
+  lv_obj_set_style_text_color(label, color, 0);
+  return label;
+}
+
+lv_obj_t* ui_create_adjust_card(lv_obj_t* parent, int x, int y, int width, const char* title,
+                                lv_event_cb_t callback, int step) {
+  lv_obj_t* card = ui_create_post_card(parent, x, y, width, 124);
+  ui_create_text(card, 14, 8, width - 28, title, FONT_NORMAL, COL_TEXT_DIM);
+  lv_obj_t* value = ui_create_text(card, 14, 30, width - 28, "", FONT_XL, COL_TEXT);
+  ui_create_btn(card, 14, 68, (width - 40) / 2, 48, "-", FONT_XL, UI_BTN_NORMAL, callback,
+                (void*)(intptr_t)-step);
+  ui_create_btn(card, 26 + (width - 40) / 2, 68, (width - 40) / 2, 48, "+", FONT_XL, UI_BTN_NORMAL, callback,
+                (void*)(intptr_t)step);
+  return value;
+}
+
+void ui_highlight_value_card(lv_obj_t* value) {
+  lv_obj_t* card = lv_obj_get_parent(value);
+  lv_obj_set_style_bg_color(card, lv_color_hex(0xFF6B38), 0);
+  lv_obj_set_style_border_width(card, 0, 0);
+  for (uint32_t i = 0; i < lv_obj_get_child_count(card); i++) {
+    lv_obj_t* child = lv_obj_get_child(card, i);
+    if (lv_obj_check_type(child, &lv_label_class))
+      lv_obj_set_style_text_color(child, lv_color_hex(0x11191C), 0);
+  }
+}
+
 void lvgl_lock() {
   if (g_lvgl_mutex) xSemaphoreTake(g_lvgl_mutex, portMAX_DELAY);
 }
@@ -29,14 +64,13 @@ void lvgl_unlock() {
 static ScreenId currentScreen = SCREEN_NONE;
 static ScreenId pendingScreen = SCREEN_NONE;
 static bool themeReinitPending = false;
-lv_obj_t* screenRoots[SCREEN_COUNT] = { nullptr };  // Extern for screen files
+lv_obj_t* screenRoots[SCREEN_COUNT] = {nullptr};  // Extern for screen files
 static bool screenCreated[SCREEN_COUNT] = {};
-static int pendingEditSlot = -1;
+static int pendingEditSlot = -2;
 
 static bool screen_needs_rebuild(ScreenId id) {
-  return id == SCREEN_PROGRAM_EDIT || id == SCREEN_EDIT_CONT
-      || id == SCREEN_EDIT_PULSE  || id == SCREEN_EDIT_STEP
-      || id == SCREEN_STEP;
+  return id == SCREEN_PROGRAM_EDIT || id == SCREEN_EDIT_CONT || id == SCREEN_EDIT_PULSE ||
+         id == SCREEN_EDIT_STEP || id == SCREEN_STEP;
 }
 
 static void create_screen(ScreenId id) {
@@ -52,28 +86,72 @@ static void create_screen(ScreenId id) {
   }
 
   switch (id) {
-    case SCREEN_BOOT:        screen_boot_create(); break;
-    case SCREEN_MAIN:        screen_main_create(); break;
-    case SCREEN_MENU:        screen_menu_create(); break;
-    case SCREEN_RUN_MODES:   screen_run_modes_create(); break;
-    case SCREEN_PULSE:       screen_pulse_create(); break;
-    case SCREEN_STEP:        screen_step_create(); break;
-    case SCREEN_JOG:         screen_jog_create(); break;
-    case SCREEN_TIMER:       screen_timer_create(); break;
-    case SCREEN_PROGRAMS:    screen_programs_create(); break;
-    case SCREEN_SETTINGS:    screen_settings_create(); break;
-    case SCREEN_SYSINFO:     screen_sysinfo_create(); break;
-    case SCREEN_CALIBRATION: screen_calibration_create(); break;
-    case SCREEN_MOTOR_CONFIG: screen_motor_config_create(); break;
-    case SCREEN_DISPLAY:     screen_display_create(); break;
-    case SCREEN_PEDAL_SETTINGS: screen_pedal_settings_create(); break;
-    case SCREEN_DIAGNOSTICS:  screen_diagnostics_create(); break;
-    case SCREEN_ABOUT:       screen_about_create(); break;
-    case SCREEN_EDIT_PULSE:  screen_edit_pulse_create(); break;
-    case SCREEN_EDIT_STEP:   screen_edit_step_create(); break;
-    case SCREEN_PROGRAM_EDIT: screen_program_edit_create(pendingEditSlot); pendingEditSlot = -1; break;
-    case SCREEN_EDIT_CONT:   screen_edit_cont_create(); break;
-    default: break;
+    case SCREEN_BOOT:
+      screen_boot_create();
+      break;
+    case SCREEN_MAIN:
+      screen_main_create();
+      break;
+    case SCREEN_MENU:
+      screen_menu_create();
+      break;
+    case SCREEN_RUN_MODES:
+      screen_run_modes_create();
+      break;
+    case SCREEN_PULSE:
+      screen_pulse_create();
+      break;
+    case SCREEN_STEP:
+      screen_step_create();
+      break;
+    case SCREEN_JOG:
+      screen_jog_create();
+      break;
+    case SCREEN_TIMER:
+      screen_timer_create();
+      break;
+    case SCREEN_PROGRAMS:
+      screen_programs_create();
+      break;
+    case SCREEN_SETTINGS:
+      screen_settings_create();
+      break;
+    case SCREEN_SYSINFO:
+      screen_sysinfo_create();
+      break;
+    case SCREEN_CALIBRATION:
+      screen_calibration_create();
+      break;
+    case SCREEN_MOTOR_CONFIG:
+      screen_motor_config_create();
+      break;
+    case SCREEN_DISPLAY:
+      screen_display_create();
+      break;
+    case SCREEN_PEDAL_SETTINGS:
+      screen_pedal_settings_create();
+      break;
+    case SCREEN_DIAGNOSTICS:
+      screen_diagnostics_create();
+      break;
+    case SCREEN_ABOUT:
+      screen_about_create();
+      break;
+    case SCREEN_EDIT_PULSE:
+      screen_edit_pulse_create();
+      break;
+    case SCREEN_EDIT_STEP:
+      screen_edit_step_create();
+      break;
+    case SCREEN_PROGRAM_EDIT:
+      screen_program_edit_create(pendingEditSlot);
+      pendingEditSlot = -2;
+      break;
+    case SCREEN_EDIT_CONT:
+      screen_edit_cont_create();
+      break;
+    default:
+      break;
   }
 
   screenCreated[id] = true;
@@ -84,7 +162,7 @@ static void create_screen(ScreenId id) {
 // ───────────────────────────────────────────────────────────────────────────────
 void screens_init() {
   if (!g_lvgl_mutex) {
-    g_lvgl_mutex = xSemaphoreCreateRecursiveMutex();
+    g_lvgl_mutex = xSemaphoreCreateMutex();
     if (!g_lvgl_mutex) {
       LOG_E("Screens init: failed to create LVGL mutex");
       return;
@@ -152,8 +230,7 @@ void screens_show(ScreenId id) {
 
   ScreenId prev = currentScreen;
   const bool leavingSliderPriorityScreen =
-      (prev == SCREEN_STEP || prev == SCREEN_CALIBRATION) &&
-      (id != SCREEN_STEP && id != SCREEN_CALIBRATION);
+      (prev == SCREEN_STEP || prev == SCREEN_CALIBRATION) && (id != SCREEN_STEP && id != SCREEN_CALIBRATION);
   if (leavingSliderPriorityScreen) {
     speed_set_slider_priority(false);
   }
@@ -180,22 +257,18 @@ void screens_show(ScreenId id) {
     screen_programs_mark_dirty();
   }
 
-  #if DEBUG_BUILD
+#if DEBUG_BUILD
   if (lvglHandle) {
     LOG_I("Screen %d stack free: %u bytes", id, uxTaskGetStackHighWaterMark(lvglHandle) * 4);
   }
-  #endif
+#endif
 
   LOG_D("Screen show: %d", id);
 }
 
-void screens_request_show(ScreenId id) {
-  pendingScreen = id;
-}
+void screens_request_show(ScreenId id) { pendingScreen = id; }
 
-void screens_request_theme_reinit() {
-  themeReinitPending = true;
-}
+void screens_request_theme_reinit() { themeReinitPending = true; }
 
 void screens_process_pending() {
   if (themeReinitPending) {
@@ -210,13 +283,9 @@ void screens_process_pending() {
   }
 }
 
-ScreenId screens_get_current() {
-  return currentScreen;
-}
+ScreenId screens_get_current() { return currentScreen; }
 
-bool screens_is_active(ScreenId id) {
-  return (currentScreen == id);
-}
+bool screens_is_active(ScreenId id) { return (currentScreen == id); }
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN UPDATE DISPATCHER
@@ -314,50 +383,36 @@ lv_obj_t* ui_create_header(lv_obj_t* parent, const char* title, const char* righ
   lv_obj_set_style_border_width(header, 0, 0);
   lv_obj_set_style_radius(header, 0, 0);
   lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_t* title_lbl = lv_label_create(header);
-  lv_label_set_text(title_lbl, title);
-  lv_obj_set_style_text_font(title_lbl, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(title_lbl, COL_ACCENT, 0);
-  lv_obj_set_width(title_lbl, 420);
-  lv_label_set_long_mode(title_lbl, LV_LABEL_LONG_MODE_CLIP);
-  lv_obj_set_pos(title_lbl, PAD_X, 11);
-
-  lv_obj_t* state_lbl = lv_label_create(header);
-  lv_label_set_text(state_lbl, right_caption ? right_caption : "");
-  lv_obj_set_style_text_font(state_lbl, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(state_lbl, COL_HDR_MUTED, 0);
-  lv_obj_set_width(state_lbl, 300);
-  lv_obj_set_style_text_align(state_lbl, LV_TEXT_ALIGN_RIGHT, 0);
-  lv_obj_set_pos(state_lbl, SCREEN_W - PAD_X - 300, 12);
-  if (opt_right_lbl) *opt_right_lbl = state_lbl;
-  ui_add_post_header_accent(parent);
+  lv_obj_t* brand = lv_label_create(header);
+  lv_label_set_text(brand, "TIG / ROTATOR");
+  lv_obj_set_style_text_font(brand, FONT_SMALL, 0);
+  lv_obj_set_style_text_color(brand, COL_TEXT_DIM, 0);
+  lv_obj_set_pos(brand, 24, 10);
+  lv_obj_t* heading = lv_label_create(header);
+  lv_label_set_text(heading, title);
+  lv_obj_set_style_text_font(heading, FONT_XL, 0);
+  lv_obj_set_style_text_color(heading, lv_color_hex(0xF5F5F0), 0);
+  lv_obj_set_width(heading, 530);
+  lv_label_set_long_mode(heading, LV_LABEL_LONG_MODE_DOTS);
+  lv_obj_set_pos(heading, 24, 32);
+  lv_obj_t* status = lv_label_create(header);
+  lv_label_set_text(status, right_caption ? right_caption : "");
+  lv_obj_set_style_text_font(status, FONT_NORMAL, 0);
+  lv_obj_set_style_text_color(status, COL_ACCENT, 0);
+  lv_obj_set_width(status, 200);
+  lv_label_set_long_mode(status, LV_LABEL_LONG_MODE_DOTS);
+  lv_obj_set_style_text_align(status, LV_TEXT_ALIGN_RIGHT, 0);
+  lv_obj_set_pos(status, 576, 28);
+  if (opt_right_lbl) *opt_right_lbl = status;
+  // V5 header separates the screen through its background, without a hairline.
   return header;
 }
 
 lv_obj_t* ui_create_settings_header(lv_obj_t* parent, const char* title, const char* right_caption,
                                     lv_color_t right_text_color) {
-  lv_obj_t* header = lv_obj_create(parent);
-  lv_obj_set_size(header, SCREEN_W, SET_HEADER_H);
-  lv_obj_set_pos(header, 0, 0);
-  lv_obj_set_style_bg_color(header, COL_BG_HEADER, 0);
-  lv_obj_set_style_pad_all(header, 0, 0);
-  lv_obj_set_style_border_width(header, 0, 0);
-  lv_obj_set_style_radius(header, 0, 0);
-  lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_t* title_lbl = lv_label_create(header);
-  lv_label_set_text(title_lbl, title);
-  lv_obj_set_style_text_font(title_lbl, SET_HEADER_FONT, 0);
-  lv_obj_set_style_text_color(title_lbl, COL_ACCENT, 0);
-  lv_obj_set_pos(title_lbl, PAD_X, 11);
-
-  lv_obj_t* mode_lbl = lv_label_create(header);
-  lv_label_set_text(mode_lbl, right_caption ? right_caption : "");
-  lv_obj_set_style_text_font(mode_lbl, FONT_NORMAL, 0);
-  lv_obj_set_style_text_color(mode_lbl, right_text_color, 0);
-  lv_obj_set_width(mode_lbl, 280);
-  lv_obj_set_style_text_align(mode_lbl, LV_TEXT_ALIGN_RIGHT, 0);
-  lv_obj_set_pos(mode_lbl, SCREEN_W - PAD_X - 280, 12);
-  ui_add_post_header_accent(parent);
+  lv_obj_t* status = nullptr;
+  lv_obj_t* header = ui_create_header(parent, title, right_caption, &status);
+  lv_obj_set_style_text_color(status, right_text_color, 0);
   return header;
 }
 
@@ -365,7 +420,8 @@ lv_obj_t* ui_create_separator(lv_obj_t* parent, lv_coord_t y) {
   return ui_create_separator_line(parent, 0, y, SCREEN_W, COL_BORDER);
 }
 
-lv_obj_t* ui_create_separator_line(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_color_t color) {
+lv_obj_t* ui_create_separator_line(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w,
+                                   lv_color_t color) {
   lv_obj_t* line = lv_obj_create(parent);
   lv_obj_set_size(line, w, 1);
   lv_obj_set_pos(line, x, y);
@@ -442,7 +498,7 @@ lv_obj_t* ui_create_post_row(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_co
 void ui_btn_style_post(lv_obj_t* btn, UiBtnStyle style) {
   const bool accent = (style == UI_BTN_ACCENT);
   const bool danger = (style == UI_BTN_DANGER);
-  lv_color_t bg = danger ? COL_BTN_DANGER : (accent ? COL_BG_ACTIVE : COL_BG_CARD);
+  lv_color_t bg = danger ? lv_color_hex(0xB52C35) : (accent ? COL_ACCENT : COL_BTN_BG);
   lv_color_t bor = danger ? COL_BORDER_DNG : (accent ? COL_ACCENT : COL_BORDER);
   lv_coord_t bw = (accent || danger) ? 2 : 1;
   lv_obj_set_style_bg_color(btn, bg, 0);
@@ -452,11 +508,13 @@ void ui_btn_style_post(lv_obj_t* btn, UiBtnStyle style) {
   lv_obj_set_style_shadow_width(btn, 0, 0);
   lv_obj_set_style_pad_all(btn, 0, 0);
   lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
+  lv_obj_set_style_opa(btn, LV_OPA_COVER, LV_STATE_DISABLED);
+  lv_obj_set_style_recolor_opa(btn, LV_OPA_TRANSP, LV_STATE_DISABLED);
 }
 
 lv_color_t ui_btn_label_color_post(UiBtnStyle style) {
-  if (style == UI_BTN_DANGER) return COL_RED;
-  if (style == UI_BTN_ACCENT) return COL_ACCENT;
+  if (style == UI_BTN_DANGER) return lv_color_hex(0xFFFFFF);
+  if (style == UI_BTN_ACCENT) return lv_color_hex(0x13171A);
   return COL_TEXT;
 }
 
@@ -471,8 +529,8 @@ void ui_nav_card_btn_style(lv_obj_t* btn, bool accent) {
 }
 
 lv_obj_t* ui_create_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h,
-                        const char* text, const lv_font_t* label_font, UiBtnStyle style,
-                        lv_event_cb_t cb, void* user_data) {
+                        const char* text, const lv_font_t* label_font, UiBtnStyle style, lv_event_cb_t cb,
+                        void* user_data) {
   lv_obj_t* btn = lv_button_create(parent);
   lv_obj_set_size(btn, w, h);
   lv_obj_set_pos(btn, x, y);
@@ -489,8 +547,7 @@ lv_obj_t* ui_create_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t
 }
 
 lv_obj_t* ui_create_pm_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, const char* text,
-                           const lv_font_t* label_font, UiBtnStyle style, lv_event_cb_t cb,
-                           void* user_data) {
+                           const lv_font_t* label_font, UiBtnStyle style, lv_event_cb_t cb, void* user_data) {
   lv_obj_t* btn = lv_button_create(parent);
   lv_obj_set_size(btn, BTN_W_PM, BTN_H_PM);
   lv_obj_set_pos(btn, x, y);
@@ -530,25 +587,29 @@ void ui_style_slider(lv_obj_t* slider) {
 }
 
 void ui_create_action_bar(lv_obj_t* parent, lv_coord_t pad_x, lv_coord_t footer_y, lv_coord_t footer_h,
-                          lv_coord_t gap, lv_coord_t left_w, lv_coord_t right_w,
-                          const char* left_text, lv_event_cb_t left_cb,
-                          const char* right_text, UiBtnStyle right_style, lv_event_cb_t right_cb) {
-  ui_create_btn(parent, pad_x, footer_y, left_w, footer_h, left_text, FONT_SUBTITLE, UI_BTN_NORMAL, left_cb, nullptr);
-  ui_create_btn(parent, pad_x + left_w + gap, footer_y, right_w, footer_h, right_text, FONT_SUBTITLE, right_style, right_cb, nullptr);
+                          lv_coord_t gap, lv_coord_t left_w, lv_coord_t right_w, const char* left_text,
+                          lv_event_cb_t left_cb, const char* right_text, UiBtnStyle right_style,
+                          lv_event_cb_t right_cb) {
+  ui_create_btn(parent, pad_x, footer_y, left_w, footer_h, left_text, FONT_SUBTITLE, UI_BTN_NORMAL, left_cb,
+                nullptr);
+  ui_create_btn(parent, pad_x + left_w + gap, footer_y, right_w, footer_h, right_text, FONT_SUBTITLE,
+                right_style, right_cb, nullptr);
 }
 
-void ui_create_action_bar_three(lv_obj_t* parent, lv_coord_t pad_x, lv_coord_t y, lv_coord_t h, lv_coord_t gap,
-                                lv_coord_t btn_w,
-                                const char* left_text, lv_event_cb_t left_cb, UiBtnStyle left_style,
-                                const char* mid_text, lv_event_cb_t mid_cb, UiBtnStyle mid_style,
-                                const char* right_text, lv_event_cb_t right_cb, UiBtnStyle right_style,
-                                lv_obj_t** out_left_btn, lv_obj_t** out_mid_btn, lv_obj_t** out_right_btn) {
+void ui_create_action_bar_three(lv_obj_t* parent, lv_coord_t pad_x, lv_coord_t y, lv_coord_t h,
+                                lv_coord_t gap, lv_coord_t btn_w, const char* left_text,
+                                lv_event_cb_t left_cb, UiBtnStyle left_style, const char* mid_text,
+                                lv_event_cb_t mid_cb, UiBtnStyle mid_style, const char* right_text,
+                                lv_event_cb_t right_cb, UiBtnStyle right_style, lv_obj_t** out_left_btn,
+                                lv_obj_t** out_mid_btn, lv_obj_t** out_right_btn) {
   lv_coord_t x0 = pad_x;
   lv_coord_t x1 = pad_x + btn_w + gap;
   lv_coord_t x2 = pad_x + (btn_w + gap) * 2;
-  lv_obj_t* b0 = ui_create_btn(parent, x0, y, btn_w, h, left_text, FONT_SUBTITLE, left_style, left_cb, nullptr);
+  lv_obj_t* b0 =
+      ui_create_btn(parent, x0, y, btn_w, h, left_text, FONT_SUBTITLE, left_style, left_cb, nullptr);
   lv_obj_t* b1 = ui_create_btn(parent, x1, y, btn_w, h, mid_text, FONT_SUBTITLE, mid_style, mid_cb, nullptr);
-  lv_obj_t* b2 = ui_create_btn(parent, x2, y, btn_w, h, right_text, FONT_SUBTITLE, right_style, right_cb, nullptr);
+  lv_obj_t* b2 =
+      ui_create_btn(parent, x2, y, btn_w, h, right_text, FONT_SUBTITLE, right_style, right_cb, nullptr);
   if (out_left_btn) *out_left_btn = b0;
   if (out_mid_btn) *out_mid_btn = b1;
   if (out_right_btn) *out_right_btn = b2;
@@ -558,12 +619,13 @@ void ui_create_action_bar_three(lv_obj_t* parent, lv_coord_t pad_x, lv_coord_t y
 // BACK BUTTON HELPER
 // ───────────────────────────────────────────────────────────────────────────────
 void screens_set_back_button(lv_obj_t* btn, ScreenId dest) {
-  lv_obj_add_event_cb(btn, [](lv_event_t* e) {
-    ScreenId dest = (ScreenId)(size_t)lv_event_get_user_data(e);
-    screens_show(dest);
-  }, LV_EVENT_CLICKED, (void*)(size_t)dest);
+  lv_obj_add_event_cb(
+      btn,
+      [](lv_event_t* e) {
+        ScreenId dest = (ScreenId)(size_t)lv_event_get_user_data(e);
+        screens_show(dest);
+      },
+      LV_EVENT_CLICKED, (void*)(size_t)dest);
 }
 
-void screens_set_edit_slot(int slot) {
-  pendingEditSlot = slot;
-}
+void screens_set_edit_slot(int slot) { pendingEditSlot = slot; }

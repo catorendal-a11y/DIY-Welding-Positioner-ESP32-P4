@@ -15,9 +15,9 @@ pio test -e native -e native-control
 
 ## Production control and tooling tests
 
-`test_control_production/` compiles the actual firmware dispatcher, motor wrapper, event log and all four motion modes with a fake clock, driver and FreeRTOS adapters. Its 12 cases cover command rejection, held locks, STOP cancellation/deadlines, pulse phases, counter wrap, mode timing and log contention. Together with native tests, 419 cases pass. These are host integration tests, not device timing measurements.
+`test_control_production/` compiles the actual firmware dispatcher, motor wrapper, event log and all four motion modes with a fake clock, driver and FreeRTOS adapters. Its 20 cases cover command rejection, held locks, STOP cancellation/deadlines, pulse phases, counter wrap, mode timing, log contention, coherent concurrent snapshot reads, stale admission, direction inversion and setup sequence/migration rules. Together with native tests, 427 cases pass. These are host integration tests, not device timing measurements.
 
-Run packaging regressions with `python -m unittest discover -s test/tooling -v` (four cases).
+Run packaging regressions with `python -m unittest discover -s test/tooling -v` (six cases).
 
 ## Simulator UI Checks
 
@@ -29,6 +29,6 @@ screenshots:
 .\simulator\run.ps1 -Screenshots artifacts\sim_screens
 ```
 
-These checks run actual LVGL screen code against stubbed hardware, including navigation, program editing, main RPM +/− and blocked/available fault reset. Real E-STOP, driver
+These checks run actual LVGL screen code against stubbed hardware, including navigation, program editing, main RPM +/−, blocked/available fault reset and the full commissioning workflow. The simulator uses the same production dispatcher, motor wrapper and four modes as native-control. Real E-STOP, driver
 alarm, touch hardware, motor movement, and calibration measurement still require
 the ESP32-P4 device.

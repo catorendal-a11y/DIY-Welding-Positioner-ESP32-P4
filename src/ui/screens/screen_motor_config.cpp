@@ -102,7 +102,7 @@ static lv_obj_t* motor_cfg_post_row(lv_obj_t* screen, int x, int y, int w, int h
 
 static void back_cb(lv_event_t* e) {
   (void)e;
-  screens_show(SCREEN_SETTINGS);
+  screen_setup_return();
 }
 
 static void micro_btn_cb(lv_event_t* e) {
@@ -239,6 +239,7 @@ static void save_apply_cb(lv_event_t* e) {
 }
 
 void screen_motor_config_create() {
+  saveRequested = false;
   lv_obj_t* screen = screenRoots[SCREEN_MOTOR_CONFIG];
   lv_obj_clean(screen);
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
@@ -475,7 +476,8 @@ void screen_motor_config_update() {
                         applied == CONFIG_PENDING ? "Apply queued" : "Apply cancelled / retry");
       return;
     }
-    const StorageStatus status = storage_status();
+    const StorageStatus status = storage_settings_save_status(control_config_save_ticket());
+    if (status == STORAGE_SAVED) screen_setup_config_saved();
     lv_label_set_text(saveFeedbackLabel, status == STORAGE_ERROR     ? "SAVE FAILED / retry"
                                          : status == STORAGE_PENDING ? "Saving..."
                                                                      : "Saved");

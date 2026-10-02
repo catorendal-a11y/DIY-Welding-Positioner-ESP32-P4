@@ -8,6 +8,7 @@
 #include "src/drivers/sdl/lv_sdl_mousewheel.h"
 
 #include "../src/control/control.h"
+#include "../src/safety/safety.h"
 #include "../src/motor/speed.h"
 #include "../src/ui/screens.h"
 #include "../src/ui/theme.h"
@@ -21,6 +22,7 @@
 void simulator_init_state();
 void simulator_tick();
 void simulator_set_estop_input(bool active);
+void simulator_fast_motion(bool fast);
 bool simulator_set_scenario(const char* scenario);
 
 static void sim_pump(uint32_t ms) {
@@ -86,6 +88,7 @@ static const char* sim_screen_name(ScreenId id) {
       return "ABOUT";
     case SCREEN_RUN_MODES:
       return "RUN_MODES";
+    case SCREEN_SETUP: return "SETUP";
     case SCREEN_COUNT:
       return "COUNT";
   }
@@ -412,7 +415,7 @@ static bool sim_test_confirm_and_overlay() {
   g_uiResetPending.store(false);
   estop_overlay_show();
   sim_pump(300);
-  lv_obj_t* blockedReset = sim_find_label_target(lv_layer_top(), "RESET BLOCKED - INPUT ACTIVE", false, true);
+  lv_obj_t* blockedReset = sim_find_label_target(lv_layer_top(), "RESET BLOCKED", false, true);
   if (!sim_expect(blockedReset && lv_obj_has_state(blockedReset, LV_STATE_DISABLED),
                   "fault reset must be disabled"))
     return false;
@@ -429,6 +432,23 @@ static bool sim_test_confirm_and_overlay() {
   return sim_expect(!estop_overlay_visible(), "ESTOP overlay did not hide");
 }
 
+static lv_obj_t* sim_find_type(lv_obj_t* obj, const lv_obj_class_t* type) {
+  if (lv_obj_check_type(obj, type)) return obj;
+  for (uint32_t i=0; i<lv_obj_get_child_count(obj); ++i)
+    if (auto found = sim_find_type(lv_obj_get_child(obj, i), type)) return found;
+  return nullptr;
+}
+static bool sim_enter_calibration_measurement() {
+  if (!sim_click_label("---")) return false;
+  auto root = screenRoots[SCREEN_CALIBRATION];
+  auto field = sim_find_type(root, &lv_textarea_class);
+  auto keyboard = sim_find_type(root, &lv_keyboard_class);
+  if (!sim_expect(field && keyboard, "calibration measurement editor missing")) return false;
+  lv_textarea_set_text(field, "360"); lv_obj_send_event(keyboard, LV_EVENT_READY, nullptr);
+  sim_pump(80); return true;
+}
+static unsigned audit_labels(lv_obj_t* obj, const char* screen);
+static int run_commissioning_test(const char* directory = nullptr);
 static int run_self_test() {
   std::puts("SIM SELFTEST: start");
   g_settings.countdown_seconds = 1;
@@ -449,11 +469,24 @@ static int run_self_test() {
   simulator_set_scenario("none"); sim_pump(1500);
   if (!sim_expect(storage_settings_save_status(ticket) == STORAGE_SAVED, "save retry did not commit")) return 8;
   control_transition_to(STATE_IDLE);
+  sim_pump(30);
   simulator_set_scenario("rejected-motion");
-  if (!sim_expect(!control_start_continuous() && control_get_state() == STATE_ESTOP,
+  control_start_continuous(); sim_pump(40);
+  if (!sim_expect(control_get_state() == STATE_ESTOP,
                   "rejected motion did not latch fault")) return 9;
   simulator_set_scenario("none"); control_transition_to(STATE_IDLE);
   std::puts("SIM SELFTEST: fault scenarios/save generations ok");
+  if (run_commissioning_test() != 0) return 10;
+  std::puts("SIM SELFTEST: commissioning UI/save failure/retry ok");
+  screens_show(SCREEN_MAIN); sim_pump(80);
+  simulator_set_scenario("stalled-control"); sim_pump(160);
+  if (!sim_expect(!ui_control_fresh() && !control_start_continuous(), "stale control admitted motion")) return 11;
+  auto start = sim_find_label_target(screenRoots[SCREEN_MAIN], "START BLOCKED", false, true);
+  if (!sim_expect(start && lv_obj_has_state(start, LV_STATE_DISABLED), "stale START not disabled")) return 12;
+  control_stop(); sim_pump(60);
+  if (!sim_expect(control_get_state() == STATE_ESTOP, "stalled executor did not fault on STOP")) return 13;
+  simulator_set_scenario("none"); safety_reset_estop(); sim_pump(80);
+  std::puts("SIM SELFTEST: stale control and independent STOP deadline ok");
   std::puts("SIM SELFTEST: PASS");
   return 0;
 }
@@ -506,6 +539,70 @@ static bool sim_write_bmp_argb8888(const char* path, const lv_draw_buf_t* buf) {
 
   std::fclose(f);
   return true;
+}
+
+static int run_commissioning_test(const char* directory) {
+  int layoutFailures = 0;
+  auto capture = [&](const char* name) {
+    lv_refr_now(nullptr); layoutFailures += audit_labels(screenRoots[SCREEN_SETUP], name);
+    if (!directory) return;
+    std::filesystem::create_directories(directory);
+    lv_refr_now(nullptr);
+    auto shot = lv_snapshot_take(screenRoots[SCREEN_SETUP], LV_COLOR_FORMAT_ARGB8888);
+    if (shot) { sim_write_bmp_argb8888((std::filesystem::path(directory) / name).string().c_str(), shot); lv_draw_buf_destroy(shot); }
+  };
+  simulator_set_scenario("none"); safety_reset_estop(); control_stop(); sim_pump(100);
+  simulator_fast_motion(true);
+  screen_setup_begin();
+  if (!sim_show_and_check(SCREEN_SETUP)) return 2;
+  capture("01_motor.bmp");
+  auto next = sim_find_active_label_target("NEXT");
+  if (!sim_expect(next && lv_obj_has_state(next, LV_STATE_DISABLED), "setup skipped unsaved motor config")) return 3;
+  if (!sim_click_label("OPEN MOTOR CONFIG") || !sim_click_label("SAVE & APPLY")) return 4;
+  sim_pump(600);
+  if (!sim_click_back_to(SCREEN_SETUP) || !sim_click_label("NEXT")) return 5;
+  capture("02_direction.bmp");
+  for (const char* label : {"HOLD CW", "HOLD CCW"}) {
+    if (!sim_send_label_event(label, LV_EVENT_PRESSED) || !sim_send_label_event(label, LV_EVENT_PRESSING) ||
+        !sim_send_label_event(label, LV_EVENT_RELEASED)) return 6;
+  }
+  if (!sim_click_label("DIRECTION CORRECT") || !sim_click_label("NEXT")) return 7;
+  capture("03_calibration.bmp");
+  if (!sim_click_label("OPEN CALIBRATION") || !sim_click_label("MOVE 360")) return 8;
+  sim_pump(900);
+  if (!sim_enter_calibration_measurement() || !sim_click_label("APPLY MEASUREMENT") || !sim_click_label("MOVE 360")) return 9;
+  sim_pump(900);
+  if (!sim_enter_calibration_measurement() || !sim_click_label("SAVE CALIBRATION")) return 10;
+  sim_pump(600);
+  if (!sim_click_back_to(SCREEN_SETUP) || !sim_click_label("NEXT")) return 11;
+  capture("04_function_check.bmp");
+  next = sim_find_active_label_target("NEXT");
+  if (!sim_expect(next && lv_obj_has_state(next, LV_STATE_DISABLED), "setup skipped physical function check")) return 12;
+  simulator_set_estop_input(true); estop_overlay_show(); sim_pump(100);
+  simulator_set_estop_input(false); sim_pump(300);
+  auto reset = sim_find_label_target(lv_layer_top(), "RESET TO IDLE", false, true);
+  if (!sim_expect(reset && !lv_obj_has_state(reset, LV_STATE_DISABLED), "wizard reset unavailable")) return 13;
+  lv_obj_send_event(reset, LV_EVENT_CLICKED, nullptr); sim_pump(80); estop_overlay_hide();
+  if (!sim_expect(control_get_state() == STATE_IDLE, "reset restarted motion")) return 14;
+  if (!sim_click_label("TEST START") || !sim_click_label("STOP ROTATION")) return 15;
+  simulator_set_scenario("nvs-failure");
+  if (!sim_click_label("NEXT")) return 16;
+  sim_pump(600);
+  auto finish = sim_find_active_label_target("FINISH");
+  if (!sim_expect(finish && lv_obj_has_state(finish, LV_STATE_DISABLED), "setup finished before durable save")) return 17;
+  capture("05_save_failed.bmp");
+  simulator_set_scenario("none"); sim_pump(1500);
+  capture("06_complete.bmp");
+  if (!sim_click_label("FINISH") || !sim_expect(screens_get_current() == SCREEN_MAIN && !control_setup_active(), "wizard did not finish")) return 18;
+  simulator_fast_motion(false);
+  // Cancellation must preserve configured data and cancel a queued start.
+  g_settings.setup_completed = false; screens_show_startup(); sim_pump(80);
+  if (!sim_expect(screens_get_current() == SCREEN_SETUP, "new installation did not offer setup")) return 19;
+  if (!sim_click_label("EXIT SETUP")) return 19;
+  if (!sim_expect(!control_setup_active() && control_get_state() == STATE_IDLE, "wizard cancellation retained motion")) return 20;
+  g_settings.setup_completed = true; screens_show_startup(); sim_pump(80);
+  if (!sim_expect(screens_get_current() == SCREEN_MAIN, "existing installation forced through wizard")) return 22;
+  return layoutFailures ? 21 : 0;
 }
 
 static int run_screenshot_dump(const char* dir) {
@@ -646,6 +743,7 @@ int main(int argc, char** argv) {
   }
   if (auditLayout) return run_layout_audit();
 
+  if (argc > 2 && std::strcmp(argv[1], "--commissioning-preview") == 0) return run_commissioning_test(argv[2]);
   if (selfTest) {
     return run_self_test();
   }
@@ -653,18 +751,18 @@ int main(int argc, char** argv) {
     return run_screenshot_dump(argv[2]);
   }
 
-  uint32_t lastScreenUpdate = 0;
+  uint32_t lastScreenUpdate = 0, lastControlUpdate = 0;
   while (lv_display_get_next(nullptr) != nullptr) {
     screens_process_pending();
     uint32_t now = lv_tick_get();
-    if (now - lastScreenUpdate >= 200) {
+    if (now - lastControlUpdate >= 5) { lastControlUpdate = now; simulator_tick(); }
+    if (now - lastScreenUpdate >= 40) {
       lastScreenUpdate = now;
-      simulator_tick();
       screens_update_current();
     }
 
     uint32_t waitMs = lv_timer_handler();
-    if (waitMs == LV_NO_TIMER_READY || waitMs > 25) {
+    if (waitMs == LV_NO_TIMER_READY || waitMs > 5) {
       waitMs = 5;
     }
     lv_delay_ms(waitMs);

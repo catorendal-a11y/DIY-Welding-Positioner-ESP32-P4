@@ -24,6 +24,7 @@ bool motor_run_cw();   // Run clockwise; false if safety or hardware state block
 bool motor_run_ccw();  // Run counter-clockwise; false if safety or hardware state blocks start
 void motor_stop();     // Smooth deceleration to stop
 bool motor_halt();     // ENA inhibit immediately; bounded library cleanup, retry if false
+void motor_bind_owner(); // Called once by controlTask; initialization precedes binding.
 bool motor_lock();     // Bounded stepper access; failure latches a motor timeout
 bool motor_cleanup_pending();
 void motor_command_failed(); // Caller may hold the stepper mutex
@@ -35,21 +36,21 @@ bool motor_is_running();
 bool motor_direction_is_cw();
 void motor_record_direction(bool cw);  // Called only when issuing a motion command.
 uint32_t motor_get_current_hz();       // Rounded Hz from UI cache (see motor_refresh_hz_cache)
-// Step frequency magnitude (Hz), sub-Hz; lock-free read of cache (~5ms fresh, motorTask updates).
+// Step frequency magnitude (Hz), sub-Hz; lock-free read of cache (~5ms fresh, controlTask updates).
 float motor_get_step_frequency_hz();
-// Core 0 / motorTask: sample stepper under mutex and publish for UI (lvglTask) without cross-core mutex wait.
+// controlTask: sample stepper under mutex and publish for UI (lvglTask) without cross-core mutex wait.
 void motor_refresh_hz_cache(void);
 // Calibrated workpiece RPM -> step rate (MilliHz), floored to START_SPEED so all paths match.
 uint32_t motor_milli_hz_for_rpm_calibrated(float rpm_workpiece_command);
 // Caller must hold g_stepperMutex.
 bool motor_apply_speed_for_rpm_locked(float rpm_workpiece_command);
 // Apply a new target step rate (milliHz) with acceleration. Handles stepper mutex internally.
-// Safe to call from Core 0 tasks (motorTask). No-op if stepper not yet initialized.
+// Safe to call from controlTask. No-op if stepper not yet initialized.
 void motor_set_target_milli_hz(uint32_t mhz);
-FastAccelStepper* motor_get_stepper();  // Get stepper instance (caller must hold g_stepperMutex)
+bool motor_move_steps(long steps, float rpm, int32_t* start_position);
+bool motor_read_position(int32_t* position);
 void motor_apply_settings();            // Apply acceleration from g_settings
 void motor_apply_soft_start_acceleration();
 void motor_restore_configured_acceleration();
 
-// FreeRTOS task
-void motorTask(void* pvParameters);  // Motor speed update task (Core 0, priority 4)
+// Input sampling lives in main.cpp; only controlTask calls this motor adapter.

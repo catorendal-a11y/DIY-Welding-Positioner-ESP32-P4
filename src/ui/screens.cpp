@@ -6,6 +6,15 @@
 #include "theme.h"
 #include "../config.h"
 #include "../motor/speed.h"
+#include "../safety/safety.h"
+#include <cstring>
+
+static ControlSnapshot uiSnapshot;
+static bool uiSnapshotValid = false;
+void ui_control_refresh() { ControlSnapshot next; if (control_read_snapshot(next)) { uiSnapshot = next; uiSnapshotValid = true; } }
+const ControlSnapshot& ui_control_view() { return uiSnapshot; }
+bool ui_control_fresh() { return control_timestamp_fresh(millis(), uiSnapshot.timestamp_ms, uiSnapshotValid); }
+SystemState ui_control_state() { return safety_is_estop_locked() ? STATE_ESTOP : uiSnapshot.state; }
 #include "freertos/task.h"
 
 // lvglHandle defined in main.cpp — used for DEBUG stack watermark logging
@@ -61,6 +70,29 @@ void lvgl_unlock() {
 // ───────────────────────────────────────────────────────────────────────────────
 // STATE
 // ───────────────────────────────────────────────────────────────────────────────
+static lv_obj_t* staleBanner = nullptr;
+static bool movement_button(lv_obj_t* obj) {
+  if (!lv_obj_check_type(obj, &lv_button_class)) return false;
+  for (uint32_t i = 0; i < lv_obj_get_child_count(obj); ++i) {
+    auto label = lv_obj_get_child(obj, i);
+    if (!lv_obj_check_type(label, &lv_label_class)) continue;
+    const char* text = lv_label_get_text(label);
+    if (strstr(text, "START") || strstr(text, "HOLD CW") || strstr(text, "HOLD CCW") ||
+        strcmp(text, "MOVE 360") == 0 || strcmp(text, "> STEP") == 0 ||
+        strcmp(text, "JOG -") == 0 || strcmp(text, "JOG +") == 0) return true;
+  }
+  return false;
+}
+static void stale_controls(lv_obj_t* obj, bool disable) {
+  if (!obj) return;
+  if (!disable && lv_obj_has_flag(obj, LV_OBJ_FLAG_USER_2)) {
+    lv_obj_remove_flag(obj, LV_OBJ_FLAG_USER_2); lv_obj_remove_state(obj, LV_STATE_DISABLED);
+  }
+  if (disable && movement_button(obj) && !lv_obj_has_state(obj, LV_STATE_DISABLED)) {
+    lv_obj_add_flag(obj, LV_OBJ_FLAG_USER_2); lv_obj_add_state(obj, LV_STATE_DISABLED);
+  }
+  for (uint32_t i=0; i<lv_obj_get_child_count(obj); ++i) stale_controls(lv_obj_get_child(obj, i), disable);
+}
 static ScreenId currentScreen = SCREEN_NONE;
 static ScreenId pendingScreen = SCREEN_NONE;
 static bool themeReinitPending = false;
@@ -69,7 +101,7 @@ static bool screenCreated[SCREEN_COUNT] = {};
 static int pendingEditSlot = -2;
 
 static bool screen_needs_rebuild(ScreenId id) {
-  return id == SCREEN_PROGRAM_EDIT || id == SCREEN_EDIT_CONT || id == SCREEN_EDIT_PULSE ||
+  return id == SCREEN_SETUP || id == SCREEN_PROGRAM_EDIT || id == SCREEN_EDIT_CONT || id == SCREEN_EDIT_PULSE ||
          id == SCREEN_EDIT_STEP || id == SCREEN_STEP;
 }
 
@@ -88,6 +120,9 @@ static void create_screen(ScreenId id) {
   switch (id) {
     case SCREEN_BOOT:
       screen_boot_create();
+      break;
+    case SCREEN_SETUP:
+      screen_setup_create();
       break;
     case SCREEN_MAIN:
       screen_main_create();
@@ -177,6 +212,10 @@ void screens_init() {
   create_screen(SCREEN_BOOT);
   create_screen(SCREEN_CONFIRM);
   screen_confirm_create_static();
+  staleBanner = ui_create_post_card(lv_layer_top(), 24, 94, 752, 54);
+  lv_obj_set_style_bg_color(staleBanner, COL_RED, 0);
+  ui_create_text(staleBanner, 16, 15, 720, "STATUS UNAVAILABLE / STOP remains available", FONT_NORMAL, lv_color_hex(0xFFFFFF));
+  lv_obj_add_flag(staleBanner, LV_OBJ_FLAG_HIDDEN);
   estop_overlay_create();
   create_screen(SCREEN_MAIN);
 
@@ -186,6 +225,7 @@ void screens_init() {
 void screens_reinit() {
   ScreenId prev = currentScreen;
 
+  screen_setup_invalidate_widgets();
   screen_main_invalidate_widgets();
   screen_pulse_invalidate_widgets();
   screen_timer_invalidate_widgets();
@@ -203,6 +243,7 @@ void screens_reinit() {
   screen_edit_pulse_invalidate_widgets();
   screen_edit_step_invalidate_widgets();
 
+  if (staleBanner) { lv_obj_delete(staleBanner); staleBanner = nullptr; }
   estop_overlay_destroy();
 
   for (int i = 0; i < SCREEN_COUNT; i++) {
@@ -221,6 +262,14 @@ void screens_reinit() {
   }
 }
 
+void screens_show_startup() {
+  bool configured;
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY); configured = g_settings.setup_completed;
+  xSemaphoreGive(g_settings_mutex);
+  if (configured) screens_show(SCREEN_MAIN);
+  else { screen_setup_begin(); screens_show(SCREEN_SETUP); }
+}
+
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN NAVIGATION
 // ───────────────────────────────────────────────────────────────────────────────
@@ -229,6 +278,7 @@ void screens_show(ScreenId id) {
   if (id < 0 || id >= SCREEN_COUNT) return;
 
   ScreenId prev = currentScreen;
+  screen_setup_leave(id);
   const bool leavingSliderPriorityScreen =
       (prev == SCREEN_STEP || prev == SCREEN_CALIBRATION) && (id != SCREEN_STEP && id != SCREEN_CALIBRATION);
   if (leavingSliderPriorityScreen) {
@@ -291,7 +341,11 @@ bool screens_is_active(ScreenId id) { return (currentScreen == id); }
 // SCREEN UPDATE DISPATCHER
 // ───────────────────────────────────────────────────────────────────────────────
 void screens_update_current() {
+  ui_control_refresh();
+  stale_controls(screenRoots[currentScreen], false);
+  screen_setup_update();
   switch (currentScreen) {
+    case SCREEN_SETUP: break; // Observed above, including while the fault overlay is visible.
     case SCREEN_MAIN:
       screen_main_update();
       break;
@@ -353,6 +407,12 @@ void screens_update_current() {
     case SCREEN_BOOT:
     case SCREEN_COUNT:
       break;
+  }
+  const bool stale = !ui_control_fresh() && currentScreen != SCREEN_BOOT && currentScreen != SCREEN_NONE;
+  stale_controls(screenRoots[currentScreen], stale);
+  if (staleBanner) {
+    if (stale && !safety_is_estop_locked()) lv_obj_remove_flag(staleBanner, LV_OBJ_FLAG_HIDDEN);
+    else lv_obj_add_flag(staleBanner, LV_OBJ_FLAG_HIDDEN);
   }
 }
 

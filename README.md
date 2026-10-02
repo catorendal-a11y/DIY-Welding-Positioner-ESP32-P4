@@ -24,7 +24,7 @@
 
 <br>
 
-Open-source controller for a stepper-driven welding positioner / pipe rotator, with a touch UI designed for workshop use, real-time motor tasking, persistent presets, foot pedal support, and hardwired E-STOP behavior.
+Open-source controller for a stepper-driven welding positioner / pipe rotator, with a touch UI designed for workshop use, a dedicated motion executor, persistent presets, foot pedal support, and hardwired E-STOP behavior.
 
 Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/wiki) for getting started, hardware setup, troubleshooting, architecture, and roadmap.
 
@@ -183,7 +183,7 @@ Most DIY welding rotator projects stop at "turn a stepper at a set speed." This 
 
 | Compared With | Typical Limitation | This Project |
 |:---|:---|:---|
-| Basic Arduino stepper sketch | Single loop, no UI state machine, limited fault handling | Dual-core FreeRTOS with separate motor, control, safety, UI, and storage tasks |
+| Basic Arduino stepper sketch | Single loop, no UI state machine, limited fault handling | Dual-core FreeRTOS with separate input, control, safety, UI, and storage tasks |
 | Generic CNC / GRBL controller | Optimized for G-code rather than a dedicated welding workflow | Purpose-built TIG rotator UI with Continuous, Jog, Pulse, Step, Timer, presets, and foot pedal support |
 | Cheap speed-controller modules | Pot-only control, no saved jobs, weak diagnostics | NVS presets, workpiece diameter fields, diagnostics screen, event log, and display/system info |
 | Open-bench ESP32 projects | Often unstable near HF-start TIG welding | Field-tested with TIG after moving ESP32-P4 screen, DM542T driver, and PSU into one grounded metal enclosure |
@@ -209,7 +209,7 @@ The project combines dedicated welding modes, input diagnostics and documented e
 
 ## UI Screens
 
-The UI is built from **22 registered screen types** plus a separate full-screen fault overlay. The table below maps the firmware registry.
+The UI is built from **23 registered screen types** (including the unreleased Setup Wizard) plus a separate full-screen fault overlay. The table below maps the firmware registry.
 
 ![Emergency-stop overlay](docs/images/ui_runtime_v5/ESTOP_ACTIVE.png)
 
@@ -230,6 +230,7 @@ The 30 design views cover all 22 screen types, additional states and keyboards. 
 | **Main** | `SCREEN_MAIN` | Large orange RPM panel, idle RPM +/−, CW/CCW and wide START/STOP |
 | **Menu** | `SCREEN_MENU` | Advanced mode selection and settings |
 | **Run Modes** | `SCREEN_RUN_MODES` | Pulse / Step / Jog / Timer selection |
+| **Setup Wizard** | `SCREEN_SETUP` | Motor, direction, verified calibration and physical E-STOP function check (unreleased source) |
 | **Jog** | `SCREEN_JOG` | Touch-and-hold rotation for manual positioning (has its own RPM +/-) |
 | **Pulse** | `SCREEN_PULSE` | ON/OFF cycle for tack welding |
 | **Step** | `SCREEN_STEP` | Rotate exact angle, then stop |
@@ -262,7 +263,7 @@ Dual-core **FreeRTOS** design separating realtime motor control from UI renderin
 Core 0 (Realtime)                Core 1 (UI)
 ─────────────────                ──────────────────
 safetyTask   (pri 5, 4 KB)      lvglTask    (pri 2, 64 KB)
-motorTask    (pri 4, 5 KB)      storageTask (pri 1, 12 KB)
+inputTask    (pri 4, 5 KB)      storageTask (pri 1, 12 KB)
 controlTask  (pri 3, 4 KB)
 ```
 
@@ -343,6 +344,14 @@ Pinned dependencies: pioarduino `55.03.37`, LVGL `v9.5.0`, FastAccelStepper `0.3
 
 ---
 
+## Guided Setup (Unreleased Source)
+
+The source includes a four-step **Setup Wizard** using the existing V5 dark/orange UI: motor settings, hold-to-run direction checks, verified manual calibration, and a user-confirmed function check of the **physical E-STOP switch**, reset and normal START/STOP. New installations open the wizard; existing valid settings without the new field remain configured. Re-run it from **Settings → Setup Wizard**. Completing setup does not start motion, and completion is confirmed only after its save succeeds.
+
+<img src="docs/images/setup_v1/01_motor.png" width="800" alt="Actual LVGL setup wizard motor stage">
+
+[All wizard screens and instructions](docs/SETUP_WIZARD.md) · [Control architecture and validation](docs/CONTROL_SETUP_IMPLEMENTATION.md). The currently published v2.1.0 binaries do not contain this unreleased addition.
+
 ## PC UI Simulator
 
 **Try it without installing development tools:** [Download the Windows x64 simulator ZIP](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.1.0/welding-positioner-v2.1.0-simulator-windows-x64.zip), extract all files, and double-click **Start Simulator.cmd**. No hardware is needed. [Portable simulator guide](docs/releases/SIMULATOR.md).
@@ -359,7 +368,7 @@ Automated UI smoke test:
 .\simulator\run.ps1 -SelfTest
 ```
 
-The self-test creates every screen, runs update loops, clicks key navigation/control buttons against fake simulator state, and exits non-zero on failure.
+The self-test creates every screen, runs update loops, clicks key navigation/control buttons through the shared production dispatcher and simulated hardware, and exits non-zero on failure.
 
 Export screenshots of every registered screen:
 
@@ -649,7 +658,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - [ ] Enclosure CAD / printable panel files
 - [ ] Assembly guide with real build photos
 - [ ] Wider DM542T speed/current tuning data
-- [ ] Optional binary release workflow for builders without PlatformIO
+- [x] Binary firmware and portable Windows simulator release workflow for builders without PlatformIO
 
 ---
 
@@ -657,10 +666,10 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 
 | Local check | Result |
 | --- | --- |
-| Native suites | 419 / 419 passed (native and production-control suites) |
-| LVGL self-test | Passed: navigation, program edits, RPM adjustment and blocked/available reset |
+| Native suites | 427 / 427 passed (native and production-control suites) |
+| LVGL self-test | Passed: navigation, program edits, RPM adjustment, fault reset, full setup workflow, save failure/retry and stale control |
 | Firmware builds | Release, debug and mirror passed |
-| Device upload | Release uploaded to COM3; esptool verified data hash and issued reset |
+| Device upload | This control/setup update has not been flashed. The earlier V5 upload to COM3 is recorded in the deployment report. |
 | Physical motor/safety testing | Not performed as part of this update |
 
 [Validation logs](docs/validation/2026-10-01/ui-v5/) record local runs. Native tests include direct production-policy tests, but older tests also model behavior separately; simulator hardware is stubbed. CI runs native tests, three firmware variants and SDL navigation checks. The badge links to the current GitHub result.
@@ -678,6 +687,8 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 | [docs/SAFETY_SYSTEM.md](docs/SAFETY_SYSTEM.md) | E-STOP behavior, watchdog model, safety assumptions |
 | [docs/PROJECT_IMPLEMENTATION.md](docs/PROJECT_IMPLEMENTATION.md) | RTOS architecture, storage, display pipeline, known workarounds |
 | [docs/INSTRUCTABLES.md](docs/INSTRUCTABLES.md) | Builder-friendly article content and assembly flow |
+| [docs/SETUP_WIZARD.md](docs/SETUP_WIZARD.md) | Guided setup, physical switch checks and runtime screenshots |
+| [docs/CONTROL_SETUP_IMPLEMENTATION.md](docs/CONTROL_SETUP_IMPLEMENTATION.md) | Motion ownership, snapshot freshness, compatibility and validation |
 | [docs/UI_V5_DEPLOYMENT.md](docs/UI_V5_DEPLOYMENT.md) | V5 UI implementation, screenshots and device upload evidence |
 | [docs/IMPROVEMENTS_2026-10-01.md](docs/IMPROVEMENTS_2026-10-01.md) | Code improvements, checks and remaining bench work |
 | [docs/estop_timing.md](docs/estop_timing.md) | Physical E-STOP measurement procedure |
@@ -723,7 +734,7 @@ src/
     lvgl_hal.cpp              Flush callback (manual 90° rotation), dim, touch polling
     theme.cpp/h               Runtime neutral palettes (dark/light), accent themes, `COL_HDR_MUTED`, fonts, layout constants
     screens.cpp/h             Screen management, lazy creation, g_lvgl_mutex
-    screens/                  screen_*.cpp (22 registered ScreenId roots + ESTOP overlay module)
+    screens/                  screen_*.cpp (23 registered ScreenId roots + ESTOP overlay module)
 test/
   test_logic/               Native Unity tests (no hardware required)
   test_device_*/            On-device integration tests (require ESP32-P4)

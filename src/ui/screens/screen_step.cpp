@@ -150,7 +150,7 @@ static void back_event_cb(lv_event_t* e) {
 
 static void step_reset_btn_cb(lv_event_t* e) {
   (void)e;
-  if (control_get_state() == STATE_IDLE) {
+  if (ui_control_state() == STATE_IDLE) {
     control_reset_step_accumulator();
     update_info_panel();
   }
@@ -159,7 +159,7 @@ static void step_reset_btn_cb(lv_event_t* e) {
 static void preset_cb(lv_event_t* e) {
   int index = (int)(intptr_t)lv_event_get_user_data(e);
   if (index < 4) {
-    if (control_get_state() == STATE_IDLE) {
+    if (ui_control_state() == STATE_IDLE) {
       control_reset_step_accumulator();
     }
     currentAngle = STEP_PRESET_DEG[index];
@@ -176,7 +176,7 @@ static void custom_keyboard_cb(lv_event_t* e) {
       const char* txt = lv_textarea_get_text(customTa);
       float val = step_parse_first_float(txt);
       if (val > 0.0f && step_angle_valid(val)) {
-        if (control_get_state() == STATE_IDLE) {
+        if (ui_control_state() == STATE_IDLE) {
           control_reset_step_accumulator();
         }
         currentAngle = val;
@@ -199,7 +199,7 @@ static void diameter_keyboard_cb(lv_event_t* e) {
     if (diaTa) {
       const char* txt = lv_textarea_get_text(diaTa);
       float mm = step_parse_first_float(txt);
-      if (control_get_state() == STATE_IDLE && mm >= 1.0f && mm <= 20000.0f) {
+      if (ui_control_state() == STATE_IDLE && mm >= 1.0f && mm <= 20000.0f) {
         speed_set_workpiece_diameter_mm(mm);
         refresh_diameter_summary();
         update_info_panel();
@@ -212,7 +212,7 @@ static void diameter_keyboard_cb(lv_event_t* e) {
 }
 
 static void diameter_btn_cb(lv_event_t* e) {
-  if (control_get_state() != STATE_IDLE) return;
+  if (ui_control_state() != STATE_IDLE) return;
   (void)e;
   if (diaKb) return;
   if (customNumpad) {
@@ -314,7 +314,7 @@ static void rpm_plus_cb(lv_event_t* e) {
 
 static void step_event_cb(lv_event_t* e) {
   (void)e;
-  if (control_get_state() != STATE_IDLE) return;
+  if (ui_control_state() != STATE_IDLE) return;
   step_push_rpm_to_speed_and_label();
   control_start_step(currentAngle);
 }
@@ -615,16 +615,16 @@ void screen_step_update() {
   if (!screens_is_active(SCREEN_STEP)) return;
 
   if (stepActionBtn) {
-    if (control_get_state() == STATE_IDLE) {
+    if (ui_control_state() == STATE_IDLE) {
       lv_obj_remove_state(stepActionBtn, LV_STATE_DISABLED);
     } else {
       lv_obj_add_state(stepActionBtn, LV_STATE_DISABLED);
     }
   }
 
-  SystemState state = control_get_state();
+  SystemState state = ui_control_state();
   if (state == STATE_STEP) {
-    float accum = control_get_step_accumulated();
+    float accum = ui_control_view().progress_degrees;
     char buf[32];
     snprintf(buf, sizeof(buf), "%.0f / %.0f deg", accum, currentAngle);
     if (angleArcLabel) lv_label_set_text(angleArcLabel, buf);

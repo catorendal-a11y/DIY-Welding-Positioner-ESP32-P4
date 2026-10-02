@@ -111,7 +111,7 @@ xvfb-run -a simulator/build/rotator_simulator --self-test
 
 ## Maintenance checks and scenarios (source v2.1.1)
 
-The source simulator now shares the production program executor, pulse timing policy and persistence-generation policy. Other hardware/control adapters remain simulated. The v2.1.0 public ZIP predates these additions.
+The source simulator now compiles the production command dispatcher, motor adapter, all four motion modes and program executor. Only hardware/input/safety/storage adapters are simulated; the save-generation policy is shared. Control runs every 5 ms, independently of 40 ms UI updates. Simulator timing and drive deceleration are models, not measurements. The v2.1.0 public ZIP predates these additions.
 
 ```powershell
 simulator/build/rotator_simulator.exe --audit-layout
@@ -119,8 +119,18 @@ simulator/build/rotator_simulator.exe --build-info
 simulator/build/rotator_simulator.exe --scenario nvs-failure
 ```
 
-Scenarios: `estop`, `driver-alarm`, `stale-adc`, `i2c-failure`, `rejected-motion`, `nvs-failure`. Rejected motion faults when START is pressed. Input faults block reset until cleared; restart the simulator to select another scenario. These scenarios never connect to hardware.
+Scenarios: `estop`, `driver-alarm`, `stale-adc`, `i2c-failure`, `rejected-motion`, `nvs-failure`, `stalled-control`. Rejected motion faults when START is pressed. Input faults block reset until cleared; restart the simulator to select another scenario. These scenarios never connect to hardware.
 
 The layout audit measures actual LVGL fonts on registered screens and fault overlays at 800×480. It checks clipped text, insufficient label height and labels outside non-scrolling parents; explicit ellipsis/scrolling and compact event summaries are intentional. Operator-generated text still needs practical visual review.
 
 CMake accepts `LVGL_DIR`, `ARDUINOJSON_DIR` and `SIMULATOR_DEPENDENCY_ROOT` overrides. Windows CI builds, tests and packages the portable EXE from the same source commit. Packaging rejects mismatched/dirty binaries and missing license files; `--allow-dirty` is only for labeled local development archives.
+
+## Setup wizard regression and preview
+
+`--self-test` navigates the actual wizard, motor configuration and calibration editor; observes simulated E-STOP/release/reset; checks separate start/stop; injects failed completion writes and checks retry. It also checks new/existing installation entry, cancellation and stale control/STOP supervision. Simulated physical travel is accelerated only during the commissioning regression; control timers remain unchanged.
+
+```powershell
+simulator/build/rotator_simulator.exe --commissioning-preview .pio/setup-preview
+```
+
+This runs the same regression and exports the four stages plus failed-save and completed views as BMP files. It never connects to the device.

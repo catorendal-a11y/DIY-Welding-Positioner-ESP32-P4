@@ -16,7 +16,7 @@ void safety_register_watchdog();
 void safety_report_input_fault();
 void safety_report_motor_fault(FaultReason reason);
 void safety_init();           // Initialize safety system
-void safety_cache_stepper();  // Cache stepper pointer for ISR (call after motor_init)
+void safety_cache_stepper();  // Compatibility no-op; safety never calls the stepper library
 void safety_attach_estop();   // Attach ESTOP interrupt (call after motor_init)
 
 // ESTOP status

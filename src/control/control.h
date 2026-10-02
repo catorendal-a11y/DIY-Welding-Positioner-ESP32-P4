@@ -3,6 +3,8 @@
 
 #pragma once
 #include <Arduino.h>
+#include "snapshot.h"
+#include "../motor/speed.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SYSTEM STATE ENUM
@@ -39,6 +41,7 @@ enum ConfigApplyStatus { CONFIG_NONE, CONFIG_PENDING, CONFIG_APPLIED, CONFIG_CAN
 struct SystemSettings;
 bool control_apply_motor_settings(const SystemSettings& settings);
 ConfigApplyStatus control_config_status();
+uint32_t control_config_save_ticket();
 struct Preset;
 bool control_start_program(const Preset& preset);
 
@@ -62,4 +65,18 @@ float control_get_jog_speed();
 // ───────────────────────────────────────────────────────────────────────────────
 // FREERTOS TASKS
 // ───────────────────────────────────────────────────────────────────────────────
+struct ControlSnapshot {
+  uint32_t sequence = 0, timestamp_ms = 0;
+  SystemState state = STATE_IDLE;
+  float target_rpm = 0, estimated_rpm = 0, progress_degrees = 0;
+  uint32_t pulse_cycles = 0;
+  long completed_steps = 0;
+  Direction direction = DIR_CW;
+  SpeedInputSource source = SPEED_SOURCE_POT;
+  bool motor_running = false;
+};
+bool control_read_snapshot(ControlSnapshot& out);
+void control_run_cycle(); // Identical dispatcher/mode cycle on hardware and host.
+void control_set_setup_active(bool active);
+bool control_setup_active();
 void controlTask(void* pvParameters);  // Main control logic task

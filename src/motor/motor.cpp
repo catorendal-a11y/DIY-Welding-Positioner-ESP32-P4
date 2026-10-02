@@ -37,7 +37,16 @@ void motor_command_failed() {
   cleanupPending.store(true);
   safety_report_motor_fault(FAULT_MOTOR_COMMAND);
 }
+#if defined(ARDUINO_ARCH_ESP32)
+static TaskHandle_t motorOwner = nullptr;
+void motor_bind_owner() { motorOwner = xTaskGetCurrentTaskHandle(); }
+static bool motor_owner_ok() { return !motorOwner || motorOwner == xTaskGetCurrentTaskHandle(); }
+#else
+void motor_bind_owner() {}
+static bool motor_owner_ok() { return true; }
+#endif
 bool motor_lock() {
+  if (!motor_owner_ok()) { motor_command_failed(); return false; }
   if (g_stepperMutex && xSemaphoreTake(g_stepperMutex, pdMS_TO_TICKS(2)) == pdTRUE) return true;
   cleanupPending.store(true);
   safety_report_motor_fault(FAULT_MOTOR_TIMEOUT);
@@ -253,7 +262,7 @@ float motor_get_step_frequency_hz() {
 
 void motor_refresh_hz_cache(void) {
   uint32_t absMilli = 0;
-  if (g_stepperMutex != nullptr && xSemaphoreTake(g_stepperMutex, 0) == pdTRUE) {
+  if (motor_owner_ok() && g_stepperMutex != nullptr && xSemaphoreTake(g_stepperMutex, 0) == pdTRUE) {
     if (stepper != nullptr) {
       int32_t mhZ = stepper->getCurrentSpeedInMilliHz();
       int64_t a = (int64_t)mhZ;
@@ -376,7 +385,24 @@ void motor_restore_configured_acceleration() {
   LOG_I("Motor: restored accel=%u", (unsigned)configured);
 }
 
-FastAccelStepper* motor_get_stepper() { return stepper; }
+bool motor_read_position(int32_t* position) {
+  if (!position || !motor_lock()) return false;
+  const bool ok = stepper != nullptr;
+  if (ok) *position = stepper->getCurrentPosition();
+  xSemaphoreGive(g_stepperMutex); return ok;
+}
+bool motor_move_steps(long steps, float rpm, int32_t* start_position) {
+  if (!start_position || !motor_lock()) return false;
+  bool ok = stepper && !safety_inhibit_motion() && !control_motion_blocked();
+  if (ok) { *start_position = stepper->getCurrentPosition(); ok = motor_apply_speed_for_rpm_locked(rpm); }
+  if (ok) {
+    digitalWrite(PIN_ENA, LOW);
+    if (safety_inhibit_motion() || control_motion_blocked()) ok = false;
+    else { motor_record_direction(steps >= 0); ok = stepper->move(steps) == MOVE_OK; if (!ok) motor_command_failed(); }
+  }
+  if (!ok) digitalWrite(PIN_ENA, HIGH);
+  xSemaphoreGive(g_stepperMutex); return ok;
+}
 
 uint32_t motor_stop_timeout_ms() {
   return motion_stop_timeout_ms(g_stepperMilliHzAbsCached.load(), configuredAcceleration.load());

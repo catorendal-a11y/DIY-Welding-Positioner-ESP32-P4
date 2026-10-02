@@ -51,6 +51,7 @@ typedef enum {
   SCREEN_DIAGNOSTICS,     // Live GPIO/fault diagnostics
   SCREEN_ABOUT,           // About screen
   SCREEN_RUN_MODES,       // Pulse / Step / Jog / Timer picker (from menu)
+  SCREEN_SETUP,          // Guided commissioning in the existing style
   SCREEN_COUNT            // MUST be last — total number of screens
 } ScreenId;
 
@@ -58,6 +59,7 @@ typedef enum {
 // SCREEN MANAGEMENT
 // ───────────────────────────────────────────────────────────────────────────────
 void screens_init();                     // Initialize all screens
+void screens_show_startup();             // Offer setup only for a genuinely new/uncompleted installation
 void screens_reinit();                   // Destroy and recreate all screens (theme change)
 void screens_show(ScreenId id);          // Show specific screen (safe from callbacks)
 void screens_request_show(ScreenId id);  // Deferred show — processed before lv_timer_handler
@@ -70,6 +72,18 @@ void screens_update_current();           // Update current screen (call from lvg
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN CREATION FUNCTIONS
 // ───────────────────────────────────────────────────────────────────────────────
+void screen_setup_create();
+void screen_setup_update();
+void screen_setup_begin();
+void screen_setup_leave(ScreenId destination);
+void screen_setup_return(bool calibration = false, bool saved = false);
+void screen_setup_config_saved();
+void screen_setup_calibration_saved();
+void screen_setup_invalidate_widgets();
+const ControlSnapshot& ui_control_view();
+bool ui_control_fresh();
+SystemState ui_control_state();
+void ui_control_refresh();
 void screen_main_create();
 void screen_menu_create();
 void screen_run_modes_create();

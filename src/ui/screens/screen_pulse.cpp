@@ -149,7 +149,7 @@ static void rpm_adj_cb(lv_event_t* e) {
 }
 
 static void start_event_cb(lv_event_t* e) {
-  SystemState state = control_get_state();
+  SystemState state = ui_control_state();
   if (state == STATE_IDLE) {
     speed_slider_set(targetRpm);
     control_start_pulse(pulseOnMs, pulseOffMs);
@@ -219,7 +219,7 @@ void screen_pulse_update() {
   if (!screens_is_active(SCREEN_PULSE)) return;
   if (!startBtn) return;
 
-  SystemState state = control_get_state();
+  SystemState state = ui_control_state();
 
   // Update START button appearance
   lv_obj_t* startLbl = lv_obj_get_child(startBtn, 0);

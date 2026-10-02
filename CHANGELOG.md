@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Control ownership and guided setup
+
+- Single control-task owner of runtime stepper calls; input task publishes ADC/pedal inputs separately. Physical E-STOP directly inhibits ENA without waiting for the executor.
+- Try-only coherent control snapshots, 40 ms UI refresh and 100 ms freshness checks; stale control blocks new motion while STOP remains available.
+- Four-stage Setup Wizard in the existing V5 design with actual physical-switch observations, verified manual calibration and durable completion receipt. Existing valid settings migrate without forcing setup.
+- Precise fault titles and save receipts, shared production dispatcher/motor/modes in the simulator, commissioning UI regression tests and runtime screenshots.
+
 ### v2.1.1 maintenance
 
 - Bounded motor access, rejected-command faults and independently supervised STOP acknowledgement/deceleration deadlines; physical latency still requires measurement.

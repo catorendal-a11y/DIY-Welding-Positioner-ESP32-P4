@@ -68,11 +68,15 @@ inline void delay(uint32_t ms) {
   std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
-inline void pinMode(int, int) {}
-#ifdef ROTATOR_TEST_HARDWARE
+#if defined(ROTATOR_SIMULATOR) && !defined(ROTATOR_TEST_HARDWARE)
+inline int simTestPins[64] = {};
+#endif
+#if defined(ROTATOR_TEST_HARDWARE) || defined(ROTATOR_SIMULATOR)
+inline void pinMode(int pin, int mode) { if (mode == INPUT_PULLUP) simTestPins[pin] = HIGH; }
 inline void digitalWrite(int pin, int value) { simTestPins[pin] = value; }
 inline int digitalRead(int pin) { return simTestPins[pin]; }
 #else
+inline void pinMode(int, int) {}
 inline void digitalWrite(int, int) {}
 inline int digitalRead(int pin) {
   // Safe defaults for simulator diagnostics: NC E-stop clear, driver alarm clear, ENA disabled.

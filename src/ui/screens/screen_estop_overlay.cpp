@@ -74,10 +74,12 @@ void estop_overlay_update() {
   if (!visible || millis() - lastUpdate < 250) return;
   lastUpdate = millis();
   const FaultReason reason = safety_get_fault_reason();
-  lv_label_set_text(title, reason == FAULT_PEDAL_INPUT    ? "PEDAL INPUT FAULT"
-                           : reason == FAULT_DRIVER_ALARM ? "DRIVER ALARM"
-                                                          : "EMERGENCY STOP");
-  lv_label_set_text_fmt(reasonLabel, "FAULT: %s", safety_fault_reason_name(reason));
+  lv_label_set_text(title, reason == FAULT_ESTOP_PRESSED || reason == FAULT_ESTOP_GLITCH ? "E-STOP ACTIVE" :
+                           reason == FAULT_PEDAL_INPUT ? "PEDAL INPUT FAULT" :
+                           reason == FAULT_DRIVER_ALARM ? "DRIVER ALARM" :
+                           reason == FAULT_MOTOR_COMMAND ? "MOTOR COMMAND FAULT" :
+                           reason == FAULT_MOTOR_TIMEOUT ? "MOTOR TIMEOUT" : "MOTION LOCKED");
+  lv_label_set_text(reasonLabel, safety_fault_reason_message(reason));
   const bool physical = safety_is_estop_active(), driver = safety_is_driver_alarm_latched();
   lv_label_set_text(inputLabel, physical ? "ACTIVE" : "RELEASED");
   lv_label_set_text(driverLabel, driver ? "ACTIVE" : "CLEAR");
@@ -87,9 +89,9 @@ void estop_overlay_update() {
   lv_label_set_text(instruction, ready ? "Check the machine. Reset returns to idle; a new START is required."
                                  : reason == FAULT_PEDAL_INPUT
                                      ? "Release the pedal and restore its input before resetting."
-                                     : "Clear the physical fault and check the machine before resetting.");
+                                     : safety_fault_reason_message(reason));
   lv_obj_t* label = lv_obj_get_child(resetBtn, 0);
-  lv_label_set_text(label, ready ? "RESET TO IDLE" : "RESET BLOCKED - INPUT ACTIVE");
+  lv_label_set_text(label, ready ? "RESET TO IDLE" : "RESET BLOCKED");
   if (ready)
     lv_obj_remove_state(resetBtn, LV_STATE_DISABLED);
   else

@@ -145,7 +145,8 @@ static void back_cb(lv_event_t* e) {
   control_stop_jog();
   calMoveTimeoutMs = 0;
   calMoveSawStepState = false;
-  screens_show(SCREEN_SETTINGS);
+  control_stop();
+  screen_setup_return(true);
 }
 
 static void restart_cb(lv_event_t* e) {
@@ -933,6 +934,7 @@ void screen_calibration_update() {
     }
     if (calStep >= STEP_SAVE) {
       const StorageStatus saved = storage_settings_save_status(calibrationSaveTicket);
+      if (saved == STORAGE_SAVED) screen_setup_calibration_saved();
       lv_label_set_text(resultStatusLabel, saved == STORAGE_SAVED ? "RESULT SAVED" :
                                           saved == STORAGE_ERROR ? "SAVE FAILED" : "SAVING...");
       lv_obj_set_style_text_color(resultStatusLabel, saved == STORAGE_ERROR ? COL_RED : COL_GREEN, 0);

@@ -1,7 +1,8 @@
 # Project Status
 
 **Last Updated:** 2026-10-02
-**Firmware:** v2.1.0
+**Published firmware:** v2.1.0
+**Source:** v2.1.1 with unreleased control/setup improvements
 **Build:** V5 local validation passed native tests (403), simulator and release/debug/mirror builds. Exact v2.1.0 release commit is checked by GitHub CI.
 
 ---

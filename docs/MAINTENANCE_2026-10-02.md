@@ -2,6 +2,8 @@
 
 This source update implements the software corrections from [the code review](CODE_REVIEW_2026-10-02.md). The published v2.1.0 assets are unchanged; v2.1.1 has not been published or flashed to the device during this task.
 
+**Subsequent source work:** [single-owner control and Setup Wizard](CONTROL_SETUP_IMPLEMENTATION.md) supersedes the architectural follow-up items in this historical maintenance report.
+
 ## Implemented changes
 
 | Review item | Implementation |

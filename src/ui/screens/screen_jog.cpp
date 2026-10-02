@@ -151,7 +151,7 @@ void screen_jog_invalidate_widgets() {
 void screen_jog_update() {
   if (!screens_is_active(SCREEN_JOG)) return;
 
-  SystemState state = control_get_state();
+  SystemState state = ui_control_state();
   if (jogHdrRight) {
     if (state == STATE_JOG) {
       lv_label_set_text(jogHdrRight, "RUN");
@@ -162,7 +162,7 @@ void screen_jog_update() {
     }
   }
   if (state == STATE_JOG) {
-    float actualRpm = speed_get_actual_rpm();
+    float actualRpm = ui_control_view().estimated_rpm;
     set_jog_rpm(actualRpm);
   } else {
     set_jog_rpm(control_get_jog_speed());

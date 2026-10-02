@@ -93,7 +93,7 @@ static void sec_adj_cb(lv_event_t* e) {
 static void start_event_cb(lv_event_t* e) {
   if (countingDown.load(std::memory_order_acquire)) return;
   if (safety_inhibit_motion()) return;
-  if (control_get_state() != STATE_IDLE) return;
+  if (ui_control_state() != STATE_IDLE) return;
 
   save_countdown_setting();
   countingDown.store(true, std::memory_order_release);
@@ -109,7 +109,7 @@ static void start_event_cb(lv_event_t* e) {
 static void stop_event_cb(lv_event_t* e) {
   countingDown.store(false, std::memory_order_release);
   startPending.store(false, std::memory_order_release);
-  if (control_get_state() != STATE_IDLE && control_get_state() != STATE_ESTOP) {
+  if (ui_control_state() != STATE_IDLE && ui_control_state() != STATE_ESTOP) {
     control_stop();
   }
 }
@@ -275,7 +275,7 @@ void screen_timer_update() {
   if (startPending.load(std::memory_order_acquire)) {
     startPending.store(false, std::memory_order_release);
     countingDown.store(false, std::memory_order_release);
-    if (safety_inhibit_motion() || control_get_state() != STATE_IDLE) {
+    if (safety_inhibit_motion() || ui_control_state() != STATE_IDLE) {
       if (warnDetailLbl) {
         lv_label_set_text(warnDetailLbl, "START BLOCKED");
         lv_obj_set_style_text_color(warnDetailLbl, COL_RED, 0);

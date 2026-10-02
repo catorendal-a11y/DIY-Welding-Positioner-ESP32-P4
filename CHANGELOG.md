@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Dependency refresh and API migration
+
+- Upgrade LVGL 9.5.0 to 9.6.0, use RGB565 default-format configuration, public driver/snapshot headers and dedicated object setters; retain the V5 screen design and English labels.
+- Upgrade pioarduino to 55.03.312-1 (Arduino 3.3.12 / ESP-IDF 5.5.5), and pin PlatformIO Core 6.2.0 and native platform 1.2.1.
+- Upgrade FastAccelStepper 0.33.14 to the upstream 1.4.0 tag commit `f24a659`; the registry artifact omits the corrected IDF5 RMT implementation. Select RMT explicitly and use typed movement results. Keep fault cleanup/reset pending until queued pulses drain, and reject DIR reconfiguration while moving.
+- Upgrade Unity to the upstream 2.7.0 commit; prevent PlatformIO's registry runner from replacing it with 2.6.1.
+- Refresh vendored GT911 1.2.1, ST7701 2.0.2~2 and EK79007 2.0.2~1 metadata/source. Use the official LDO header and C++-compatible touch configuration.
+- Keep already-current ArduinoJson 7.4.3, esp_lcd_touch 1.2.1 and compatible SDL2; update packaging for LVGL's moved font-license directory.
+- Add upstream RMT encoder regression to Linux/Windows CI and three production-control migration cases (430 host cases total). Document the full 0.33.14-to-1.4.0 analysis and outstanding device measurements.
+
 ### Control ownership and guided setup
 
 - Single control-task owner of runtime stepper calls; input task publishes ADC/pedal inputs separately. Physical E-STOP directly inhibits ENA without waiting for the executor.

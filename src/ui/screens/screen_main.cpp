@@ -95,7 +95,7 @@ void screen_main_create() {
                           stop_cb, nullptr);
   lv_obj_set_user_data(startBtn, (void*)(uintptr_t)UI_ACTION_START);
   lv_obj_set_user_data(stopBtn, (void*)(uintptr_t)UI_ACTION_STOP);
-  lv_obj_add_flag(stopBtn, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_hidden(stopBtn, true);
 }
 void screen_main_update() {
   if (!screens_is_active(SCREEN_MAIN) || !rpmLabel) return;
@@ -151,11 +151,11 @@ void screen_main_update() {
     lv_label_set_text(
         detailLabel, storage_status() == STORAGE_ERROR ? "SAVE FAILED / retry pending" : "Saving changes...");
   if (moving || !ui_control_fresh()) {
-    lv_obj_add_flag(startBtn, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_remove_flag(stopBtn, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(startBtn, true);
+    lv_obj_set_hidden(stopBtn, false);
   } else {
-    lv_obj_remove_flag(startBtn, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(stopBtn, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(startBtn, false);
+    lv_obj_set_hidden(stopBtn, true);
   }
   enabled(startBtn, !blocked);
   lv_label_set_text(lv_obj_get_child(startBtn, 0),

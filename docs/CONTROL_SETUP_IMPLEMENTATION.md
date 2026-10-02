@@ -28,7 +28,7 @@ Settings add the optional boolean `setup_completed`. Fresh defaults are false. M
 
 The simulator compiles production control, motor wrapper, continuous/pulse/step/jog modes and program executor. Its FreeRTOS, drive, input, safety and persistence adapters remain host simulations; real motion response and scheduler behavior are not asserted. The commissioning regression accelerates only simulated physical travel, leaving control timers unchanged.
 
-- 427 native cases, including 20 cases compiling actual production control/motor/modes. Concurrent mailbox copies, stale admission, STOP, direction inversion, setup sequence and migration are covered.
+- 430 native cases, including 23 cases compiling actual production control/motor/modes. Concurrent mailbox copies, stale admission, STOP, direction inversion, setup sequence and migration are covered.
 - Six simulator packaging regression cases.
 - Firmware release/debug/USB-mirror builds.
 - LVGL self-test includes the actual motor-config and calibration editors, all wizard stages, physical-input simulation, reset without restart, failed completion persistence/retry, new/existing entry and cancellation.

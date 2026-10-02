@@ -336,7 +336,7 @@ void screen_step_create() {
   targetRpm = speed_get_target_rpm();
   step_clamp_target_rpm();
 
-  ui_create_settings_header(screen, "STEP MODE", "ANGLE MOVE", COL_HDR_MUTED);
+  ui_create_settings_header(screen, "STEP MODE", "EST. ANGLE MOVE", COL_HDR_MUTED);
 
   // POST mockup #6: gauge left, stack right; keep x+w <= SCREEN_W (800) for presets + aux row + footer
   const int kProSz = 276;
@@ -357,7 +357,7 @@ void screen_step_create() {
   const int kFooterW = 246;
 
   lv_obj_t* leftCard = ui_create_post_card(screen, kGaugeX, kGaugeY, kProSz, kProSz);
-  lv_obj_remove_flag(leftCard, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+  lv_obj_set_overflow_visible(leftCard, false);
 
   lv_obj_t* protractor = lv_obj_create(leftCard);
   lv_obj_set_size(protractor, kProSz, kProSz);
@@ -367,7 +367,7 @@ void screen_step_create() {
   lv_obj_set_style_border_width(protractor, 1, 0);
   lv_obj_set_style_border_color(protractor, COL_BORDER, 0);
   lv_obj_set_style_pad_all(protractor, 0, 0);
-  lv_obj_remove_flag(protractor, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(protractor, false);
 
   {
     lv_obj_t* tick0 = lv_line_create(protractor);
@@ -406,8 +406,8 @@ void screen_step_create() {
   lv_obj_set_style_arc_color(arcWidget, COL_GAUGE_BG, LV_PART_MAIN);
   lv_obj_set_style_arc_width(arcWidget, 12, LV_PART_MAIN);
   lv_obj_set_style_opa(arcWidget, 0, LV_PART_KNOB);
-  lv_obj_remove_flag(arcWidget, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_remove_flag(arcWidget, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_clickable(arcWidget, false);
+  lv_obj_set_scrollable(arcWidget, false);
 
   angleArcLabel = lv_label_create(protractor);
   {
@@ -421,8 +421,8 @@ void screen_step_create() {
   lv_obj_center(angleArcLabel);
 
   lv_obj_t* targetCard = ui_create_post_card(screen, kTargetX, kTargetY, kTargetW, kTargetH);
-  lv_obj_remove_flag(targetCard, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_add_flag(targetCard, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_scrollable(targetCard, false);
+  lv_obj_set_clickable(targetCard, true);
   lv_obj_add_event_cb(targetCard, target_card_cb, LV_EVENT_CLICKED, nullptr);
 
   lv_obj_t* targetLbl = lv_label_create(targetCard);
@@ -442,7 +442,7 @@ void screen_step_create() {
   lv_obj_set_pos(angleLabel, 144, 18);
 
   lv_obj_t* rpmCard = ui_create_post_card(screen, kTargetX, kRpmY, kTargetW, kTargetH);
-  lv_obj_remove_flag(rpmCard, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_clickable(rpmCard, false);
 
   lv_obj_t* rpmTitle = lv_label_create(rpmCard);
   lv_label_set_text(rpmTitle, "RPM");

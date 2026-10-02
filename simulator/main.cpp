@@ -1,11 +1,11 @@
 // PC Simulator - LVGL SDL host for the rotator HMI
 
 #include "lvgl.h"
-#include "src/draw/snapshot/lv_snapshot.h"
-#include "src/drivers/sdl/lv_sdl_window.h"
-#include "src/drivers/sdl/lv_sdl_mouse.h"
-#include "src/drivers/sdl/lv_sdl_keyboard.h"
-#include "src/drivers/sdl/lv_sdl_mousewheel.h"
+#include "include/lvgl/draw/lv_snapshot.h"
+#include "include/lvgl/drivers/sdl/lv_sdl_window.h"
+#include "include/lvgl/drivers/sdl/lv_sdl_mouse.h"
+#include "include/lvgl/drivers/sdl/lv_sdl_keyboard.h"
+#include "include/lvgl/drivers/sdl/lv_sdl_mousewheel.h"
 
 #include "../src/control/control.h"
 #include "../src/safety/safety.h"
@@ -38,6 +38,11 @@ static void sim_pump(uint32_t ms) {
     }
     lv_delay_ms(waitMs);
   } while ((lv_tick_get() - start) < ms);
+  // Rendering or the final delay can cross a control deadline. Observe that
+  // elapsed time before the test checks state; do not depend on frame speed.
+  simulator_tick();
+  screens_update_current();
+  estop_overlay_update();
 }
 
 static const char* sim_screen_name(ScreenId id) {

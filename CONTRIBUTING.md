@@ -6,9 +6,11 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agr
 
 ## Development Environment
 
-- **PlatformIO** with pinned `pioarduino` 55.03.37 (ESP-IDF 5.5.x)
+- **PlatformIO Core 6.2.0** from `requirements-dev.txt`, with pinned `pioarduino` 55.03.312-1 (Arduino 3.3.12 / ESP-IDF 5.5.5)
 - **Board:** GUITION JC4880P443C (ESP32-P4 + ESP32-C6, 4.3" MIPI-DSI)
 - **Python:** CI uses Python 3.11. Use PlatformIO's managed runtime or a project virtual environment. On Linux/macOS/Git Bash, `./install.sh` creates `.venv` and installs project dependencies; `./install.sh --check` checks an existing installation.
+
+Install the pinned CLI with `python -m pip install -r requirements-dev.txt` in the managed/project environment. [Dependency upgrade notes](docs/DEPENDENCY_UPGRADE_2026-10-02.md) explain the Git source pins and LVGL migration.
 
 ### Build Commands
 
@@ -26,7 +28,7 @@ pio run -e esp32p4-mirror
 PYTHONUTF8=1 pio run --target upload
 
 # Run native tests (Unity framework)
-pio test -e native
+pio test -e native -e native-control
 ```
 
 Windows PowerShell: set `$env:PYTHONUTF8='1'` before upload if the terminal uses a legacy encoding. Detect the port with `pio device list`, then pass `--upload-port COM3` (example).
@@ -49,7 +51,7 @@ Run the actual LVGL simulator with `.\simulator\run.ps1 -SelfTest`. CI checks na
 Core 0 (Realtime)          Core 1 (UI)
 ------------------          ------------------
 safetyTask  (pri 5, 4KB)    lvglTask   (pri 2, 64KB)
-motorTask   (pri 4, 5KB)    storageTask (pri 1, 12KB)
+inputTask   (pri 4, 5KB)    storageTask (pri 1, 12KB)
 controlTask (pri 3, 4KB)
 ```
 
@@ -72,7 +74,7 @@ controlTask (pri 3, 4KB)
 
 ### Threading Rules
 - All `lv_*` calls must come from Core 1 (`lvglTask`) only
-- `speed_apply()` must ONLY be called from Core 0 (`motorTask`)
+- `speed_apply()` must ONLY be called from Core 0 (`controlTask`)
 - UI callbacks request control actions or deferred saves; never execute motor operations directly. `volatile` does not synchronize cross-core state.
 - Shared state between cores: use `std::atomic` with explicit memory ordering where required; `volatile` alone is insufficient on RISC-V SMP
 - Mutex-protected data (`g_presets_mutex`, `g_settings_mutex`, `g_stepperMutex`, `g_nvs_mutex`): always `xSemaphoreGive` before ANY return path

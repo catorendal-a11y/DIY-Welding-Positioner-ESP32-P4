@@ -145,7 +145,9 @@ void test_setup_migration_preserves_existing_installations() {
   TEST_ASSERT_TRUE(setup_migration_completed(true, true));
 }
 void test_rejected_commands_never_run_or_complete() {
-  for (int8_t error : {-1, -2, -3}) {
+  for (auto error : {MoveResultCode::ErrorNoDirectionPin,
+                     MoveResultCode::ErrorSpeedIsUndefined,
+                     MoveResultCode::ErrorAccelerationIsUndefined}) {
     testStepper.commandResult = error;
     TEST_ASSERT_TRUE(control_start_step(90)); process_pending_requests();
     TEST_ASSERT_EQUAL(STATE_ESTOP, control_get_state());
@@ -234,8 +236,34 @@ void test_pulse_two_cycles_and_rejected_restart() {
   TEST_ASSERT_EQUAL(2, pulse_get_cycle_count());
   setUp(); pulse_start(100, 100, 0);
   simTestMillis += 100; pulse_update(); testStepper.running = false; pulse_update();
-  testStepper.commandResult = -1; simTestMillis += 100; pulse_update();
+  testStepper.commandResult = MoveResultCode::ErrorSpeedIsUndefined; simTestMillis += 100; pulse_update();
   TEST_ASSERT_EQUAL(STATE_ESTOP, control_get_state());
+}
+void test_force_stop_drain_keeps_cleanup_pending_and_ena_disabled() {
+  TEST_ASSERT_TRUE(motor_run_cw());
+  testStepper.drainForceStop = true;
+  TEST_ASSERT_FALSE(motor_halt());
+  TEST_ASSERT_TRUE(motor_cleanup_pending());
+  TEST_ASSERT_EQUAL(HIGH, simTestPins[PIN_ENA]);
+  TEST_ASSERT_TRUE(testStepper.running);
+  TEST_ASSERT_FALSE(motor_halt());
+  testStepper.running = false; // Hardware completion, independently of forceStop().
+  TEST_ASSERT_TRUE(motor_halt());
+  TEST_ASSERT_FALSE(motor_cleanup_pending());
+  TEST_ASSERT_EQUAL(HIGH, simTestPins[PIN_ENA]);
+}
+void test_direction_timing_never_changes_during_queued_motion() {
+  g_settings.stepper_driver = STEPPER_DRIVER_STANDARD; motor_apply_settings();
+  const auto before = testStepper.directionWrites;
+  TEST_ASSERT_TRUE(motor_run_cw()); testStepper.drainForceStop = true;
+  g_settings.stepper_driver = STEPPER_DRIVER_DM542T; motor_apply_settings();
+  TEST_ASSERT_EQUAL(before, testStepper.directionWrites);
+  TEST_ASSERT_EQUAL(FAULT_MOTOR_COMMAND, testFault);
+  TEST_ASSERT_EQUAL(HIGH, simTestPins[PIN_ENA]);
+  TEST_ASSERT_TRUE(motor_cleanup_pending());
+}
+void test_rmt_driver_is_selected_explicitly() {
+  TEST_ASSERT_EQUAL(static_cast<uint8_t>(FasDriver::RMT), static_cast<uint8_t>(engine.selectedDriver));
 }
 void test_step_progress_crosses_counter_boundary() {
   testStepper.position = INT32_MAX - 49;
@@ -270,6 +298,9 @@ void test_event_snapshot_contention_retries_and_counts_drops() {
 }
 int main() {
   UNITY_BEGIN();
+  RUN_TEST(test_force_stop_drain_keeps_cleanup_pending_and_ena_disabled);
+  RUN_TEST(test_direction_timing_never_changes_during_queued_motion);
+  RUN_TEST(test_rmt_driver_is_selected_explicitly);
   RUN_TEST(test_snapshot_and_dispatch_use_one_control_cycle);
   RUN_TEST(test_stale_control_blocks_start_but_stop_is_unconditional);
   RUN_TEST(test_config_apply_publishes_receipt_and_driver_kind);

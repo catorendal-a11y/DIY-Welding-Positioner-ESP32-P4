@@ -458,8 +458,8 @@ void screen_calibration_create() {
   const int rightW = CAL_RIGHT_W;
 
   lv_obj_t* factorCard = ui_create_post_card(screen, leftX, topY, CAL_TOP_W_A, topH);
-  lv_obj_remove_flag(factorCard, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_add_flag(factorCard, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+  lv_obj_set_clickable(factorCard, false);
+  lv_obj_set_overflow_visible(factorCard, true);
 
   lv_obj_t* encSecLabel = lv_label_create(factorCard);
   lv_label_set_text(encSecLabel, "CAL FACTOR");
@@ -485,8 +485,8 @@ void screen_calibration_create() {
   lv_label_set_long_mode(zeroValueLabel, LV_LABEL_LONG_MODE_DOTS);
 
   lv_obj_t* spdCard = ui_create_post_card(screen, xMid, topY, CAL_TOP_W_B, topH);
-  lv_obj_remove_flag(spdCard, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_add_flag(spdCard, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+  lv_obj_set_clickable(spdCard, false);
+  lv_obj_set_overflow_visible(spdCard, true);
 
   lv_obj_t* spdSecLabel = lv_label_create(spdCard);
   lv_label_set_text(spdSecLabel, "STEPS/DEG OUT|WP");
@@ -504,8 +504,8 @@ void screen_calibration_create() {
   lv_label_set_long_mode(dualStepsDegLabel, LV_LABEL_LONG_MODE_CLIP);
 
   lv_obj_t* cmdCard = ui_create_post_card(screen, xRight, topY, CAL_TOP_W_C, topH);
-  lv_obj_remove_flag(cmdCard, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_add_flag(cmdCard, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+  lv_obj_set_clickable(cmdCard, false);
+  lv_obj_set_overflow_visible(cmdCard, true);
 
   lv_obj_t* cmdTitle = lv_label_create(cmdCard);
   lv_label_set_text(cmdTitle, "CMD 360 OUT|WP");
@@ -530,8 +530,8 @@ void screen_calibration_create() {
   lv_label_set_long_mode(cmdStepsWpLabel, LV_LABEL_LONG_MODE_CLIP);
 
   lv_obj_t* wizardCard = ui_create_post_card(screen, leftX, wizY, wizW, wizH);
-  lv_obj_remove_flag(wizardCard, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_add_flag(wizardCard, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+  lv_obj_set_clickable(wizardCard, false);
+  lv_obj_set_overflow_visible(wizardCard, true);
 
   lv_obj_t* wizTitle = lv_label_create(wizardCard);
   lv_label_set_text(wizTitle, "WIZARD");
@@ -554,8 +554,8 @@ void screen_calibration_create() {
   lv_obj_set_style_bg_color(wizardTrack, COL_PROGRESS_BG, 0);
   lv_obj_set_style_border_width(wizardTrack, 0, 0);
   lv_obj_set_style_radius(wizardTrack, 3, 0);
-  lv_obj_remove_flag(wizardTrack, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_remove_flag(wizardTrack, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_scrollable(wizardTrack, false);
+  lv_obj_set_clickable(wizardTrack, false);
 
   wizardFill = lv_obj_create(wizardTrack);
   lv_obj_set_size(wizardFill, 14, 6);
@@ -563,8 +563,8 @@ void screen_calibration_create() {
   lv_obj_set_style_border_width(wizardFill, 0, 0);
   lv_obj_set_style_radius(wizardFill, 3, 0);
   lv_obj_align(wizardFill, LV_ALIGN_LEFT_MID, 0, 0);
-  lv_obj_remove_flag(wizardFill, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_remove_flag(wizardFill, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_scrollable(wizardFill, false);
+  lv_obj_set_clickable(wizardFill, false);
 
   const int dotD = 20;
   const int dotY = 48;
@@ -576,8 +576,8 @@ void screen_calibration_create() {
     lv_obj_set_style_border_width(wizardDots[i], 0, 0);
     lv_obj_set_style_radius(wizardDots[i], LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_pad_all(wizardDots[i], 0, 0);
-    lv_obj_remove_flag(wizardDots[i], LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_remove_flag(wizardDots[i], LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_scrollable(wizardDots[i], false);
+    lv_obj_set_clickable(wizardDots[i], false);
   }
 
   lv_obj_t* wz0 = lv_label_create(wizardCard);
@@ -602,8 +602,8 @@ void screen_calibration_create() {
   lv_obj_set_pos(wz3, 352, 78);
 
   lv_obj_t* kinCard = ui_create_post_card(screen, rightX, wizY, rightW, wizH);
-  lv_obj_remove_flag(kinCard, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_add_flag(kinCard, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+  lv_obj_set_clickable(kinCard, false);
+  lv_obj_set_overflow_visible(kinCard, true);
 
   lv_obj_t* kinTitle = lv_label_create(kinCard);
   lv_label_set_text(kinTitle, "KINEMATICS");
@@ -658,8 +658,8 @@ void screen_calibration_create() {
   const int infoY = CAL_INFO_Y;
   const int infoH = CAL_INFO_H;
   lv_obj_t* measCard = ui_create_post_card(screen, leftX, infoY, wizW, infoH);
-  lv_obj_remove_flag(measCard, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_add_flag(measCard, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+  lv_obj_set_clickable(measCard, false);
+  lv_obj_set_overflow_visible(measCard, true);
 
   lv_obj_t* mdHead = lv_label_create(measCard);
   lv_label_set_text(mdHead, "MEASURED DEG");
@@ -675,8 +675,8 @@ void screen_calibration_create() {
   lv_obj_set_style_border_width(measuredFieldBg, 1, 0);
   lv_obj_set_style_radius(measuredFieldBg, RADIUS_CARD, 0);
   lv_obj_set_style_pad_all(measuredFieldBg, 0, 0);
-  lv_obj_remove_flag(measuredFieldBg, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_add_flag(measuredFieldBg, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_scrollable(measuredFieldBg, false);
+  lv_obj_set_clickable(measuredFieldBg, true);
   lv_obj_add_event_cb(measuredFieldBg, measured_tap_cb, LV_EVENT_CLICKED, nullptr);
 
   measuredTapLabel = lv_label_create(measuredFieldBg);
@@ -684,7 +684,7 @@ void screen_calibration_create() {
   lv_obj_set_style_text_font(measuredTapLabel, FONT_LARGE, 0);
   lv_obj_set_style_text_color(measuredTapLabel, COL_TEXT_WHITE, 0);
   lv_obj_align(measuredTapLabel, LV_ALIGN_CENTER, 0, 0);
-  lv_obj_remove_flag(measuredTapLabel, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_clickable(measuredTapLabel, false);
 
   lv_obj_t* tapHint = lv_label_create(measCard);
   lv_label_set_text(tapHint, "tap field");
@@ -700,8 +700,8 @@ void screen_calibration_create() {
                                   FONT_NORMAL, UI_BTN_ACCENT, apply_measure_cb, nullptr);
 
   lv_obj_t* formCard = ui_create_post_card(screen, rightX, infoY, rightW, infoH);
-  lv_obj_remove_flag(formCard, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_add_flag(formCard, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+  lv_obj_set_clickable(formCard, false);
+  lv_obj_set_overflow_visible(formCard, true);
 
   lv_obj_t* fmHead = lv_label_create(formCard);
   lv_label_set_text(fmHead, "FORMULA");
@@ -745,9 +745,9 @@ void screen_calibration_create() {
   lv_obj_set_pos(resultBar, leftX, resultY);
   ui_style_post_ok(resultBar);
   lv_obj_set_style_radius(resultBar, RADIUS_CARD, 0);
-  lv_obj_remove_flag(resultBar, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_remove_flag(resultBar, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_add_flag(resultBar, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+  lv_obj_set_scrollable(resultBar, false);
+  lv_obj_set_clickable(resultBar, false);
+  lv_obj_set_overflow_visible(resultBar, true);
 
   resultStatusLabel = lv_label_create(resultBar);
   lv_label_set_text(resultStatusLabel, "STEP 1/5");
@@ -771,7 +771,7 @@ void screen_calibration_create() {
   lv_obj_set_width(resultReadyLabel, 130);
   lv_obj_set_style_text_align(resultReadyLabel, LV_TEXT_ALIGN_RIGHT, 0);
   lv_obj_set_pos(resultReadyLabel, resultW - 144, 8);
-  lv_obj_add_flag(resultReadyLabel, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_hidden(resultReadyLabel, true);
 
   lv_obj_update_layout(body);
   for (uint32_t i = 0; i < lv_obj_get_child_count(body); ++i) {
@@ -930,7 +930,7 @@ void screen_calibration_update() {
 
   if (resultDetailLabel && resultStatusLabel && resultBar) {
     if (resultReadyLabel) {
-      lv_obj_add_flag(resultReadyLabel, LV_OBJ_FLAG_HIDDEN);
+      lv_obj_set_hidden(resultReadyLabel, true);
     }
     if (calStep >= STEP_SAVE) {
       const StorageStatus saved = storage_settings_save_status(calibrationSaveTicket);
@@ -957,7 +957,7 @@ void screen_calibration_update() {
         style_result_bar_pass(true);
         if (resultReadyLabel) {
           lv_label_set_text(resultReadyLabel, "READY TO SAVE");
-          lv_obj_remove_flag(resultReadyLabel, LV_OBJ_FLAG_HIDDEN);
+          lv_obj_set_hidden(resultReadyLabel, false);
         }
       } else {
         lv_label_set_text(resultStatusLabel, "RESULT FAIL");

@@ -32,7 +32,7 @@ The system transitions through a rigorous state machine (defined in `control.h`)
 
 ## 4. Thread Safety
 - **Stepper mutex:** `g_stepperMutex` (`SemaphoreHandle_t`, FreeRTOS mutex) protects all FastAccelStepper calls. Uses `xSemaphoreTake`/`xSemaphoreGive` — keeps tick interrupts enabled during cross-core contention (prevents IWDT crashes). Only controlTask calls runtime motor adapter functions after ownership binding. UI/input tasks submit requests; the raw stepper pointer is not exposed.
-- **Safety stepper stop:** ENA is disabled before cleanup. Physical E-STOP/driver-alarm handling does not call the stepper library. controlTask alone performs bounded `forceStop()` cleanup and retries when needed. The E-STOP transition publishes its state without waiting for blocking motor cleanup.
+- **Safety stepper stop:** ENA is disabled before cleanup. Physical E-STOP/driver-alarm handling does not call the stepper library. controlTask alone performs bounded `forceStop()` cleanup and retries until `isRunning()` confirms that queued pulses drained. Reset remains blocked during cleanup; ENA stays inhibited. The E-STOP transition publishes its state without waiting for blocking motor cleanup.
 - **Atomic variables:** Cross-core shared state uses `std::atomic` with explicit memory ordering. All such flags are declared in `src/app_state.h` and defined in `src/app_state.cpp` — no scattered declarations.
 - **Pending-flag pattern:** UI callbacks `.store()` atomic flags with `memory_order_release`; Core 0 tasks `.load()` with `memory_order_acquire` and execute within their cycle. No direct motor calls from UI thread.
 - **Storage mutex:** `g_presets_mutex` semaphore protects preset vector access.

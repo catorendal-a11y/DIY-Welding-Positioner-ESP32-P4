@@ -49,8 +49,8 @@ Open-source welding positioner controller for rotary welding tables, pipe weldin
 | MCU | ESP32-P4 (360MHz, dual-core RISC-V) |
 | Display | GUITION JC4880P443C, 800x480 landscape, MIPI-DSI ST7701S |
 | Touch | GT911 capacitive |
-| UI Framework | LVGL 9.5.0 |
-| Motor Driver | FastAccelStepper 0.33.x (RMT hardware pulses) |
+| UI Framework | LVGL 9.6.0 |
+| Motor Driver | FastAccelStepper 1.4.0 (upstream `f24a659`) (RMT hardware pulses) |
 | Gear Ratio | **1:108** total (60 x 72/40, NMRV030 + spur) |
 | Microstepping | 1/4, 1/8, 1/16, 1/32 (selectable) |
 | RPM Range | 0.001-3.0 RPM (`MIN_RPM`/`MAX_RPM`); UI max <= cap via Motor Config (NVS). Roadmap: higher limits with DM542T |

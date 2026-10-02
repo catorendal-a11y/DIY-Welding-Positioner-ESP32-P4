@@ -549,7 +549,7 @@ void screen_program_edit_create(int slot) {
   lv_obj_set_style_pad_all(line2, 0, 0);
   lv_obj_set_style_border_width(line2, 0, 0);
   lv_obj_set_style_radius(line2, 0, 0);
-  lv_obj_remove_flag(line2, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(line2, false);
 
   // ── Mode-specific settings link button (SVG: y=280, 760x52) ──
   modeSettingsBtn = lv_button_create(screen);

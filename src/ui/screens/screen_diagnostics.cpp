@@ -74,7 +74,7 @@ void screen_diagnostics_create() {
   ui_create_settings_header(screen, "DIAGNOSTICS", "LIVE", COL_GREEN);
 
   lv_obj_t* gpioPanel = ui_create_post_card(screen, 24, 94, 368, 224);
-  lv_obj_remove_flag(gpioPanel, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(gpioPanel, false);
 
   lv_obj_t* gpioTitle = lv_label_create(gpioPanel);
   lv_label_set_text(gpioTitle, "GPIO INPUTS");
@@ -92,7 +92,7 @@ void screen_diagnostics_create() {
   pedalSwVal = add_gpio_row(gpioPanel, gy, "PEDAL SW");
 
   lv_obj_t* rtPanel = ui_create_post_card(screen, 424, 94, 368, 224);
-  lv_obj_remove_flag(rtPanel, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(rtPanel, false);
 
   lv_obj_t* rtTitle = lv_label_create(rtPanel);
   lv_label_set_text(rtTitle, "RUNTIME STATUS");
@@ -110,7 +110,7 @@ void screen_diagnostics_create() {
   enaVal = add_rt_row(rtPanel, ry, "ENA");
 
   lv_obj_t* eventPanel = ui_create_post_card(screen, 24, 334, 752, 48);
-  lv_obj_remove_flag(eventPanel, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(eventPanel, false);
   eventStripLabel = lv_label_create(eventPanel);
   lv_label_set_text(eventStripLabel, "-");
   lv_obj_set_style_text_font(eventStripLabel, FONT_NORMAL, 0);

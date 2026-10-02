@@ -1,4 +1,4 @@
 # Auxiliary manifest for ESP-IDF experiments. Production PlatformIO builds
 # use platformio.ini and the committed components under lib/.
 dependencies:
-  espressif/esp_lcd_touch_gt911: "^1.1.2"
+  espressif/esp_lcd_touch_gt911: "1.2.1"

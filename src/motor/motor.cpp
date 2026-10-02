@@ -75,17 +75,21 @@ static uint32_t motor_clamp_acceleration(uint32_t accel) {
   return accel;
 }
 
-static void motor_apply_stepper_dir_timing(uint16_t want) {
-  if (stepper == nullptr) return;
-  if (s_dir_timing_applied && want == s_applied_dir_delay_us) return;
+static bool motor_apply_stepper_dir_timing(uint16_t want) {
+  if (stepper == nullptr) return false;
+  if (s_dir_timing_applied && want == s_applied_dir_delay_us) return true;
 
   if (s_dir_timing_applied && want != s_applied_dir_delay_us && stepper->isRunning()) {
-    stepper->forceStop();
     digitalWrite(PIN_ENA, HIGH);
+    // forceStop() drains the RMT queue asynchronously. Do not reconfigure DIR
+    // while that queue can still emit pulses; owner-task fault cleanup retries.
+    motor_command_failed();
+    return false;
   }
   stepper->setDirectionPin(PIN_DIR, true, want);
   s_applied_dir_delay_us = want;
   s_dir_timing_applied = true;
+  return true;
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -132,7 +136,8 @@ void motor_init() {
   engine.init(0);
 
   // Connect stepper to step pin with RMT driver
-  stepper = engine.stepperConnectToPin(PIN_STEP);
+  // 1.4.0 can fall back to I2S when RMT is exhausted. This machine requires RMT.
+  stepper = engine.stepperConnectToPin(PIN_STEP, FasDriver::RMT);
   if (stepper == nullptr) fatal_halt("motor: FastAccelStepper init");
 
   int accelSteps = 7500;
@@ -186,7 +191,7 @@ bool motor_run_cw() {
     return false;
   }
   motor_record_direction(true);
-  if (stepper->runForward() != MOVE_OK) {
+  if (stepper->runForward() != MoveResultCode::OK) {
     motor_command_failed();
     xSemaphoreGive(g_stepperMutex);
     return false;
@@ -214,7 +219,7 @@ bool motor_run_ccw() {
     return false;
   }
   motor_record_direction(false);
-  if (stepper->runBackward() != MOVE_OK) {
+  if (stepper->runBackward() != MoveResultCode::OK) {
     motor_command_failed();
     xSemaphoreGive(g_stepperMutex);
     return false;
@@ -239,9 +244,12 @@ bool motor_halt() {
   digitalWrite(PIN_ENA, HIGH); // Inhibit before waiting on library cleanup.
   if (!motor_lock()) return false;
   if (stepper) stepper->forceStop();
-  cleanupPending.store(false);
+  // forceStop() stops adding commands, not necessarily the pulses already
+  // queued. Keep reset inhibited until isRunning() confirms the queue drained.
+  const bool stopped = !stepper || !stepper->isRunning();
+  cleanupPending.store(!stopped);
   xSemaphoreGive(g_stepperMutex);
-  return true;
+  return stopped;
 }
 
 void motor_disable() { digitalWrite(PIN_ENA, HIGH); }
@@ -331,10 +339,10 @@ void motor_apply_settings() {
 
   if (!motor_lock()) return;
   if (stepper != nullptr) {
+    if (!motor_apply_stepper_dir_timing(dirDelayUs)) { xSemaphoreGive(g_stepperMutex); return; }
     if (stepper->setAcceleration(accelSteps) != 0) motor_command_failed();
     configuredAcceleration.store(static_cast<uint32_t>(accelSteps));
     stepper->setLinearAcceleration(200);
-    motor_apply_stepper_dir_timing(dirDelayUs);
   }
   xSemaphoreGive(g_stepperMutex);
   LOG_I("Motor: accel=%d driver=%s (DIR delay %u us)", accelSteps,
@@ -398,7 +406,7 @@ bool motor_move_steps(long steps, float rpm, int32_t* start_position) {
   if (ok) {
     digitalWrite(PIN_ENA, LOW);
     if (safety_inhibit_motion() || control_motion_blocked()) ok = false;
-    else { motor_record_direction(steps >= 0); ok = stepper->move(steps) == MOVE_OK; if (!ok) motor_command_failed(); }
+    else { motor_record_direction(steps >= 0); ok = stepper->move(steps) == MoveResultCode::OK; if (!ok) motor_command_failed(); }
   }
   if (!ok) digitalWrite(PIN_ENA, HIGH);
   xSemaphoreGive(g_stepperMutex); return ok;

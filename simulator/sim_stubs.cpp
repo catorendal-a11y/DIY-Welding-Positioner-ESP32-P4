@@ -123,7 +123,7 @@ void simulator_init_state() {
 void simulator_fast_motion(bool fast) { simStepper.motionScale = fast ? 1000.0 : 1.0; }
 void simulator_tick() {
   storage_flush();
-  simStepper.commandResult = simRejectMotion ? -1 : 0;
+  simStepper.commandResult = simRejectMotion ? MoveResultCode::ErrorSpeedIsUndefined : MoveResultCode::OK;
   control_check_stop_deadline(millis());
   if (!simControlStalled) control_run_cycle();
 }

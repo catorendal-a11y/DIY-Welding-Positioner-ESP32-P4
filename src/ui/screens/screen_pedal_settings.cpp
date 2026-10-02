@@ -36,7 +36,7 @@ static void update_toggle() {
     lv_obj_set_style_border_color(pedalToggle, COL_BORDER_ROW, 0);
     lv_obj_set_style_border_width(pedalToggle, 1, 0);
   }
-  lv_obj_add_flag(pedalToggle, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_clickable(pedalToggle, true);
   if (control_get_state() != STATE_IDLE || (!enabled && digitalRead(PIN_PEDAL_SW) == LOW))
     lv_obj_add_state(pedalToggle, LV_STATE_DISABLED);
   else

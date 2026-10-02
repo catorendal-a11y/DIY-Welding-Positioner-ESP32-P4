@@ -25,9 +25,9 @@ void estop_overlay_create() {
   lv_obj_set_pos(overlay, 0, 0);
   lv_obj_set_style_bg_color(overlay, lv_color_hex(0x201619), 0);
   lv_obj_set_style_bg_opa(overlay, LV_OPA_COVER, 0);
-  lv_obj_remove_flag(overlay, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_add_flag(overlay, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_add_flag(overlay, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_scrollable(overlay, false);
+  lv_obj_set_clickable(overlay, true);
+  lv_obj_set_hidden(overlay, true);
   lv_obj_t* banner = panel(overlay, 0, 0, 800, 106, 0xB52C35);
   lv_obj_set_style_radius(banner, 0, 0);
   lv_obj_t* icon = panel(banner, 24, 22, 62, 62, 0xFFFFFF);
@@ -54,14 +54,14 @@ void estop_overlay_create() {
 void estop_overlay_show() {
   dim_reset_activity();
   if (!overlay) return;
-  lv_obj_remove_flag(overlay, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_hidden(overlay, false);
   visible = true;
   lastUpdate = millis() - 500;
   estop_overlay_update();
   LOG_E("ESTOP overlay: shown");
 }
 void estop_overlay_hide() {
-  if (overlay) lv_obj_add_flag(overlay, LV_OBJ_FLAG_HIDDEN);
+  if (overlay) lv_obj_set_hidden(overlay, true);
   visible = false;
 }
 bool estop_overlay_visible() { return visible; }

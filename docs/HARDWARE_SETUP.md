@@ -89,7 +89,9 @@ Pick the row that equals **200 × (Motor Config microstep value)**. Wrong table 
 **Pulse timing (datasheet vs firmware):**
 
 - DM542T typically specifies **≥ 2.5 µs** minimum step pulse width.
-- This project uses **FastAccelStepper** with **ESP32-P4 RMT** (`gin66/FastAccelStepper@^0.33.14`). There is **no** supported `platformio.ini` flag named `FAS_MIN_PULSE_WIDTH_TICKS` in that library version; timing is defined inside the library (`MIN_CMD_TICKS` / RMT symbol encoding). If you see missed steps, first match **DIP microstep** to the UI and **Motor Config driver** to **DM542T**, then check wiring and **VM** motor supply — do not assume ~100 ns pulses at the opto without measuring.
+- This project uses **FastAccelStepper** with **ESP32-P4 RMT** (FastAccelStepper **1.4.0**, upstream commit `f24a659`). There is **no** supported `platformio.ini` flag named `FAS_MIN_PULSE_WIDTH_TICKS` in that library version; timing is defined inside the library (`pd_esp32/pd_config.h` and `pd_esp32/StepperISR_idf5_esp32_rmt_encode.cpp`). If you see missed steps, first match **DIP microstep** to the UI and **Motor Config driver** to **DM542T**, then check wiring and **VM** motor supply — do not assume ~100 ns pulses at the opto without measuring.
+
+The 1.4.0 RMT driver drains its buffered output before changing DIR, then applies the configured DIR delay (200 µs in DM542T mode). `forceStop()` also drains queued output; physical ENA inhibition happens independently. Running Step progress is an estimate from the queued position, not encoder feedback. [Migration details and bench checks](DEPENDENCY_UPGRADE_2026-10-02.md).
 
 **RPM sweep note:** Absolute workpiece limits are **`MIN_RPM` … `MAX_RPM`** in `src/config.h` (currently **0.001 … 3.0 RPM**). The **Max RPM** value in **Motor Config** (stored in NVS) sets the pot/slider ceiling up to that cap.
 

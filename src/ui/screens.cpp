@@ -85,11 +85,11 @@ static bool movement_button(lv_obj_t* obj) {
 }
 static void stale_controls(lv_obj_t* obj, bool disable) {
   if (!obj) return;
-  if (!disable && lv_obj_has_flag(obj, LV_OBJ_FLAG_USER_2)) {
-    lv_obj_remove_flag(obj, LV_OBJ_FLAG_USER_2); lv_obj_remove_state(obj, LV_STATE_DISABLED);
+  if (!disable && lv_obj_has_state(obj, LV_STATE_USER_2)) {
+    lv_obj_set_state_user_2(obj, false); lv_obj_remove_state(obj, LV_STATE_DISABLED);
   }
   if (disable && movement_button(obj) && !lv_obj_has_state(obj, LV_STATE_DISABLED)) {
-    lv_obj_add_flag(obj, LV_OBJ_FLAG_USER_2); lv_obj_add_state(obj, LV_STATE_DISABLED);
+    lv_obj_set_state_user_2(obj, true); lv_obj_add_state(obj, LV_STATE_DISABLED);
   }
   for (uint32_t i=0; i<lv_obj_get_child_count(obj); ++i) stale_controls(lv_obj_get_child(obj, i), disable);
 }
@@ -114,7 +114,7 @@ static void create_screen(ScreenId id) {
     lv_obj_set_style_border_width(screenRoots[id], 0, 0);
     lv_obj_set_style_pad_all(screenRoots[id], 0, 0);
     lv_obj_set_style_radius(screenRoots[id], 0, 0);
-    lv_obj_remove_flag(screenRoots[id], LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_scrollable(screenRoots[id], false);
   }
 
   switch (id) {
@@ -215,7 +215,7 @@ void screens_init() {
   staleBanner = ui_create_post_card(lv_layer_top(), 24, 94, 752, 54);
   lv_obj_set_style_bg_color(staleBanner, COL_RED, 0);
   ui_create_text(staleBanner, 16, 15, 720, "STATUS UNAVAILABLE / STOP remains available", FONT_NORMAL, lv_color_hex(0xFFFFFF));
-  lv_obj_add_flag(staleBanner, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_hidden(staleBanner, true);
   estop_overlay_create();
   create_screen(SCREEN_MAIN);
 
@@ -411,8 +411,8 @@ void screens_update_current() {
   const bool stale = !ui_control_fresh() && currentScreen != SCREEN_BOOT && currentScreen != SCREEN_NONE;
   stale_controls(screenRoots[currentScreen], stale);
   if (staleBanner) {
-    if (stale && !safety_is_estop_locked()) lv_obj_remove_flag(staleBanner, LV_OBJ_FLAG_HIDDEN);
-    else lv_obj_add_flag(staleBanner, LV_OBJ_FLAG_HIDDEN);
+    if (stale && !safety_is_estop_locked()) lv_obj_set_hidden(staleBanner, false);
+    else lv_obj_set_hidden(staleBanner, true);
   }
 }
 
@@ -429,8 +429,8 @@ void ui_add_post_header_accent(lv_obj_t* parent) {
   lv_obj_set_style_border_width(ln, 0, 0);
   lv_obj_set_style_radius(ln, 0, 0);
   lv_obj_set_style_pad_all(ln, 0, 0);
-  lv_obj_remove_flag(ln, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_remove_flag(ln, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_scrollable(ln, false);
+  lv_obj_set_clickable(ln, false);
 }
 
 lv_obj_t* ui_create_header(lv_obj_t* parent, const char* title, const char* right_caption,
@@ -442,7 +442,7 @@ lv_obj_t* ui_create_header(lv_obj_t* parent, const char* title, const char* righ
   lv_obj_set_style_pad_all(header, 0, 0);
   lv_obj_set_style_border_width(header, 0, 0);
   lv_obj_set_style_radius(header, 0, 0);
-  lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(header, false);
   lv_obj_t* brand = lv_label_create(header);
   lv_label_set_text(brand, "TIG / ROTATOR");
   lv_obj_set_style_text_font(brand, FONT_SMALL, 0);
@@ -489,7 +489,7 @@ lv_obj_t* ui_create_separator_line(lv_obj_t* parent, lv_coord_t x, lv_coord_t y,
   lv_obj_set_style_pad_all(line, 0, 0);
   lv_obj_set_style_border_width(line, 0, 0);
   lv_obj_set_style_radius(line, 0, 0);
-  lv_obj_remove_flag(line, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(line, false);
   return line;
 }
 
@@ -501,8 +501,8 @@ void ui_style_post_card(lv_obj_t* obj) {
   lv_obj_set_style_radius(obj, RADIUS_CARD, 0);
   lv_obj_set_style_shadow_width(obj, 0, 0);
   lv_obj_set_style_pad_all(obj, 0, 0);
-  lv_obj_remove_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_scrollable(obj, false);
+  lv_obj_set_clickable(obj, false);
 }
 
 void ui_style_post_row(lv_obj_t* obj) {
@@ -513,8 +513,8 @@ void ui_style_post_row(lv_obj_t* obj) {
   lv_obj_set_style_radius(obj, RADIUS_ROW, 0);
   lv_obj_set_style_shadow_width(obj, 0, 0);
   lv_obj_set_style_pad_all(obj, 0, 0);
-  lv_obj_remove_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_scrollable(obj, false);
+  lv_obj_set_clickable(obj, false);
 }
 
 void ui_style_post_warn(lv_obj_t* obj) {
@@ -525,7 +525,7 @@ void ui_style_post_warn(lv_obj_t* obj) {
   lv_obj_set_style_radius(obj, RADIUS_ROW, 0);
   lv_obj_set_style_shadow_width(obj, 0, 0);
   lv_obj_set_style_pad_all(obj, 0, 0);
-  lv_obj_remove_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(obj, false);
 }
 
 void ui_style_post_ok(lv_obj_t* obj) {
@@ -536,7 +536,7 @@ void ui_style_post_ok(lv_obj_t* obj) {
   lv_obj_set_style_radius(obj, RADIUS_ROW, 0);
   lv_obj_set_style_shadow_width(obj, 0, 0);
   lv_obj_set_style_pad_all(obj, 0, 0);
-  lv_obj_remove_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(obj, false);
 }
 
 lv_obj_t* ui_create_post_card(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h) {

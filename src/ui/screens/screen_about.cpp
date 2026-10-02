@@ -12,7 +12,7 @@ static lv_obj_t* make_info_row(lv_obj_t* parent, int x, int y, int w, int h, con
   lv_obj_set_size(row, w, h);
   lv_obj_set_pos(row, x, y);
   ui_style_post_row(row);
-  lv_obj_remove_flag(row, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_clickable(row, false);
 
   lv_obj_t* keyLbl = lv_label_create(row);
   lv_label_set_text(keyLbl, key);

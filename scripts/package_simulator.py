@@ -69,7 +69,7 @@ def package_into(folder, executable, args, identity, name):
                 ROOT / '.pio/libdeps/esp32p4-release/lvgl/COPYRIGHTS.md',
                 ROOT / '.pio/libdeps/esp32p4-release/lvgl/src/stdlib/builtin/LICENSE_TLSF.txt',
                 ROOT / '.pio/libdeps/esp32p4-release/lvgl/src/stdlib/builtin/LICENSE_SPRINTF.txt',
-                ROOT / '.pio/libdeps/esp32p4-release/lvgl/scripts/built_in_font/font_license/FontAwesome5/LICENSE.txt']
+                ROOT / '.pio/libdeps/esp32p4-release/lvgl/scripts/generators/built_in_font/font_license/FontAwesome5/LICENSE.txt']
     license_root = args.toolchain / 'share/licenses'
     # MSYS2 split gcc-libs into libgcc/libstdc++ and renamed runtime notices.
     gcc_notices = ['gcc-libs'] if (license_root / 'gcc-libs').is_dir() else ['libgcc', 'libstdc++']

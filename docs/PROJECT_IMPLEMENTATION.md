@@ -66,7 +66,7 @@ See [control/setup implementation and validation](CONTROL_SETUP_IMPLEMENTATION.m
 
 ## 3. Motor Control & Live Speed Adjustment
 
-- **FastAccelStepper 0.33.x** with RMT driver on GPIO 50
+- **FastAccelStepper 1.4.0** (pinned upstream commit `f24a659`) with RMT driver on GPIO 50
 - **Live speed**: `applySpeedAcceleration()` required after `setSpeedInMilliHz()` for changes during running
 - **Cross-core**: Shared RPM variables use `std::atomic<float>` with explicit `.load(memory_order_*)` / `.store(...)`. All cross-core atomic flags are declared in `src/app_state.h` / defined in `src/app_state.cpp` (single source of truth).
 - **Stepper mutex**: `g_stepperMutex` (`SemaphoreHandle_t`, FreeRTOS mutex) protects all stepper calls — uses `xSemaphoreTake`/`xSemaphoreGive`, keeps interrupts enabled during cross-core contention. Only controlTask calls runtime motor adapter functions. UI/input producers submit control commands; no raw stepper pointer is exposed. The adapter retains a bounded mutex and rejects calls from a different task after owner binding.

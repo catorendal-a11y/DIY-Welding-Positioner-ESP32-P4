@@ -28,7 +28,7 @@ jobs:
       - name: Install PlatformIO Core
         run: |
           python -m pip install --upgrade pip
-          pip install --upgrade platformio
+          pip install --upgrade -r requirements-dev.txt
 
       - name: Cache PlatformIO packages
         uses: actions/cache@v5
@@ -37,7 +37,7 @@ jobs:
             ~/.platformio/.cache
             ~/.platformio/packages
             ~/.platformio/platforms
-          key: pio-${{ runner.os }}-${{ hashFiles('platformio.ini', 'sdkconfig.defaults', 'default_16MB.csv') }}
+          key: pio-${{ runner.os }}-${{ hashFiles('requirements-dev.txt', 'test/test_custom_runner.py', 'platformio.ini', 'sdkconfig.defaults', 'default_16MB.csv') }}
           restore-keys: |
             pio-${{ runner.os }}-
 
@@ -72,7 +72,7 @@ jobs:
       - name: Install PlatformIO Core
         run: |
           python -m pip install --upgrade pip
-          pip install --upgrade platformio
+          pip install --upgrade -r requirements-dev.txt
 
       - name: Cache PlatformIO packages
         uses: actions/cache@v5
@@ -81,7 +81,7 @@ jobs:
             ~/.platformio/.cache
             ~/.platformio/packages
             ~/.platformio/platforms
-          key: pio-${{ runner.os }}-${{ hashFiles('platformio.ini', 'sdkconfig.defaults', 'default_16MB.csv') }}
+          key: pio-${{ runner.os }}-${{ hashFiles('requirements-dev.txt', 'test/test_custom_runner.py', 'platformio.ini', 'sdkconfig.defaults', 'default_16MB.csv') }}
           restore-keys: |
             pio-${{ runner.os }}-
 
@@ -107,7 +107,7 @@ jobs:
           python-version: '3.11'
       - name: Install build dependencies
         run: |
-          pip install platformio
+          pip install -r requirements-dev.txt
           sudo apt-get update
           sudo apt-get install -y libsdl2-dev ninja-build xvfb
           pio pkg install -e esp32p4-release
@@ -117,6 +117,7 @@ jobs:
           cmake --build simulator/build --target rotator_simulator
       - name: Test actual UI navigation
         run: |
+          python scripts/test_fas_rmt.py
           xvfb-run -a simulator/build/rotator_simulator --self-test
           xvfb-run -a simulator/build/rotator_simulator --audit-layout
 
@@ -142,7 +143,7 @@ jobs:
         env:
           MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
         run: |
-          python -m pip install platformio
+          python -m pip install -r requirements-dev.txt
           pio pkg install -e esp32p4-release
           $simToolchain = Join-Path $env:MSYS2_LOCATION 'ucrt64'
           (Join-Path $simToolchain 'bin') | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
@@ -155,6 +156,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Simulator build failed' }
       - name: Test and package exact binary
         run: |
+          python scripts/test_fas_rmt.py
+          if ($LASTEXITCODE -ne 0) { throw 'FastAccelStepper RMT regression failed' }
           & simulator/build/rotator_simulator.exe --self-test
           if ($LASTEXITCODE -ne 0) { throw 'Simulator self-test failed' }
           & simulator/build/rotator_simulator.exe --audit-layout

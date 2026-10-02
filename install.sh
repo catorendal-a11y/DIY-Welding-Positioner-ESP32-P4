@@ -37,7 +37,8 @@ if [[ -x "$PROJECT_DIR/.venv/bin/python" ]]; then
 else
   PROJECT_ENV_PYTHON="$PROJECT_DIR/.venv/Scripts/python.exe"
 fi
-"$PROJECT_ENV_PYTHON" -m pip install --upgrade pip platformio
+"$PROJECT_ENV_PYTHON" -m pip install --upgrade pip
+"$PROJECT_ENV_PYTHON" -m pip install --upgrade -r "$PROJECT_DIR/requirements-dev.txt"
 cd -- "$PROJECT_DIR"
 "$PROJECT_ENV_PYTHON" -m platformio pkg install -e esp32p4-release
 printf '\nProject dependencies installed. Next commands:\n'

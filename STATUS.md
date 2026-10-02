@@ -14,8 +14,8 @@
 Runtime stepper calls belong to controlTask; inputTask samples ADC/pedal separately. See [implementation and validation](docs/CONTROL_SETUP_IMPLEMENTATION.md).
 - [x] **ESP32-P4 MIPI-DSI display** (ST7701S 480x800, RGB565, landscape rotation)
 - [x] **GT911 capacitive touch** (I2C, coordinate mapping)
-- [x] **LVGL 9.5.x UI framework** (800x480 landscape, 23 registered `ScreenId` roots + E-STOP overlay)
-- [x] **FastAccelStepper motor control** (hardware RMT pulses, v0.33.x)
+- [x] **LVGL 9.6.0 UI framework** (800x480 landscape, 23 registered `ScreenId` roots + E-STOP overlay)
+- [x] **FastAccelStepper motor control** (hardware RMT pulses, v1.4.0, pinned upstream commit)
 - [x] **FreeRTOS dual-core architecture** (Core 0: Input/Control/Safety, Core 1: UI/Storage)
 - [x] **5 welding modes:** Continuous, Jog, Pulse, Step, Timer
 - [x] **RPM adjustment** (live potentiometer input; idle main-screen +/−; Jog and program/edit controls)
@@ -112,14 +112,16 @@ Runtime stepper calls belong to controlTask; inputTask samples ADC/pedal separat
 
 ## Build Info
 
+See the [dependency inventory and migration analysis](docs/DEPENDENCY_UPGRADE_2026-10-02.md). These metrics describe the unreleased source build, not the published v2.1.0 download.
+
 | Metric | Value |
 |--------|-------|
-| **Platform** | pioarduino (ESP-IDF 5.5.x) |
+| **Platform** | pioarduino 55.03.312-1 (Arduino 3.3.12 / ESP-IDF 5.5.5) |
 | **Board** | GUITION JC4880P443C (ESP32-P4 + ESP32-C6) |
-| **RAM Usage** | ~10.1% (33,068 bytes / 320 KB, release build) |
-| **Flash Usage** | ~16.2% (1,062,694 bytes / 6.5 MB, release build) |
-| **FastAccelStepper** | 0.33.x |
-| **LVGL** | 9.5.0 (RGB565) |
+| **RAM Usage** | 9.9% (32,540 bytes / 327,680 bytes, release build) |
+| **Flash Usage** | 17.0% (1,110,964 bytes / 6,553,600 bytes, release build) |
+| **FastAccelStepper** | 1.4.0, upstream `f24a659` |
+| **LVGL** | 9.6.0 (RGB565) |
 | **ArduinoJson** | 7.4.3 |
 
 ---

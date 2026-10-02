@@ -76,6 +76,10 @@ PC clicks are ignored until armed.
 
 PlatformIO Monitor cannot use COM5 while the viewer is connected.
 
+## Source dependency update
+
+Unreleased source uses LVGL **9.6.0** with an explicit SDL software renderer. SDL2 **2.32.10** is current in the compatible SDL2 series on the local Windows toolchain; Linux CI uses its distro SDL2 package. SDL3 is a different API and is not used by the LVGL SDL2 driver. The simulated drive models asynchronous force-stop drain, and movement result codes match the typed 1.4.0 API. [Full migration report](../docs/DEPENDENCY_UPGRADE_2026-10-02.md).
+
 ## Requirements
 
 - CMake

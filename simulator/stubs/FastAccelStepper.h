@@ -1,11 +1,15 @@
 #pragma once
 #include <Arduino.h>
-using MoveResultCode = int8_t;
-inline constexpr MoveResultCode MOVE_OK = 0;
+// Public 1.4.0 result types; do not let host tests accept integer comparisons.
+enum class MoveResultCode : int8_t {
+  OK = 0, ErrorNoDirectionPin = -1,
+  ErrorSpeedIsUndefined = -2, ErrorAccelerationIsUndefined = -3
+};
+enum class FasDriver : uint8_t { RMT = 1, DONT_CARE = 255 };
 // Only hardware is simulated; dispatcher and modes are production code.
 class FastAccelStepper {
  public:
-  int8_t commandResult = 0;
+  MoveResultCode commandResult = MoveResultCode::OK;
   double motionScale = 1; // Test-only acceleration of physical travel, not control timers.
   void setDirectionPin(int, bool, uint16_t) {}
   int8_t setAcceleration(int32_t) { return 0; }
@@ -18,7 +22,8 @@ class FastAccelStepper {
   MoveResultCode move(int32_t steps) { return start(steps >= 0 ? 1 : -1, true, std::abs(int64_t(steps))); }
   bool isRunning() { update(); return running; }
   void stopMove() { update(); stopping = true; stopAt = millis(); }
-  void forceStop() { update(); running = false; stopping = false; }
+  // The real forceStop drains queued pulses; ENA inhibition is separate.
+  void forceStop() { update(); if (!stopping) { stopping = true; stopAt = millis(); } }
   int32_t getCurrentPosition() { update(); return static_cast<int32_t>(position); }
   int32_t getCurrentSpeedInMilliHz() { update(); return running ? int32_t(milliHz) * direction : 0; }
  private:
@@ -27,9 +32,9 @@ class FastAccelStepper {
   uint32_t position = 0, milliHz = 0, lastMs = 0, stopAt = 0;
   double remaining = 0, fraction = 0;
   MoveResultCode start(int dir, bool bounded, double distance) {
-    if (commandResult) return commandResult;
+    if (commandResult != MoveResultCode::OK) return commandResult;
     update(); direction = dir; finite = bounded; remaining = distance;
-    stopping = false; running = true; lastMs = millis(); return MOVE_OK;
+    stopping = false; running = true; lastMs = millis(); return MoveResultCode::OK;
   }
   void update() {
     const uint32_t now = millis(), elapsed = now - lastMs; lastMs = now;
@@ -46,5 +51,5 @@ inline FastAccelStepper simStepper;
 class FastAccelStepperEngine {
  public:
   void init(int) {}
-  FastAccelStepper* stepperConnectToPin(int) { return &simStepper; }
+  FastAccelStepper* stepperConnectToPin(uint8_t, FasDriver) { return &simStepper; }
 };

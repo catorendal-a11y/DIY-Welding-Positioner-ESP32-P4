@@ -95,8 +95,8 @@ static lv_obj_t* motor_cfg_post_row(lv_obj_t* screen, int x, int y, int w, int h
   lv_obj_set_size(row, w, h);
   lv_obj_set_pos(row, x, y);
   ui_style_post_row(row);
-  lv_obj_remove_flag(row, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_remove_flag(row, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+  lv_obj_set_clickable(row, false);
+  lv_obj_set_overflow_visible(row, false);
   return row;
 }
 
@@ -375,7 +375,7 @@ void screen_motor_config_create() {
   lv_obj_set_size(toggleRow, ROW_W, 50);
   lv_obj_set_pos(toggleRow, ROW_X, y);
   ui_style_post_row(toggleRow);
-  lv_obj_remove_flag(toggleRow, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_clickable(toggleRow, false);
 
   lv_obj_t* invertTitleLbl = lv_label_create(toggleRow);
   lv_label_set_text(invertTitleLbl, "INVERT");
@@ -388,8 +388,8 @@ void screen_motor_config_create() {
   lv_obj_set_pos(invertToggle, 96, 5);
   lv_obj_set_style_radius(invertToggle, SET_TOGGLE_R, 0);
   lv_obj_set_style_pad_all(invertToggle, 0, 0);
-  lv_obj_remove_flag(invertToggle, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_add_flag(invertToggle, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_scrollable(invertToggle, false);
+  lv_obj_set_clickable(invertToggle, true);
   lv_obj_add_event_cb(invertToggle, invert_toggle_cb, LV_EVENT_CLICKED, nullptr);
 
   invertToggleLbl = lv_label_create(invertToggle);
@@ -407,8 +407,8 @@ void screen_motor_config_create() {
   lv_obj_set_style_radius(idleToggle, SET_TOGGLE_R, 0);
   lv_obj_set_style_border_width(idleToggle, 0, 0);
   lv_obj_set_style_pad_all(idleToggle, 0, 0);
-  lv_obj_remove_flag(idleToggle, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_add_flag(idleToggle, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_scrollable(idleToggle, false);
+  lv_obj_set_clickable(idleToggle, true);
   lv_obj_add_event_cb(idleToggle, idle_toggle_cb, LV_EVENT_CLICKED, nullptr);
 
   idleToggleLbl = lv_label_create(idleToggle);
@@ -420,7 +420,7 @@ void screen_motor_config_create() {
   lv_obj_set_size(statusRow, ROW_W, 28);
   lv_obj_set_pos(statusRow, ROW_X, y);
   ui_style_post_row(statusRow);
-  lv_obj_remove_flag(statusRow, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_clickable(statusRow, false);
 
   rpmRangeVal = lv_label_create(statusRow);
   lv_obj_set_style_text_font(rpmRangeVal, FONT_SMALL, 0);

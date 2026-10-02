@@ -338,11 +338,15 @@ Default environment: `esp32p4-release`. Build output goes to `.pio/build-fw` to 
 | Native tests | `pio test -e native -e native-control` |
 | On-device tests | `pio test -e esp32p4-test` |
 
-`COM5` is configured in `platformio.ini`; change `upload_port` / `monitor_port` if Windows assigns another port. Native tests do not need hardware. Use `pio device list` and override the configured port with `--upload-port COM3` (example).
+Serial ports are detected automatically. Use `pio device list` and override the port with `--upload-port COM3` (example) if needed. Native tests do not need hardware.
 
-Pinned dependencies: pioarduino `55.03.37`, LVGL `v9.5.0`, FastAccelStepper `0.33.14`, ArduinoJson `7.4.3`.
+Pinned source dependencies: PlatformIO Core `6.2.0`, pioarduino `55.03.312-1` (Arduino `3.3.12` / ESP-IDF `5.5.5`), LVGL `9.6.0`, FastAccelStepper `1.4.0` at commit `f24a659`, ArduinoJson `7.4.3`, and Unity `2.7.0`. FastAccelStepper uses the upstream Git commit because the registry package with the same version lacks the corrected RMT implementation. [Dependency inventory, migration analysis and validation](docs/DEPENDENCY_UPGRADE_2026-10-02.md). Published v2.1.0 binaries retain their original dependencies.
 
 ---
+
+## Dependency Update (Unreleased Source)
+
+The source now uses **LVGL 9.6.0** and **FastAccelStepper 1.4.0** with the current Arduino ESP32 framework. The existing V5 layout and English labels are retained. Motor initialization selects RMT explicitly; reset waits for queued pulses to finish after `forceStop()`. The actual upstream RMT encoder is tested on the PC as well as the production control code. [Complete dependency and migration report](docs/DEPENDENCY_UPGRADE_2026-10-02.md).
 
 ## Guided Setup (Unreleased Source)
 
@@ -440,7 +444,7 @@ Remote control is fail-closed: it starts disabled after boot, requires **Setting
 | **Microstepping** | 1/4, 1/8, 1/16 (default), 1/32 — selectable in Motor Config, persisted to NVS |
 | **Motor Torque** | 3.0 Nm (NEMA 23) |
 | **Control Resolution** | Sub-milli-RPM (speed is computed in milli-Hz and applied via `setSpeedInMilliHz()` + `applySpeedAcceleration()`) |
-| **Display** | 800 x 480, landscape, LVGL 9.5.0, RGB565, 2-lane MIPI-DSI |
+| **Display** | 800 x 480, landscape, LVGL 9.6.0, RGB565, 2-lane MIPI-DSI |
 | **Flash partition** | 16 MB total; two 0x640000-byte app slots, 0x360000-byte SPIFFS area, NVS/OTA metadata and coredump. See [flashing guide](docs/releases/FLASHING.md). |
 | **RAM Usage** | ~10% &ensp; (about 32 KB / 320 KB internal SRAM in release build) — LVGL buffers live in PSRAM (`CONFIG_SPIRAM_FETCH_INSTRUCTIONS`) |
 
@@ -666,13 +670,13 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 
 | Local check | Result |
 | --- | --- |
-| Native suites | 427 / 427 passed (native and production-control suites) |
+| Native suites | 430 / 430 passed (native and production-control suites) |
 | LVGL self-test | Passed: navigation, program edits, RPM adjustment, fault reset, full setup workflow, save failure/retry and stale control |
 | Firmware builds | Release, debug and mirror passed |
 | Device upload | This control/setup update has not been flashed. The earlier V5 upload to COM3 is recorded in the deployment report. |
 | Physical motor/safety testing | Not performed as part of this update |
 
-[Validation logs](docs/validation/2026-10-01/ui-v5/) record local runs. Native tests include direct production-policy tests, but older tests also model behavior separately; simulator hardware is stubbed. CI runs native tests, three firmware variants and SDL navigation checks. The badge links to the current GitHub result.
+[Dependency validation logs](docs/validation/2026-10-02/dependencies/) record local runs. Native tests include direct production-policy tests, but older tests also model behavior separately; simulator hardware is stubbed. CI runs native tests, three firmware variants and SDL navigation checks. The badge links to the current GitHub result.
 
 ---
 

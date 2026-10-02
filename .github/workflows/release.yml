@@ -65,7 +65,8 @@ jobs:
 
       - name: Install packaging dependencies
         run: |
-          python -m pip install --upgrade pip platformio
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
 
       - name: Cache PlatformIO packages
         uses: actions/cache@v5
@@ -74,7 +75,7 @@ jobs:
             ~/.platformio/.cache
             ~/.platformio/packages
             ~/.platformio/platforms
-          key: pio-${{ runner.os }}-${{ hashFiles('platformio.ini', 'sdkconfig.defaults', 'default_16MB.csv') }}
+          key: pio-${{ runner.os }}-${{ hashFiles('requirements-dev.txt', 'test/test_custom_runner.py', 'platformio.ini', 'sdkconfig.defaults', 'default_16MB.csv') }}
           restore-keys: |
             pio-${{ runner.os }}-
 
@@ -102,10 +103,10 @@ jobs:
           set -euo pipefail
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" release/* --clobber
-            gh release edit "$RELEASE_TAG" --title "$RELEASE_TAG — V5 UI and input reliability" \
+            gh release edit "$RELEASE_TAG" --title "$RELEASE_TAG â€” V5 UI and input reliability" \
               --notes-file "docs/releases/$RELEASE_TAG.md" --draft=false --latest
           else
             gh release create "$RELEASE_TAG" release/* --verify-tag --latest \
-              --title "$RELEASE_TAG — V5 UI and input reliability" \
+              --title "$RELEASE_TAG â€” V5 UI and input reliability" \
               --notes-file "docs/releases/$RELEASE_TAG.md"
           fi

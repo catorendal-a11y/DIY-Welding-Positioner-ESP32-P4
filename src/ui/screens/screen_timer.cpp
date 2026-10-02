@@ -129,8 +129,8 @@ static lv_obj_t* timer_make_info_card(lv_obj_t* scr, int y, const char* title, b
   lv_obj_set_style_border_width(c, 1, 0);
   lv_obj_set_style_radius(c, RADIUS_CARD, 0);
   lv_obj_set_style_pad_all(c, 0, 0);
-  lv_obj_remove_flag(c, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_remove_flag(c, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_scrollable(c, false);
+  lv_obj_set_clickable(c, false);
 
   lv_obj_t* t = lv_label_create(c);
   lv_label_set_text(t, title);
@@ -168,7 +168,7 @@ void screen_timer_create() {
   lv_obj_set_style_border_width(ringCard, 1, 0);
   lv_obj_set_style_radius(ringCard, RADIUS_CARD, 0);
   lv_obj_set_style_pad_all(ringCard, 0, 0);
-  lv_obj_remove_flag(ringCard, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(ringCard, false);
 
   const int arcSz = 224;
   const int arcPad = (296 - arcSz) / 2;
@@ -182,7 +182,7 @@ void screen_timer_create() {
   lv_obj_set_style_arc_width(arcRing, 14, LV_PART_MAIN);
   lv_obj_set_style_arc_color(arcRing, COL_GREEN, LV_PART_INDICATOR);
   lv_obj_set_style_arc_width(arcRing, 12, LV_PART_INDICATOR);
-  lv_obj_remove_flag(arcRing, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_clickable(arcRing, false);
   lv_obj_set_style_bg_opa(arcRing, LV_OPA_TRANSP, LV_PART_MAIN);
   lv_obj_remove_style(arcRing, nullptr, LV_PART_KNOB);
 

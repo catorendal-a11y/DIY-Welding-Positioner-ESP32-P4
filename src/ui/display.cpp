@@ -16,21 +16,11 @@
 #include "driver/i2c_master.h"
 #include "driver/ledc.h"
 #include "esp_log.h"
+#include "esp_ldo_regulator.h"
 #include "lvgl.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include <cstring>
-
-// Forward declarations for LDO
-extern "C" {
-  typedef struct esp_ldo_channel_t *esp_ldo_channel_handle_t;
-  typedef struct {
-    int chan_id;
-    int voltage_mv;
-  } esp_ldo_channel_config_t;
-  esp_err_t esp_ldo_acquire_channel(const esp_ldo_channel_config_t *config, esp_ldo_channel_handle_t *ret);
-}
-
 
 // ───────────────────────────────────────────────────────────────────────────────
 // TOUCH CONFIGURATION (GT911 - from JC4880P433C BSP)
@@ -353,7 +343,14 @@ void display_init() {
     LOG_I("       I2C bus OK");
 
     // Initialize GT911 touch IO
-    esp_lcd_panel_io_i2c_config_t tp_io_cfg = ESP_LCD_TOUCH_IO_I2C_GT911_CONFIG();
+    // Component 1.2.1's C initializer orders scl_speed_hz before older IDF
+    // fields. Assign explicitly for C++ and preserve the board's 400 kHz bus.
+    esp_lcd_panel_io_i2c_config_t tp_io_cfg{};
+    tp_io_cfg.dev_addr = ESP_LCD_TOUCH_IO_I2C_GT911_ADDRESS;
+    tp_io_cfg.control_phase_bytes = 1;
+    tp_io_cfg.dc_bit_offset = 0;
+    tp_io_cfg.lcd_cmd_bits = 16;
+    tp_io_cfg.flags.disable_control_phase = 1;
     tp_io_cfg.scl_speed_hz = TOUCH_I2C_FREQ;
     touch_ret = esp_lcd_new_panel_io_i2c(touch_i2c_bus, &tp_io_cfg, &touch_io);
     if (touch_ret != ESP_OK) {

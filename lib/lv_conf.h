@@ -1,4 +1,4 @@
-// LVGL 9.5 Configuration File for TIG Rotator Controller
+// LVGL 9.6 Configuration File for TIG Rotator Controller
 // ESP32-P4 4.3" Touch Display (800x480, 16-bit color, PSRAM)
 
 #ifndef LV_CONF_H
@@ -11,7 +11,7 @@
 // ───────────────────────────────────────────────────────────────────────────────
 // COLOR SETTINGS
 // ───────────────────────────────────────────────────────────────────────────────
-#define LV_COLOR_DEPTH          16
+#define LV_COLOR_FORMAT_DEFAULT LV_COLOR_FORMAT_RGB565
 
 // ───────────────────────────────────────────────────────────────────────────────
 // MEMORY SETTINGS
@@ -48,7 +48,7 @@
 #define LV_FONT_DEFAULT          &lv_font_montserrat_14
 
 // ───────────────────────────────────────────────────────────────────────────────
-// WIDGETS — LVGL 9.5 names (some renamed from 8.x)
+// WIDGETS — LVGL 9.6 names (some renamed from 8.x)
 // ───────────────────────────────────────────────────────────────────────────────
 #define LV_USE_ANIMIMG           0     // Was LV_USE_ANIMIMAGE in LVGL 8 — renamed in 9!
 #define LV_USE_ARC               1     // For RPM gauge arc

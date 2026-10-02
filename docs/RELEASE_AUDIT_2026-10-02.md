@@ -14,7 +14,7 @@ Target release: **v2.1.0**, V5 UI integration. Public text is English. This audi
 | PlatformIO / component/config references | Direct libraries remain pinned. Auxiliary ESP-IDF manifest and sdkconfig reference scope clarified. Partition CSV matches emitted binary layout; actual release packaging checks it again. |
 | Git attributes / ignore rules | LF for portable scripts/config, binary media attributes, generated release/exports and Python cache ignored. |
 | CodeRabbit | Updated STOP generation/JOG/save/English-label guidance to match production behavior. |
-| CI / release workflow | Native, three firmware variants and actual LVGL navigation; setup-script checks; tagged release builds all variants, verifies version/layout and publishes checksummed bundles. |
+| CI / release workflow | Native, three firmware variants and actual LVGL navigation; setup-script checks; tagged release requires successful CI for the exact tag commit, packages those binaries and verifies version/layout before publishing checksummed, licensed bundles. |
 | Hardware / safety / builder guides | Current E-STOP polarity and ENA assumptions, idle +/−, countdown and fault-reset behavior. Older diagrams are explicitly legacy references. |
 | Reports / historical design | English report filenames/content and regenerated English V4 SVG/PNG/gallery; V3 download archive synchronized. |
 | Wiki | Six maintained pages synchronized with v2.1.0, current UI, build, wiring and troubleshooting. Public wiki is published from these source pages. |

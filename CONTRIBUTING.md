@@ -128,4 +128,4 @@ Before modifying code, read:
 
 ## Release workflow
 
-Update `FW_VERSION`, README, STATUS, CHANGELOG, current wiki pages and English notes in `docs/releases/<version>.md`. Run CI, then create the matching `vX.Y.Z` tag. The release workflow validates the version/tag, runs native and actual LVGL checks, builds release/debug/mirror, packages the verified partition layout and publishes firmware with SHA-256 checksums. [Flashing instructions](docs/releases/FLASHING.md) document the current release.
+Update `FW_VERSION`, README, STATUS, CHANGELOG, current wiki pages and English notes in `docs/releases/<version>.md`. Push to master and wait for all CI jobs, then create the matching `vX.Y.Z` tag. The release workflow requires successful native, firmware and actual LVGL CI for that exact commit, downloads its release/debug/mirror binaries, verifies version/partition layout and publishes bundles with licenses and SHA-256 checksums. [Flashing instructions](docs/releases/FLASHING.md) document the current release.

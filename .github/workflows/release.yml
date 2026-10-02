@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: release-${{ github.event.inputs.tag || github.ref_name }}
@@ -20,7 +21,7 @@ concurrency:
 
 jobs:
   release:
-    name: Validate, Build and Publish
+    name: Package Validated Firmware and Publish
     runs-on: ubuntu-latest
     env:
       RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
@@ -44,11 +45,27 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install build dependencies
+      - name: Require successful CI for the tagged commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          COMMIT="$(git rev-parse HEAD)"
+          CI_RUN_ID="$(gh run list --workflow pio-build.yml --branch master --commit "$COMMIT" \
+            --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+          test -n "$CI_RUN_ID"
+          test "$(gh run view "$CI_RUN_ID" --json jobs --jq 'all(.jobs[]; .conclusion == "success")')" = true
+          echo "CI_RUN_ID=$CI_RUN_ID" >> "$GITHUB_ENV"
+          echo "CI_RUN_URL=https://github.com/$GITHUB_REPOSITORY/actions/runs/$CI_RUN_ID" >> "$GITHUB_ENV"
+          gh run download "$CI_RUN_ID" --dir ci-artifacts
+          for ENVIRONMENT in esp32p4-release esp32p4-debug esp32p4-mirror; do
+            mkdir -p ".pio/build-fw/$ENVIRONMENT"
+            cp "ci-artifacts/tig-rotator-$ENVIRONMENT/"*.bin ".pio/build-fw/$ENVIRONMENT/"
+          done
+
+      - name: Install packaging dependencies
         run: |
           python -m pip install --upgrade pip platformio
-          sudo apt-get update
-          sudo apt-get install -y libsdl2-dev ninja-build xvfb
 
       - name: Cache PlatformIO packages
         uses: actions/cache@v5
@@ -61,22 +78,13 @@ jobs:
           restore-keys: |
             pio-${{ runner.os }}-
 
-      - name: Run native tests
-        run: pio test -e native
-
-      - name: Build all firmware variants
-        run: pio run -e esp32p4-release -e esp32p4-debug -e esp32p4-mirror
-
-      - name: Test actual LVGL navigation
-        run: |
-          cmake -S simulator -B simulator/build -G Ninja
-          cmake --build simulator/build --target rotator_simulator -j 2
-          xvfb-run -a simulator/build/rotator_simulator --self-test
+      - name: Load pinned license and OTA initialization files
+        run: pio pkg install -e esp32p4-release
 
       - name: Prepare firmware bundles and checksums
         run: |
           python scripts/package_release.py --version "$RELEASE_TAG" --output release \
-            --run-url "https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            --run-url "$CI_RUN_URL"
 
       - name: Save build artifacts
         uses: actions/upload-artifact@v7

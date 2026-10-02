@@ -1,32 +1,32 @@
 [
   {
     "slug": "01_ready",
-    "title": "Klar til start",
-    "note": "Stor verdi, eksplisitt hastighetskilde og fast plass til START/STOPP. Beregnet hastighet er ikke encoderfeedback."
+    "title": "Ready to start",
+    "note": "Large value, explicit source and fixed START/STOP. Speed is calculated, without encoder feedback."
   },
   {
     "slug": "02_running",
-    "title": "Drift",
-    "note": "Stor verdi, eksplisitt hastighetskilde og fast plass til START/STOPP. Beregnet hastighet er ikke encoderfeedback."
+    "title": "Running",
+    "note": "Large value, explicit source and fixed START/STOP. Speed is calculated, without encoder feedback."
   },
   {
     "slug": "03_pulse",
-    "title": "Pulsoppsett",
-    "note": "Store pluss/minus-flater og en konkret tidslinje. Pause regnes etter nedbremsing."
+    "title": "Pulse settings",
+    "note": "Large adjustment controls and a clear timeline. Pause begins after deceleration."
   },
   {
     "slug": "04_programs",
-    "title": "Programmer",
-    "note": "Lesbare rader med nøkkelverdier. Programvalg åpner gjennomgang før start."
+    "title": "Programs",
+    "note": "Readable rows with key values. Program selection opens a review before start."
   },
   {
     "slug": "05_settings",
-    "title": "Oppsett",
-    "note": "Seks tydelige områder og fast retur til drift."
+    "title": "Settings",
+    "note": "Six clear areas and a fixed return to operation."
   },
   {
     "slug": "06_fault",
-    "title": "Feiltilstand",
-    "note": "Tekst og handlingstrinn forklarer feilen. Kvittering er sperret mens inngangen er aktiv."
+    "title": "Fault state",
+    "note": "Text and steps explain the fault. Reset is blocked while the input is active."
   }
 ]

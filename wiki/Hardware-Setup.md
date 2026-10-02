@@ -43,7 +43,7 @@ Default firmware uses **1/16** (3200 pulses/rev with DM542T). Motor Config also 
 
 ### ESP32-P4 to driver (signal wires)
 
-Most PUL/DIR boards use optically isolated inputs. Wire in **Common Ground** configuration:
+Most PUL/DIR boards use optically isolated inputs. The following is a legacy common-ground illustration; verify signal voltage, optocoupler current and **ENA HIGH disables** behavior for the exact driver before using it:
 
 1. Connect **PUL-**, **DIR-**, and **ENA-** together -> ESP32-P4 **GND**
 2. **PUL+** (Step) -> **GPIO 50**
@@ -62,7 +62,7 @@ Measured ADC range: 0-3315 (with 11dB attenuation on ESP32-P4).
 
 ### E-STOP (GPIO 34)
 
-Wire so **released (safe) = HIGH** and **pressed / fault = LOW** on GPIO 34 (matches `safety.cpp`: `INPUT_PULLUP`, **FALLING** ISR). See repository `docs/HARDWARE_SETUP.md` for a full discussion and EMI options.
+Wire the conditioned interface so **healthy = HIGH** and **pressed / fault = LOW** at GPIO34. A bare NC contact to GND gives the opposite logic. Verify cable-break and supply-loss behavior, plus ENA HIGH disable, before motor power. See the repository hardware guide and E-STOP measurement procedure.
 
 ### Direction Switch (CW/CCW)
 
@@ -101,7 +101,7 @@ GPIO 28, GPIO 14-19, and GPIO 54 may be PCB-routed toward the ESP32-C6 co-proces
 2. Then power the motor supply (24V or 36V on driver VM)
 3. Firmware holds ENA HIGH (motor disabled) on boot — safe by default
 
-## Validated Hardware
+## Historical hardware experience
 
 | Component | Status |
 |-----------|--------|
@@ -111,9 +111,9 @@ GPIO 28, GPIO 14-19, and GPIO 54 may be PCB-routed toward the ESP32-C6 co-proces
 | NMRV030 + spur (**1:108** total) | Tested |
 | 24–36V DC PSU (36V optimal) | Tested |
 | 10k Pot (LA42DWQ-22) | Tested |
-| NC E-STOP Button | Tested |
+| E-STOP circuit | Earlier build experience; current input contract requires physical verification |
 | Direction switch (GPIO 29) | Tested |
-| Foot pedal | Tested |
+| Foot pedal | Earlier build experience; new failure/release behavior needs bench checks |
 
 ### Known limitations (basic PUL/DIR drivers)
 

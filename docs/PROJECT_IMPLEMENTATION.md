@@ -51,8 +51,8 @@
 | Task | Core | Priority | Stack | Purpose |
 |------|------|----------|-------|---------|
 | safetyTask | 0 | 5 | 4 KB | E-STOP ISR processing, state guard |
-| motorTask | 0 | 4 | 5 KB | Speed apply, ADC poll, pedal, motor config |
-| controlTask | 0 | 3 | 4 KB | State machine, mode logic |
+| motorTask | 0 | 4 | 5 KB | Speed apply, ADC poll and pedal input |
+| controlTask | 0 | 3 | 4 KB | Motion dispatch, mode logic, motor settings and fault cleanup |
 | lvglTask | 1 | 2 | 64 KB | LVGL rendering, screen updates, dim, ESTOP overlay |
 | storageTask | 1 | 1 | 12 KB | NVS flush (settings/presets), periodic housekeeping |
 

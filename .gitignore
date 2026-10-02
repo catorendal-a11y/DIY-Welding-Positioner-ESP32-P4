@@ -58,3 +58,9 @@ compile_commands.json
 # Python env
 .venv/
 .ruff_cache/
+__pycache__/
+*.py[cod]
+
+# Generated release packages and local simulator exports
+release/
+artifacts/

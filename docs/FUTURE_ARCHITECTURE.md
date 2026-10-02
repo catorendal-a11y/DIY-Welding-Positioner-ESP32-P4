@@ -6,15 +6,15 @@ This document outlines planned features and their current status.
 
 ## 1. Closed-Loop Encoder Feedback
 
-> **STATUS: CANCELLED**
-> The open-loop stepper setup is precise enough for welding applications. Encoder feedback adds complexity without meaningful benefit.
+> **STATUS: DEFERRED / OPTIONAL**
+> Current firmware uses open-loop pulse-derived speed. It cannot detect mechanical slip or missed steps. Encoder feedback remains an optional improvement for measured speed and deviation monitoring.
 
 ---
 
 ## 2. Alternate operator / remote interfaces
 
 > **STATUS: NOT IN SCOPE**
-> Operator control is touch UI, potentiometer, direction switch, and optional foot pedal. A second MCU may exist on the dev board for factory use; this repository does not ship remote operator panels or companion apps.
+> Operator control is touch UI, potentiometer, direction switch, and optional foot pedal. A second MCU may exist on the dev board for factory use; this repository does not ship a wireless companion controller. Optional USB-C mirroring is implemented and requires physical-screen arming.
 
 ### Already in product
 - Countdown before start (3-2-1 on screen) — implemented in current firmware

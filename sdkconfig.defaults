@@ -1,3 +1,6 @@
+# ESP32-P4 board configuration reference for the pinned Arduino/ESP-IDF build.
+# Precompiled framework sdkconfig values remain authoritative; verify actual
+# build settings before treating this file as an applied runtime configuration.
 # MIPI-DSI Configuration for ESP32-P4
 CONFIG_MIPI_DSI_ENABLED=y
 CONFIG_MIPI_DSI_BUS_COUNT=1

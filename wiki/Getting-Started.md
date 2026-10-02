@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - **PlatformIO** Core 6.x or newer (VS Code extension recommended)
-- **Python** PlatformIO bundled Python (system Python 3.14 is incompatible)
+- **Python** PlatformIO managed runtime or Python 3.11 as used by CI
 - **GUITION JC4880P443C** ESP32-P4 4.3" Touch Display dev board
 - **USB-C cable** for power and serial
 - **Hardware:** Stepper driver, NEMA 23 motor, 24–36V motor PSU (**36V optimal**, **24V** works), 10k pot, NC E-STOP button
@@ -17,7 +17,7 @@ git clone https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4.git
 cd DIY-Welding-Positioner-ESP32-P4
 ```
 
-Open the folder in VS Code with the PlatformIO extension installed.
+Open the folder in VS Code with PlatformIO. Current release: **v2.1.0**. Prebuilt firmware and English flashing instructions are available on the repository Releases page. Linux/macOS/Git Bash users may run `./install.sh` for a project environment.
 
 ## 2. Build
 
@@ -36,8 +36,9 @@ pio run --target upload
 ```
 
 **Note:** If esptool crashes with Unicode encoding error on Windows, set `PYTHONUTF8=1`:
-```bash
-set PYTHONUTF8=1 && pio run --target upload
+```powershell
+$env:PYTHONUTF8='1'
+pio run -e esp32p4-release -t upload --upload-port COM3
 ```
 
 ## 4. Serial Monitor
@@ -46,10 +47,10 @@ set PYTHONUTF8=1 && pio run --target upload
 pio device monitor
 ```
 
-Expected boot output:
+Example debug boot output (release logging is intentionally quieter; confirm the actual version on About):
 ```
 [I] BOOT OK — ENA=HIGH (motor disabled)
-[I] TIG Rotator Controller v2.0
+[I] TIG Rotator Controller v2.1.0
 [I] Hardware: ESP32-P4 4.3" Touch Display (Waveshare/Guition)
 [I] Safety init: ESTOP=OK
 [I] Speed control init: pot=3327 (pin=49)
@@ -84,11 +85,11 @@ For simulator-only UI review:
 - [ ] Touch responds to taps
 - [ ] Press START — motor rotates at set RPM
 - [ ] Turn potentiometer — RPM changes during rotation
-- [ ] Turn pot on main screen — workpiece RPM changes during rotation (main has no +/-; use **Jog** screen +/- for jog speed if needed)
-- [ ] Toggle direction switch — motor reverses
+- [ ] Test main RPM +/− while idle; confirm controls are blocked during motion
+- [ ] Check physical direction-switch priority and idle CW/CCW selection
 - [ ] Press STOP — motor decelerates and stops
-- [ ] Press E-STOP — motor halts instantly, red overlay appears
-- [ ] Reset E-STOP — tap overlay to dismiss
+- [ ] Check E-STOP driver disable and red overlay; measure physical stopping response
+- [ ] Clear fault, press RESET TO IDLE, then use a separate START
 - [ ] Try each mode: JOG, PULSE, STEP, TIMER
 - [ ] Navigate to Settings > Motor Config — enable direction switch
 - [ ] Navigate to Settings > Display — adjust brightness, optional **UI MODE** (dark/light), and accent theme
@@ -113,16 +114,16 @@ Settings can also be changed from the touchscreen via **Settings > Motor Config*
 |-----------|----------|------------|
 | GPIO 50 | STEP (Output) | Driver PUL+ |
 | GPIO 51 | DIR (Output) | Driver DIR+ |
-| GPIO 52 | ENABLE (Output) | Driver ENA- |
+| GPIO 52 | ENABLE (Output) | Verified driver interface; HIGH must disable |
 | GPIO 49 | POT (ADC Input) | 10k Pot wiper |
 | GPIO 29 | DIR SW (Input) | CW/CCW toggle |
-| GPIO 34 | E-STOP (Input, ISR) | NC E-STOP button |
+| GPIO 34 | E-STOP (Input, ISR) | Conditioned HIGH healthy / LOW fault input |
 | GPIO 32 | DRIVER ALM (Input) | DM542T alarm, LOW = fault |
 | GPIO 33 | PEDAL SW (Input) | Foot pedal switch (optional) |
 | I2C (GPIO 7/8) | ADS1115 | Pedal pot ADC, addr 0x48-0x4B |
 
 **Reserved:** GPIO 28, 14-19, and 54 may be routed to the ESP32-C6 on the PCB — do not use as application GPIO without the GUITION schematic. GPIO 32 is intentionally used by this firmware for DM542T alarm input. See `docs/HARDWARE_SETUP.md` §Reserved pins.
 
-All driver minus pins (PUL-, DIR-, ENA-) connect to ESP32 GND.
+Check the actual driver/opto voltage and ENA polarity before selecting common-anode/cathode wiring. A bare NC contact to GND is incompatible with GPIO34 LOW-on-fault behavior. Keep motor power off until verified against the hardware guide.
 
 See [[Hardware Setup]] for full details with diagrams.

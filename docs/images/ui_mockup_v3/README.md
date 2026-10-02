@@ -1,54 +1,34 @@
-# UI-utkast V3
+# V3 UI proposals
 
-Nytt SVG-design for alle 22 registrerte skjermbilder i `src/ui/screens.h`,
-pluss åtte ekstra tilstander/visninger. Totalt 30 skjermutkast, hver i 800 × 480.
+Historical SVG proposals for all 22 registered screen types in `src/ui/screens.h`, plus eight additional states: 30 views at 800 × 480. The final integration uses the later V5 design.
 
-- Åpne `index.html` for et galleri med navigasjon og enkeltfiler.
-- Åpne `all_screens.svg` for hele oversikten som skalerbar vektorgrafikk.
-- Filene `01_boot.svg` til `30_input_fault.svg` er selvstendige SVG-er.
-- `manifest.json` kobler hver visning til riktig ScreenId og forklarer formålet.
+- Open `index.html` for the gallery and individual files.
+- Open `all_screens.svg` for the scalable vector overview.
+- `01_boot.svg` through `30_input_fault.svg` are standalone SVGs.
+- `manifest.json` maps each view to its ScreenId and explains its purpose.
 
-## Designvalg
+## Design choices
 
-Mørk grafitt, varm oransje for handling/aktivitet, rødt for stopp/feil og grønt
-for bekreftet tilstand. Status er alltid også skrevet i tekst. Skriftfamilien
-er Bahnschrift med Segoe UI og Arial som reserve. Tekst forblir redigerbar.
+Dark graphite, orange for action/activity, red for stop/fault and green for confirmed state. Status also has text. Bahnschrift uses Segoe UI/Arial fallbacks; text remains editable.
 
-Hovedskjermen prioriterer lesbar hastighet, retning og betjeningskilde. RPM fra
-stegpulser er merket CALCULATED under kjøring. Sveisehastighet i mm/min vises
-sammen med emnediameter. Tallene er illustrasjoner, ikke levende maskindata.
+Main prioritizes speed, direction and source. Pulse-derived RPM is labelled CALCULATED. Surface speed appears with diameter. Values are illustrative rather than live machine data.
 
-Primærknapper er normalt 56–82 piksler høye. Jog bruker to separate, store
-hold-knapper. Når STOP vises på kjøreskjermene, ligger den nederst til høyre.
-Skjermtastaturets nederste funksjonstaster er 48 piksler høye. Mindre tekst er
-sekundær informasjon og må prøves på det fysiske 4,3-tommers panelet.
+Primary buttons are generally 56–82 px high; JOG has two large hold buttons. STOP is bottom right on operating screens. Keyboard footer keys are 48 px high. Secondary text requires inspection on the physical 4.3-inch display.
 
-## Skjermgrupper
+## Screen groups
 
-1. **Operate, 01–06:** oppstart, hovedskjerm klar/kjøring, meny, modusvalg, jog.
-2. **Process & safety, 07–12:** puls, steg, nedtelling, nødstopp aktiv/klar for reset, bekreftelse.
-3. **Programs, 13–18:** liste, redigering, kontinuerlig/puls/steg, tom liste.
-4. **Setup, 19–24:** innstillinger, motor, pedal, skjerm, kalibrering og verifikasjon.
-5. **Service & input, 25–30:** diagnostikk, systeminfo, om, talltastatur, teksttastatur, pedalfeil.
+1. **Operate, 01–06:** boot, main ready/running, menu, mode picker, jog.
+2. **Process & safety, 07–12:** pulse, step, countdown, active/resettable E-STOP, confirmation.
+3. **Programs, 13–18:** list, edit, continuous/pulse/step, empty list.
+4. **Setup, 19–24:** settings, motor, pedal, display, calibration/verification.
+5. **Service & input, 25–30:** diagnostics, system info, about, numeric/text keyboard, pedal fault.
 
-## Foreslått oppførsel som krever implementering
+## Proposed behavior
 
-Dette er en designleveranse. Firmware og LVGL-skjermer er ikke endret.
-Følgende detaljer er forbedringsforslag, ikke bekreftelser på eksisterende funksjoner:
+These files record the original design delivery. Proposed task readiness, release-before-arm pedal input, program review, auto-stop, idle-only settings and separate USB view/control permission are not evidence of implementation. See [implemented improvements](../../IMPROVEMENTS_2026-10-01.md) and [V5 integration](../../UI_V5_DEPLOYMENT.md) for subsequent changes.
 
-- Faktiske READY-signaler under oppstart, i stedet for tidsstyrt fremdrift.
-- Pedal må slippes før armering; inputfeil stopper pedalstyrt kjøring.
-- Valg av program går til gjennomgang før start.
-- Kontinuerlig program har et tydelig felt for automatisk stopp.
-- Endring av motorinnstillinger håndheves bare ved stoppet motor.
-- USB-visning og tillatelse til fjernbetjening skilles tydelig.
-- Talltastatur og teksttastatur er forslag til samlede inndatavisninger.
+RESET returns to IDLE; START is separate. Screen indicators do not replace checking the physical safety circuit.
 
-Trykk på RESET skal bare gå til IDLE. Ny START må alltid være en separat
-handling. En skjermindikator erstatter ikke kontroll av fysisk sikkerhetskrets.
+## Regeneration
 
-## Regenerering
-
-Kjør `python scripts/generate_ui_mockup_v3.py` fra prosjektet.
-Generatoren bruker bare Python-standardbiblioteket og kontrollerer automatisk
-at alle 22 registrerte ScreenId-er er dekket. Eksisterende SVG-forslag beholdes.
+Run `python scripts/generate_ui_mockup_v3.py`. The standard-library generator verifies coverage of all 22 registered ScreenIds and retains existing proposals.

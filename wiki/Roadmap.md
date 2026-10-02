@@ -36,7 +36,7 @@ Historical release; v2.1.0 above is current.
 - [x] RAM event log for START/STOP, pedal, program, state and fault events
 - [x] Pedal Settings screen for GPIO33 arm/disarm and ADS1115 status
 - [x] ProgramExecutor applies direction, workpiece diameter, pulse cycles, step repeats/dwell, soft start and auto-stop timer fields
-- [x] STOP latch and generation-checked starts replace the earlier latest-command overwrite behavior
+- [x] Historical START fix used a latest-command queue; v2.1.0 supersedes it with a separate STOP latch and generation checks
 - [x] Workpiece diameter stored per STEP preset
 - [x] README, wiki, status and UI SVG documentation sync
 
@@ -57,7 +57,7 @@ Historical release; v2.1.0 above is current.
 ## v2.0.4 — main UI, jog, SMP
 
 ### v2.0.4 (2026-04-12)
-- [x] V5 orange main speed panel with idle RPM +/−, direction selection and wide START/STOP
+- [x] Historical pot-only main gauge; superseded by V5 idle RPM +/− and the orange speed panel in v2.1.0
 - [x] Jog screen RPM row cleanup (no stray range label; non-overlapping +/-)
 - [x] Control state memory ordering; `programsDirty` atomic; `g_settings_mutex` hardening; `rpm_buttons_enabled` removed
 

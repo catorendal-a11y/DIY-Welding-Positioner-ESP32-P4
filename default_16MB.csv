@@ -1,8 +1,9 @@
 # Name,   Type, SubType,  Offset,  Size,   Flags
-# Note: not used - PlatformIO uses default partitions for esp32-p4
-nvs,      data, nvs,      0x9000,  0x6000,
-otadata,  data, ota,      0xf000,  0x2000,
-phy_init, data, phy,      0x11000, 0x1000,
-ota_0,    app,  ota_0,    0x20000, 0x400000,
-ota_1,    app,  ota_1,    0x420000,0x400000,
-storage,  data, spiffs,   0x820000,0x7D0000,
+# Matches the emitted ESP32-P4 16 MB table verified for v2.1.0.
+# The generated partitions.bin is authoritative for flashing.
+nvs,      data, nvs,      0x9000,   0x5000,
+otadata,  data, ota,      0xe000,   0x2000,
+app0,     app,  ota_0,    0x10000,  0x640000,
+app1,     app,  ota_1,    0x650000, 0x640000,
+spiffs,   data, spiffs,   0xc90000, 0x360000,
+coredump, data, coredump, 0xff0000, 0x10000,

@@ -6,9 +6,9 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agr
 
 ## Development Environment
 
-- **PlatformIO** with `pioarduino` platform (ESP-IDF 5.5.x)
+- **PlatformIO** with pinned `pioarduino` 55.03.37 (ESP-IDF 5.5.x)
 - **Board:** GUITION JC4880P443C (ESP32-P4 + ESP32-C6, 4.3" MIPI-DSI)
-- **Python:** System Python 3.14 is incompatible with some PlatformIO flows. Run commands from a PlatformIO environment so `pio` uses PlatformIO's managed Python runtime.
+- **Python:** CI uses Python 3.11. Use PlatformIO's managed runtime or a project virtual environment. On Linux/macOS/Git Bash, `./install.sh` creates `.venv` and installs project dependencies; `./install.sh --check` checks an existing installation.
 
 ### Build Commands
 
@@ -19,6 +19,9 @@ pio run
 # Build debug (verbose serial logging)
 pio run -e esp32p4-debug
 
+# Build USB mirror
+pio run -e esp32p4-mirror
+
 # Flash to device
 PYTHONUTF8=1 pio run --target upload
 
@@ -26,14 +29,16 @@ PYTHONUTF8=1 pio run --target upload
 pio test -e native
 ```
 
-> **Windows note:** `PYTHONUTF8=1` is required for flash to prevent esptool Unicode crash in cp1252.
+Windows PowerShell: set `$env:PYTHONUTF8='1'` before upload if the terminal uses a legacy encoding. Detect the port with `pio device list`, then pass `--upload-port COM3` (example).
+
+Run the actual LVGL simulator with `.\simulator\run.ps1 -SelfTest`. CI checks native tests, all three firmware variants and simulator navigation. Device tests require an isolated bench with motor power controlled; see [test/README.md](test/README.md).
 
 ## Development Workflow
 
 1. **Fork** the repository on GitHub
 2. **Clone** your fork locally
 3. **Branch** off `master` for your feature/bugfix (e.g., `git checkout -b feature/my-feature`)
-4. **Build** locally using the commands above — only build errors matter, LSP errors are false (missing PlatformIO headers)
+4. **Build and test** relevant changes using the commands above. Configure the editor from PlatformIO's compile database before deciding whether diagnostics are genuine.
 5. **Commit** with clear, descriptive messages following conventional commits format
 6. **Push** your branch to your fork
 7. **Submit a Pull Request** to the original repository
@@ -68,7 +73,7 @@ controlTask (pri 3, 4KB)
 ### Threading Rules
 - All `lv_*` calls must come from Core 1 (`lvglTask`) only
 - `speed_apply()` must ONLY be called from Core 0 (`motorTask`)
-- UI callbacks must set `std::atomic` or `volatile` flags — never call motor functions directly
+- UI callbacks request control actions or deferred saves; never execute motor operations directly. `volatile` does not synchronize cross-core state.
 - Shared state between cores: use `std::atomic` with explicit memory ordering where required; `volatile` alone is insufficient on RISC-V SMP
 - Mutex-protected data (`g_presets_mutex`, `g_settings_mutex`, `g_stepperMutex`, `g_nvs_mutex`): always `xSemaphoreGive` before ANY return path
 - **`g_stepperMutex` is a FreeRTOS mutex** (`SemaphoreHandle_t`) — NOT a spinlock. Uses `xSemaphoreTake`/`xSemaphoreGive`
@@ -79,8 +84,8 @@ controlTask (pri 3, 4KB)
 - Use LVGL 9 API names only (e.g., `lv_button_create`, not `lv_btn_create`)
 - `lv_style_t` must be static/global — never stack-allocated
 - Canvas is 800x480 landscape — coordinates must satisfy `x + width <= 800`, `y + height <= 480`
-- ASCII only in labels (0x20-0x7E) — no Unicode, no arrows, no degree sign
-- Font max is `montserrat_40` — `montserrat_48` crashes ESP32-P4
+- Use English label text and prefer ASCII for ordinary labels. Use LVGL symbols or additional glyphs only when supported by the selected font and verified in runtime captures; do not assume arbitrary Unicode renders.
+- Shared body fonts have a 14 px floor. Main digits use the checked-in 104 px Montserrat numeric subset. Keep generated-font source, simulator/firmware integration and OFL license together; verify any new font on the device.
 - Do NOT use `lv_display_set_rotation()` — manual rotation in flush callback only
 - `lv_display_flush_ready()` must be called exactly once per flush
 
@@ -114,7 +119,13 @@ controlTask (pri 3, 4KB)
 
 ## Documentation
 
+Use English for source comments, UI labels, documentation, issue templates, commit messages and release notes. Preserve builder content and hardware photos when updating the README.
+
 Before modifying code, read:
-- `AGENTS.md` — agent/coding conventions and project constraints
+- `AGENTS.md`, if supplied locally; this file is not required for a clone/build
 - `docs/` — hardware setup, safety system, EMI mitigation, implementation notes
 - `wiki/` — getting started, troubleshooting, architecture
+
+## Release workflow
+
+Update `FW_VERSION`, README, STATUS, CHANGELOG, current wiki pages and English notes in `docs/releases/<version>.md`. Run CI, then create the matching `vX.Y.Z` tag. The release workflow validates the version/tag, runs native and actual LVGL checks, builds release/debug/mirror, packages the verified partition layout and publishes firmware with SHA-256 checksums. [Flashing instructions](docs/releases/FLASHING.md) document the current release.

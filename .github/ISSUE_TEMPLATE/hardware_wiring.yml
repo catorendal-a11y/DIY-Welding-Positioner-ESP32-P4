@@ -21,7 +21,7 @@ body:
     attributes:
       label: Wiring description
       description: Describe exact pins and driver terminals used.
-      placeholder: ESP GPIO50 -> PUL-, ESP GND -> PUL+...
+      placeholder: List STEP/DIR/ENA connections, opto supply voltage, and measured healthy/fault levels. Firmware expects GPIO34 HIGH healthy / LOW fault and ENA HIGH disabled.
     validations:
       required: true
   - type: textarea
@@ -43,4 +43,4 @@ body:
       options:
         - label: Motor supply was off while changing wiring.
         - label: E-STOP disables ENA / motor power path before testing motion.
-        - label: Logic GND and driver signal GND are wired as documented.
+        - label: Driver input voltage, ENA polarity and E-STOP cable-break response were checked against the hardware guide.

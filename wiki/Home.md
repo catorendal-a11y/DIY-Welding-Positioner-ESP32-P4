@@ -6,7 +6,15 @@
 
 Release **v2.1.0** is the current firmware identifier (**`FW_VERSION`**), with V5 UI, STOP/pedal/JOG interlocks and persistence fixes. The previous v2.0.9 release documented TIG welding validation: the controller works during welding when the ESP32-P4 screen, stepper driver, and motor PSU are installed inside the same grounded metal enclosure.
 
-Release **v2.0.8** was the previous version-alignment release; behaviour also includes the **v2.0.7** dark/light UI mode and header contrast work. See `CHANGELOG.md` for the full list.
+Earlier releases include v2.0.8 version alignment and v2.0.7 dark/light mode. See the repository changelog for history.
+
+## Current release and UI
+
+[Download v2.1.0](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.1.0) · [Flashing instructions](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/releases/FLASHING.md) · [Validation and improvements](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/IMPROVEMENTS_2026-10-01.md)
+
+![V5 main screen](https://raw.githubusercontent.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/master/docs/images/ui_runtime_v5/01_MAIN.png)
+
+Actual LVGL simulator capture with example data. Main RPM +/− controls operate while idle; physical direction-switch priority and fault gates remain effective.
 
 Implemented features (latest update verified in native tests and simulator; physical safety checks remain bench work):
 

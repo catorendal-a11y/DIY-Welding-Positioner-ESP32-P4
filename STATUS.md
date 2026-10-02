@@ -15,7 +15,7 @@
 - [x] **FastAccelStepper motor control** (hardware RMT pulses, v0.33.x)
 - [x] **FreeRTOS dual-core architecture** (Core 0: Motor/Safety, Core 1: UI)
 - [x] **5 welding modes:** Continuous, Jog, Pulse, Step, Timer
-- [x] **Live RPM adjustment** (potentiometer; touch +/- on Jog and in program/settings flows; main RPM from pot)
+- [x] **RPM adjustment** (live potentiometer input; idle main-screen +/−; Jog and program/edit controls)
 - [x] **Thread-safe cross-core speed updates** (atomic + request flag pattern, FreeRTOS mutex for stepper)
 - [x] **`applySpeedAcceleration()`** for immediate speed changes during running
 - [x] **Linear acceleration phase** (resonance-zone traversal)
@@ -24,9 +24,9 @@
 - [x] **ADC potentiometer** (IIR filtering, 0-3315 ADC range, 200-count override threshold)
 
 ### Safety
-- [x] **Hardware E-STOP** (GPIO34, active LOW fault, <0.5ms ISR; wakes dimmed display)
+- [x] **E-STOP input** (GPIO34 HIGH healthy / LOW fault; ISR drives ENA HIGH and wakes dimmed display; physical latency requires measurement)
 - [x] **Motion-start safety re-checks** (ENA is re-disabled if E-STOP/ALM appears during the final start window)
-- [x] **Task Watchdog Timer** (motor & safety tasks)
+- [x] **Task Watchdog Timer** (motor, control and safety tasks; checked setup/feed)
 - [x] **Boot-safe ENA pin** (motor disabled on startup)
 - [x] **CAS state transitions** (race-free between safetyTask and controlTask)
 - [x] **E-STOP UI overlay** (full-screen red, blocks all interaction)
@@ -128,7 +128,7 @@
 | GPIO 52 | ENABLE | Active LOW to driver ENA |
 | GPIO 49 | POT | 10k speed potentiometer (ADC) |
 | GPIO 29 | DIR SWITCH | CW/CCW toggle, INPUT_PULLUP |
-| GPIO 34 | E-STOP | NC contact, interrupt, active LOW |
+| GPIO 34 | E-STOP | HIGH healthy / LOW fault, FALLING interrupt; verify conditioned interface and cable-break behavior |
 | GPIO 32 | DRIVER ALM | DM542T alarm input, active LOW |
 | GPIO 33 | PEDAL SW | Foot pedal switch, active LOW |
 | GPIO 7/8 | Touch I2C | GT911 + ADS1115 pedal ADC (shared bus) |

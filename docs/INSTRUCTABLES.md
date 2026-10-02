@@ -129,7 +129,7 @@ IMAGE: docs/images/Wiring_diagram.v2.svg
 | GPIO 50 (STEP) | Driver PUL+ | Step pulse |
 | GPIO 51 (DIR) | Driver DIR+ | Direction |
 | GPIO 52 (ENA) | Driver ENA- | LOW = motor ON |
-| GPIO 34 (ESTOP) | E-STOP button | NC contact, pull-up |
+| GPIO 34 (ESTOP) | Conditioned E-STOP input | HIGH healthy / LOW fault; FALLING interrupt |
 | GPIO 32 (DRIVER ALM) | DM542T ALM | Input pull-up, LOW = alarm |
 | GPIO 29 (DIR SW) | Direction toggle | Pull-up, CW/CCW |
 | GPIO 49 (POT) | 10k pot wiper | ADC input |
@@ -143,7 +143,7 @@ IMAGE: docs/images/Wiring_diagram.v2.svg
 
 - **GPIO 28, 14-19, 54 (and other C6 bus pins on the PCB)** — may be routed to the ESP32-C6; **wireless is disabled in firmware** — check the GUITION schematic before repurposing. GPIO 32 is used by this firmware as the DM542T ALM input.
 - **ENA is active LOW** — HIGH means motor disabled (fail-safe)
-- **E-STOP uses NC contact** — breaks connection when pressed
+- **E-STOP interface** — GPIO34 must be HIGH healthy / LOW fault; a bare NC contact to GND has opposite polarity. Verify the conditioned circuit and cable-break response.
 - **All grounds must be connected** — ESP32 GND, PSU GND, motor driver GND
 - **TIG HF start requires a grounded metal enclosure** around the ESP32-P4 screen, stepper driver, and motor PSU
 - **Pot ADC range is 0-3315** with 11dB attenuation on ESP32-P4
@@ -183,12 +183,12 @@ IMAGE: Photo of boot screen
 
 ### Main Screen Layout
 
-IMAGE: docs/images/main_screen.svg
+IMAGE: docs/images/ui_runtime_v5/01_MAIN.png
 
-- **Gauge** — shows current RPM (default range per `MIN_RPM`/`MAX_RPM` in `config.h`); speed on this screen is from the **potentiometer** (no +/- here as of v2.0.4)
+- **Speed panel** — V5 orange target RPM with panel input and idle +/− adjustment. Pulse-derived speed is calculated rather than encoder-measured.
 - **CW/CCW button** — toggle rotation direction
 - **START/STOP** — continuous rotation mode
-- **Mode buttons** — quick access to Jog, Pulse, Step, Timer
+- **Menu / Run Modes** — access Jog, Pulse, Step and Timer
 
 ---
 
@@ -199,13 +199,13 @@ IMAGE: docs/images/main_screen.svg
 Ways to adjust speed:
 
 1. **Potentiometer** — primary control on the **main** screen (full range per `config.h` and Motor Config max RPM)
-2. **Jog screen +/-** — small digital steps for **jog RPM** while setting up that mode (v2.0.4+)
+2. **Main +/− and Jog +/−** — main adjustments while idle and safe; dedicated Jog speed controls
 3. **Foot pedal** — analog speed via ADS1115 I2C ADC (if connected)
 4. **Programs / edit flows** — stored RPM per preset; load a program to apply
 
 ### 5 Welding Modes
 
-IMAGE: docs/images/ui_screens.svg
+IMAGE: docs/images/ui_runtime_v5/overview.png
 
 | Mode | Description |
 |---|---|
@@ -213,7 +213,7 @@ IMAGE: docs/images/ui_screens.svg
 | **Pulse** | Timed ON/OFF cycles (configurable) |
 | **Step** | Rotate exact angle, then stop |
 | **Jog** | Run while button is held |
-| **Timer** | Run for set duration, then stop |
+| **Timer** | Configurable countdown before continuous rotation starts |
 
 ### E-STOP Safety
 
@@ -282,7 +282,7 @@ Attach these files to the Instructable:
 - If the motor stalls at low RPM, increase microstepping to 1/16 or 1/32
 - If the pot is noisy, check ADC wiring and grounding
 - If the screen flickers, check PSRAM seating and MIPI-DSI cable
-- If E-STOP doesn't work, verify NC contact wiring against firmware sense: **safe / released = HIGH**, **fault / pressed = LOW** on GPIO 34 (see `safety.cpp` / `docs/HARDWARE_SETUP.md`).
+- If E-STOP doesn't work, verify the input interface against firmware sense: **safe / released = HIGH**, **fault / pressed = LOW** on GPIO 34 (see `safety.cpp` / `docs/HARDWARE_SETUP.md`).
 - If you add custom wiring, avoid pins that the GUITION PCB reserves for the ESP32-C6 unless the schematic confirms they are free
 - If direction switch doesn't work, enable it in Settings > Motor Config > Direction Switch
 

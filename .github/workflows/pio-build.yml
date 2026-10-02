@@ -44,6 +44,12 @@ jobs:
       - name: Run native tests
         run: pio test -e native
 
+      - name: Check setup and packaging scripts
+        run: |
+          bash -n install.sh
+          bash install.sh --check
+          python -m py_compile scripts/package_release.py
+
   firmware-build:
     name: ESP32-P4 ${{ matrix.environment }}
     strategy:
@@ -78,7 +84,7 @@ jobs:
           restore-keys: |
             pio-${{ runner.os }}-
 
-      - name: Build release firmware
+      - name: Build firmware variant
         run: pio run -e ${{ matrix.environment }}
 
       - name: Upload firmware artifact

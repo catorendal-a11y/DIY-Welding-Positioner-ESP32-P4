@@ -31,7 +31,7 @@ For a first installation or when deliberately replacing the partition layout:
 python -m esptool --chip esp32p4 --port COM3 write-flash --flash-size 16MB 0x2000 bootloader.bin 0x8000 partitions.bin 0xe000 boot_app0.bin 0x10000 firmware.bin
 ```
 
-The bundle's partition table has NVS at 0x9000 (0x5000 bytes), OTA metadata at 0xe000, app0 at 0x10000 (0x640000 bytes), app1 at 0x650000 (0x640000 bytes), SPIFFS at 0xc90000 and coredump at 0xff0000. This is the actual PlatformIO-generated layout; the legacy `default_16MB.csv` illustration is not the emitted table. Replacing a different layout may require resetting stored configuration. No filesystem upload is needed for settings and presets.
+The bundle's partition table has NVS at 0x9000 (0x5000 bytes), OTA metadata at 0xe000, app0 at 0x10000 (0x640000 bytes), app1 at 0x650000 (0x640000 bytes), SPIFFS at 0xc90000 and coredump at 0xff0000. `default_16MB.csv` documents the same layout; generated `partitions.bin` is authoritative. Replacing a different layout may require resetting stored configuration. No filesystem upload is needed for settings and presets.
 
 Standalone application files from the release page contain only `firmware.bin`; they are not merged full-flash images. The ZIP also includes the bootloader, partition table, OTA initialization image, build metadata and checksums.
 

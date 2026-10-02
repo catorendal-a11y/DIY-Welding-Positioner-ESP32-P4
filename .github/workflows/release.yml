@@ -3,30 +3,52 @@ name: Release Firmware
 on:
   push:
     tags:
-      - "v*.*.*"
+      - 'v*.*.*'
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing vX.Y.Z tag to build and publish
+        required: true
+        type: string
 
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   release:
-    name: Build and Publish Release
+    name: Validate, Build and Publish
     runs-on: ubuntu-latest
-
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
     steps:
-      - name: Checkout repository
+      - name: Checkout tagged source
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+          fetch-depth: 0
+
+      - name: Check version and release notes
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          git rev-parse "refs/tags/$RELEASE_TAG"
+          grep -F "#define FW_VERSION \"$RELEASE_TAG\"" src/config.h
+          test -f "docs/releases/$RELEASE_TAG.md"
 
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
-      - name: Install PlatformIO Core
+      - name: Install build dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install --upgrade platformio
+          python -m pip install --upgrade pip platformio
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev ninja-build xvfb
 
       - name: Cache PlatformIO packages
         uses: actions/cache@v5
@@ -42,35 +64,38 @@ jobs:
       - name: Run native tests
         run: pio test -e native
 
-      - name: Build release firmware
-        run: pio run -e esp32p4-release
+      - name: Build all firmware variants
+        run: pio run -e esp32p4-release -e esp32p4-debug -e esp32p4-mirror
 
-      - name: Prepare release assets
+      - name: Test actual LVGL navigation
         run: |
-          set -euo pipefail
-          mkdir -p release
-          FW_BIN="$(ls -t .pio/build-fw/esp32p4-release/fw_*.bin | head -n1)"
-          cp "$FW_BIN" "release/firmware-${GITHUB_REF_NAME}.bin"
-          cp .pio/build-fw/esp32p4-release/bootloader.bin "release/bootloader-${GITHUB_REF_NAME}.bin"
-          cp .pio/build-fw/esp32p4-release/partitions.bin "release/partitions-${GITHUB_REF_NAME}.bin"
-          cat > release/flash-command.txt <<EOF
-          Recommended flashing:
+          cmake -S simulator -B simulator/build -G Ninja
+          cmake --build simulator/build --target rotator_simulator -j 2
+          xvfb-run -a simulator/build/rotator_simulator --self-test
 
-            pio run -e esp32p4-release --target upload --upload-port COM5
+      - name: Prepare firmware bundles and checksums
+        run: |
+          python scripts/package_release.py --version "$RELEASE_TAG" --output release \
+            --run-url "https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
-          Included files:
-            firmware-${GITHUB_REF_NAME}.bin
-            bootloader-${GITHUB_REF_NAME}.bin
-            partitions-${GITHUB_REF_NAME}.bin
-
-          Prefer PlatformIO upload because it uses the board and partition offsets from platformio.ini.
-          EOF
+      - name: Save build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: welding-positioner-${{ env.RELEASE_TAG }}
+          path: release/*
+          if-no-files-found: error
 
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" release/* \
-            --title "${GITHUB_REF_NAME}" \
-            --generate-notes \
-            --verify-tag
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" release/* --clobber
+            gh release edit "$RELEASE_TAG" --title "$RELEASE_TAG — V5 UI and input reliability" \
+              --notes-file "docs/releases/$RELEASE_TAG.md" --draft=false --latest
+          else
+            gh release create "$RELEASE_TAG" release/* --verify-tag --latest \
+              --title "$RELEASE_TAG — V5 UI and input reliability" \
+              --notes-file "docs/releases/$RELEASE_TAG.md"
+          fi

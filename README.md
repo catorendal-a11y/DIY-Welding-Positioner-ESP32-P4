@@ -59,7 +59,7 @@ Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Posit
 - Failed NVS writes stay pending and retry; UI reports pending/failed saves. Five-minute dimming stores correctly.
 - Pulse pause timing begins after the motor library reports stopped. USB mirror writes have bounded waits and release remote input on failure.
 
-[Implementation details](docs/FORBEDRINGER_2026-10-01.md) · [V5 integration and upload record](docs/UI_V5_DEPLOYMENT.md) · [Changelog](CHANGELOG.md)
+[Implementation details](docs/IMPROVEMENTS_2026-10-01.md) · [V5 integration and upload record](docs/UI_V5_DEPLOYMENT.md) · [Changelog](CHANGELOG.md)
 
 **Current release: v2.1.0, updated 2 October 2026.** V5 identifies the UI design iteration. [Download firmware and read the release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.1.0). Runtime screenshots were captured during V5 integration before the release version update.
 
@@ -428,7 +428,7 @@ Remote control is fail-closed: it starts disabled after boot, requires **Setting
 | **Motor Torque** | 3.0 Nm (NEMA 23) |
 | **Control Resolution** | Sub-milli-RPM (speed is computed in milli-Hz and applied via `setSpeedInMilliHz()` + `applySpeedAcceleration()`) |
 | **Display** | 800 x 480, landscape, LVGL 9.5.0, RGB565, 2-lane MIPI-DSI |
-| **Flash partition** | 16 MB total; 2x 4 MB app (OTA-capable); 8 MB storage partition |
+| **Flash partition** | 16 MB total; two 0x640000-byte app slots, 0x360000-byte SPIFFS area, NVS/OTA metadata and coredump. See [flashing guide](docs/releases/FLASHING.md). |
 | **RAM Usage** | ~10% &ensp; (about 32 KB / 320 KB internal SRAM in release build) — LVGL buffers live in PSRAM (`CONFIG_SPIRAM_FETCH_INSTRUCTIONS`) |
 
 ---
@@ -675,7 +675,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 | [docs/PROJECT_IMPLEMENTATION.md](docs/PROJECT_IMPLEMENTATION.md) | RTOS architecture, storage, display pipeline, known workarounds |
 | [docs/INSTRUCTABLES.md](docs/INSTRUCTABLES.md) | Builder-friendly article content and assembly flow |
 | [docs/UI_V5_DEPLOYMENT.md](docs/UI_V5_DEPLOYMENT.md) | V5 UI implementation, screenshots and device upload evidence |
-| [docs/FORBEDRINGER_2026-10-01.md](docs/FORBEDRINGER_2026-10-01.md) | Code improvements, checks and remaining bench work |
+| [docs/IMPROVEMENTS_2026-10-01.md](docs/IMPROVEMENTS_2026-10-01.md) | Code improvements, checks and remaining bench work |
 | [docs/estop_timing.md](docs/estop_timing.md) | Physical E-STOP measurement procedure |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Fork, build, test, and pull-request workflow |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Contributor Covenant (community standards for GitHub / contributors) |

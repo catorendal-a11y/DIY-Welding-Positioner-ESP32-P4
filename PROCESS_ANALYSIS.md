@@ -1,396 +1,76 @@
-# Process Flow Analysis — TIG Rotator Controller
+# Process flow analysis — v2.1.0
 
-## Task Architecture
+Updated 2 October 2026. This document describes current production flow; the [earlier analysis is archived](docs/archive/PROCESS_ANALYSIS_v2.0.5.md). Physical response times require measurement.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           CORE 0 (Real-time)                              │
-│                                                                             │
-│  safetyTask (pri 5, 4KB)     motorTask (pri 4, 5KB)    controlTask (pri 3, 4KB)│
-│  ┌─────────────────────┐    ┌──────────────────────┐    ┌────────────────────┐  │
-│  │ 1ms loop            │    │ 5ms loop              │    │ 10ms loop          │  │
-│  │ - WDT feed          │    │ - WDT feed            │    │ - WDT feed          │  │
-│  │ - ESTOP debounce    │    │ - speed_apply()       │    │ - Process pending  │  │
-│  │ - forceStop()       │    │ - ADC read (20ms)     │    │   mode requests    │  │
-│  │ - state→ESTOP       │    │ - accel apply         │    │ - State transitions│  │
-│  │ - reset handling    │    │ - motor config apply  │    │                    │  │
-│  └─────────────────────┘    │ - pedal input         │    └────────────────────┘  │
-│                              └──────────────────────┘                            │
-│                                                                             │
-│  ISR: estopISR (FALLING edge on GPIO34)                                     │
-│  ┌────────────────────────────────────────────┐                              │
-│  │ GPIO.out1_w1ts                             │  ← ONLY GPIO write + flags  │
-│  │ g_estopPending.store(true, release)        │                              │
-│  │ g_wakePending.store(true, release)         │                              │
-│  └────────────────────────────────────────────┘                              │
-│  (flags declared in src/app_state.h)                                         │
-└─────────────────────────────────────────────────────────────────────────────┘
+## Task architecture
 
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           CORE 1 (UI/IO)                                  │
-│                                                                             │
-│  lvglTask (pri 2, 64KB)               storageTask (pri 1, 12KB)             │
-│  ┌──────────────────────────────┐    ┌──────────────────────────┐           │
-│  │ 10ms loop                    │    │ 100ms loop               │           │
-│  │                              │    │                          │           │
-│  │ 1. screens_process_pending() │    │ 1. storage_flush()       │           │
-│  │    → theme_reinit (rare)     │    │    → NVS / flash write   │           │
-│  │    → screens_show()          │    │                          │           │
-│  │                              │    │ 2. Health monitoring     │           │
-│  │ 2. lvgl_lock()               │    │    → stack/heap check    │           │
-│  │    lv_timer_handler()         │    │                          │           │
-│  │    lvgl_unlock()             │    │ NO WDT — blocking I/O   │           │
-│  │                              │    └──────────────────────────┘           │
-│  │ 3. dim_update()              │                                         │
-│  │                              │                                         │
-│  │ 4. screens_update_current()  │                                         │
-│  │    [every 200ms, mutex]       │                                         │
-│  │                              │                                         │
-│  │ 5. ESTOP overlay show/hide   │                                         │
-│  │    [mutex]                   │                                         │
-│  │                              │                                         │
-│  │ 6. ESTOP overlay update      │                                         │
-│  │    [mutex]                   │                                         │
-│  └──────────────────────────────┘                                         │
-└─────────────────────────────────────────────────────────────────────────────┘
+| Task | Core | Priority | Stack | Responsibility |
+| --- | --- | --- | --- | --- |
+| safetyTask | 0 | 5 | 4 KB | Fault polling, E-STOP debounce, driver alarm, watchdog |
+| motorTask | 0 | 4 | 5 KB | Speed source/ADC, pedal interlock, speed application |
+| controlTask | 0 | 3 | 4 KB | Motion commands, STOP latch, mode state, settings application, fault cleanup/reset |
+| lvglTask | 1 | 2 | 64 KB | Actual LVGL screens, touch, dimming, blocking fault overlay |
+| storageTask | 1 | 1 | 12 KB | Debounced NVS writes/retries and housekeeping |
+| usbMirrorTask, optional | 1 | 1 | 8 KB | Bounded pixel transport and gated remote pointer input |
+
+Task creation is checked. Motion stays inhibited until four critical tasks report ready. Watchdog setup, registration and feed failures are checked. Storage/UI are not watchdog subscribers; motor/control/safety are.
+
+## Motion dispatch and STOP
+
+```mermaid
+flowchart LR
+  UI[UI / pedal / program] --> Request[Parameter snapshot + generation]
+  Request --> Queue[One-slot command queue]
+  Queue --> Control[controlTask]
+  Stop[STOP request] --> Latch[Independent STOP latch]
+  Latch --> Invalidate[Invalidate pending starts]
+  Invalidate --> Control
+  Control --> Gate[Readiness / fault / pedal / state checks]
+  Gate --> Motor[Serialized motor API]
 ```
 
-## Data Flow: SAVE Operation (Settings)
-
-```
-User presses SAVE on any settings screen
-         │
-         ▼
-┌─────────────────────────────────────────┐
-│ Event callback (inside lv_timer_handler) │
-│                                         │
-│ 1. g_settings.xxx = newValue           │
-│ 2. storage_save_settings()              │
-│    → savePending = true (1 line)        │
-│ 3. Return (no flash write!)             │
-└─────────────────┬───────────────────────┘
-                  │
-                  │  (1 second debounce)
-                  ▼
-┌─────────────────────────────────────────┐
-│ storageTask: storage_flush()            │
-│                                         │
-│ 1. Check savePending && 1s elapsed     │
-│ 2. savePending = false                 │
-│ 3. storage_save_settings_internal()    │
-│    a. copy g_settings under mutex       │
-│    b. serializeJson(doc, RAM buffer)    │
-│    c. Preferences.putBytes("cfg", buf)  │
-│       → NVS FLASH WRITE                 │
-│       → Flash cache may be disabled     │
-│         during commit                   │
-│ 4. g_screenRedraw = true                │
-└─────────────────────────────────────────┘
-```
-
-## Data Flow: Screen Switch
-
-```
-User presses BACK button
-         │
-         ▼
-┌─────────────────────────────────────────┐
-│ Event callback (inside lv_timer_handler) │
-│                                         │
-│ screens_show(SCREEN_SETTINGS)           │
-│  1. create_screen() if not created      │
-│  2. currentScreen = SCREEN_SETTINGS     │
-│  3. lv_screen_load(screenRoots[id])     │
-│                                         │
-│ SAFE: LVGL 9 guarantees sequential      │
-│ execution within lv_timer_handler()      │
-└─────────────────────────────────────────┘
-```
-
-## Data Flow: Theme Change (Deferred)
-
-```
-User presses ACCENT COLOR cycle button
-         │
-         ▼
-┌─────────────────────────────────────────┐
-│ Event callback (inside lv_timer_handler) │
-│                                         │
-│ 1. g_settings.accent_color = next       │
-│ 2. theme_set_color(idx)                 │
-│    → g_accent = new color (fast)        │
-│ 3. Update button label text             │
-│ 4. themeRefreshPending = true           │
-│ 5. Return                              │
-└─────────────────┬───────────────────────┘
-                  │
-                  │  (next 10ms loop iteration)
-                  ▼
-┌─────────────────────────────────────────┐
-│ lvglTask: screens_process_pending()     │
-│ (OUTSIDE mutex — no LVGL rendering)     │
-│                                         │
-│ 1. themeRefreshPending = false         │
-│ 2. theme_refresh()                     │
-│    → screens_reinit()                   │
-│      a. estop_overlay_destroy()         │
-│      b. lv_obj_delete() ALL screens    │
-│      c. screens_init()                  │
-│      d. screens_show(prev)              │
-│                                         │
-│ SAFE: No LVGL rendering active         │
-│ Next lv_timer_handler() will render     │
-│ fresh screens with new colors           │
-└─────────────────────────────────────────┘
-```
-
-## Data Flow: ESTOP Activation
-
-```
-ESTOP button pressed (GPIO34 LOW)
-         │
-         ▼
-┌─────────────────────────────────────────┐
-│ estopISR (interrupt, IRAM_ATTR)                │
-│                                                │
-│ 1. GPIO.out1_w1ts = ENA HIGH                  │
-│    → Motor disabled (direct register)         │
-│ 2. g_estopPending.store(true, release)        │
-│ 3. g_wakePending.store(true, release)         │
-│                                                │
-│ TOTAL: ~2-3 CPU cycles                         │
-│ NO function calls, NO flash access             │
-└─────────────────┬──────────────────────────────┘
-                  │
-                  │  (next 1ms safetyTask loop)
-                  ▼
-┌────────────────────────────────────────────────┐
-│ safetyTask (Core 0, priority 5)                │
-│                                                │
-│ 1. WDT feed                                    │
-│ 2. if (g_estopPending.load(acquire))           │
-│    a. g_estopTriggerMs.store(millis(), release)│
-│    b. estopStepper->forceStop()                │
-│    c. Wait 5ms (debounce)                      │
-│    d. Verify PIN still LOW                     │
-│    e. control_transition_to(STATE_ESTOP)       │
-│       → motor_halt()                          │
-│       → estopLocked.store(true, release)       │
-│    f. g_estopPending.store(false, release)     │
-│    g. g_estopTriggerMs.store(0, release)       │
-└────────────────────────────────────────────────┘
-```
+Commands are received once before dispatch. STOP is not overwritten by START; it invalidates older start tickets. JOG release cancels queued JOG and active JOG requires UI renewal within 150 ms. These software intervals are not measurements of physical standstill.
 
----
+Motor configuration applies through controlTask only while idle. UI reports applied/cancelled and storage status rather than claiming persistence immediately. Program start snapshots parameters; program speed/direction ownership does not depend on an untouched panel's static RPM difference.
 
-## KNOWN PROBLEMS & RISK AREAS
+## Pedal and speed input
 
-### PROBLEM 1: LittleFS Flash Write Disables CPU Cache (CRITICAL)
+Pedal arming requires 50 ms stable release at boot, enable and reset. Release cancels the pedal's pending start. Active analog input requires a valid, fresh sample; stale/failed enabled pedal input blocks motion instead of selecting the panel. Switch-only builds intentionally use panel speed. ADS1115 conversion polling is split across task cycles.
 
-**Severity**: HIGH — causes blue screen flash, potential IWDT reboot
-**Status**: PARTIALLY MITIGATED
+Calculated RPM comes from step timing and geometry, not an encoder. Source/direction are visible on the main screen. Idle-screen RPM +/− and direction controls are disabled during motion; the physical direction switch retains priority when enabled.
 
-When `storage_save_settings_internal()` or `storage_save_presets_internal()` writes to flash:
-- SPI flash cache is **disabled on BOTH cores** for the duration of the write
-- Any code in flash (not PSRAM) will crash if executed during this window
-- LittleFS write takes 50-200ms depending on data size
-- `serializeJson()` builds the entire JSON in RAM first, then writes — the write itself is a single `file.write()` call
+## E-STOP and driver alarm
 
-**Mitigations applied**:
-- `CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y` + `CONFIG_SPIRAM_RODATA=y` — moves code/rodata to PSRAM
-- ESTOP ISR contains NO function calls (only GPIO + flag)
-- IWDT timeout increased to 2000ms
-- storageTask NOT subscribed to WDT
+GPIO34 expects HIGH healthy / LOW fault. A FALLING ISR writes ENA HIGH and stores pending/wake flags. ISR avoids motor calls, logging, allocation and ordinary flash functions. ENA HIGH disable is a driver/interface assumption that must be verified.
 
-**REMAINING RISK**:
-- `lv_timer_handler()` runs on Core 1 and may call LVGL code in flash during a write
-- LVGL tick timer callback (`lvgl_tick_cb`) is `IRAM_ATTR` — safe
-- But LVGL rendering code (widget draw functions) is in flash — if `lv_timer_handler()` is called while storageTask is writing, LVGL code in flash may crash
-- `dim_update()` runs OUTSIDE mutex — calls `display_set_brightness()` which may be in flash
-- `g_presets_mutex` is held during `storage_save_presets_internal()` — if UI code tries to take this mutex while storageTask holds it, Core 1 blocks. But Core 0 tasks don't take this mutex.
+The safety task publishes a latched ESTOP transition; potentially blocking motor cleanup runs in controlTask. Driver-alarm handling disables ENA first and attempts bounded initial mutex cleanup. The control task retries fault cleanup as needed. A brief input glitch also remains faulted until explicit reset.
 
-**FIX NEEDED**: `lv_timer_handler()` and `dim_update()` should NOT run during flash writes. Options:
-1. Add a `volatile bool flashWriteInProgress` flag that `lvglTask` checks before calling `lv_timer_handler()`
-2. Or: accept the blue flash as cosmetic (no crash if all ISR code is in IRAM/PSRAM)
+The overlay displays fault/input state, wakes the backlight and blocks underlying controls. RESET TO IDLE is available only when physical input/alarm/pedal conditions permit it; callback and control processing both guard reset. Reset never starts motion.
 
-### PROBLEM 2: `dim_update()` Runs Outside Mutex (MEDIUM)
+No ISR-cycle count or physical stop-time guarantee is asserted. Repeated software checks do not make GPIO enable atomic with an interrupt. Verify wiring, cable breaks, driver enable polarity and timing on the assembled machine using the [measurement procedure](docs/estop_timing.md).
 
-**Severity**: MEDIUM — touches display hardware without mutex protection
-**Status**: NOT FIXED
+## SAVE operation
 
-`dim_update()` is called on line 102 of main.cpp, AFTER `lvgl_unlock()` and BEFORE the 200ms update check. It calls:
-- `display_set_brightness()` — LEDC PWM, probably safe
-- `esp_lcd_touch_read_data()` + `esp_lcd_touch_get_coordinates()` — I2C touch, NOT thread-safe with LVGL's internal touch processing
+1. UI updates a guarded draft/settings snapshot and requests a deferred save.
+2. `SaveRequest` records a generation; settings debounce for 1000 ms and presets for 500 ms.
+3. storageTask serializes snapshots and writes NVS `wrot/cfg` or `wrot/prs`.
+4. Success clears only the completed generation; a concurrent new request remains pending.
+5. Failure retains pending data, reports error and retries with backoff up to 30 seconds.
 
-If `lv_timer_handler()` processes a touch event while `dim_update()` is reading touch data, the GT911 I2C bus gets concurrent access → garbage touch data or I2C bus lockup.
+UI distinguishes pending/saved/error. Invalid existing JSON roots and out-of-range/nonfinite values are validated; corrupt stored data does not silently become a successful boot. Dimming uses 16 bits and documented 44→300 migration.
 
-**FIX**: Move `dim_update()` inside the mutex, or add a separate mutex for touch I2C.
+Flash commits may interfere with rendering/cache access. `g_flashWriting` signals active writes; the UI loop checks it, although this flag is not a hardware cache-safety proof. Framework configuration, ISR placement and worst-case flash/load behavior still require bench checks.
 
-### PROBLEM 3: `control_get_state()` Called Outside Mutex (LOW)
+## Screen, theme and input lifecycle
 
-**Severity**: LOW — reads atomic variable, probably safe
-**Status**: NOT FIXED
+Navigation requests and theme recreation are deferred through the UI loop, outside callback deletion of triggering widgets. Static widget pointers are invalidated before screen reconstruction. Program draft lifetime is separate from screen widgets, preserving edits across child screens.
 
-Line 114: `SystemState state = control_get_state();` is called outside mutex.
-`control_get_state()` reads `std::atomic<SystemState>` which is lock-free — safe.
-But the subsequent `estop_overlay_show/hide/update()` calls are properly mutex-wrapped.
+V5 shares a graphite/orange theme, 14 px body floor and generated 104 px numeric font across firmware/simulator. Twenty-two ScreenIds and a separate fault overlay are registered. Calibration keeps scrollable content and fixed motion actions. GT911 read failure reports RELEASED, and JOG renewal protects against stalled UI input.
 
-### PROBLEM 4: `motor_is_running()` Uses Critical Section (FIXED)
+## USB mirror
 
-**Severity**: LOW — was short critical sections
-**Status**: FIXED (2026-04-05)
+Mirror firmware sends dirty RGB565 rectangles through bounded writes. Failed transport disarms/releases remote input and requests redraw after dropped regions. Remote interaction requires physical-screen arming and valid keepalive; no direct motor-command protocol exists.
 
-`motor_is_running()` and `motor_get_current_hz()` previously used `portENTER_CRITICAL` (spinlock) which disables interrupts on the calling core. When called from Core 1 (UI) while Core 0 held the spinlock, both cores had interrupts disabled — triggering IWDT crashes under cross-core contention.
+## Verification and remaining work
 
-**Fix**: `g_stepperMutex` replaced from `portMUX_TYPE` (spinlock) to `SemaphoreHandle_t` (FreeRTOS mutex). All `portENTER_CRITICAL`/`portEXIT_CRITICAL` replaced with `xSemaphoreTake`/`xSemaphoreGive`. FreeRTOS mutex blocks via scheduler without disabling interrupts.
-
-### PROBLEM 5: `g_stepperMutex` is `portMUX_TYPE` Not `SemaphoreHandle_t` (FIXED)
-
-**Severity**: WAS LOW, turned out to be CRITICAL — caused IWDT crash on Core 0
-**Status**: FIXED (2026-04-05)
-
-`g_stepperMutex` was a spinlock (`portMUX_TYPE`) used with `portENTER_CRITICAL`. When contended across both cores (Core 1 UI calling `motor_is_running()` while Core 0 motorTask holds lock), interrupts were disabled on both cores simultaneously. This blocked the IPC task and tick interrupt on Core 0, triggering "Interrupt wdt timeout on CPU0" after 2000ms.
-
-**Fix**: Changed to `SemaphoreHandle_t` mutex. All 16 instances of `portENTER_CRITICAL`/`portEXIT_CRITICAL` across `motor.cpp`, `speed.cpp`, `step_mode.cpp`, `jog.cpp`, and `pulse.cpp` replaced with `xSemaphoreTake`/`xSemaphoreGive`. FreeRTOS mutex has priority inheritance and blocks via scheduler, keeping tick interrupts enabled.
-
-### PROBLEM 6: `storage_save_presets_internal()` Holds Mutex During Flash Write (MEDIUM)
-
-**Severity**: MEDIUM — blocks UI if it tries to access presets
-**Status**: NOT FIXED
-
-`storage_save_presets_internal()` (storage.cpp:105) takes `g_presets_mutex` at the start and releases it after the entire write + rename sequence. If any UI code (Core 1) tries to take this mutex during the write, it blocks.
-
-Currently, only `screen_programs.cpp` and `screen_program_edit.cpp` take `g_presets_mutex` from the UI. These are event callbacks inside `lv_timer_handler()`. If `storage_flush()` is writing presets while the user clicks a program, the UI callback blocks until the write completes (50-200ms).
-
-**FIX**: Copy presets to local buffer, release mutex, then write from buffer.
-
-### PROBLEM 7: `screens_reinit()` Deletes All Screens (MEDIUM)
-
-**Severity**: MEDIUM — causes brief blue flash
-**Status**: MITIGATED (deferred via screens_process_pending)
-
-`screens_reinit()` deletes all screen objects and recreates them. During the brief moment between delete and recreate, there is no valid active screen → display shows default color (blue/black).
-
-Mitigation: Runs in `screens_process_pending()` BEFORE `lv_timer_handler()`, so no rendering happens during the transition. The blue flash is caused by the MIPI-DSI panel showing its default color when no new frame is sent.
-
-**FIX**: Could send a black frame before reinit, but this is cosmetic.
-
-### PROBLEM 8: `lvgl_tick_cb` Uses `ESP_TIMER_TASK` (LOW)
-
-**Severity**: LOW — 1ms timer
-**Status**: ACCEPTABLE
-
-The LVGL tick timer uses `ESP_TIMER_TASK` dispatch (not `ESP_TIMER_ISR`). This means `lv_tick_inc(1)` runs in the timer task context, not as an actual ISR. This is correct for ESP-IDF 5.x on ESP32-P4 where `ESP_TIMER_ISR` is not available.
-
-The callback is marked `IRAM_ATTR` which is correct — it ensures the function is in IRAM even though it runs in task context.
-
----
-
-## MUTEX OWNERSHIP MAP
-
-| Mutex | Owner | Used by | Notes |
-|---|---|---|---|
-| `g_lvgl_mutex` (recursive) | lvglTask | lv_timer_handler, screens_update_current, estop overlay | Event callbacks run inside this mutex (called from lv_timer_handler) |
-| `g_stepperMutex` (FreeRTOS mutex) | motorTask | All motor functions, speed_apply, jog, pulse, step_mode | xSemaphoreTake/Give — scheduler-based, interrupts stay enabled |
-| `g_presets_mutex` | storageTask | storage_save/load_presets_internal | Held during flash write (PROBLEM 6) |
-| (none) | storageTask | NVS / housekeeping | Sequential in same task — no mutex needed |
-
----
-
-## SHARED STATE BETWEEN CORES
-
-All cross-core atomic flags below are declared in `src/app_state.h` and defined in `src/app_state.cpp` (single source of truth).
-
-| Variable | Type | Writer | Reader | Protection |
-|---|---|---|---|---|
-| `currentState` | `atomic<SystemState>` | controlTask | All | Lock-free atomic + CAS |
-| `g_estopPending` | `std::atomic<bool>` | estopISR | safetyTask | release/acquire ordering |
-| `g_estopTriggerMs` | `std::atomic<uint32_t>` | safetyTask | safetyTask | release/acquire ordering |
-| `g_uiResetPending` | `std::atomic<bool>` | lvglTask (estop overlay) | controlTask | release/acquire ordering |
-| `g_wakePending` | `std::atomic<bool>` | estopISR / boot | lvglTask (dim) | release/acquire ordering |
-| `g_flashWriting` | `std::atomic<bool>` | storageTask | lvglTask | release/acquire ordering |
-| `g_screenRedraw` | `std::atomic<bool>` | lvglTask (callbacks) | lvglTask | release/acquire ordering |
-| `g_dir_switch_cache` | `std::atomic<bool>` | safetyTask / motorTask | motorTask / UI | release/acquire ordering |
-| `motorConfigApplyPending` | `std::atomic<bool>` | lvglTask (callbacks) | motorTask | release/acquire ordering |
-| `sliderRPM` | `atomic<float>` | lvglTask (callbacks) | motorTask | Lock-free atomic |
-| `cachedTargetRpm` | `atomic<float>` | motorTask | motorTask | Lock-free atomic |
-| `jogRPM` | `atomic<float>` | lvglTask (callbacks) | jog.cpp | Lock-free atomic |
-| `pendingJogSpeed` | `atomic<float>` | lvglTask (callbacks) | motorTask | Lock-free atomic |
-| `g_settings` | plain struct | lvglTask + storageTask | All | `g_settings_mutex` on cross-core touches |
-| `g_presets` | vector | storageTask + lvglTask | lvglTask | `g_presets_mutex` |
-| `g_accent` | `lv_color_t` | lvglTask | lvglTask (via COL_ACCENT) | No mutex needed — same core |
-
----
-
-## RECOMMENDED FIXES (Priority Order)
-
-### 1. Add flash write guard to lvglTask (fixes blue screen)
-
-> **Status (v2.0.5):** `g_flashWriting` already exists as `std::atomic<bool>` in `src/app_state.h` / `src/app_state.cpp`. Tightening the `lvglTask` loop to skip work during the cache-off window is still optional cosmetic work.
-
-```cpp
-// Declared in src/app_state.h:
-extern std::atomic<bool> g_flashWriting;
-
-// In storage.cpp (storage_save_settings_internal / _presets_internal):
-g_flashWriting.store(true, std::memory_order_release);
-// ... existing write code ...
-g_flashWriting.store(false, std::memory_order_release);
-
-// In main.cpp lvglTask loop (optional):
-for (;;) {
-  if (!g_flashWriting.load(std::memory_order_acquire)) {
-    screens_process_pending();
-    lvgl_lock();
-    lv_timer_handler();
-    lvgl_unlock();
-  }
-  dim_update();
-  // ...
-}
-```
-
-### 2. Move dim_update() inside mutex
-
-```cpp
-for (;;) {
-  screens_process_pending();
-  lvgl_lock();
-  lv_timer_handler();
-  dim_update();          // ← move here (inside mutex)
-  screens_update_current();
-  // ESTOP overlay...
-  lvgl_unlock();
-  vTaskDelayUntil(&t, pdMS_TO_TICKS(10));
-}
-```
-
-### 3. Remove stale `extern` declarations from `main.cpp` if they no longer link to storage
-
-Line 25 is a dead reference to a removed variable.
-
-### 4. Release g_presets_mutex before flash write
-
-```cpp
-static bool storage_save_presets_internal() {
-  // Copy presets to local buffer
-  xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
-  std::vector<Preset> localCopy = g_presets;
-  xSemaphoreGive(g_presets_mutex);
-
-  // Serialize localCopy to RAM, then write JSON bytes to NVS.
-  // No presets mutex is held during the flash write.
-  g_prefs.putBytes(NVS_KEY_PRESETS, buf.data(), written);
-}
-```
-
-### 5. Consider: lv_timer_handler() timeout
-
-If `lv_timer_handler()` takes too long (complex screen with many widgets), the 10ms loop can't keep up. Add a timeout or skip frames:
-
-```cpp
-uint32_t handlerStart = millis();
-lv_timer_handler();
-uint32_t handlerMs = millis() - handlerStart;
-if (handlerMs > 50) LOG_W("LVGL handler took %lums", handlerMs);
-```
+The published integration passed 403 native tests, actual LVGL self-test and release/debug/mirror CI builds. Tests directly cover several production policies; older suites model other behavior and simulator motor/storage are stubbed. Device fault injection, physical stop response, power loss, cable-break behavior, USB backpressure and TIG HF conditions remain separate checks. See [improvement report](docs/IMPROVEMENTS_2026-10-01.md), [current status](STATUS.md), [hardware guide](docs/HARDWARE_SETUP.md) and [flashing guide](docs/releases/FLASHING.md).

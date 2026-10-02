@@ -9,7 +9,7 @@ The system transitions through a rigorous state machine (defined in `control.h`)
 - **STATE_PULSE:** Pulse mode (ON/OFF cycles).
 - **STATE_STEP:** Step mode (exact angle rotation).
 - **STATE_JOG:** Touch-and-hold jog control.
-- **STATE_TIMER:** Timed rotation with auto-stop.
+- **STATE_TIMER:** Countdown before continuous rotation starts; program auto-stop is a separate setting.
 - **STATE_STOPPING:** Deceleration ramp before IDLE.
 - **STATE_ESTOP:** Latched fault. ENA is driven HIGH; mechanical stopping behavior depends on the driver and load.
 

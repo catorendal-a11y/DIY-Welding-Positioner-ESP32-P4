@@ -1,7 +1,7 @@
 # Load Test — Thermal Validation
 
 ## Hardware: GUITION JC4880P443C (ESP32-P4 + ESP32-C6)
-## Firmware: v2.0.0
+## Firmware under test: v2.1.0 (record the exact commit before testing)
 ## Test Date: [FILL IN AFTER HARDWARE TEST]
 
 ---
@@ -10,7 +10,7 @@
 
 - **Workpiece:** 50 kg steel pipe
 - **Diameter:** 300 mm
-- **RPM:** 1.0 (default MAX_RPM cap)
+- **RPM:** 1.0 test setpoint; firmware absolute maximum is 3.0 RPM, subject to saved motor settings
 - **Duration:** 60 minutes continuous
 - **Ambient Temperature:** ___ C
 - **Motor:** NEMA 23 (3 Nm rated)

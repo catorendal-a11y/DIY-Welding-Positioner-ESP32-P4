@@ -49,7 +49,7 @@ void estop_overlay_create() {
   ui_create_text(overlay, 24, 438, 242, "Reset never starts motion.", FONT_NORMAL, lv_color_hex(0xE3CBCD));
   resetBtn =
       ui_create_btn(overlay, 288, 408, 488, 56, "RESET BLOCKED", FONT_BTN, UI_BTN_NORMAL, reset_cb, nullptr);
-  lv_obj_add_state(resetBtn, LV_STATE_DISABLED);
+  lv_obj_set_disabled(resetBtn, true);
 }
 void estop_overlay_show() {
   dim_reset_activity();
@@ -93,9 +93,9 @@ void estop_overlay_update() {
   lv_obj_t* label = lv_obj_get_child(resetBtn, 0);
   lv_label_set_text(label, ready ? "RESET TO IDLE" : "RESET BLOCKED");
   if (ready)
-    lv_obj_remove_state(resetBtn, LV_STATE_DISABLED);
+    lv_obj_set_disabled(resetBtn, false);
   else
-    lv_obj_add_state(resetBtn, LV_STATE_DISABLED);
+    lv_obj_set_disabled(resetBtn, true);
   lv_obj_set_style_bg_color(resetBtn, lv_color_hex(ready ? 0xF5F5F0 : 0x49343A), 0);
   lv_obj_set_style_bg_color(resetBtn, lv_color_hex(0x49343A), LV_STATE_DISABLED);
   lv_obj_set_style_text_color(label, lv_color_hex(ready ? 0x201619 : 0xF1D5D9), 0);

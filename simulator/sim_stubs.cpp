@@ -49,7 +49,6 @@ static bool s_directionOverride = false;
 static Direction s_directionOverrideValue = DIR_CW;
 static float s_targetRpm = 0.50f;
 static float s_workpieceDiameterMm = 0.0f;
-static float s_calibrationFactor = 1.0f;
 static bool s_sliderPriority = false;
 static bool s_pedalEnabled = true;
 static uint32_t s_eventVersion = 0;
@@ -151,12 +150,12 @@ float rpmToStepHz(float rpmWorkpiece) {
   float rollerScale = D_EMNE / D_RULLE;
   return rpmWorkpiece * speed_steps_per_gear_output_rev() * rollerScale / 60.0f;
 }
-float rpmToStepHzCalibrated(float rpmCommand) { return rpmToStepHz(rpmCommand * s_calibrationFactor); }
+float rpmToStepHzCalibrated(float rpmCommand) { return rpmToStepHz(rpmCommand * calibration_get_factor()); }
 long angleToSteps(float degrees) { return angleToStepsForDiameter(degrees, s_workpieceDiameterMm); }
 long angleToStepsForDiameter(float degrees, float mmOd) {
   float odM = (mmOd > 0.0f) ? (mmOd / 1000.0f) : D_EMNE;
   float steps = speed_steps_per_gear_output_rev() * (odM / D_RULLE) * (degrees / 360.0f);
-  return (long)(steps * s_calibrationFactor + 0.5f);
+  return (long)(steps * calibration_get_factor() + 0.5f);
 }
 void speed_set_workpiece_diameter_mm(float mmOd) { s_workpieceDiameterMm = mmOd < 0.0f ? 0.0f : mmOd; }
 float speed_get_workpiece_diameter_mm(void) { return s_workpieceDiameterMm; }
@@ -198,16 +197,6 @@ bool speed_pedal_connected() { return s_pedalEnabled; }
 bool speed_ads1115_pedal_present(void) { return false; }
 
 // Motor settings
-void calibration_init() {}
-void calibration_set_factor(float factor) {
-  s_calibrationFactor = constrain(factor, 0.5f, 1.5f);
-  g_settings.calibration_factor = s_calibrationFactor;
-}
-float calibration_get_factor() { return s_calibrationFactor; }
-long calibration_apply_steps(long steps) { return (long)(steps * s_calibrationFactor + 0.5f); }
-float calibration_apply_angle(float angle) { return angle / s_calibrationFactor; }
-uint32_t calibration_save() { return storage_request_settings_save(); }
-bool calibration_validate() { return s_calibrationFactor >= 0.5f && s_calibrationFactor <= 1.5f; }
 void microstep_init() {}
 MicrostepSetting microstep_get() { return (MicrostepSetting)g_settings.microstep; }
 void microstep_set(MicrostepSetting setting) { g_settings.microstep = setting; }

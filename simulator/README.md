@@ -138,3 +138,7 @@ simulator/build/rotator_simulator.exe --commissioning-preview .pio/setup-preview
 ```
 
 This runs the same regression and exports the four stages plus failed-save and completed views as BMP files. It never connects to the device.
+
+## Calibration regression and preview
+
+The simulator compiles the actual calibration module and session policy alongside production control. `--self-test` checks interrupted motion, draft isolation, failed/passing verification and save failure/retry, including STOP while saving. `--calibration-preview <directory>` exports eight actual LVGL states and checks their label layouts. See [the calibration guide](../docs/CALIBRATION_WORKFLOW.md). LVGL argument and widget-tree validation are enabled in the simulator; invalid calls abort the test. Diagnostics uses cached driver/DIR timing information without calling the stepper from the UI.

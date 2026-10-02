@@ -15,7 +15,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgrade Unity to the upstream 2.7.0 commit; prevent PlatformIO's registry runner from replacing it with 2.6.1.
 - Refresh vendored GT911 1.2.1, ST7701 2.0.2~2 and EK79007 2.0.2~1 metadata/source. Use the official LDO header and C++-compatible touch configuration.
 - Keep already-current ArduinoJson 7.4.3, esp_lcd_touch 1.2.1 and compatible SDL2; update packaging for LVGL's moved font-license directory.
-- Add upstream RMT encoder regression to Linux/Windows CI and three production-control migration cases (430 host cases total). Document the full 0.33.14-to-1.4.0 analysis and outstanding device measurements.
+- Add upstream RMT encoder regression to Linux/Windows CI and three production-control migration cases. Document the full 0.33.14-to-1.4.0 analysis and outstanding device measurements.
+
+### Guided calibration and updated library features
+
+- Replace the crowded calibration page with fixed Align → Measure → Verify → Save stages, same-page diameter entry and a full-screen numeric editor. Retain the V5 palette and visible normal STOP.
+- Require completed moves for measurement; reject interruption, stale status, context changes, invalid input and out-of-range corrections. Keep unverified corrections outside saved settings; Restart restores the saved factor. Confirm the verified save receipt, including retry and STOP during saving.
+- Inhibit unrelated mode/program and pedal starts during calibration. Add eight production regressions and the complete LVGL interaction flow (438 host cases total).
+- Adopt LVGL 9.6 dedicated state queries/setters, explicit style caching, simulator argument/widget-tree validation and bounded label lines. Cache FastAccelStepper driver/DIR budgets for Diagnostics.
+- Fix program editor positioning by resolving LVGL layout before shifting controls; add footer/mode-position audit checks and refresh runtime images.
 
 ### Control ownership and guided setup
 

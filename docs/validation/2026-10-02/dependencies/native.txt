@@ -1,10 +1,17 @@
------- native-control:test_control_production [PASSED] Took 1.90 seconds ------
+------ native-control:test_control_production [PASSED] Took 1.77 seconds ------
 
 =================================== SUMMARY ===================================
 Environment     Test                     Status    Duration
 --------------  -----------------------  --------  ------------
-native          test_logic               PASSED    00:00:02.773
-native          test_screens             PASSED    00:00:03.611
-native          test_utils               PASSED    00:00:01.670
-native-control  test_control_production  PASSED    00:00:01.897
-================ 430 test cases: 430 succeeded in 00:00:09.951 ================
+native          test_logic               PASSED    00:00:00.896
+native          test_screens             PASSED    00:00:00.918
+native          test_utils               PASSED    00:00:00.994
+native-control  test_control_production  PASSED    00:00:01.768
+================ 438 test cases: 438 succeeded in 00:00:04.575 ================
+
+Final driver-cache assertion run:
+=================================== SUMMARY ===================================
+Environment     Test                     Status    Duration
+--------------  -----------------------  --------  ------------
+native-control  test_control_production  PASSED    00:00:01.762
+================= 31 test cases: 31 succeeded in 00:00:01.762 =================

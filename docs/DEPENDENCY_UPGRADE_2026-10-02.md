@@ -73,15 +73,39 @@ Source: [pinned public API](https://github.com/gin66/FastAccelStepper/blob/f24a6
 - Update firmware/simulator packages and packaging tests for LVGL's moved `scripts/generators/built_in_font` license directory.
 - The simulator test pump observes elapsed time after the last render/delay before checking control deadlines, removing frame-speed-dependent STOP-test failures.
 
+## New-feature review and adoption
+
+The release notes and installed source were reviewed for applicability, not just version compatibility. Useful application changes are enabled; features for other hardware or a different product architecture are recorded below.
+
+| Updated area | Adopted improvement / applicability |
+|---|---|
+| LVGL 9.6 software rendering | Updated blending/transform implementations are compiled automatically. Style caching is explicitly enabled. No project FPS improvement is claimed without measuring the display and mirror workloads. |
+| LVGL object/state APIs | Dedicated visibility/clickability/scrolling queries and disabled/user-state queries/setters replace deprecated calls. Calibration instructions and numeric-editor errors use `lv_label_set_max_lines()`. |
+| LVGL argument validation | Simulator enables argument checking, widget-tree validation, logging and abort-on-invalid-call. Production keeps argument checks without per-call widget-tree walks. Full navigation and calibration flows pass. |
+| LVGL class/span checks | Upstream v9.6.0 `lv_arc.c` references undefined `obj_class` when class checks are enabled. The span widget's argument validation passes a span pointer to a widget-tree check. Class checks remain disabled; unused span support is disabled. These limitations are not hidden by a local library patch. |
+| Other LVGL additions | Other-SoC GPU backends, glTF, Wayland/DRM, GStreamer, Chinese calendar and variable/dynamic fonts are not used by this RGB565 MIPI/SDL controller. Unused deprecated list/window widgets are disabled; public include paths and explicit SDL software selection are used. |
+| FastAccelStepper public introspection | Cache `driverTypeString()`, before-change ticks/pause count and after-change ticks under motor ownership. Diagnostics shows actual selected driver and DIR budgets, e.g. `RMT / DIR 1500 + 200 us`. The UI reads the cache without library calls. Experimental multi-axis/I2S planners are not applicable to the single RMT axis. |
+| Arduino 3.3.8–3.3.12 / IDF 5.5.5 | USB CDC/HWCDC write fixes, DMA alignment, LEDC timeout/lock fixes, Wire receive bounds, P4 LDO ownership and framework fixes are incorporated through the tested bundle. Existing bounded USB-mirror writes, shared I2C ownership and explicit display LDO allocation remain necessary. Wi-Fi/BLE/OTA/webserver additions are unused. |
+| PlatformIO 6.2.0 | Pin the core in local setup and CI; installer checks its Python ≥3.9 requirement. The new `--port` option can set both upload and monitor port: `pio run -e esp32p4-release --target upload --port COM3`. Removed PVS integration is not used. |
+| Unity 2.7.0 | Updated floating-point assertions and assertion fixes are used by existing/new tests. Optional generated-runner shuffling does not apply to the project's explicit `RUN_TEST` handlers. The custom runner preserves the exact upstream version. |
+| ArduinoJson 7.4.3 | Already includes its floating-point string conversion buffer fix. Settings formats and APIs need no migration. |
+| Touch/panel/SDL components | GT911 source fixes are included, retaining 400 kHz and shared-bus ownership. Remaining panel updates are metadata-only; SDL2 remains the supported simulator driver. |
+
+The calibration redesign also resolves the program editor's collapsed layout: LVGL layout must be updated before reading child positions and applying the existing header offset. The layout audit now checks the editor footer and mode-row positions, in addition to label boundaries.
+
+Sources: [LVGL 9.6 changelog](https://github.com/lvgl/lvgl/blob/v9.6.0/docs/src/changelog/CHANGELOG.mdx), [Arduino 3.3.8](https://github.com/espressif/arduino-esp32/releases/tag/3.3.8), [3.3.9](https://github.com/espressif/arduino-esp32/releases/tag/3.3.9), [3.3.10](https://github.com/espressif/arduino-esp32/releases/tag/3.3.10), [3.3.11](https://github.com/espressif/arduino-esp32/releases/tag/3.3.11), [3.3.12](https://github.com/espressif/arduino-esp32/releases/tag/3.3.12), [IDF 5.5.5](https://github.com/espressif/esp-idf/releases/tag/v5.5.5), [PlatformIO 6.2.0](https://github.com/platformio/platformio-core/releases/tag/v6.2.0), [Unity 2.7.0](https://github.com/ThrowTheSwitch/Unity/releases/tag/v2.7.0).
+
+See [guided calibration](CALIBRATION_WORKFLOW.md) for the new UI, formula, runtime draft isolation and verified-save behavior.
+
 ## Validation
 
-- **430/430** native cases, including **23** production-control cases using the actual dispatcher, motor wrapper and modes with fake hardware. New cases cover explicit RMT selection, pending force-stop drain and forbidden DIR reconfiguration during queued motion.
+- **438/438** native cases, including **31** production-control cases using the actual dispatcher, motor wrapper and modes with fake hardware. New cases cover explicit RMT selection, pending force-stop drain and forbidden DIR reconfiguration during queued motion.
 - **Six** packaging regressions pass, including required license notices and clean build identity.
 - `scripts/test_fas_rmt.py` compiles the installed upstream 1.4.0 core and actual IDF5/6 encoder with upstream `test_30.cpp`. Both RMT buffer geometries pass (PART_SIZE 32 and 24; 158 profiles covering long low phases, pauses, pulse counts and direction changes). Linux and Windows CI run this test.
 - The GPIO, storage and system device-test programs compile against the updated dependencies; build-only validation does not execute hardware tests.
 - Release, debug and USB-mirror firmware build against the pinned platform and actual upstream FastAccelStepper commit.
 - LVGL navigation/setup self-test, layout audit and commissioning/screenshot exports use the actual 9.6 source. Runtime screenshots are refreshed from this simulator.
-- Release build: 32,540 / 327,680 bytes static RAM and 1,110,964 / 6,553,600 bytes application flash. Framework SPI code emits an upstream discarded-volatile warning; application compilation succeeds.
+- Release build: 32,564 / 327,680 bytes static RAM and 1,108,124 / 6,553,600 bytes application flash. Framework SPI code emits an upstream discarded-volatile warning; application compilation succeeds.
 
 Reproduce:
 

@@ -78,5 +78,6 @@ struct ControlSnapshot {
 bool control_read_snapshot(ControlSnapshot& out);
 void control_run_cycle(); // Identical dispatcher/mode cycle on hardware and host.
 void control_set_setup_active(bool active);
-bool control_setup_active();
+bool control_setup_active(); // Wizard or manual calibration: suppress pedal starts
+void control_set_calibration_active(bool active);
 void controlTask(void* pvParameters);  // Main control logic task

@@ -78,18 +78,18 @@ static bool movement_button(lv_obj_t* obj) {
     if (!lv_obj_check_type(label, &lv_label_class)) continue;
     const char* text = lv_label_get_text(label);
     if (strstr(text, "START") || strstr(text, "HOLD CW") || strstr(text, "HOLD CCW") ||
-        strcmp(text, "MOVE 360") == 0 || strcmp(text, "> STEP") == 0 ||
+        (strcmp(text, "MOVE 360") == 0 || strcmp(text, "VERIFY 360") == 0) || strcmp(text, "> STEP") == 0 ||
         strcmp(text, "JOG -") == 0 || strcmp(text, "JOG +") == 0) return true;
   }
   return false;
 }
 static void stale_controls(lv_obj_t* obj, bool disable) {
   if (!obj) return;
-  if (!disable && lv_obj_has_state(obj, LV_STATE_USER_2)) {
-    lv_obj_set_state_user_2(obj, false); lv_obj_remove_state(obj, LV_STATE_DISABLED);
+  if (!disable && lv_obj_is_state_user_2(obj)) {
+    lv_obj_set_state_user_2(obj, false); lv_obj_set_disabled(obj, false);
   }
-  if (disable && movement_button(obj) && !lv_obj_has_state(obj, LV_STATE_DISABLED)) {
-    lv_obj_set_state_user_2(obj, true); lv_obj_add_state(obj, LV_STATE_DISABLED);
+  if (disable && movement_button(obj) && !lv_obj_is_disabled(obj)) {
+    lv_obj_set_state_user_2(obj, true); lv_obj_set_disabled(obj, true);
   }
   for (uint32_t i=0; i<lv_obj_get_child_count(obj); ++i) stale_controls(lv_obj_get_child(obj, i), disable);
 }
@@ -224,6 +224,7 @@ void screens_init() {
 
 void screens_reinit() {
   ScreenId prev = currentScreen;
+  if (prev == SCREEN_CALIBRATION) screen_calibration_leave();
 
   screen_setup_invalidate_widgets();
   screen_main_invalidate_widgets();
@@ -278,6 +279,7 @@ void screens_show(ScreenId id) {
   if (id < 0 || id >= SCREEN_COUNT) return;
 
   ScreenId prev = currentScreen;
+  if (prev == SCREEN_CALIBRATION && id != SCREEN_CALIBRATION) screen_calibration_leave();
   screen_setup_leave(id);
   const bool leavingSliderPriorityScreen =
       (prev == SCREEN_STEP || prev == SCREEN_CALIBRATION) && (id != SCREEN_STEP && id != SCREEN_CALIBRATION);
@@ -297,6 +299,7 @@ void screens_show(ScreenId id) {
   }
   if (screenRoots[id] == nullptr) return;
 
+  if (id == SCREEN_CALIBRATION && prev != id) screen_calibration_enter();
   currentScreen = id;
   lv_screen_load(screenRoots[id]);
 

@@ -36,9 +36,9 @@ static void direction_cb(lv_event_t* e) {
 }
 static void enabled(lv_obj_t* o, bool yes) {
   if (yes)
-    lv_obj_remove_state(o, LV_STATE_DISABLED);
+    lv_obj_set_disabled(o, false);
   else
-    lv_obj_add_state(o, LV_STATE_DISABLED);
+    lv_obj_set_disabled(o, true);
 }
 void screen_main_create() {
   lv_obj_t* s = screenRoots[SCREEN_MAIN];

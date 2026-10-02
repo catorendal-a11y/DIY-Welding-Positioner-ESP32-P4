@@ -17,7 +17,7 @@ static void enabled(lv_obj_t* obj, bool yes) {
   lv_obj_set_style_border_color(obj, COL_BORDER, LV_STATE_DISABLED);
   auto label = lv_obj_get_child(obj, 0);
   if (label) lv_obj_set_style_text_color(label, !yes ? COL_TEXT_DIM : obj == nextBtn ? lv_color_hex(0x11191C) : COL_TEXT, 0);
-  if (yes) lv_obj_remove_state(obj, LV_STATE_DISABLED); else lv_obj_add_state(obj, LV_STATE_DISABLED);
+  if (yes) lv_obj_set_disabled(obj, false); else lv_obj_set_disabled(obj, true);
 }
 void screen_setup_begin() {
   control_stop(); progress = SetupProgress{}; cwTested = ccwTested = false;
@@ -159,7 +159,7 @@ void screen_setup_update() {
   switch (progress.stage) {
     case SetupStage::Motor: message = progress.motor_saved ? "Motor settings saved. Continue with a direction check." : "Select the driver, then open Motor Config and SAVE & APPLY."; break;
     case SetupStage::Direction: message = progress.direction_confirmed ? "Direction confirmed. Continue with calibration." : "Hold both buttons and observe the workpiece. Flip if needed, test again, then confirm."; break;
-    case SetupStage::Calibration: message = progress.calibration_saved ? "Verified calibration saved. Continue with the function check." : "Use the existing MOVE 360 calibration and verification. Save the verified result, then return here."; break;
+    case SetupStage::Calibration: message = progress.calibration_saved ? "Verified calibration saved. Continue with the function check." : "Open Calibration: align, measure, verify, then save. Return here after storage confirms the result."; break;
     case SetupStage::Check: message = !progress.estop_seen ? "Press the PHYSICAL E-STOP switch. The fault overlay must appear." : !progress.reset_seen ? "Release the physical switch, check the machine, then RESET TO IDLE." : !progress.stop_seen ? "Press TEST START, observe rotation, then STOP ROTATION. Confirm that the workpiece stops." : "E-STOP, reset and start/stop sequence observed. NEXT confirms your physical function check."; break;
     case SetupStage::Saving: message = storage_settings_save_status(finishTicket) == STORAGE_ERROR ? "SAVE FAILED. Retrying automatically; keep power on." : "Saving completed setup. Keep power on."; break;
     case SetupStage::Complete: message = "SETUP SAVED. Select FINISH to return to the operating screen."; break;

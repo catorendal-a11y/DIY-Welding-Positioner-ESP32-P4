@@ -21,6 +21,8 @@
 // ───────────────────────────────────────────────────────────────────────────────
 static FastAccelStepperEngine engine = FastAccelStepperEngine();
 static FastAccelStepper* stepper = nullptr;
+static SnapshotMailbox<MotorDriverInfo> driverInfoMailbox;
+bool motor_read_driver_info(MotorDriverInfo& out) { return driverInfoMailbox.read(out); }
 static std::atomic<bool> commandedCw{true};
 bool motor_direction_is_cw() { return commandedCw.load(); }
 void motor_record_direction(bool cw) { commandedCw.store(cw); }
@@ -87,6 +89,11 @@ static bool motor_apply_stepper_dir_timing(uint16_t want) {
     return false;
   }
   stepper->setDirectionPin(PIN_DIR, true, want);
+  MotorDriverInfo info;
+  info.name = stepper->driverTypeString();
+  info.direction_before_us = uint32_t(stepper->getDirChangeBeforeTicks()) * stepper->getDirChangeBeforePauseCount() / (TICKS_PER_S / 1000000);
+  info.direction_after_us = stepper->getDirChangeAfterTicks() / (TICKS_PER_S / 1000000);
+  driverInfoMailbox.publish(info);
   s_applied_dir_delay_us = want;
   s_dir_timing_applied = true;
   return true;

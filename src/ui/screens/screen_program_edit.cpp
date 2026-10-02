@@ -580,6 +580,8 @@ void screen_program_edit_create(int slot) {
     ui_create_btn(screen, 420, 406, 260, 52, "SAVE", FONT_NORMAL, UI_BTN_ACCENT, save_preset_cb, nullptr);
   }
 
+  // Positions are resolved lazily; read them only after LVGL layout.
+  lv_obj_update_layout(screen);
   for (uint32_t i = firstContent; i < lv_obj_get_child_count(screen); ++i) {
     lv_obj_t* child = lv_obj_get_child(screen, i);
     if (lv_obj_get_y(child) < 400) lv_obj_set_y(child, lv_obj_get_y(child) + 40);

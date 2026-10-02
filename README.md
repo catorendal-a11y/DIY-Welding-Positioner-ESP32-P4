@@ -219,7 +219,7 @@ Simulated active fault: the physical input must be cleared before reset is avail
 
 [V5 SVG proposals](docs/images/ui_mockup_v5/all_screens.svg) · [Design bundle](docs/images/ui_mockup_v5.zip) · [Readability review](docs/images/ui_mockup_v5/READABILITY_REVIEW.md) · [Previous UI map](docs/images/ui_screens.svg)
 
-The 30 design views cover all 22 screen types, additional states and keyboards. The SVG audit measured 581 text elements at 800 × 480. Those results apply to the mockups; actual firmware captures are shown above. Calibration, step and countdown retain some existing controls and layouts; see the [integration notes](docs/UI_V5_DEPLOYMENT.md).
+The 30 design views cover all 22 screen types, additional states and keyboards. The SVG audit measured 581 text elements at 800 × 480. Those results apply to the mockups; actual firmware captures are shown above. Calibration now uses a guided, non-scrolling workflow; step and countdown retain some existing controls and layouts; see the [integration notes](docs/UI_V5_DEPLOYMENT.md).
 
 <details>
 <summary><b>ScreenId registry</b></summary>
@@ -243,7 +243,7 @@ The 30 design views cover all 22 screen types, additional states and keyboards. 
 | **Settings** | `SCREEN_SETTINGS` | Hub for Motor Config, Calibration, Display, Pedal Settings, Diagnostics, System Info and About |
 | **Display** | `SCREEN_DISPLAY` | Brightness, dim timeout, **UI MODE** (DARK/LIGHT), accent theme selection |
 | **System Info** | `SCREEN_SYSINFO` | Core load, heap, PSRAM, uptime |
-| **Calibration** | `SCREEN_CALIBRATION` | Motor calibration factor adjustment with mandatory verify-before-save |
+| **Calibration** | `SCREEN_CALIBRATION` | Guided Align → Measure → Verify → Save, with isolated draft correction |
 | **Motor Config** | `SCREEN_MOTOR_CONFIG` | Microstepping, acceleration, direction switch, pedal enable |
 | **Pedal Settings** | `SCREEN_PEDAL_SETTINGS` | Pedal arm/disarm plus live GPIO33 and ADS1115 status |
 | **Diagnostics** | `SCREEN_DIAGNOSTICS` | Live GPIO/fault page for ESTOP, ALM, DIR switch, pedal switch, ENA, direction, RPM state and recent event log |
@@ -346,7 +346,7 @@ Pinned source dependencies: PlatformIO Core `6.2.0`, pioarduino `55.03.312-1` (A
 
 ## Dependency Update (Unreleased Source)
 
-The source now uses **LVGL 9.6.0** and **FastAccelStepper 1.4.0** with the current Arduino ESP32 framework. The existing V5 layout and English labels are retained. Motor initialization selects RMT explicitly; reset waits for queued pulses to finish after `forceStop()`. The actual upstream RMT encoder is tested on the PC as well as the production control code. [Complete dependency and migration report](docs/DEPENDENCY_UPGRADE_2026-10-02.md).
+The source now uses **LVGL 9.6.0** and **FastAccelStepper 1.4.0** with the current Arduino ESP32 framework. The V5 visual style and English labels are retained; Calibration now has a guided, non-scrolling layout. Motor initialization selects RMT explicitly; reset waits for queued pulses to finish after `forceStop()`. The actual upstream RMT encoder is tested on the PC as well as the production control code. [Complete dependency and migration report](docs/DEPENDENCY_UPGRADE_2026-10-02.md).
 
 ## Guided Setup (Unreleased Source)
 
@@ -514,7 +514,9 @@ Open `src/config.h` to adjust hardware parameters:
 
 Settings can also be changed from the touchscreen via **Settings > Motor Config** and are persisted to **NVS** (see [Persistence (NVS)](#persistence-nvs)).
 
-Calibration is changed from **Settings > Calibration**. The screen now requires a verify pass before saving: set workpiece OD on Step, command a 360-degree move, enter the measured angle, apply, run verify, and save only after the result is within tolerance. This prevents storing an unverified calibration factor by accident.
+Open **Settings → Calibration** for the guided **Align → Measure → Verify → Save** workflow. Set workpiece diameter on the same page, align with hold-to-run Jog, measure a completed 360-degree move, and verify the correction with another completed move. Save requires 360 ± 0.5 degrees and confirms the actual storage receipt. STOP cancels a measurement; unverified corrections remain temporary and cannot leak into autosaves. Restart restores the saved factor. See the [calibration guide](docs/CALIBRATION_WORKFLOW.md).
+
+![Guided calibration](docs/images/calibration_v2/01_align.png)
 
 ---
 
@@ -670,8 +672,8 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 
 | Local check | Result |
 | --- | --- |
-| Native suites | 430 / 430 passed (native and production-control suites) |
-| LVGL self-test | Passed: navigation, program edits, RPM adjustment, fault reset, full setup workflow, save failure/retry and stale control |
+| Native suites | 438 / 438 passed (native and production-control suites) |
+| LVGL self-test | Passed: navigation, program edits, RPM adjustment, fault reset, full setup/calibration workflows, save failure/retry and stale control |
 | Firmware builds | Release, debug and mirror passed |
 | Device upload | This control/setup update has not been flashed. The earlier V5 upload to COM3 is recorded in the deployment report. |
 | Physical motor/safety testing | Not performed as part of this update |
@@ -691,6 +693,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 | [docs/SAFETY_SYSTEM.md](docs/SAFETY_SYSTEM.md) | E-STOP behavior, watchdog model, safety assumptions |
 | [docs/PROJECT_IMPLEMENTATION.md](docs/PROJECT_IMPLEMENTATION.md) | RTOS architecture, storage, display pipeline, known workarounds |
 | [docs/INSTRUCTABLES.md](docs/INSTRUCTABLES.md) | Builder-friendly article content and assembly flow |
+| [docs/CALIBRATION_WORKFLOW.md](docs/CALIBRATION_WORKFLOW.md) | Guided measurement, verification, temporary correction and runtime screenshots |
 | [docs/SETUP_WIZARD.md](docs/SETUP_WIZARD.md) | Guided setup, physical switch checks and runtime screenshots |
 | [docs/CONTROL_SETUP_IMPLEMENTATION.md](docs/CONTROL_SETUP_IMPLEMENTATION.md) | Motion ownership, snapshot freshness, compatibility and validation |
 | [docs/UI_V5_DEPLOYMENT.md](docs/UI_V5_DEPLOYMENT.md) | V5 UI implementation, screenshots and device upload evidence |

@@ -3,6 +3,8 @@
 #include <thread>
 #include "../../src/control/setup_policy.h"
 #include "../../src/motor/motor.cpp"
+#include "../../src/motor/calibration.cpp"
+#include "../../src/motor/calibration_session.h"
 #include "../../src/control/control.cpp"
 #include "../../src/control/modes/continuous.cpp"
 #include "../../src/control/modes/pulse.cpp"
@@ -48,6 +50,7 @@ long angleToSteps(float angle) { return static_cast<long>(angle * 100.0f); }
 uint32_t microstep_get_steps_per_rev() { return 3200; }
 
 void setUp() {
+  control_set_calibration_active(false);
   simTestMillis = 100;
   testStepper = FastAccelStepper{};
   testFault = FAULT_NONE;
@@ -55,6 +58,7 @@ void setUp() {
   testRpm = 0.5f;
   if (!g_settings_mutex) g_settings_mutex = xSemaphoreCreateMutex();
   if (g_stepperMutex) g_stepperMutex->unavailable = false;
+  calibration_discard_draft(); calibration_process_pending(); g_settings.calibration_factor = 1.0f;
   g_settings.acceleration = 7500; g_settings.invert_direction = false;
   event_log_init();
   control_init();
@@ -264,6 +268,11 @@ void test_direction_timing_never_changes_during_queued_motion() {
 }
 void test_rmt_driver_is_selected_explicitly() {
   TEST_ASSERT_EQUAL(static_cast<uint8_t>(FasDriver::RMT), static_cast<uint8_t>(engine.selectedDriver));
+  MotorDriverInfo info;
+  TEST_ASSERT_TRUE(motor_read_driver_info(info));
+  TEST_ASSERT_EQUAL_STRING("RMT", info.name);
+  TEST_ASSERT_EQUAL_UINT32(1500, info.direction_before_us);
+  TEST_ASSERT_EQUAL_UINT32(200, info.direction_after_us);
 }
 void test_step_progress_crosses_counter_boundary() {
   testStepper.position = INT32_MAX - 49;
@@ -296,8 +305,74 @@ void test_event_snapshot_contention_retries_and_counts_drops() {
   TEST_ASSERT_TRUE(event_log_try_snapshot(entries, 2, &count, &version));
   TEST_ASSERT_EQUAL_STRING("FAULT TEST", entries[0].text);
 }
+
+void test_calibration_draft_is_not_persisted_before_save() {
+  calibration_set_factor(1.1f);
+  TEST_ASSERT_FLOAT_WITHIN(0.00001f, 1.1f, calibration_get_factor());
+  TEST_ASSERT_FLOAT_WITHIN(0.00001f, 1.0f, g_settings.calibration_factor);
+  calibration_discard_draft(); control_run_cycle();
+  TEST_ASSERT_FLOAT_WITHIN(0.00001f, 1.0f, calibration_get_factor());
+  calibration_set_factor(1.2f); calibration_save();
+  TEST_ASSERT_FLOAT_WITHIN(0.00001f, 1.2f, g_settings.calibration_factor);
+}
+void test_calibration_requires_two_completed_moves() {
+  CalibrationSession s; s.reset(1.0f,300);
+  TEST_ASSERT_FALSE(s.measurement(360));
+  TEST_ASSERT_TRUE(s.begin(100,1000,4,true,16));
+  s.observe(120,true,false,4,true,16); TEST_ASSERT_TRUE(s.moving());
+  s.observe(200,true,false,5,true,16); TEST_ASSERT_EQUAL(CalibrationSession::Measure,s.stage);
+  TEST_ASSERT_TRUE(s.measurement(345)); TEST_ASSERT_TRUE(s.apply());
+  TEST_ASSERT_FLOAT_WITHIN(0.00001f,360.0f/345,s.factor); TEST_ASSERT_FALSE(s.passed());
+  TEST_ASSERT_TRUE(s.begin(300,1000,5,true,16));
+  s.observe(500,true,false,6,true,16); TEST_ASSERT_TRUE(s.measurement(360.25f)); TEST_ASSERT_TRUE(s.passed());
+}
+void test_calibration_abort_and_fault_never_allow_save() {
+  CalibrationSession s; s.begin(100,1000,0,true,16); s.abort("STOP");
+  TEST_ASSERT_FALSE(s.measurement(360)); TEST_ASSERT_FALSE(s.passed());
+  s.begin(200,1000,0,true,16); s.observe(300,true,true,1,true,16);
+  TEST_ASSERT_EQUAL(CalibrationSession::Prepare,s.stage); TEST_ASSERT_FALSE(s.measurement(360));
+}
+void test_calibration_rejected_move_timeout_and_clock_wrap() {
+  CalibrationSession s; s.begin(0xfffffff0u,1000,3,true,16);
+  s.observe(50,true,false,3,true,16); TEST_ASSERT_TRUE(s.moving());
+  s.observe(600,true,false,3,true,16); TEST_ASSERT_FALSE(s.moving()); TEST_ASSERT_FALSE(s.measurement(360));
+  s.begin(1000,1000,3,true,16); s.observe(2001,false,false,3,true,16); TEST_ASSERT_FALSE(s.moving());
+}
+void test_calibration_context_change_rejects_move() {
+  CalibrationSession s; s.begin(100,1000,0,true,16); s.observe(200,true,false,1,false,16);
+  TEST_ASSERT_FALSE(s.measurement(360));
+  s.begin(300,1000,0,true,16); s.observe(400,true,false,1,true,32); TEST_ASSERT_FALSE(s.measurement(360));
+}
+void test_calibration_rejects_silent_factor_clamp_and_invalid_numbers() {
+  CalibrationSession s; s.begin(100,1000,0,true,16); s.observe(200,true,false,1,true,16);
+  TEST_ASSERT_FALSE(s.measurement(NAN)); TEST_ASSERT_TRUE(s.measurement(180));
+  TEST_ASSERT_FALSE(s.apply()); TEST_ASSERT_FLOAT_WITHIN(0.00001f,1,s.factor);
+  TEST_ASSERT_TRUE(s.measurement(360)); TEST_ASSERT_TRUE(s.apply());
+  calibration_set_factor(NAN); TEST_ASSERT_FLOAT_WITHIN(0.00001f,1,calibration_get_factor());
+}
+void test_calibration_parser_accepts_comma_rejects_trailing_text() {
+  float v; TEST_ASSERT_TRUE(calibration_parse_angle("359,75",v)); TEST_ASSERT_FLOAT_WITHIN(0.001f,359.75f,v);
+  TEST_ASSERT_FALSE(calibration_parse_angle("360junk",v)); TEST_ASSERT_FALSE(calibration_parse_angle("360.1.2",v));
+  TEST_ASSERT_FALSE(calibration_parse_angle("nan",v)); TEST_ASSERT_FALSE(calibration_parse_angle("",v));
+}
+void test_calibration_blocks_unrelated_motion_and_pedal_mode() {
+  control_set_calibration_active(true); control_run_cycle();
+  TEST_ASSERT_TRUE(control_setup_active()); TEST_ASSERT_FALSE(control_start_continuous());
+  TEST_ASSERT_FALSE(control_start_pulse(500,500,1));
+  TEST_ASSERT_TRUE(control_start_step(360)); control_stop(); control_run_cycle();
+  control_set_calibration_active(false); TEST_ASSERT_FALSE(control_setup_active());
+}
 int main() {
   UNITY_BEGIN();
+  RUN_TEST(test_calibration_blocks_unrelated_motion_and_pedal_mode);
+  RUN_TEST(test_calibration_draft_is_not_persisted_before_save);
+  RUN_TEST(test_calibration_requires_two_completed_moves);
+  RUN_TEST(test_calibration_abort_and_fault_never_allow_save);
+  RUN_TEST(test_calibration_rejected_move_timeout_and_clock_wrap);
+  RUN_TEST(test_calibration_context_change_rejects_move);
+  RUN_TEST(test_calibration_rejects_silent_factor_clamp_and_invalid_numbers);
+  RUN_TEST(test_calibration_parser_accepts_comma_rejects_trailing_text);
+
   RUN_TEST(test_force_stop_drain_keeps_cleanup_pending_and_ena_disabled);
   RUN_TEST(test_direction_timing_never_changes_during_queued_motion);
   RUN_TEST(test_rmt_driver_is_selected_explicitly);

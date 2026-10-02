@@ -1,4 +1,5 @@
 #pragma once
+#define TICKS_PER_S 16000000L
 #include <Arduino.h>
 // Public 1.4.0 result types; do not let host tests accept integer comparisons.
 enum class MoveResultCode : int8_t {
@@ -9,9 +10,14 @@ enum class FasDriver : uint8_t { RMT = 1, DONT_CARE = 255 };
 // Only hardware is simulated; dispatcher and modes are production code.
 class FastAccelStepper {
  public:
+  uint16_t directionDelay = 200;
+  const char* driverTypeString() const { return "RMT"; }
+  uint16_t getDirChangeBeforeTicks() const { return 24000; }
+  uint8_t getDirChangeBeforePauseCount() const { return 1; }
+  uint16_t getDirChangeAfterTicks() const { return directionDelay * 16; }
   MoveResultCode commandResult = MoveResultCode::OK;
   double motionScale = 1; // Test-only acceleration of physical travel, not control timers.
-  void setDirectionPin(int, bool, uint16_t) {}
+  void setDirectionPin(int, bool, uint16_t delay) { directionDelay = delay; }
   int8_t setAcceleration(int32_t) { return 0; }
   void setLinearAcceleration(uint32_t) {}
   int8_t setSpeedInHz(uint32_t hz) { return setSpeedInMilliHz(hz * 1000u); }

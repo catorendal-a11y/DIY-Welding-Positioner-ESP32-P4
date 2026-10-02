@@ -18,7 +18,7 @@ Hold **HOLD CW** and **HOLD CCW** separately and observe the actual workpiece. R
 
 ## 3. Calibration
 
-Open the existing calibration screen. Mark the workpiece, explicitly select **MOVE 360**, enter the measured angle, apply the measurement, then run the verification move. Enter the verification angle and save only after verification passes. Return to the wizard after **RESULT SAVED**. Navigation never initiates a calibration movement.
+Open [guided Calibration](CALIBRATION_WORKFLOW.md). Set diameter on that page, align the mark, explicitly select **MOVE 360**, measure, apply, then select **VERIFY 360** and measure again. Save only after verification passes; return after **Calibration saved** confirms storage. Navigation never initiates a calibration movement.
 
 ![Calibration entry](images/setup_v1/03_calibration.png)
 

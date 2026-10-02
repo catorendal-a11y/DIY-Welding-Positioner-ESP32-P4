@@ -12,6 +12,8 @@ else
   exit 1
 fi
 
+"$PROJECT_PYTHON" -c 'import sys; sys.exit("PlatformIO 6.2 requires Python 3.9 or newer; Python 3.11 is recommended.") if sys.version_info < (3, 9) else None'
+
 case "${1:-}" in
   --check)
     "$PROJECT_PYTHON" --version

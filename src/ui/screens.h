@@ -118,6 +118,8 @@ void screen_edit_cont_create();
 void screen_sysinfo_create();
 void screen_sysinfo_update();
 void screen_calibration_create();
+void screen_calibration_leave();
+void screen_calibration_enter();
 void screen_calibration_update();
 void screen_motor_config_create();
 void screen_motor_config_update();

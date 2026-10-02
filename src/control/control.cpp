@@ -1,3 +1,4 @@
+#include "../motor/calibration.h"
 // Control - State machine core with motion command mailbox
 #include "control.h"
 #include "../app_state.h"
@@ -55,14 +56,15 @@ static std::atomic<uint32_t> configSaveTicket{0};
 uint32_t control_config_save_ticket() { return configSaveTicket.load(); }
 ConfigApplyStatus control_config_status() { return configStatus.load(); }
 static std::atomic<bool> resetStepPending{false};
-static std::atomic<bool> setupActive{false};
+static std::atomic<bool> setupActive{false}, calibrationActive{false};
 static SnapshotMailbox<ControlSnapshot> snapshotMailbox;
 static uint32_t snapshotSequence = 0;
 static std::atomic<uint32_t> lastCycleAt{0};
 static std::atomic<bool> cyclePublished{false};
 static bool faultCleaned = false;
 void control_set_setup_active(bool active) { setupActive.store(active); }
-bool control_setup_active() { return setupActive.load(); }
+bool control_setup_active() { return setupActive.load() || calibrationActive.load(); }
+void control_set_calibration_active(bool active) { if (active) control_stop(); calibrationActive.store(active); }
 bool control_read_snapshot(ControlSnapshot& out) { return snapshotMailbox.read(out); }
 static void publish_snapshot() {
   ControlSnapshot s;
@@ -115,6 +117,7 @@ static bool queue_motion_command(const MotionCommand& cmd) {
     LOG_W("Control queue not ready");
     return false;
   }
+  if (calibrationActive.load() && (cmd.program || (cmd.type != MOTION_CMD_START_STEP && cmd.type != MOTION_CMD_START_JOG))) return false;
   const uint32_t ticket = motionGate.ticket();
   if (motionGate.blocked() || control_get_state() != STATE_IDLE || safety_inhibit_motion()) return false;
   MotionCommand request = cmd;
@@ -432,6 +435,7 @@ static void process_pending_requests() {
 // CONTROL TASK — Main state machine loop
 // ───────────────────────────────────────────────────────────────────────────────
 void control_run_cycle() {
+  if (control_get_state() == STATE_IDLE) calibration_process_pending();
   // STOP/ESTOP dispatch precedes any live speed changes.
     if (control_get_state() == STATE_IDLE && resetStepPending.exchange(false)) step_reset_accumulator();
     process_pending_requests();

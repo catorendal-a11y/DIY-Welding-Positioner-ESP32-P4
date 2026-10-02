@@ -54,3 +54,9 @@ void motor_apply_soft_start_acceleration();
 void motor_restore_configured_acceleration();
 
 // Input sampling lives in main.cpp; only controlTask calls this motor adapter.
+
+struct MotorDriverInfo {
+  const char* name = "UNAVAILABLE";
+  uint32_t direction_before_us = 0, direction_after_us = 0;
+};
+bool motor_read_driver_info(MotorDriverInfo& out); // Cached at configuration, no library call from UI

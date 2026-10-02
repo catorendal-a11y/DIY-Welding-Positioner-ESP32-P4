@@ -1,0 +1,9 @@
+Build-only: --without-uploading --without-testing
+Processing test_device_gpio in esp32p4-test environment
+---------- esp32p4-test:test_device_gpio [SKIPPED] Took 55.42 seconds ----------
+Processing test_device_storage in esp32p4-test environment
+-------- esp32p4-test:test_device_storage [SKIPPED] Took 19.17 seconds --------
+Processing test_device_system in esp32p4-test environment
+--------- esp32p4-test:test_device_system [SKIPPED] Took 18.54 seconds ---------
+================== 0 test cases: 0 succeeded in 00:01:33.139 ==================
+No upload or physical test execution.

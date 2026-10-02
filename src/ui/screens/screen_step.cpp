@@ -616,9 +616,9 @@ void screen_step_update() {
 
   if (stepActionBtn) {
     if (ui_control_state() == STATE_IDLE) {
-      lv_obj_remove_state(stepActionBtn, LV_STATE_DISABLED);
+      lv_obj_set_disabled(stepActionBtn, false);
     } else {
-      lv_obj_add_state(stepActionBtn, LV_STATE_DISABLED);
+      lv_obj_set_disabled(stepActionBtn, true);
     }
   }
 

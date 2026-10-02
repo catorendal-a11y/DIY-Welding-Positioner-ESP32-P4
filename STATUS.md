@@ -2,8 +2,8 @@
 
 **Last Updated:** 2026-10-02
 **Published firmware:** v2.1.0
-**Source:** v2.1.1 with unreleased control/setup improvements
-**Build:** Source validation passed 427 native/production-control cases, six packaging cases, the full simulator setup/self-test and layout audit, and release/debug/mirror builds. The source update has not been flashed. Published v2.1.0 binaries remain unchanged.
+**Source:** v2.1.1 with unreleased control/setup, dependency and calibration improvements
+**Build:** Source validation passed 438 native/production-control cases, six packaging cases, the full simulator setup/self-test and layout audit, and release/debug/mirror builds. The source update has not been flashed. Published v2.1.0 binaries remain unchanged.
 
 ---
 
@@ -47,7 +47,7 @@ Runtime stepper calls belong to controlTask; inputTask samples ADC/pedal separat
 - [x] **Pedal Settings** (pedal arm/disarm, GPIO33 switch status, ADS1115 analog status)
 - [x] **Workpiece diameter per preset** (`workpiece_diameter_mm`, 0 = default reference diameter)
 - [x] **Motor Config** (microstepping, acceleration, direction switch, pedal enable)
-- [x] **Calibration verify-before-save** (larger calibration screen; save blocked until verification passes)
+- [x] **Guided calibration** (non-scrolling stages, same-page diameter, interrupted-move rejection, isolated draft, verification and storage receipt)
 - [x] **About screen** (firmware version, hardware info)
 - [x] **Program Edit** (full preset editor with on-screen keyboard)
 - [x] **Guided setup** (motor, direction, verified calibration and physical E-STOP function check; compatible legacy settings)

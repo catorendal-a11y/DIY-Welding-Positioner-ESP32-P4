@@ -13,6 +13,12 @@
 // ───────────────────────────────────────────────────────────────────────────────
 #define LV_COLOR_FORMAT_DEFAULT LV_COLOR_FORMAT_RGB565
 
+// LVGL 9.6 software blending/style caching improve rendering without a GPU.
+#define LV_OBJ_STYLE_CACHE 1
+#define LV_USE_CHECK_ARG 1
+#define LV_USE_CHECK_OBJ_CLASSTYPE 0
+#define LV_USE_CHECK_OBJ_VALIDITY 0
+
 // ───────────────────────────────────────────────────────────────────────────────
 // MEMORY SETTINGS
 // ───────────────────────────────────────────────────────────────────────────────
@@ -63,10 +69,11 @@
 #define LV_USE_IMAGE             1
 #define LV_USE_IMAGEBUTTON       0
 #define LV_USE_KEYBOARD          1     // For program name entry
+#define LV_USE_SPAN              0     // Unused; upstream 9.6 validator treats spans as widgets
 #define LV_USE_LABEL             1
 #define LV_USE_LED               0
 #define LV_USE_LINE              1
-#define LV_USE_LIST              1     // For programs list
+#define LV_USE_LIST              0     // Lists use the supported flex container API
 #define LV_USE_MENU              0
 #define LV_USE_MSGBOX            1     // For confirm dialogs
 #define LV_USE_ROLLER            0
@@ -79,7 +86,7 @@
 #define LV_USE_TABLE             0
 #define LV_USE_TABVIEW           0
 #define LV_USE_TILEVIEW          0
-#define LV_USE_WIN               1
+#define LV_USE_WIN               0
 
 // ───────────────────────────────────────────────────────────────────────────────
 // LVGL 9 SPECIFIC FEATURES

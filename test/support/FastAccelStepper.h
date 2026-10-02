@@ -1,4 +1,5 @@
 #pragma once
+#define TICKS_PER_S 16000000L
 #include <cstdint>
 enum class MoveResultCode : int8_t {
   OK = 0, ErrorNoDirectionPin = -1,
@@ -7,6 +8,11 @@ enum class MoveResultCode : int8_t {
 enum class FasDriver : uint8_t { RMT = 1, DONT_CARE = 255 };
 class FastAccelStepper {
  public:
+  uint16_t directionDelay = 200;
+  const char* driverTypeString() const { return "RMT"; }
+  uint16_t getDirChangeBeforeTicks() const { return 24000; }
+  uint8_t getDirChangeBeforePauseCount() const { return 1; }
+  uint16_t getDirChangeAfterTicks() const { return directionDelay * 16; }
   bool running = false;
   int32_t position = 0, milliHz = 0;
   MoveResultCode commandResult = MoveResultCode::OK;
@@ -15,7 +21,7 @@ class FastAccelStepper {
   unsigned directionWrites = 0;
   unsigned starts = 0, moves = 0;
   bool isRunning() { return running; }
-  void setDirectionPin(uint8_t, bool, uint16_t) { ++directionWrites; }
+  void setDirectionPin(uint8_t, bool, uint16_t delay) { directionDelay = delay; ++directionWrites; }
   int8_t setAcceleration(int32_t) { return accelerationResult; }
   void setLinearAcceleration(uint32_t) {}
   int8_t setSpeedInHz(uint32_t hz) { return setSpeedInMilliHz(hz * 1000u); }

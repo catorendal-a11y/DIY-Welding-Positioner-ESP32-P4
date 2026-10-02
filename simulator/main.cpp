@@ -10,6 +10,7 @@
 #include "../src/control/control.h"
 #include "../src/safety/safety.h"
 #include "../src/motor/speed.h"
+#include "../src/motor/calibration.h"
 #include "../src/ui/screens.h"
 #include "../src/ui/theme.h"
 
@@ -110,7 +111,7 @@ static bool sim_expect(bool condition, const char* msg) { return condition ? tru
 static lv_obj_t* sim_clickable_ancestor(lv_obj_t* obj) {
   obj = lv_obj_get_parent(obj);
   while (obj) {
-    if (lv_obj_has_flag(obj, LV_OBJ_FLAG_CLICKABLE)) {
+    if (lv_obj_is_clickable(obj)) {
       return obj;
     }
     obj = lv_obj_get_parent(obj);
@@ -244,7 +245,7 @@ static lv_obj_t* sim_find_action(lv_obj_t* root, UiActionId id) {
 }
 static bool sim_click_action(UiActionId id) {
   lv_obj_t* target = sim_find_action(lv_screen_active(), id);
-  if (!target || lv_obj_has_state(target, LV_STATE_DISABLED) || lv_obj_has_flag(target, LV_OBJ_FLAG_HIDDEN))
+  if (!target || lv_obj_is_disabled(target) || lv_obj_is_hidden(target))
     return sim_fail("action unavailable");
   lv_obj_send_event(target, LV_EVENT_CLICKED, nullptr);
   sim_pump(60);
@@ -421,7 +422,7 @@ static bool sim_test_confirm_and_overlay() {
   estop_overlay_show();
   sim_pump(300);
   lv_obj_t* blockedReset = sim_find_label_target(lv_layer_top(), "RESET BLOCKED", false, true);
-  if (!sim_expect(blockedReset && lv_obj_has_state(blockedReset, LV_STATE_DISABLED),
+  if (!sim_expect(blockedReset && lv_obj_is_disabled(blockedReset),
                   "fault reset must be disabled"))
     return false;
   lv_obj_send_event(blockedReset, LV_EVENT_CLICKED, nullptr);
@@ -429,7 +430,7 @@ static bool sim_test_confirm_and_overlay() {
   simulator_set_estop_input(false);
   sim_pump(300);
   lv_obj_t* readyReset = sim_find_label_target(lv_layer_top(), "RESET TO IDLE", false, true);
-  if (!sim_expect(readyReset && !lv_obj_has_state(readyReset, LV_STATE_DISABLED), "safe reset unavailable"))
+  if (!sim_expect(readyReset && !lv_obj_is_disabled(readyReset), "safe reset unavailable"))
     return false;
   if (!sim_expect(estop_overlay_visible(), "ESTOP overlay did not show")) return false;
   estop_overlay_hide();
@@ -443,17 +444,18 @@ static lv_obj_t* sim_find_type(lv_obj_t* obj, const lv_obj_class_t* type) {
     if (auto found = sim_find_type(lv_obj_get_child(obj, i), type)) return found;
   return nullptr;
 }
-static bool sim_enter_calibration_measurement() {
+static bool sim_enter_calibration_measurement(const char* value = "360") {
   if (!sim_click_label("---")) return false;
-  auto root = screenRoots[SCREEN_CALIBRATION];
+  auto root = lv_layer_top();
   auto field = sim_find_type(root, &lv_textarea_class);
   auto keyboard = sim_find_type(root, &lv_keyboard_class);
   if (!sim_expect(field && keyboard, "calibration measurement editor missing")) return false;
-  lv_textarea_set_text(field, "360"); lv_obj_send_event(keyboard, LV_EVENT_READY, nullptr);
+  lv_textarea_set_text(field, value); lv_obj_send_event(keyboard, LV_EVENT_READY, nullptr);
   sim_pump(80); return true;
 }
 static unsigned audit_labels(lv_obj_t* obj, const char* screen);
 static int run_commissioning_test(const char* directory = nullptr);
+static int run_calibration_test(const char* directory = nullptr);
 static int run_self_test() {
   std::puts("SIM SELFTEST: start");
   g_settings.countdown_seconds = 1;
@@ -481,13 +483,15 @@ static int run_self_test() {
                   "rejected motion did not latch fault")) return 9;
   simulator_set_scenario("none"); control_transition_to(STATE_IDLE);
   std::puts("SIM SELFTEST: fault scenarios/save generations ok");
+  if (run_calibration_test() != 0) return 14;
+  std::puts("SIM SELFTEST: calibration interruption/draft/verify/save ok");
   if (run_commissioning_test() != 0) return 10;
   std::puts("SIM SELFTEST: commissioning UI/save failure/retry ok");
   screens_show(SCREEN_MAIN); sim_pump(80);
   simulator_set_scenario("stalled-control"); sim_pump(160);
   if (!sim_expect(!ui_control_fresh() && !control_start_continuous(), "stale control admitted motion")) return 11;
   auto start = sim_find_label_target(screenRoots[SCREEN_MAIN], "START BLOCKED", false, true);
-  if (!sim_expect(start && lv_obj_has_state(start, LV_STATE_DISABLED), "stale START not disabled")) return 12;
+  if (!sim_expect(start && lv_obj_is_disabled(start), "stale START not disabled")) return 12;
   control_stop(); sim_pump(60);
   if (!sim_expect(control_get_state() == STATE_ESTOP, "stalled executor did not fault on STOP")) return 13;
   simulator_set_scenario("none"); safety_reset_estop(); sim_pump(80);
@@ -546,6 +550,57 @@ static bool sim_write_bmp_argb8888(const char* path, const lv_draw_buf_t* buf) {
   return true;
 }
 
+
+static int run_calibration_test(const char* directory) {
+  unsigned failures = 0;
+  auto capture = [&](const char* name) {
+    lv_obj_update_layout(screenRoots[SCREEN_CALIBRATION]);
+    failures += audit_labels(screenRoots[SCREEN_CALIBRATION], name);
+    if (!directory) return;
+    std::filesystem::create_directories(directory);
+    auto shot = lv_snapshot_take(screenRoots[SCREEN_CALIBRATION], LV_COLOR_FORMAT_ARGB8888);
+    if (shot) { sim_write_bmp_argb8888((std::filesystem::path(directory)/name).string().c_str(),shot); lv_draw_buf_destroy(shot); }
+  };
+  simulator_set_scenario("none"); safety_reset_estop(); control_stop(); sim_pump(100);
+  screens_show(SCREEN_MAIN); sim_pump(50); g_settings.calibration_factor = 1;
+  simulator_fast_motion(true); screens_show(SCREEN_CALIBRATION); sim_pump(50);
+  capture("01_align.bmp");
+  if (!sim_click_label("MOVE 360")) return 1;
+  capture("02_moving.bmp");
+  if (!sim_click_label("STOP")) return 2;
+  sim_pump(300);
+  auto save = sim_find_active_label_target("SAVE CALIBRATION");
+  if (!sim_expect(save && lv_obj_is_disabled(save), "interrupted calibration allowed Save")) return 3;
+  if (!sim_click_label("RESTART") || !sim_click_label("MOVE 360")) return 4;
+  sim_pump(900); capture("03_measure.bmp");
+  if (!sim_enter_calibration_measurement("345") || !sim_click_label("APPLY MEASUREMENT")) return 5;
+  if (!sim_expect(std::fabs(g_settings.calibration_factor-1) < 0.00001f && calibration_get_factor() > 1,
+                  "unverified calibration leaked into stored settings")) return 6;
+  capture("04_verify_ready.bmp");
+  if (!sim_click_label("VERIFY 360")) return 7;
+  sim_pump(900);
+  if (!sim_enter_calibration_measurement("359")) return 8;
+  capture("05_verify_failed.bmp");
+  if (!sim_expect(lv_obj_is_disabled(save), "failed verification allowed Save")) return 9;
+  if (!sim_click_label("VERIFY 360")) return 10;
+  sim_pump(900);
+  if (!sim_enter_calibration_measurement("360,25")) return 11;
+  capture("06_verified.bmp");
+  simulator_set_scenario("nvs-failure");
+  if (!sim_click_label("SAVE CALIBRATION")) return 12;
+  sim_pump(600); capture("07_save_retry.bmp");
+  auto back = sim_find_active_label_target("<  BACK");
+  if (!sim_expect(back && lv_obj_is_disabled(back), "calibration allowed exit before save receipt")) return 15;
+  if (!sim_click_label("STOP")) return 16;
+  simulator_set_scenario("none"); sim_pump(1500); capture("08_saved.bmp");
+  if (!sim_expect(sim_find_label_target(screenRoots[SCREEN_CALIBRATION],"Calibration saved",false,false) != nullptr,
+                  "calibration save confirmation missing")) return 13;
+  screens_show(SCREEN_MAIN); sim_pump(50);
+  g_settings.calibration_factor = 1; calibration_discard_draft(); calibration_process_pending();
+  simulator_fast_motion(false);
+  return failures ? 14 : 0;
+}
+
 static int run_commissioning_test(const char* directory) {
   int layoutFailures = 0;
   auto capture = [&](const char* name) {
@@ -562,7 +617,7 @@ static int run_commissioning_test(const char* directory) {
   if (!sim_show_and_check(SCREEN_SETUP)) return 2;
   capture("01_motor.bmp");
   auto next = sim_find_active_label_target("NEXT");
-  if (!sim_expect(next && lv_obj_has_state(next, LV_STATE_DISABLED), "setup skipped unsaved motor config")) return 3;
+  if (!sim_expect(next && lv_obj_is_disabled(next), "setup skipped unsaved motor config")) return 3;
   if (!sim_click_label("OPEN MOTOR CONFIG") || !sim_click_label("SAVE & APPLY")) return 4;
   sim_pump(600);
   if (!sim_click_back_to(SCREEN_SETUP) || !sim_click_label("NEXT")) return 5;
@@ -575,18 +630,18 @@ static int run_commissioning_test(const char* directory) {
   capture("03_calibration.bmp");
   if (!sim_click_label("OPEN CALIBRATION") || !sim_click_label("MOVE 360")) return 8;
   sim_pump(900);
-  if (!sim_enter_calibration_measurement() || !sim_click_label("APPLY MEASUREMENT") || !sim_click_label("MOVE 360")) return 9;
+  if (!sim_enter_calibration_measurement() || !sim_click_label("APPLY MEASUREMENT") || !sim_click_label("VERIFY 360")) return 9;
   sim_pump(900);
   if (!sim_enter_calibration_measurement() || !sim_click_label("SAVE CALIBRATION")) return 10;
   sim_pump(600);
   if (!sim_click_back_to(SCREEN_SETUP) || !sim_click_label("NEXT")) return 11;
   capture("04_function_check.bmp");
   next = sim_find_active_label_target("NEXT");
-  if (!sim_expect(next && lv_obj_has_state(next, LV_STATE_DISABLED), "setup skipped physical function check")) return 12;
+  if (!sim_expect(next && lv_obj_is_disabled(next), "setup skipped physical function check")) return 12;
   simulator_set_estop_input(true); estop_overlay_show(); sim_pump(100);
   simulator_set_estop_input(false); sim_pump(300);
   auto reset = sim_find_label_target(lv_layer_top(), "RESET TO IDLE", false, true);
-  if (!sim_expect(reset && !lv_obj_has_state(reset, LV_STATE_DISABLED), "wizard reset unavailable")) return 13;
+  if (!sim_expect(reset && !lv_obj_is_disabled(reset), "wizard reset unavailable")) return 13;
   lv_obj_send_event(reset, LV_EVENT_CLICKED, nullptr); sim_pump(80); estop_overlay_hide();
   if (!sim_expect(control_get_state() == STATE_IDLE, "reset restarted motion")) return 14;
   if (!sim_click_label("TEST START") || !sim_click_label("STOP ROTATION")) return 15;
@@ -594,7 +649,7 @@ static int run_commissioning_test(const char* directory) {
   if (!sim_click_label("NEXT")) return 16;
   sim_pump(600);
   auto finish = sim_find_active_label_target("FINISH");
-  if (!sim_expect(finish && lv_obj_has_state(finish, LV_STATE_DISABLED), "setup finished before durable save")) return 17;
+  if (!sim_expect(finish && lv_obj_is_disabled(finish), "setup finished before durable save")) return 17;
   capture("05_save_failed.bmp");
   simulator_set_scenario("none"); sim_pump(1500);
   capture("06_complete.bmp");
@@ -661,7 +716,7 @@ static int run_screenshot_dump(const char* dir) {
 }
 
 static unsigned audit_labels(lv_obj_t* obj, const char* screen) {
-  if (!obj || lv_obj_has_flag(obj, LV_OBJ_FLAG_HIDDEN)) return 0;
+  if (!obj || lv_obj_is_hidden(obj)) return 0;
   unsigned failures = 0;
   if (lv_obj_check_type(obj, &lv_label_class)) {
     const char* text = lv_label_get_text(obj);
@@ -684,7 +739,7 @@ static unsigned audit_labels(lv_obj_t* obj, const char* screen) {
       ++failures;
     }
     lv_obj_t* parent = lv_obj_get_parent(obj);
-    if (parent && !lv_obj_has_flag(parent, LV_OBJ_FLAG_SCROLLABLE)) {
+    if (parent && !lv_obj_is_scrollable(parent)) {
       lv_area_t bounds{}, parentBounds{};
       lv_obj_get_coords(obj, &bounds); lv_obj_get_coords(parent, &parentBounds);
       if (bounds.x1 < parentBounds.x1 || bounds.x2 > parentBounds.x2 ||
@@ -705,6 +760,16 @@ static int run_layout_audit() {
     screens_show(static_cast<ScreenId>(id)); sim_pump(250);
     lv_obj_update_layout(screenRoots[id]);
     failures += audit_labels(screenRoots[id], sim_screen_name(static_cast<ScreenId>(id)));
+    if (id == SCREEN_PROGRAM_EDIT) {
+      for (const char* text : {"CANCEL", "SAVE"}) {
+        auto button = sim_find_label_target(screenRoots[id], text, false, true);
+        if (!button || lv_obj_get_y(button) < 400) { std::printf("LAYOUT EDITOR FOOTER: %s\n", text); ++failures; }
+      }
+      for (const char* text : {"CONT", "PULSE", "STEP"}) {
+        auto button = sim_find_label_target(screenRoots[id], text, false, true);
+        if (!button || lv_obj_get_y(button) < 160) { std::printf("LAYOUT EDITOR MODE: %s\n", text); ++failures; }
+      }
+    }
   }
   for (const char* scenario : {"estop", "driver-alarm", "stale-adc", "i2c-failure"}) {
     simulator_set_scenario(scenario); estop_overlay_show(); sim_pump(100);
@@ -748,6 +813,7 @@ int main(int argc, char** argv) {
   }
   if (auditLayout) return run_layout_audit();
 
+  if (argc > 2 && std::strcmp(argv[1], "--calibration-preview") == 0) return run_calibration_test(argv[2]);
   if (argc > 2 && std::strcmp(argv[1], "--commissioning-preview") == 0) return run_commissioning_test(argv[2]);
   if (selfTest) {
     return run_self_test();

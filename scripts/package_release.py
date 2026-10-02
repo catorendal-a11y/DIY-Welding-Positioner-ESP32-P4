@@ -18,6 +18,24 @@ def checksum(data):
     return hashlib.sha256(data).hexdigest()
 
 
+def license_notices():
+    dependencies = ROOT / '.pio/libdeps/esp32p4-release'
+    notices = [ROOT / 'LICENSE', ROOT / 'src/ui/fonts/OFL-Montserrat.txt',
+               dependencies / 'FastAccelStepper/LICENSE',
+               dependencies / 'ArduinoJson/LICENSE.txt',
+               dependencies / 'lvgl/LICENCE.txt',
+               dependencies / 'lvgl/COPYRIGHTS.md',
+               dependencies / 'lvgl/src/stdlib/builtin/LICENSE_TLSF.txt',
+               dependencies / 'lvgl/src/stdlib/builtin/LICENSE_SPRINTF.txt',
+               dependencies / 'lvgl/scripts/built_in_font/font_license/FontAwesome5/LICENSE.txt']
+    notices.extend(sorted((ROOT / 'lib').glob('*/license.txt')))
+    sections = ['Project, font and direct dependency notices. Framework and other components retain their original licenses in the pinned source distributions.\n']
+    for path in notices:
+        sections.append('\n--- ' + path.relative_to(ROOT).as_posix() + ' ---\n\n' +
+                        path.read_text(encoding='utf-8-sig'))
+    return '\n'.join(sections).encode('utf-8')
+
+
 def partitions(data):
     entries = []
     for position in range(0, len(data), 32):
@@ -59,6 +77,7 @@ def main():
     if len(ota_data) != 8192:
         raise ValueError('Unexpected OTA initialization image size')
     guide = (ROOT / 'docs/releases/FLASHING.md').read_bytes()
+    licenses = license_notices()
     args.output.mkdir(parents=True, exist_ok=True)
     prepared = {}
     for variant in ['release', 'debug', 'mirror']:
@@ -80,7 +99,7 @@ def main():
         files = {'firmware.bin': application,
                  'bootloader.bin': (folder / 'bootloader.bin').read_bytes(),
                  'partitions.bin': table, 'boot_app0.bin': ota_data,
-                 'FLASHING.md': guide,
+                 'FLASHING.md': guide, 'LICENSES.txt': licenses,
                  'BUILD.json': (json.dumps(metadata, indent=2) + '\n').encode()}
         files['SHA256SUMS.txt'] = ''.join(checksum(data) + '  ' + name + '\n'
                                        for name, data in sorted(files.items())).encode()
@@ -99,6 +118,7 @@ def main():
     shutil.copyfile(ROOT / 'docs/images/ui_mockup_v5.zip',
                     args.output / ('welding-positioner-' + args.version + '-design-svg.zip'))
     (args.output / 'FLASHING.md').write_bytes(guide)
+    (args.output / 'LICENSES.txt').write_bytes(licenses)
     assets = sorted(p for p in args.output.iterdir() if p.is_file() and p.name != 'SHA256SUMS.txt')
     (args.output / 'SHA256SUMS.txt').write_text(
         ''.join(checksum(p.read_bytes()) + '  ' + p.name + '\n' for p in assets), encoding='utf-8')

@@ -52,7 +52,7 @@ jobs:
           python -m unittest discover -s test/tooling -v
 
   firmware-build:
-    name: ESP32-P4 ${{ matrix.environment }}
+    name: ${{ matrix.environment == 'esp32p4-release' && 'ESP32-P4 Release Build' || format('ESP32-P4 {0}', matrix.environment) }}
     strategy:
       fail-fast: false
       matrix:

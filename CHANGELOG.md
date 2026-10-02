@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Verify installed FastAccelStepper HEAD against upstream tag 1.4.0. Retain asynchronous force-stop drain handling, explicit RMT selection and typed movement results.
 - Allocate the RMT channel in a bounded Core 0 boot task; engine task affinity alone does not select the interrupt allocation core. Keep ENA inhibited throughout initialization and stop boot on allocation/timeout failure.
 - Correct IRQ-affinity and jitter claims. Publish firmware and the portable simulator from the exact green master CI commit with English release notes and complete download checksums.
+- Keep the release-build check name aligned with the existing master branch protection so validated pull requests can merge without bypassing required checks.
 
 ### Dependency refresh and API migration
 

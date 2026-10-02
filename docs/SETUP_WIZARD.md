@@ -28,7 +28,7 @@ Press the **physical E-STOP switch**. The fault overlay blocks operation. Releas
 
 ![Physical function check](images/setup_v1/04_function_check.png)
 
-The wizard observes input and controller-state sequences; **FINISH is your confirmation of the physical function check**. It does not measure electrical/mechanical stop time or certify the machine. Pedal starts are inhibited throughout commissioning.
+The wizard observes input and controller-state sequences; **NEXT is your confirmation of the physical function check**. It does not measure electrical/mechanical stop time or certify the machine. Pedal starts are inhibited throughout commissioning.
 
 ## Completion and failed saves
 

@@ -1,5 +1,9 @@
 # PC UI Simulator
 
+## Download and try
+
+[Download the portable Windows x64 ZIP](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.1.0/welding-positioner-v2.1.0-simulator-windows-x64.zip). Extract all files and double-click **Start Simulator.cmd**. No development tools or hardware are required. Runtime libraries and license notices are included. See the [portable guide](../docs/releases/SIMULATOR.md). The build instructions below are for source development.
+
 Runs the existing LVGL screens on Windows using SDL2. This is a UI simulator only:
 no ESP32 hardware, motor driver, GPIO, ESTOP input, flash, or serial protocol is
 controlled from the PC.

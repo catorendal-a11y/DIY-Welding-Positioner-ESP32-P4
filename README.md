@@ -343,6 +343,8 @@ Pinned dependencies: pioarduino `55.03.37`, LVGL `v9.5.0`, FastAccelStepper `0.3
 
 ## PC UI Simulator
 
+**Try it without installing development tools:** [Download the Windows x64 simulator ZIP](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.1.0/welding-positioner-v2.1.0-simulator-windows-x64.zip), extract all files, and double-click **Start Simulator.cmd**. No hardware is needed. [Portable simulator guide](docs/releases/SIMULATOR.md).
+
 The Windows simulator runs the real LVGL screen code on the PC using SDL2. It is useful for UI review, navigation testing, and quick logic checks without flashing the ESP32-P4.
 
 ```powershell

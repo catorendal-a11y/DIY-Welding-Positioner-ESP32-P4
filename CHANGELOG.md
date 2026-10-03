@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Release packaging
+
+- Distinguish pioarduino's generated application and combined `.factory.bin` images. Exclude combined factory images from application-only release bundles and reject ambiguous or missing application outputs.
+- Apply the same filtering when re-packaging validated CI artifacts for an existing tag, keeping its original firmware commit and tag immutable.
+- Include the reviewed wiring SVG as a separate release download and identify the documentation source commit separately from the tagged firmware/simulator provenance.
+
+### Project entry documentation
+
+- Shorten the README while retaining the full previous builder material in `docs/BUILDER_GUIDE.md`. Keep the exact GUITION board identity, hardware images, wiring overview, Setup Wizard, TIG HF enclosure requirement and key commissioning details visible.
+- Correct the original wiring diagram in place and restyle it to match the V5 graphite/orange UI. Retain the hardware layout and common-cathode routing, correct the pedal switch endpoint to GPIO33 and its supply to the ADS1115 VDD net, separate the panel-pot wiper from the GND bus, show the NC input-interface requirement, add GPIO32 ALM, correct current/microstep notes and RPM limits, and remove the unmeasured 0.5 ms claim. Keep the firmware input contract unchanged.
+
 ## [2.1.1] - 2026-10-03
 
 ### FastAccelStepper re-audit and release

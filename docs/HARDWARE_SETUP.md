@@ -26,7 +26,7 @@ Tables below match the **STEPPERONLINE DM542T** front label (same family as many
 
 The driver has a **5 V / 24 V** selector for the **control input** side (often labeled near **PWR** / alarm). For **ESP32-P4** (3.3 V GPIO):
 
-- Use the **5 V** logic position and wire **PUL+/DIR+/ENA+** to **3.3 V or 5 V** as in §3.4 — **not** motor `VM` (24–36 V) on the opto inputs.
+- For a driver requiring **5 V** control signals, select its **5 V** position and use a suitable **3.3 V-to-driver signal interface** as in §3.4. Direct 3.3 V drive is only appropriate if the actual driver's voltage/current specification permits it. Keep motor `VM` (24–36 V) off the opto logic inputs and ESP32 pins.
 - If pulses were ignored before, wrong voltage on this selector or on **+** inputs is a common cause.
 
 ### 3.2 Motor current — SW1, SW2, SW3 (peak / RMS)
@@ -70,21 +70,21 @@ Pick the row that equals **200 × (Motor Config microstep value)**. Wrong table 
 
 **Motor power:** **+Vdc** = **+18 V … +50 V** (motor supply), **GND** = power return. Do **not** connect motor `VM` to **PUL/DIR/ENA**.
 
-**Signal wiring (optocoupler “+” to logic VCC, “−” to GPIO — Style 2):**
+**Signal wiring (optocoupler “+” to logic VCC, “−” to the signal interface — Style 2):**
 
 | Driver terminal | Connect to |
 |-----------------|------------|
-| **PUL+** | **3.3 V** on ESP32-P4 header (or **5 V** via series resistor e.g. **1 kΩ** if your manual recommends it) |
-| **PUL−** | **GPIO 50** (STEP) |
-| **DIR+** | Same logic **3.3 V** (or 5 V as above) |
-| **DIR−** | **GPIO 51** (DIR) |
-| **ENA+** | Same logic **3.3 V** (or 5 V as above) |
-| **ENA−** | **GPIO 52** (ENA) |
+| **PUL+** | Driver logic VCC specified by its manual; separate from motor supply |
+| **PUL−** | Suitable interface output controlled by **GPIO 50** (STEP) |
+| **DIR+** | Same driver logic VCC |
+| **DIR−** | Suitable interface output controlled by **GPIO 51** (DIR) |
+| **ENA+** | Same driver logic VCC |
+| **ENA−** | Suitable interface output controlled by **GPIO 52** (ENA); verify polarity |
 
 **ALM+ / ALM−:** fault output (open-drain, **active LOW** on alarm for typical DM542T wiring to ESP GND). Firmware reads **GPIO 32** (`PIN_DRIVER_ALM`, `INPUT_PULLUP`). Wire so the pin is **HIGH when OK** and **pulled LOW on driver fault** (follow your driver manual; often ALM− to signal GND and ALM+ / opto side per datasheet). **RESET** on the ESTOP overlay stays disabled until ALM is high again and the physical E-STOP is released.
 
 - **Common GND:** Driver signal **GND** / **`COM`** / logic reference must tie to **ESP32 GND**.
-- Inputs are usually **5 V tolerant**; **3.3 V** on the `+` side often works with the opto current your manual specifies.
+- **ESP32 GPIO is 3.3 V logic, not 5 V tolerant.** A series resistor alone is not a substitute for a compatible interface. Direct GPIO wiring is only appropriate if the actual driver interface satisfies the ESP32 voltage/current limits and the driver's input requirements. Keep the firmware's **HIGH = inhibit** contract when choosing or configuring the interface.
 
 **Pulse timing (datasheet vs firmware):**
 
@@ -106,20 +106,22 @@ Identify your stepper motor pairs (use a multimeter on continuity mode if unsure
 
 Opto-isolated drivers support **two common layouts**. Your **PCB silkscreen** and **manual** decide which one applies — mixing them causes no motion or wrong enable polarity.
 
-**Style 1 — “Minus to GND, plus to MCU”** (common on some **DIP breakout** boards; matches older wiring diagram v2 signal routing):
+**Style 1 — “Minus to GND, plus to MCU”** (common on some **DIP breakout** boards; retained in the project's wiring diagram, revision 2.6):
 
 1. Tie **PUL−**, **DIR−**, **ENA−** together → **GND** on the ESP32-P4.
 2. **PUL+** → `GPIO 50` (STEP)
 3. **DIR+** → `GPIO 51` (DIR)
 4. **ENA+** → `GPIO 52` (ENA)
 
+The diagram preserves the original routing; it does not establish that every DM542T revision accepts direct 3.3 V drive or the same ENA polarity. Use a suitable signal adapter where required by the actual driver's input voltage/current specification, and verify **GPIO52 HIGH inhibits motion** on the assembled system. Dashed interface blocks in the diagram are functional requirements, not verified installed components.
+
 **Style 2 — “Plus to VCC, minus to MCU”** (common on **DM542T** / Leadshine-style inputs; see **§3 DM542T checklist**):
 
-1. **PUL+**, **DIR+**, **ENA+** → **3.3 V** (or **5 V** per manual, sometimes via **1 kΩ**).
-2. **PUL−** → `GPIO 50`, **DIR−** → `GPIO 51`, **ENA−** → `GPIO 52`.
+1. **PUL+**, **DIR+**, **ENA+** → driver logic VCC specified by its manual.
+2. **PUL−**, **DIR−**, **ENA−** → compatible interface outputs controlled by `GPIO 50`, `GPIO 51`, `GPIO 52` respectively; see §3.4 for direct-drive limits.
 3. **GND** common between ESP32 and driver logic / `COM` as required by the manual.
 
-Firmware: **LOW** on the ENA GPIO line = **motor enabled**, **HIGH** = disabled (after stop). If direction or enable behaves inverted, swap **Style 1 vs 2** or use **Invert direction** in Motor Config — do not change ENA safety semantics without testing.
+Firmware: **LOW** on the ENA GPIO line requests **motor enabled**, **HIGH** requests disabled (after stop). Verify these states at the actual driver before motion. **Invert direction** in Motor Config affects direction only; it cannot correct ENA polarity. Choose wiring and interface polarity using the actual driver's manual rather than swapping styles by trial and error.
 
 ### C. External Controls
 - **Speed Potentiometer (10k Linear):**

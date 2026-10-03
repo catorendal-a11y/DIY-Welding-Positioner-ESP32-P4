@@ -18,6 +18,15 @@ def checksum(data):
     return hashlib.sha256(data).hexdigest()
 
 
+def application_image(folder):
+    # pioarduino also emits PROGNAME.factory.bin (bootloader + app). It is not
+    # an application image and must never be packaged at the 0x10000 offset.
+    applications = [p for p in folder.glob('fw_*.bin') if not p.name.endswith('.factory.bin')]
+    if len(applications) != 1:
+        raise ValueError('Use clean build outputs with one application per environment: ' + str(folder))
+    return applications[0]
+
+
 def license_notices():
     dependencies = ROOT / '.pio/libdeps/esp32p4-release'
     notices = [ROOT / 'LICENSE', ROOT / 'src/ui/fonts/OFL-Montserrat.txt',
@@ -83,10 +92,7 @@ def main():
     for variant in ['release', 'debug', 'mirror']:
         environment = 'esp32p4-' + variant
         folder = args.build_root / environment
-        applications = list(folder.glob('fw_*.bin'))
-        if len(applications) != 1:
-            raise ValueError('Use clean build outputs with one application per environment: ' + environment)
-        application = applications[0].read_bytes()
+        application = application_image(folder).read_bytes()
         if args.version.encode() not in application:
             raise ValueError('Application version string missing: ' + environment)
         table = (folder / 'partitions.bin').read_bytes()

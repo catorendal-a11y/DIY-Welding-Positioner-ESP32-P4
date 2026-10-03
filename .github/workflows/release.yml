@@ -60,7 +60,12 @@ jobs:
           gh run download "$CI_RUN_ID" --dir ci-artifacts
           for ENVIRONMENT in esp32p4-release esp32p4-debug esp32p4-mirror; do
             mkdir -p ".pio/build-fw/$ENVIRONMENT"
-            cp "ci-artifacts/tig-rotator-$ENVIRONMENT/"*.bin ".pio/build-fw/$ENVIRONMENT/"
+            # Framework-generated factory images include the bootloader and are
+            # not application-only images. Exclude them even for older tags.
+            for IMAGE in "ci-artifacts/tig-rotator-$ENVIRONMENT/"*.bin; do
+              [[ "$IMAGE" == *.factory.bin ]] && continue
+              cp "$IMAGE" ".pio/build-fw/$ENVIRONMENT/"
+            done
           done
 
       - name: Install packaging dependencies
@@ -88,13 +93,34 @@ jobs:
             --run-url "$CI_RUN_URL"
           (cd ci-artifacts/tig-rotator-simulator-windows-x64 && sha256sum -c *.zip.sha256)
           cp ci-artifacts/tig-rotator-simulator-windows-x64/*.zip* release/
+          # Documentation may advance after an immutable firmware tag. Export
+          # the reviewed drawing from this workflow's exact source commit.
+          git show "$GITHUB_SHA:docs/images/Wiring_diagram.v2.svg" \
+            > "release/welding-positioner-$RELEASE_TAG-wiring.svg"
           python - <<'PY'
           import hashlib
+          import os
           from pathlib import Path
           directory = Path('release')
           entries = sorted(p for p in directory.iterdir() if p.is_file() and p.name != 'SHA256SUMS.txt')
           (directory / 'SHA256SUMS.txt').write_text(''.join(
               hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + p.name + '\n' for p in entries), encoding='utf-8')
+          tag = os.environ['RELEASE_TAG']
+          repository = os.environ['GITHUB_REPOSITORY']
+          documentation_commit = os.environ['GITHUB_SHA']
+          project = 'https://github.com/' + repository
+          notes = Path('docs/releases/' + tag + '.md').read_text(encoding='utf-8')
+          notes += ('\n## Updated project documentation\n\n'
+                    '[Reviewed wiring SVG](' + project + '/releases/download/' + tag +
+                    '/welding-positioner-' + tag + '-wiring.svg) · '
+                    '[Shorter README](' + project + '/blob/' + documentation_commit + '/README.md) · '
+                    '[Complete builder guide](' + project + '/blob/' + documentation_commit +
+                    '/docs/BUILDER_GUIDE.md)\n\n'
+                    'The revised wiring diagram and project documentation come from commit `' +
+                    documentation_commit + '`. Firmware and simulator retain the original tagged '
+                    'commit and its validated CI provenance. The documentation correction does '
+                    'not constitute a physical wiring or stop-time test.\n')
+          Path('release-notes.md').write_text(notes, encoding='utf-8')
           PY
 
       - name: Save build artifacts
@@ -112,9 +138,9 @@ jobs:
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" release/* --clobber
             gh release edit "$RELEASE_TAG" --title "$RELEASE_TAG â€” Welding Positioner Controller" \
-              --notes-file "docs/releases/$RELEASE_TAG.md" --draft=false --latest
+              --notes-file release-notes.md --draft=false --latest
           else
             gh release create "$RELEASE_TAG" release/* --verify-tag --latest \
               --title "$RELEASE_TAG â€” Welding Positioner Controller" \
-              --notes-file "docs/releases/$RELEASE_TAG.md"
+              --notes-file release-notes.md
           fi

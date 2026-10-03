@@ -2,15 +2,15 @@
 
 **ESP32-P4 / C6 GUITION JC4880P443C** | Open-source firmware for TIG/MIG welding rotators
 
-## Current Status: v2.1.1 - LVGL 9.6, guided calibration and program editing
+## Current Status: v2.2.0 - Idle screen saver and flat UI refinements
 
-Release **v2.1.1** is the current firmware identifier (**`FW_VERSION`**), retaining V5 styling with LVGL 9.6, FastAccelStepper 1.4, single-owner control, guided setup/calibration and the revised program editor. This update is host-tested and has not been flashed or physically tested during publication. The previous v2.0.9 release documented TIG welding validation: the controller works during welding when the ESP32-P4 screen, stepper driver, and motor PSU are installed inside the same grounded metal enclosure.
+Release **v2.2.0** is the current firmware identifier (**`FW_VERSION`**). It adds an idle screen saver and flat UI refinements, retaining LVGL 9.6, FastAccelStepper 1.4 and guided setup/calibration. A functional pre-release build was uploaded and flash-verified on the owner's ESP32-P4; physical touch, motion, stop timing and HF qualification of the release-tagged binaries remain unmeasured. Earlier TIG field experience supports installing the controller, driver and motor PSU inside one grounded metal enclosure.
 
 Earlier releases include v2.0.8 version alignment and v2.0.7 dark/light mode. See the repository changelog for history.
 
 ## Current release and UI
 
-[Download v2.1.1](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.1.1) · [Flashing instructions](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/releases/FLASHING.md) · [Validation and improvements](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/FASTACCELSTEPPER_1_4_REAUDIT.md)
+[Download v2.2.0](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.2.0) · [Flashing instructions](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/releases/FLASHING.md) · [Validation and improvements](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/FASTACCELSTEPPER_1_4_REAUDIT.md)
 
 ![V5 main screen](https://raw.githubusercontent.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/master/docs/images/ui_runtime_v5/01_MAIN.png)
 
@@ -75,4 +75,4 @@ docs/
 wiki/                   - GitHub Wiki pages
 ```
 
-Current source includes an [idle screen saver](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/SCREEN_SAVER.md) with preview and wake-touch consumption. Published v2.1.1 downloads predate this feature.
+v2.2.0 includes an [idle screen saver](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/v2.2.0/docs/SCREEN_SAVER.md) with preview and wake-touch consumption.

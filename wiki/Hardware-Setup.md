@@ -18,7 +18,7 @@
 
 ## TIG HF Enclosure Requirement
 
-Earlier hardware was exercised during TIG welding with the ESP32-P4 screen, stepper driver and motor PSU inside the same grounded metal enclosure. This is historical field experience; it does not qualify v2.1.1 or establish its physical stop response.
+Earlier hardware was exercised during TIG welding with the ESP32-P4 screen, stepper driver and motor PSU inside the same grounded metal enclosure. This is historical field experience; it does not qualify v2.2.0 or establish its physical stop response.
 
 Do not weld with open bench wiring near an HF-start TIG machine. HF noise can reset the ESP32-P4, freeze touch/I2C, or create false GPIO/ADC inputs.
 

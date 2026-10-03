@@ -1,6 +1,6 @@
 # Workpiece calibration
 
-The calibration workflow is included in v2.1.1 firmware and simulator. These current source captures also show the unreleased text/input refinements. They are actual 800 × 480 LVGL 9.6 simulator captures, using the V5 dark graphite/orange design. The simulator validates interaction and state transitions; the operator must measure the real workpiece.
+The calibration workflow is included in v2.1.1 firmware and simulator. These current source captures also show the v2.2.0 text/input refinements. They are actual 800 × 480 LVGL 9.6 simulator captures, using the V5 dark graphite/orange design. The simulator validates interaction and state transitions; the operator must measure the real workpiece.
 
 ## Align
 
@@ -46,4 +46,4 @@ The page has no scrolling: four progress indicators, one instruction/input stage
 
 ## Regression evidence
 
-438 native cases include the actual calibration module, session policy and production dispatcher. Cases cover interrupted/rejected moves, timeout and clock wrap, context changes, strict parsing, correction bounds and draft isolation. The actual LVGL self-test additionally checks interrupted motion, failed verification, successful verification, failed storage/retry and STOP during saving. The layout audit reports zero failures. Firmware builds pass for release, debug and mirror; this update has not been flashed or physically tested.
+459 native/control/speed/storage cases include the actual calibration module, session policy and production dispatcher. Cases cover interrupted/rejected moves, timeout and clock wrap, context changes, strict parsing, correction bounds and draft isolation. The actual LVGL self-test additionally checks interrupted motion, failed verification, successful verification, failed storage/retry and STOP during saving. The layout audit reports zero failures. Firmware builds pass for release, debug and mirror; the functional pre-release build was flash-verified, but physical calibration, touch and motion/stop behavior remain unmeasured.

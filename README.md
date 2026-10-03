@@ -10,7 +10,7 @@ Touchscreen controller for a single-axis TIG/MIG welding rotator.
 
 ![Main screen — actual LVGL simulator capture](docs/images/ui_runtime_v5/01_MAIN.png)
 
-**[Try the Windows simulator](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.1.1/welding-positioner-v2.1.1-simulator-windows-x64.zip)** · **[Firmware downloads](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.1.1)** · **[Builder guide](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/wiki)** · **[Watch the hardware demo](https://youtu.be/GygLl6XY-TM)**
+**[Try the Windows simulator](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.2.0/welding-positioner-v2.2.0-simulator-windows-x64.zip)** · **[Firmware downloads](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.2.0)** · **[Builder guide](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/wiki)** · **[Watch the hardware demo](https://youtu.be/GygLl6XY-TM)**
 
 The image shows the current V5 interface with example data. The hardware demo shows an earlier UI on the existing machine.
 
@@ -41,9 +41,9 @@ Board illustration and pin reference above. The product illustration shows vendo
 - **16 saved programs**, with speed, direction, diameter and mode settings.
 - Physical **E-STOP input**, driver-alarm monitoring and guarded reset.
 - Guided **setup and calibration**, touch diagnostics and a USB-C live mirror.
-- Source update: an optional **[idle screen saver](docs/SCREEN_SAVER.md)** in the V5 design, with touch-to-wake and a Display preview.
+- Optional **[idle screen saver](docs/SCREEN_SAVER.md)** in the V5 design, with touch-to-wake and a Display preview.
 
-**v2.1.1** adds LVGL 9.6, FastAccelStepper 1.4, single-owner motion control, verified calibration and a clearer program editor. [Release notes](docs/releases/v2.1.1.md) · [Changelog](CHANGELOG.md).
+**v2.2.0** adds the idle screen saver, flat UI refinements and further motion/input/storage fixes, retaining LVGL 9.6 and FastAccelStepper 1.4. [Release notes](docs/releases/v2.2.0.md) · [Changelog](CHANGELOG.md).
 
 ## Try it on your PC
 
@@ -93,7 +93,7 @@ For **HF-start TIG welding**, put the **ESP32-P4 display/controller, stepper dri
 - Use shielded external cables and enclosure-side shield termination where appropriate; add ferrites if interference remains.
 - Repeat HF-start checks after changing firmware, wiring, cable routing or the enclosure.
 
-Earlier hardware testing worked during TIG welding after the shared grounded enclosure was installed. This is historical field experience; it does not qualify v2.1.1 or measure its physical stop response. [EMI installation and test details](docs/EMI_MITIGATION.md).
+Earlier hardware testing worked during TIG welding after the shared grounded enclosure was installed. This is historical field experience; it does not qualify v2.2.0 or measure its physical stop response. [EMI installation and test details](docs/EMI_MITIGATION.md).
 
 
 ## Install firmware
@@ -105,7 +105,7 @@ For a source build, install PlatformIO and use:
 ```sh
 git clone https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4.git
 cd DIY-Welding-Positioner-ESP32-P4
-git checkout v2.1.1
+git checkout v2.2.0
 pio run
 ```
 
@@ -147,12 +147,12 @@ Calibration guides you through **Align → Measure → Verify → Save**. The co
 
 ## Validation and limitations
 
-Unreleased source fixes cover cancelled countdowns, motion bounds/timeouts, pedal takeover, program direction and verified saves. [Changes and local validation](docs/CODE_LOGIC_REVIEW_2026-10-03.md). [LVGL 9.6 UI refinements](docs/LVGL_9_6_UI_IMPROVEMENTS.md) improve text placement, status updates and exact motor-settings entry while preserving the flat design. Published v2.1.1 downloads remain a separate release.
+v2.2.0 includes cancelled-countdown guards, motion bounds/timeouts, pedal takeover, program direction and verified saves. [Logic review](docs/CODE_LOGIC_REVIEW_2026-10-03.md). [LVGL 9.6 UI refinements](docs/LVGL_9_6_UI_IMPROVEMENTS.md) improve text placement, status updates and exact motor-settings entry while preserving the flat design.
 
-v2.1.1 passes **438 native/production-control tests**, packaging regressions, actual upstream RMT encoder tests, Linux/Windows simulator checks, a zero-failure layout audit and three firmware builds. Published binaries come from the exact validated master CI commit. [Evidence](docs/validation/2026-10-03/fastaccelstepper/README.md).
+Validation covers **459 native/control/speed/storage tests**, packaging regressions, upstream RMT encoder checks, Linux/Windows simulator checks, a zero-failure layout audit and three firmware builds. Release binaries come from the exact validated master CI commit. [Release validation](docs/releases/v2.2.0.md#validation-and-hardware-status).
 
 - **Single axis; no encoder feedback.** RPM/progress are calculated, so calibration requires real measurement.
-- This update has **not been flashed or physically tested during publication**. Check real motion, STOP/E-STOP, touch, alarms and saved settings on your machine.
+- A pre-release functional build was flashed successfully on 2026-10-03. This verifies upload, not real motion, STOP/E-STOP timing, physical touch or HF qualification of the release-tagged binaries.
 - Earlier TIG field experience supports the grounded-enclosure requirement; it does not qualify the latest firmware or establish a physical stop-time guarantee.
 
 ## Documentation and contributions

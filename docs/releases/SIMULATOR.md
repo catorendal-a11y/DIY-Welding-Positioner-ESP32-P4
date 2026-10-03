@@ -4,7 +4,7 @@ Try the V5 welding positioner interface without buying hardware or installing de
 
 ## Start
 
-1. Download the simulator Windows x64 ZIP from the v2.1.1 GitHub release.
+1. Download the simulator Windows x64 ZIP from the v2.2.0 GitHub release.
 2. Right-click the ZIP and choose Extract All. Keep all extracted files together.
 3. Open the extracted folder and double-click Start Simulator.cmd (or rotator_simulator.exe).
 4. Use the mouse to operate the touchscreen interface. Close the window to exit.
@@ -12,6 +12,10 @@ Try the V5 welding positioner interface without buying hardware or installing de
 The window uses the same 800x480 LVGL screens and fonts as the firmware. Explore rotation modes, program editing, settings and diagnostics. No ESP32, motor, serial port, PlatformIO, Python or MSYS2 installation is needed. Runtime libraries are included.
 
 This is an offline UI demonstration. Motor speed, inputs and fault states are simulated. It does not move a motor, connect to your controller, reproduce welding interference, or validate physical safety. Settings are simulated rather than stored on an ESP32. The USB live mirror is a separate tool.
+
+## Screen saver
+
+Open Settings > Display > PREVIEW to see the idle screen saver. Automatic activation is initially OFF; select 30s/1m/2m/5m and SAVE to enable it. The first touch only wakes the display; release and touch again to operate it. Motion, faults and editing stay visible.
 
 ## Self-test and troubleshooting
 

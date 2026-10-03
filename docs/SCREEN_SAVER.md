@@ -1,4 +1,4 @@
-# Idle screen saver
+# Idle screen saver (v2.2.0)
 
 ![Actual LVGL screen-saver capture](images/ui_runtime_v5/SCREEN_SAVER.png)
 
@@ -30,4 +30,4 @@ Build the simulator, then run:
 
 This also exports BMP captures of the screen saver, its movement, the restored main page, E-STOP priority and Display settings. Real GT911 touch, physical backlight behavior and USB mirror wake should be checked on the controller before treating hardware behavior as verified.
 
-Local validation on 2026-10-03: 459 native/control/speed/storage tests passed; the complete simulator self-test and dedicated screen-saver preview passed; the all-screen layout audit reported zero failures; release, debug and USB-mirror firmware compiled successfully. No device was flashed.
+Local validation on 2026-10-03: 459 native/control/speed/storage tests passed; the complete simulator self-test and dedicated screen-saver preview passed; the all-screen layout audit reported zero failures; release, debug and USB-mirror firmware compiled successfully. The pre-release functional build at commit 673e078 was subsequently uploaded to the owner's ESP32-P4, its flash data verified, and no serial error output was observed during a 10-second check. Physical touch, backlight, motor/stop timing and HF qualification of the release-tagged binaries remain unmeasured.

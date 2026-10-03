@@ -1,4 +1,4 @@
-# Process flow analysis — v2.1.1
+# Process flow analysis — v2.2.0
 
 Updated 3 October 2026. This document describes current production flow; the [earlier analysis is archived](docs/archive/PROCESS_ANALYSIS_v2.0.5.md). Physical response times require measurement.
 

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-10-03
+
 ### Idle screen saver
 
 - Add a flat graphite/orange screen saver with slow rotator-marker movement, English text and no shadows.

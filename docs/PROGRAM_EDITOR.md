@@ -1,6 +1,6 @@
 # Program editor
 
-The editor uses the existing V5 palette at 800×480, with no page scrolling. These captures come from the actual LVGL 9.6 simulator, not design mockups. The core editor is included in v2.1.1; these current source captures also show the unreleased text/input refinements. Historical downloads retain their original appearance.
+The editor uses the existing V5 palette at 800×480, with no page scrolling. These captures come from the actual LVGL 9.6 simulator, not design mockups. The core editor is included in v2.1.1; these current source captures also show the v2.2.0 text/input refinements. Historical downloads retain their original appearance.
 
 ## Create or edit
 
@@ -12,7 +12,7 @@ Open **Programs → + NEW**, or edit an existing slot. The top field opens the n
 
 ## Name and exact speed
 
-Tap the name, edit it, and use the keyboard's confirm key or the visible **CANCEL** button. Leading/trailing spaces are trimmed. An empty confirmed name becomes `Untitled`. The existing stored name field allows 31 UTF-8 bytes; oversized input displays an error rather than truncating a character. Long ASCII names use a smaller summary font.
+Tap the name, edit it, and use the keyboard's confirm key or the visible **CANCEL** button. Leading/trailing spaces are trimmed. An empty confirmed name becomes `Untitled`. New editor names use up to 31 printable ASCII characters supported by the display font; invalid or oversized entries show an error instead of truncating. Valid legacy UTF-8 names remain intact in storage, with the font's glyph limitations. Long ASCII names use a smaller summary font.
 
 ![Name keyboard](images/program_v2/03_name_editor.png)
 
@@ -28,7 +28,7 @@ Tap the RPM value to enter exact speed. Dot and comma decimal separators are acc
 
 ![Pulse draft](images/program_v2/05_pulse_program.png)
 
-The main editor's **SAVE** adds/replaces the preset and queues its existing debounced NVS save. The Programs list exposes the existing save/error status; returning to the list alone is not proof of durable storage. **CANCEL** discards the editor draft. Existing slots additionally offer **DELETE** with confirmation. The list remains limited to 16 programs.
+The main editor's **SAVE** adds/replaces the preset and queues its debounced NVS save. Edits and Cancel stay locked while the write is pending. The editor shows **SAVING** or **FAILED / RETRYING** and returns to Programs only after the matching successful storage receipt. Before saving, **CANCEL** discards the editor draft. Existing slots additionally offer **DELETE** with confirmation. The list remains limited to 16 programs.
 
 ![Saved program list](images/program_v2/06_saved_programs.png)
 

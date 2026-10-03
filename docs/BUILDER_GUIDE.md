@@ -8,7 +8,7 @@ Detailed material retained from the former README. Start with the [short project
 
 ### Precision Multi-Mode Welding Rotator for TIG, MIG, and Pipe Welding
 
-**ESP32-P4 &nbsp;&middot;&nbsp; Source firmware v2.1.1**
+**ESP32-P4 &nbsp;&middot;&nbsp; Source firmware v2.2.0**
 
 [![PlatformIO CI](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml/badge.svg)](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml)
 [![Latest Release](https://img.shields.io/github/v/release/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4)](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/latest)
@@ -65,9 +65,9 @@ Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Posit
 
 [Implementation details](../docs/IMPROVEMENTS_2026-10-01.md) · [V5 integration and upload record](../docs/UI_V5_DEPLOYMENT.md) · [Changelog](../CHANGELOG.md)
 
-**Current release: v2.1.1, updated 3 October 2026.** V5 identifies the UI design iteration. [Download firmware and read the release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.1.1). The current firmware and simulator include LVGL 9.6, FastAccelStepper 1.4, guided setup/calibration and the revised program editor.
+**Current release: v2.2.0, updated 3 October 2026.** V5 identifies the UI design iteration. [Download firmware and read the release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.2.0). The current firmware and simulator include LVGL 9.6, FastAccelStepper 1.4, guided setup/calibration and the revised program editor.
 
-v2.1.1 adds bounded motor error handling, precise RPM values, durable calibration confirmation and production motion tests. This release is validated on the host and has not been flashed or physically tested as part of publication. [Maintenance implementation report](../docs/MAINTENANCE_2026-10-02.md) · [FastAccelStepper re-audit](../docs/FASTACCELSTEPPER_1_4_REAUDIT.md).
+v2.2.0 adds an idle screen saver, exact motor-settings input and flat LVGL UI refinements, plus motion/input/storage corrections. A functional pre-release build was uploaded and flash-verified; release-tagged hardware behavior still requires measurement. [Release notes](releases/v2.2.0.md) · [Logic review](CODE_LOGIC_REVIEW_2026-10-03.md) · [Screen saver](SCREEN_SAVER.md).
 
 ---
 
@@ -354,7 +354,7 @@ The source now uses **LVGL 9.6.0** and **FastAccelStepper 1.4.0** with the curre
 
 ## Program Editor (v2.1.1)
 
-**New Program** keeps the V5 dark/orange style with a fixed 800×480 layout. Select one **RUN MODE**, choose the other modes the preset allows, enter an exact RPM, and open **MODE SETTINGS** for direction and timing. Name and RPM have separate full-screen editors; invalid input keeps the draft unchanged. Low-speed adjustments preserve 0.001 RPM precision in every mode editor. Save stores the program without starting rotation. Unreleased source shows SAVING/FAILED feedback and returns to the list only after a confirmed NVS write. New names use printable ASCII (31 characters); valid legacy UTF-8 names remain intact in storage, although the built-in font has limited glyph coverage.
+**New Program** keeps the V5 dark/orange style with a fixed 800×480 layout. Select one **RUN MODE**, choose the other modes the preset allows, enter an exact RPM, and open **MODE SETTINGS** for direction and timing. Name and RPM have separate full-screen editors; invalid input keeps the draft unchanged. Low-speed adjustments preserve 0.001 RPM precision in every mode editor. Save stores the program without starting rotation. v2.2.0 shows SAVING/FAILED feedback and returns to the list only after a confirmed NVS write. New names use printable ASCII (31 characters); valid legacy UTF-8 names remain intact in storage, although the built-in font has limited glyph coverage.
 
 <img src="../docs/images/program_v2/01_new_program.png" width="800" alt="Actual LVGL New Program page with run mode, availability, exact speed and mode settings">
 
@@ -370,7 +370,7 @@ The source includes a four-step **Setup Wizard** using the existing V5 dark/oran
 
 ## PC UI Simulator
 
-**Try it without installing development tools:** [Download the Windows x64 simulator ZIP](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.1.1/welding-positioner-v2.1.1-simulator-windows-x64.zip), extract all files, and double-click **Start Simulator.cmd**. No hardware is needed. [Portable simulator guide](../docs/releases/SIMULATOR.md).
+**Try it without installing development tools:** [Download the Windows x64 simulator ZIP](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.2.0/welding-positioner-v2.2.0-simulator-windows-x64.zip), extract all files, and double-click **Start Simulator.cmd**. No hardware is needed. [Portable simulator guide](../docs/releases/SIMULATOR.md).
 
 The Windows simulator runs the real LVGL screen code on the PC using SDL2. It is useful for UI review, navigation testing, and quick logic checks without flashing the ESP32-P4.
 
@@ -684,10 +684,10 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 
 | Local check | Result |
 | --- | --- |
-| Native suites | 438 / 438 passed (native and production-control suites) |
+| Native suites | 459 / 459 passed (native/control/speed/storage suites) |
 | LVGL self-test | Passed: navigation, program edits, RPM adjustment, fault reset, full setup/calibration workflows, save failure/retry and stale control |
 | Firmware builds | Release, debug and mirror passed |
-| Device upload | This control/setup update has not been flashed. The earlier V5 upload to COM3 is recorded in the deployment report. |
+| Device upload | Functional pre-release commit 673e078 uploaded to COM3 and flash data verified on 2026-10-03. Release-tagged physical behavior remains unmeasured. |
 | Physical motor/safety testing | Not performed as part of this update |
 
 [Dependency validation logs](../docs/validation/2026-10-02/dependencies) and [program editor validation](../docs/validation/2026-10-03/program-editor/README.md) record local runs. Native tests include direct production-policy tests, but older tests also model behavior separately; simulator hardware is stubbed. CI runs native tests, three firmware variants and SDL navigation checks. The badge links to the current GitHub result.
@@ -778,6 +778,6 @@ MIT License — see [LICENSE](../LICENSE) for details. Dependencies retain their
 
 </div>
 
-## Idle screen saver (current source)
+## Idle screen saver (v2.2.0)
 
 Open Settings > Display > Screen saver after, choose OFF/30s/1m/2m/5m and SAVE. PREVIEW shows the design immediately. The first touch wakes only; motion, faults and editing stay visible. Published v2.1.1 binaries predate this feature. See [behavior and captures](SCREEN_SAVER.md).

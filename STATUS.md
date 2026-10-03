@@ -1,9 +1,9 @@
 # Project Status
 
 **Last Updated:** 2026-10-03
-**Published firmware:** v2.1.1
-**Source:** v2.1.1 with control/setup, dependency, calibration and program-editor improvements
-**Build:** Source validation passed 438 native/production-control cases, six packaging cases, the full simulator setup/self-test and layout audit, and release/debug/mirror builds. The source update has not been flashed. Historical v2.1.0 assets remain unchanged.
+**Published firmware:** v2.2.0
+**Source:** v2.2.0 with idle screen saver, flat UI refinements and motion/input/storage corrections
+**Build:** 459 native/control/speed/storage tests, packaging regressions, Linux/Windows simulator self-tests/layout audits and release/debug/mirror builds. A pre-release functional build was uploaded and flash-verified on the owner's ESP32-P4; physical motion/touch/stop/HF measurements remain outstanding. Historical releases retain their original assets.
 
 ---
 
@@ -37,7 +37,7 @@ Runtime stepper calls belong to controlTask; inputTask samples ADC/pedal separat
 
 ### UI/UX
 
-Current source also includes the [idle screen saver](docs/SCREEN_SAVER.md) and [LVGL UI refinements](docs/LVGL_9_6_UI_IMPROVEMENTS.md), beyond the published v2.1.1 downloads.
+v2.2.0 includes the [idle screen saver](docs/SCREEN_SAVER.md) and [LVGL UI refinements](docs/LVGL_9_6_UI_IMPROVEMENTS.md).
 - [x] **23 registered root screens** with lazy creation pattern + ESTOP overlay
 - [x] **8 accent color themes** (switchable from Display Settings; combines with dark/light neutral UI mode)
 - [x] **Dark / Light UI mode** (Display Settings **Appearance**, persisted as `color_scheme` in NVS `cfg`)
@@ -71,7 +71,7 @@ Current source also includes the [idle screen saver](docs/SCREEN_SAVER.md) and [
 - [x] **TIG HF field validation** (welding works with ESP32-P4 screen, driver, and PSU inside one grounded metal enclosure)
 
 ### Documentation
-- [x] **README** (source and release v2.1.1, feature list, wiring diagram, BOM, TIG HF enclosure requirement; synced with `config.h`)
+- [x] **README** (source and release v2.2.0, feature list, wiring diagram, BOM, TIG HF enclosure requirement; synced with `config.h`)
 - [x] **Wiki** (Home, Getting Started, Hardware Setup, Troubleshooting, Roadmap, Architecture)
 - [x] **docs/** (Hardware Setup, Safety System, EMI Mitigation, Implementation, Instructables)
 - [x] **Wiring diagram v2** (SVG, GPIO29 on correct side, clean cable routing)

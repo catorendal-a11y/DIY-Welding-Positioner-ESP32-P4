@@ -1,6 +1,15 @@
 # Roadmap
 
-## v2.1.1 - Current Release
+## v2.2.0 - Current Release
+
+### v2.2.0 (2026-10-03)
+- [x] Idle screen saver with preview, configurable timeout and full wake-touch consumption
+- [x] Flat UI refinements, exact motor input, shared Cancel panels and fault priority
+- [x] Motion bounds/countdown/deadline, analog takeover and persistence corrections
+- [x] 459 production/native tests, simulator regressions and all-screen layout audit
+- [x] Three firmware variants and portable Windows simulator from validated CI
+
+## v2.1.1 - LVGL 9.6 and guided calibration
 
 ### v2.1.1 (2026-10-03)
 - [x] LVGL 9.6 / FastAccelStepper 1.4, explicit RMT and Core 0 channel allocation
@@ -27,7 +36,7 @@
 
 ## v2.0.8 - version alignment
 
-Historical release; v2.1.1 above is current.
+Historical release; v2.2.0 above is current.
 
 ### v2.0.8 (2026-04-29)
 - [x] **`FW_VERSION` v2.0.8** — README, STATUS, wiki, implementation docs, UI SVGs, issue templates synced to canonical release tag

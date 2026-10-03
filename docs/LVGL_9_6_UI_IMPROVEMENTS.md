@@ -1,6 +1,6 @@
 # LVGL 9.6 UI refinements
 
-These source changes retain the V5 graphite/orange design and its 800 x 480 layout. They refine typography and how the operating panel and Diagnostics receive status.
+These v2.2.0 changes retain the V5 graphite/orange design and its 800 x 480 layout. They refine typography and how the operating panel and Diagnostics receive status.
 
 ## Text placement
 
@@ -42,7 +42,7 @@ Simulator regressions cover unchanged integer notifications, text copied from a 
 
 ## Local validation
 
-Windows simulator self-test and the program-editor preview flow pass. The 800 x 480 layout audit reports zero failures. Release, debug and USB-mirror firmware compile successfully. Calibration, main, Diagnostics, motor configuration and program-editor simulator screenshots were visually checked. No device was flashed and no on-device rendering benchmark was performed for these changes.
+Windows simulator self-test and the program-editor preview flow pass. The 800 x 480 layout audit reports zero failures. Release, debug and USB-mirror firmware compile successfully. Calibration, main, Diagnostics, motor configuration and program-editor simulator screenshots were visually checked. A functional pre-release build at commit 673e078 was later uploaded to the owner's ESP32-P4 with flash verification. No on-device rendering benchmark or physical touch/motion qualification was performed.
 
 ## Performance and scope
 

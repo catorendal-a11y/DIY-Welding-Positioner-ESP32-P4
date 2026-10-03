@@ -97,6 +97,10 @@ jobs:
           # the reviewed drawing from this workflow's exact source commit.
           git show "$GITHUB_SHA:docs/images/Wiring_diagram.v2.svg" \
             > "release/welding-positioner-$RELEASE_TAG-wiring.svg"
+          if [[ -f docs/images/ui_runtime_v5/SCREEN_SAVER.png ]]; then
+            cp docs/images/ui_runtime_v5/SCREEN_SAVER.png \
+              "release/welding-positioner-$RELEASE_TAG-screen-saver.png"
+          fi
           python - <<'PY'
           import hashlib
           import os

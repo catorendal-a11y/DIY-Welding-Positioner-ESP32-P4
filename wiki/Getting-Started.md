@@ -17,7 +17,7 @@ git clone https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4.git
 cd DIY-Welding-Positioner-ESP32-P4
 ```
 
-Open the folder in VS Code with PlatformIO. Current release: **v2.1.1**. Prebuilt firmware and English flashing instructions are available on the repository Releases page. Linux/macOS/Git Bash users may run `./install.sh` for a project environment.
+Open the folder in VS Code with PlatformIO. Current release: **v2.2.0**. Prebuilt firmware and English flashing instructions are available on the repository Releases page. Linux/macOS/Git Bash users may run `./install.sh` for a project environment.
 
 ## 2. Build
 
@@ -50,7 +50,7 @@ pio device monitor
 Example debug boot output (release logging is intentionally quieter; confirm the actual version on About):
 ```
 [I] BOOT OK — ENA=HIGH (motor disabled)
-[I] TIG Rotator Controller v2.1.1
+[I] TIG Rotator Controller v2.2.0
 [I] Hardware: ESP32-P4 4.3" Touch Display (Waveshare/Guition)
 [I] Safety init: ESTOP=OK
 [I] Speed control init: pot=3327 (pin=49)

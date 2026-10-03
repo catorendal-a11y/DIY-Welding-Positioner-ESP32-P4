@@ -1,10 +1,10 @@
-# Flashing v2.1.1
+# Flashing v2.2.0
 
 Target: GUITION JC4880P443C ESP32-P4, 16 MB flash, 800 × 480 landscape display. Use only one firmware variant at a time. Keep motor/driver power off during flashing and initial input checks.
 
 ## Recommended: build from the release source
 
-Install PlatformIO, clone the project, check out `v2.1.1`, then run:
+Install PlatformIO, clone the project, check out `v2.2.0`, then run:
 
 ```sh
 pio device list
@@ -37,4 +37,14 @@ Standalone application files from the release page contain only `firmware.bin`; 
 
 ## After flashing
 
-Confirm v2.1.1 appears on the About screen. Check display/touch, GPIO34 HIGH healthy / LOW fault, driver alarm state, ENA disable polarity, pedal release and stored motor settings before enabling motor power. Test physical stop behavior on the assembled machine. The mirror variant requires Settings > Display > USB MIRROR to be armed on the physical display before accepting PC input.
+Confirm v2.2.0 appears on the About screen. Check display/touch, GPIO34 HIGH healthy / LOW fault, driver alarm state, ENA disable polarity, pedal release and stored motor settings before enabling motor power. Test physical stop behavior on the assembled machine. The mirror variant requires Settings > Display > USB remote control to be armed on the physical display before accepting PC input.
+
+## Windows log encoding
+
+If redirecting PlatformIO/esptool output to a file, enable UTF-8 first so progress characters do not break the upload log reader:
+
+```powershell
+$env:PYTHONUTF8 = "1"
+$env:PYTHONIOENCODING = "utf-8"
+pio run -e esp32p4-release -t upload --upload-port COM3
+```

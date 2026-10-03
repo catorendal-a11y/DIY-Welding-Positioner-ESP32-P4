@@ -2,7 +2,7 @@
 // TIG Welding Rotator Controller - Hardware Configuration
 // Waveshare/Guition ESP32-P4 4.3" Touch Display Dev Board
 
-#define FW_VERSION "v2.1.1"
+#define FW_VERSION "v2.2.0"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // GPIO HEADER PINS (2×13 pin header)

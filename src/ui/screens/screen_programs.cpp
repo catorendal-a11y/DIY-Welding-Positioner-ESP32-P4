@@ -29,15 +29,21 @@ static void start_reviewed_preset() {
 static void load_preset_cb(lv_event_t* e) {
   int id = (int)(size_t)lv_event_get_user_data(e);
   if (!storage_get_preset(id, &reviewedPreset)) return;
-  char details[280];
+  char details[320], timing[80];
   const Preset& p = reviewedPreset;
+  if (!control_program_feasible(p)) {
+    screen_confirm_create("PROGRAM BLOCKED", "Speed or angle exceeds the current motor range.\nAdjust RPM, part diameter or angle in the editor.", nullptr, nullptr, SCREEN_PROGRAMS);
+    return;
+  }
   const char* mode = p.mode == STATE_PULSE ? "Pulse" : p.mode == STATE_STEP ? "Step" : "Continuous";
-  snprintf(
-      details, sizeof(details),
-      "%s\n%s / %.3f RPM / %s\nPart diameter: %.0f mm\nConfirm starts motion. Cancel keeps the motor idle.",
-      p.name, mode, (double)p.rpm, speed_resolve_direction(p.direction == DIR_CCW ? DIR_CCW : DIR_CW) == DIR_CCW ? "CCW" : "CW",
-      (double)(p.workpiece_diameter_mm > 0 ? p.workpiece_diameter_mm : D_EMNE * 1000.0f));
-  screen_confirm_create("START PROGRAM", details, start_reviewed_preset, nullptr, SCREEN_MAIN);
+  if (p.mode == STATE_STEP) snprintf(timing,sizeof(timing),"%.1f deg x%u / dwell %.1fs",(double)p.step_angle,p.step_repeats,(double)p.step_dwell_sec);
+  else if (p.mode == STATE_PULSE) snprintf(timing,sizeof(timing),"ON %.2fs / OFF %.2fs / %u cycles (0=repeat)",p.pulse_on_ms/1000.0,p.pulse_off_ms/1000.0,p.pulse_cycles);
+  else if (p.timer_auto_stop && p.timer_ms) snprintf(timing,sizeof(timing),"Auto-stop %.1fs / soft start %s",p.timer_ms/1000.0,p.cont_soft_start ? "ON" : "OFF");
+  else snprintf(timing,sizeof(timing),"Continuous / soft start %s",p.cont_soft_start ? "ON" : "OFF");
+  snprintf(details,sizeof(details),"%s\n%s / %.3f RPM / %s\nPart diameter: %.0f mm\n%s\nConfirm starts motion.",
+      p.name,mode,(double)p.rpm,speed_resolve_direction((Direction)p.direction)==DIR_CCW ? "CCW" : "CW",
+      (double)(p.workpiece_diameter_mm>0 ? p.workpiece_diameter_mm : D_EMNE*1000.0f),timing);
+  screen_confirm_create("START PROGRAM",details,start_reviewed_preset,nullptr,SCREEN_MAIN,true);
 }
 
 static void edit_preset_cb(lv_event_t* e) {

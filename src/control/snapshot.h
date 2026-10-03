@@ -26,5 +26,5 @@ template <typename T> class SnapshotMailbox {
 };
 
 inline bool control_timestamp_fresh(uint32_t now, uint32_t timestamp, bool valid) {
-  return valid && uint32_t(now - timestamp) <= 100u;
+  return valid && static_cast<int32_t>(now - timestamp) >= -5 && static_cast<int32_t>(now - timestamp) <= 100;
 }

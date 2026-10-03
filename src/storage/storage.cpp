@@ -2,6 +2,7 @@
 #include "storage.h"
 #include "settings_policy.h"
 #include "save_request.h"
+#include "name_policy.h"
 #include "../control/setup_policy.h"
 #include "../motor/speed.h"
 #include "../event_log.h"
@@ -38,6 +39,12 @@ StorageStatus storage_settings_save_status(uint32_t ticket) {
   return settingsSave.failed() ? STORAGE_ERROR : STORAGE_PENDING;
 }
 
+uint32_t storage_request_presets_save() { return presetsSave.request(); }
+StorageStatus storage_presets_save_status(uint32_t ticket) {
+  if (presetsSave.saved(ticket)) return STORAGE_SAVED;
+  return presetsSave.failed() ? STORAGE_ERROR : STORAGE_PENDING;
+}
+static constexpr size_t SETTINGS_BLOB_MAX = 4096, PRESETS_BLOB_MAX = 16384;
 static Preferences g_prefs;
 static bool g_prefs_open = false;
 
@@ -45,6 +52,8 @@ static void storage_migrate_littlefs_to_nvs();
 static bool storage_apply_settings_doc(JsonObjectConst doc);
 static bool storage_parse_presets_buffer(const uint8_t* data, size_t len);
 static int storage_sanitize_microstep(int value);
+static bool storage_decode_settings_doc(JsonObjectConst doc, SystemSettings& decoded);
+static bool storage_decode_presets_buffer(const uint8_t* data, size_t len, float cap, std::vector<Preset>& loaded);
 
 void storage_init() {
   LOG_I("Initializing NVS storage...");
@@ -80,50 +89,45 @@ static void storage_migrate_littlefs_to_nvs() {
     return;
   }
 
-  bool migrated = false;
-  xSemaphoreTake(g_nvs_mutex, portMAX_DELAY);
-  if (haveCfg == 0 && LittleFS.exists(SETTINGS_FILE)) {
-    File f = LittleFS.open(SETTINGS_FILE, FILE_READ);
-    if (f) {
-      const size_t sz = f.size();
-      std::vector<uint8_t> buf(sz);
-      if (sz > 0 && f.read(buf.data(), sz) == sz) {
-        if (g_prefs.putBytes(NVS_KEY_SETTINGS, buf.data(), sz)) {
-          LOG_I("Migrated settings from LittleFS to NVS");
-          migrated = true;
-        }
-      }
-      f.close();
-    }
+  auto readLegacy = [](const char* path, size_t maximum, std::vector<uint8_t>& buffer) {
+    if (!LittleFS.exists(path)) return true;
+    File file = LittleFS.open(path, FILE_READ);
+    if (!file || !file.size() || file.size() > maximum) return false;
+    buffer.resize(file.size());
+    return file.read(buffer.data(), buffer.size()) == buffer.size();
+  };
+  std::vector<uint8_t> cfg, prs;
+  bool valid = (haveCfg || readLegacy(SETTINGS_FILE, SETTINGS_BLOB_MAX, cfg)) &&
+               (havePrs || readLegacy(PRESETS_FILE, PRESETS_BLOB_MAX, prs));
+  SystemSettings decoded{};
+  decoded.max_rpm = MAX_RPM;
+  if (valid && !cfg.empty()) {
+    JsonDocument doc;
+    valid = !deserializeJson(doc, cfg.data(), cfg.size()) && doc.is<JsonObject>() &&
+            storage_decode_settings_doc(doc.as<JsonObjectConst>(), decoded);
   }
-  if (havePrs == 0 && LittleFS.exists(PRESETS_FILE)) {
-    File f = LittleFS.open(PRESETS_FILE, FILE_READ);
-    if (f) {
-      const size_t sz = f.size();
-      std::vector<uint8_t> buf(sz);
-      if (sz > 0 && f.read(buf.data(), sz) == sz) {
-        if (g_prefs.putBytes(NVS_KEY_PRESETS, buf.data(), sz)) {
-          LOG_I("Migrated presets from LittleFS to NVS");
-          migrated = true;
-        }
-      }
-      f.close();
-    }
+  std::vector<Preset> programs;
+  if (valid && !prs.empty()) valid = storage_decode_presets_buffer(prs.data(), prs.size(), decoded.max_rpm, programs);
+  if (valid) {
+    xSemaphoreTake(g_nvs_mutex, portMAX_DELAY);
+    const bool cfgWritten = cfg.empty() || g_prefs.putBytes(NVS_KEY_SETTINGS, cfg.data(), cfg.size()) == cfg.size();
+    const bool prsWritten = cfgWritten && (prs.empty() || g_prefs.putBytes(NVS_KEY_PRESETS, prs.data(), prs.size()) == prs.size());
+    if (!prsWritten && !cfg.empty() && cfgWritten) g_prefs.remove(NVS_KEY_SETTINGS);
+    xSemaphoreGive(g_nvs_mutex);
+    valid = cfgWritten && prsWritten;
   }
-  xSemaphoreGive(g_nvs_mutex);
   LittleFS.end();
-  if (migrated) {
-    LOG_I("Legacy LittleFS migration finished (partition may still exist unused)");
-  }
+  if (!valid) fatal_halt("Legacy migration failed: original files retained; motion disabled");
 }
 
 bool storage_load_presets() {
   xSemaphoreTake(g_nvs_mutex, portMAX_DELAY);
   const size_t len = g_prefs.getBytesLength(NVS_KEY_PRESETS);
   std::vector<uint8_t> buf;
+  if (len > PRESETS_BLOB_MAX) { xSemaphoreGive(g_nvs_mutex); return false; }
   if (len > 0) {
     buf.resize(len);
-    g_prefs.getBytes(NVS_KEY_PRESETS, buf.data(), len);
+    if (g_prefs.getBytes(NVS_KEY_PRESETS, buf.data(), len) != len) { xSemaphoreGive(g_nvs_mutex); return false; }
   }
   xSemaphoreGive(g_nvs_mutex);
 
@@ -145,7 +149,8 @@ void preset_clamp_mode_to_mask(Preset* p) {
   }
 }
 
-static bool storage_parse_presets_buffer(const uint8_t* data, size_t len) {
+static bool storage_decode_presets_buffer(const uint8_t* data, size_t len, float rpmCap, std::vector<Preset>& loaded) {
+  if (!data || !len || len > PRESETS_BLOB_MAX) return false;
   JsonDocument doc;
   const DeserializationError error = deserializeJson(doc, data, len);
   if (error) {
@@ -154,17 +159,17 @@ static bool storage_parse_presets_buffer(const uint8_t* data, size_t len) {
   }
 
   if (!doc.is<JsonArray>()) return false;
-  std::vector<Preset> loaded;
+  loaded.clear();
   JsonArray array = doc.as<JsonArray>();
-  for (JsonObject obj : array) {
-    if (loaded.size() >= MAX_PRESETS) {
-      break;
-    }
-
-    Preset p;
-    p.id = obj["id"] | 0;
-    strlcpy(p.name, obj["name"] | "Unnamed", sizeof(p.name));
-    sanitize_ascii(p.name, sizeof(p.name));
+  if (array.size() > MAX_PRESETS) return false;
+  for (JsonVariantConst entry : array) {
+    if (!entry.is<JsonObjectConst>()) return false;
+    JsonObjectConst obj = entry.as<JsonObjectConst>();
+    Preset p{};
+    p.id = static_cast<uint8_t>(loaded.size() + 1); // Normalize old/duplicate IDs without dropping programs.
+    const char* name = obj["name"] | "Unnamed";
+    if (!program_name_valid(name, sizeof(p.name))) return false;
+    strlcpy(p.name, name, sizeof(p.name));
     p.mode = (SystemState)(obj["mode"] | (int)STATE_RUNNING);
     p.mode_mask = (uint8_t)(obj["mode_mask"] | 0) & PRESET_MASK_ALL;
     if (p.mode_mask == 0) {
@@ -185,10 +190,6 @@ static bool storage_parse_presets_buffer(const uint8_t* data, size_t len) {
     p.timer_auto_stop = obj["timer_auto_stop"] | 1;
     p.cont_soft_start = obj["cont_soft_start"] | 0;
 
-    float rpmCap = MAX_RPM;
-    xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-    rpmCap = g_settings.max_rpm;
-    xSemaphoreGive(g_settings_mutex);
     if (rpmCap < MIN_RPM) rpmCap = MIN_RPM;
     if (rpmCap > MAX_RPM) rpmCap = MAX_RPM;
     if (!std::isfinite(p.rpm) || !std::isfinite(p.step_angle) || !std::isfinite(p.step_dwell_sec) ||
@@ -209,13 +210,28 @@ static bool storage_parse_presets_buffer(const uint8_t* data, size_t len) {
     loaded.push_back(p);
   }
 
-  [[maybe_unused]] const size_t count = loaded.size();
-  xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
-  g_presets = std::move(loaded);
-  xSemaphoreGive(g_presets_mutex);
-
-  LOG_I("Loaded %u presets from NVS.", (unsigned)count);
   return true;
+}
+
+static bool storage_parse_presets_buffer(const uint8_t* data, size_t len) {
+  float cap;
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY); cap = g_settings.max_rpm; xSemaphoreGive(g_settings_mutex);
+  std::vector<Preset> loaded;
+  if (!storage_decode_presets_buffer(data, len, cap, loaded)) return false;
+  xSemaphoreTake(g_presets_mutex, portMAX_DELAY); g_presets = std::move(loaded); xSemaphoreGive(g_presets_mutex);
+  return true;
+}
+
+static bool storage_write_doc(const char* key, const JsonDocument& doc, size_t maximum) {
+  if (doc.overflowed()) return false;
+  const size_t expected = measureJson(doc);
+  if (!expected || expected > maximum) return false;
+  std::vector<uint8_t> buffer(expected + 1);
+  if (serializeJson(doc, buffer.data(), buffer.size()) != expected) return false;
+  xSemaphoreTake(g_nvs_mutex, portMAX_DELAY);
+  const bool saved = g_prefs.putBytes(key, buffer.data(), expected) == expected;
+  xSemaphoreGive(g_nvs_mutex);
+  return saved;
 }
 
 static bool storage_save_presets_internal() {
@@ -227,7 +243,10 @@ static bool storage_save_presets_internal() {
   JsonDocument doc;
   JsonArray array = doc.to<JsonArray>();
 
+  if (localCopy.size() > MAX_PRESETS) return false;
   for (const auto& p : localCopy) {
+    if (!program_name_valid(p.name, sizeof(p.name)) || !std::isfinite(p.rpm) ||
+        !std::isfinite(p.step_angle) || !std::isfinite(p.step_dwell_sec) || !std::isfinite(p.workpiece_diameter_mm)) return false;
     JsonObject obj = array.add<JsonObject>();
     obj["id"] = p.id;
     obj["name"] = p.name;
@@ -247,32 +266,13 @@ static bool storage_save_presets_internal() {
     obj["cont_soft_start"] = p.cont_soft_start;
   }
 
-  const size_t need = measureJson(doc);
-  if (need == 0 && !localCopy.empty()) {
-    LOG_E("Failed to measure presets JSON");
-    return false;
-  }
-  std::vector<uint8_t> buf(need + 1);
-  const size_t written = serializeJson(doc, buf.data(), buf.size());
-  if (written == 0 && !localCopy.empty()) {
-    LOG_E("Failed to serialize presets JSON");
-    return false;
-  }
-
-  xSemaphoreTake(g_nvs_mutex, portMAX_DELAY);
-  const bool ok = g_prefs.putBytes(NVS_KEY_PRESETS, buf.data(), written);
-  xSemaphoreGive(g_nvs_mutex);
-
-  if (!ok) {
-    LOG_E("NVS putBytes failed for presets");
-    return false;
-  }
+  if (!storage_write_doc(NVS_KEY_PRESETS, doc, PRESETS_BLOB_MAX)) return false;
   LOG_I("Saved %u presets to NVS.", (unsigned)localCopy.size());
   return true;
 }
 
 bool storage_save_presets() {
-  presetsSave.request();
+  storage_request_presets_save();
   return true;
 }
 
@@ -280,9 +280,10 @@ bool storage_load_settings() {
   xSemaphoreTake(g_nvs_mutex, portMAX_DELAY);
   const size_t len = g_prefs.getBytesLength(NVS_KEY_SETTINGS);
   std::vector<uint8_t> buf;
+  if (len > SETTINGS_BLOB_MAX) { xSemaphoreGive(g_nvs_mutex); return false; }
   if (len > 0) {
     buf.resize(len);
-    g_prefs.getBytes(NVS_KEY_SETTINGS, buf.data(), len);
+    if (g_prefs.getBytes(NVS_KEY_SETTINGS, buf.data(), len) != len) { xSemaphoreGive(g_nvs_mutex); return false; }
   }
   xSemaphoreGive(g_nvs_mutex);
 
@@ -313,36 +314,39 @@ static int storage_sanitize_microstep(int value) {
   return 16;
 }
 
-static bool storage_apply_settings_doc(JsonObjectConst doc) {
+static bool storage_decode_settings_doc(JsonObjectConst doc, SystemSettings& decoded) {
   if (!std::isfinite(doc["max_rpm"] | MAX_RPM) || !std::isfinite(doc["calibration_factor"] | 1.0f))
     return false;
   if (!doc["setup_completed"].isNull() && !doc["setup_completed"].is<bool>()) return false;
-  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  g_settings.acceleration = constrain(doc["acceleration"] | 5000, (int)1000, (int)30000);
-  g_settings.microstep = storage_sanitize_microstep(doc["microstep"] | 16);
+  decoded.acceleration = constrain(doc["acceleration"] | 5000, (int)1000, (int)30000);
+  decoded.microstep = storage_sanitize_microstep(doc["microstep"] | 16);
   {
     float mx = doc["max_rpm"] | MAX_RPM;
     if (mx < MIN_RPM) mx = MIN_RPM;
     if (mx > MAX_RPM) mx = MAX_RPM;
-    g_settings.max_rpm = mx;
+    decoded.max_rpm = mx;
   }
-  g_settings.calibration_factor = constrain(doc["calibration_factor"] | 1.0f, 0.5f, 1.5f);
-  g_settings.brightness = constrain(doc["brightness"] | 150, (uint8_t)10, (uint8_t)255);
-  g_settings.dim_timeout = settings_dim_seconds(doc["dim_timeout"] | 60);
-  g_settings.dir_switch_enabled = doc["dir_switch_enabled"] | true;
-  g_settings.invert_direction = doc["invert_direction"] | false;
-  g_settings.accent_color = constrain(doc["accent_color"] | 0, (uint8_t)0, (uint8_t)7);
-  g_settings.color_scheme = constrain(doc["color_scheme"] | 0, (uint8_t)0, (uint8_t)1);
-  g_settings.countdown_seconds = constrain(doc["countdown_seconds"] | 3, (uint8_t)1, (uint8_t)10);
+  decoded.calibration_factor = constrain(doc["calibration_factor"] | 1.0f, 0.5f, 1.5f);
+  decoded.brightness = constrain(doc["brightness"] | 150, 10, 255);
+  decoded.dim_timeout = settings_dim_seconds(doc["dim_timeout"] | 60);
+  decoded.dir_switch_enabled = doc["dir_switch_enabled"] | true;
+  decoded.invert_direction = doc["invert_direction"] | false;
+  decoded.accent_color = constrain(doc["accent_color"] | 0, 0, 7);
+  decoded.color_scheme = constrain(doc["color_scheme"] | 0, 0, 1);
+  decoded.countdown_seconds = constrain(doc["countdown_seconds"] | 3, 1, 10);
   // Missing JSON key: keep project default DM542T timing for older NVS blobs.
-  g_settings.stepper_driver = constrain(doc["stepper_driver"] | (int)STEPPER_DRIVER_DM542T, 0, 1);
-  g_settings.pedal_enabled = doc["pedal_enabled"] | false;
-  g_settings.settings_version = doc["settings_version"] | 0;
-  g_settings.setup_completed = setup_migration_completed(!doc["setup_completed"].isNull(), doc["setup_completed"] | false);
-  const bool dirSw = g_settings.dir_switch_enabled;
-  xSemaphoreGive(g_settings_mutex);
+  decoded.stepper_driver = constrain(doc["stepper_driver"] | (int)STEPPER_DRIVER_DM542T, 0, 1);
+  decoded.pedal_enabled = doc["pedal_enabled"] | false;
+  decoded.settings_version = doc["settings_version"] | 0;
+  decoded.setup_completed = setup_migration_completed(!doc["setup_completed"].isNull(), doc["setup_completed"] | false);
+  return true;
+}
 
-  g_dir_switch_cache.store(dirSw, std::memory_order_release);
+static bool storage_apply_settings_doc(JsonObjectConst doc) {
+  SystemSettings decoded{};
+  if (!storage_decode_settings_doc(doc, decoded)) return false;
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY); g_settings = decoded; xSemaphoreGive(g_settings_mutex);
+  g_dir_switch_cache.store(decoded.dir_switch_enabled, std::memory_order_release);
   return true;
 }
 
@@ -352,6 +356,7 @@ static bool storage_save_settings_internal() {
   snap = g_settings;
   xSemaphoreGive(g_settings_mutex);
 
+  if (!std::isfinite(snap.max_rpm) || !std::isfinite(snap.calibration_factor)) return false;
   JsonDocument doc;
   doc["acceleration"] = snap.acceleration;
   doc["microstep"] = snap.microstep;
@@ -369,22 +374,7 @@ static bool storage_save_settings_internal() {
   doc["settings_version"] = snap.settings_version;
   doc["setup_completed"] = snap.setup_completed;
 
-  const size_t need = measureJson(doc);
-  std::vector<uint8_t> buf(need + 1);
-  const size_t written = serializeJson(doc, buf.data(), buf.size());
-  if (written == 0) {
-    LOG_E("Failed to serialize settings JSON");
-    return false;
-  }
-
-  xSemaphoreTake(g_nvs_mutex, portMAX_DELAY);
-  const bool ok = g_prefs.putBytes(NVS_KEY_SETTINGS, buf.data(), written);
-  xSemaphoreGive(g_nvs_mutex);
-
-  if (!ok) {
-    LOG_E("NVS putBytes failed for settings");
-    return false;
-  }
+  if (!storage_write_doc(NVS_KEY_SETTINGS, doc, SETTINGS_BLOB_MAX)) return false;
   LOG_I("Saved settings to NVS.");
   g_dir_switch_cache.store(snap.dir_switch_enabled, std::memory_order_release);
   return true;
@@ -464,7 +454,13 @@ bool storage_get_nvs_stats(size_t* used_entries, size_t* total_entries) {
   return true;
 }
 
-void storage_format() {
+bool storage_format() {
+  if (control_get_state() != STATE_IDLE || storage_status() != STORAGE_SAVED) return false;
+  control_stop(); digitalWrite(PIN_ENA, HIGH);
+  xSemaphoreTake(g_nvs_mutex, portMAX_DELAY);
+  const bool cleared = g_prefs_open && g_prefs.clear();
+  xSemaphoreGive(g_nvs_mutex);
+  if (!cleared) return false;
   xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
   g_presets.clear();
   xSemaphoreGive(g_presets_mutex);
@@ -475,12 +471,8 @@ void storage_format() {
   const bool dirSw = g_settings.dir_switch_enabled;
   xSemaphoreGive(g_settings_mutex);
 
-  xSemaphoreTake(g_nvs_mutex, portMAX_DELAY);
-  if (g_prefs_open) {
-    g_prefs.clear();
-  }
-  xSemaphoreGive(g_nvs_mutex);
 
   g_dir_switch_cache.store(dirSw, std::memory_order_release);
   LOG_I("Storage formatted - NVS cleared");
+  return true;
 }

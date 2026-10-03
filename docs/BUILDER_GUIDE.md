@@ -354,7 +354,7 @@ The source now uses **LVGL 9.6.0** and **FastAccelStepper 1.4.0** with the curre
 
 ## Program Editor (v2.1.1)
 
-**New Program** keeps the V5 dark/orange style with a fixed 800×480 layout. Select one **RUN MODE**, choose the other modes the preset allows, enter an exact RPM, and open **MODE SETTINGS** for direction and timing. Name and RPM have separate full-screen editors; invalid input keeps the draft unchanged. Low-speed adjustments preserve 0.001 RPM precision in every mode editor. Save stores the program without starting rotation.
+**New Program** keeps the V5 dark/orange style with a fixed 800×480 layout. Select one **RUN MODE**, choose the other modes the preset allows, enter an exact RPM, and open **MODE SETTINGS** for direction and timing. Name and RPM have separate full-screen editors; invalid input keeps the draft unchanged. Low-speed adjustments preserve 0.001 RPM precision in every mode editor. Save stores the program without starting rotation. Unreleased source shows SAVING/FAILED feedback and returns to the list only after a confirmed NVS write. New names use printable ASCII (31 characters); valid legacy UTF-8 names remain intact in storage, although the built-in font has limited glyph coverage.
 
 <img src="../docs/images/program_v2/01_new_program.png" width="800" alt="Actual LVGL New Program page with run mode, availability, exact speed and mode settings">
 
@@ -450,7 +450,7 @@ Remote control is fail-closed: it starts disabled after boot, requires **Setting
 
 | Parameter | Value |
 |:---|:---|
-| **Output RPM Range** | **0.001 – 3.0 RPM** workpiece (`MIN_RPM` / `MAX_RPM` in `config.h`); Motor Config can set a lower **max RPM** ceiling in NVS |
+| **Output RPM Range** | **0.001 – 3.0 RPM** configured envelope, further limited by geometry/calibration and the retained 20 Hz step-rate floor; the UI displays the effective minimum. Motor Config can lower the maximum ceiling in NVS |
 | **Gear Ratio** | **1 : 108** total &ensp; (NMRV030 60:1 x spur 72/40) |
 | **Roller / workpiece (defaults)** | `D_RULLE` 80 mm roller, `D_EMNE` 300 mm reference workpiece OD — used in `rpmToStepHz()` / `angleToSteps()` (see `config.h`, `speed.cpp`) |
 | **Microstepping** | 1/4, 1/8, 1/16 (default), 1/32 — selectable in Motor Config, persisted to NVS |
@@ -521,7 +521,7 @@ Open `src/config.h` to adjust hardware parameters:
 #define D_EMNE          0.300f  // Reference workpiece diameter (m) — kinematics
 #define D_RULLE         0.080f  // Roller diameter (m) — kinematics
 // Acceleration and microstep are stored in NVS (Motor Config); defaults 7500 steps/s^2, 1/16
-#define START_SPEED     20      // Hz minimum step-frequency floor
+#define START_SPEED     20      // Hz operational minimum; lower RPM requests are rejected
 ```
 
 Settings can also be changed from the touchscreen via **Settings > Motor Config** and are persisted to **NVS** (see [Persistence (NVS)](#persistence-nvs)).

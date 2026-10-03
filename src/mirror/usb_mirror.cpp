@@ -220,9 +220,16 @@ static void parse_serial_input() {
   static uint32_t payloadLen = 0;
   static UsbMirrorHeader header{};
 
-  while (Serial.available() > 0) {
+  static uint32_t lastByteAt = 0;
+  const uint32_t began = millis();
+  if ((magicPos || headerPos || payloadPos) && began - lastByteAt > 250u) {
+    parser_reset(magicPos, headerPos, payloadPos, payloadLen, header); pointer_release();
+  }
+  unsigned remaining = 512;
+  while (remaining-- && millis() - began < 2u && Serial.available() > 0) {
     int raw = Serial.read();
     if (raw < 0) return;
+    lastByteAt = millis();
     uint8_t b = (uint8_t)raw;
 
     if (headerPos == 0) {

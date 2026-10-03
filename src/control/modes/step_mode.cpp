@@ -31,7 +31,10 @@ static uint32_t step_dwell_until_ms = 0;
 
 static bool start_step_move() {
   accumulatedAngle = 0.0f;
+  uint32_t budget = 0;
+  if (!motor_move_timeout_ms(static_cast<uint32_t>(labs(step_sequence_signed_steps)), speed_get_target_rpm(), budget)) return false;
   if (!motor_move_steps(step_sequence_signed_steps, speed_get_target_rpm(), &step_move_start_pos)) return false;
+  control_expect_motion_completion(STATE_STEP, budget);
   step_move_steps_total = labs(step_sequence_signed_steps);
   step_finish_earliest_ms = millis() + 50u;
   step_waiting_dwell = false;
@@ -49,12 +52,13 @@ void step_execute_sequence(float angle_deg, uint16_t repeats, float dwell_sec) {
   if (control_get_state() != STATE_IDLE) return;
 
   // Validate angle range
-  if (angle_deg <= 0.0f || angle_deg > 3600.0f) {
+  if (!std::isfinite(angle_deg) || !std::isfinite(dwell_sec) || angle_deg <= 0.0f || angle_deg > 3600.0f) {
     LOG_W("Invalid step angle: %.1f", angle_deg);
     return;
   }
 
   long steps = angleToSteps(angle_deg);
+  if (steps <= 0 || steps > INT32_MAX) { LOG_W("Step move exceeds pulse range"); return; }
   if (speed_get_direction() == DIR_CCW) {
     steps = -steps;
   }
@@ -111,6 +115,7 @@ void step_update() {
   }
   const bool running = motor_is_running();
   if (safety_inhibit_motion() || running || (int32_t)(millis() - step_finish_earliest_ms) < 0) return;
+  control_clear_motion_deadline();
   accumulatedAngle = stepCurrentAngle.load(); ++stepsTaken; ++step_sequence_completed;
   if (step_sequence_completed < step_sequence_target_repeats) {
     if (step_sequence_dwell_ms) {

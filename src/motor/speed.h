@@ -31,6 +31,9 @@ void speed_init();        // Initialize speed control
 void speed_update_adc();  // Read and filter potentiometer (call every 20ms)
 // Reload UI max RPM from g_settings (after NVS load or Motor Config save). Core 0 / motorTask safe.
 void speed_sync_rpm_limits_from_settings();
+float speed_get_rpm_min_for_diameter(float mm);
+float speed_get_rpm_min(); // Geometry-dependent 20 Hz operational floor.
+float speed_clamp_rpm(float rpm); // Returns zero if no feasible range exists.
 float speed_get_rpm_max();         // Current UI/pot ceiling (atomic, MIN_RPM..MAX_RPM)
 void speed_slider_set(float rpm);  // Set speed from GUI slider
 // When true (Step screen), cached target RPM follows UI slider only (no pot takeover).
@@ -44,6 +47,7 @@ void speed_apply();         // Apply speed to motor (call every 5ms)
 
 // Direction control
 typedef enum { DIR_CW = 0, DIR_CCW = 1 } Direction;
+Direction speed_get_requested_direction();
 Direction speed_get_direction();
 Direction speed_resolve_direction(Direction requested); // Effective direction after configured inversion
 void speed_set_direction(Direction dir);

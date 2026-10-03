@@ -4,6 +4,7 @@
 #include "../../motor/speed.h"
 #include "../../config.h"
 #include <atomic>
+#include <cmath>
 
 static_assert(std::atomic<float>::is_always_lock_free,
               "std::atomic<float> must be lock-free for inter-core jog speed sharing");
@@ -17,7 +18,11 @@ void jog_start(Direction dir) {
 
   LOG_I("Jog mode: %s", (dir == DIR_CW) ? "CW" : "CCW");
 
-  motor_set_target_milli_hz(motor_milli_hz_for_rpm_calibrated(jogRPM.load(std::memory_order_relaxed)));
+  const float effective = speed_clamp_rpm(jogRPM.load(std::memory_order_relaxed));
+  jogRPM.store(effective);
+  const uint32_t rate = motor_milli_hz_for_rpm_calibrated(effective);
+  if (!rate) return;
+  motor_set_target_milli_hz(rate);
 
   bool started = (dir == DIR_CW) ? motor_run_cw() : motor_run_ccw();
   if (!started) {
@@ -38,7 +43,8 @@ void jog_stop() {
 }
 
 void jog_set_speed(float rpm) {
-  float constrained = constrain(rpm, MIN_RPM, speed_get_rpm_max());
+  if (!std::isfinite(rpm)) return;
+  float constrained = speed_clamp_rpm(rpm);
   jogRPM.store(constrained, std::memory_order_relaxed);
   pendingJogSpeed.store(constrained, std::memory_order_release);
 }
@@ -47,10 +53,14 @@ void jog_update() {
   float pending = pendingJogSpeed.load(std::memory_order_acquire);
   if (pending >= 0.0f && control_get_state() == STATE_JOG) {
     pendingJogSpeed.store(-1.0f, std::memory_order_relaxed);
-    motor_set_target_milli_hz(motor_milli_hz_for_rpm_calibrated(jogRPM.load(std::memory_order_relaxed)));
+    const float effective = speed_clamp_rpm(jogRPM.load(std::memory_order_relaxed));
+    jogRPM.store(effective);
+    const uint32_t rate = motor_milli_hz_for_rpm_calibrated(effective);
+    if (!rate) { jog_stop(); return; }
+    motor_set_target_milli_hz(rate);
   }
 }
 
 float jog_get_speed() {
-  return jogRPM.load(std::memory_order_relaxed);
+  return speed_clamp_rpm(jogRPM.load(std::memory_order_relaxed));
 }

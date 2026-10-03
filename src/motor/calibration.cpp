@@ -6,6 +6,7 @@
 #include "freertos/semphr.h"
 #include <atomic>
 #include <cmath>
+#include "../control/motion_policy.h"
 
 static std::atomic<float> draftFactor{0};
 static std::atomic<bool> discardPending{false};
@@ -43,7 +44,9 @@ float calibration_get_factor() {
 }
 
 long calibration_apply_steps(long steps) {
-  return (long)(steps * calibration_get_factor());
+  int32_t checked = 0;
+  motion_checked_steps(double(steps) * calibration_get_factor(), checked);
+  return checked;
 }
 
 float calibration_apply_angle(float angle) {

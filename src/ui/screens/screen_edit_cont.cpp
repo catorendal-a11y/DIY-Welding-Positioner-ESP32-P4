@@ -121,7 +121,7 @@ static void save_cb(lv_event_t* e) {
   Preset* p = screen_program_edit_get_preset();
   if (p) {
     p->rpm = editRpm;
-    p->direction = directionCW ? 0 : 1;
+    p->direction = speed_resolve_direction(directionCW ? DIR_CW : DIR_CCW);
     p->cont_soft_start = softStartEnabled ? 1 : 0;
     p->timer_auto_stop = autoStopSeconds > 0;
     p->timer_ms = autoStopSeconds * 1000u;
@@ -148,7 +148,7 @@ void screen_edit_cont_create() {
   lv_obj_clean(screen);
   Preset* p = screen_program_edit_get_preset();
   editRpm = p ? p->rpm : 1.0f;
-  directionCW = !p || p->direction == DIR_CW;
+  directionCW = !p || speed_resolve_direction((Direction)p->direction) == DIR_CW;
   softStartEnabled = p && p->cont_soft_start;
   ui_create_header(screen, "Continuous settings", "PROGRAM EDIT", nullptr);
   rpmBar = nullptr;

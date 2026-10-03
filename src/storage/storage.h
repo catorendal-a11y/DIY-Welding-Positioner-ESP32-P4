@@ -108,6 +108,8 @@ enum StorageStatus { STORAGE_SAVED, STORAGE_PENDING, STORAGE_ERROR };
 StorageStatus storage_status();
 uint32_t storage_request_settings_save();
 StorageStatus storage_settings_save_status(uint32_t ticket);
+uint32_t storage_request_presets_save();
+StorageStatus storage_presets_save_status(uint32_t ticket);
 bool storage_get_nvs_stats(size_t* used_entries, size_t* total_entries);
 void storage_init();
 bool storage_load_presets();
@@ -120,7 +122,7 @@ void storage_flush();
 bool storage_get_preset(uint8_t id, Preset* out);
 bool storage_delete_preset(uint8_t id);
 void storage_get_usage(size_t* used, size_t* total);
-void storage_format();
+bool storage_format(); // Idle, no pending writes; false preserves RAM/data on failure.
 
 // FreeRTOS task
 void storageTask(void* pvParameters);  // Program save/load task (Core 1, priority 1)

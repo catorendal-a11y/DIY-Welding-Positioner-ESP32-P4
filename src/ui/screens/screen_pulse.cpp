@@ -216,6 +216,7 @@ void screen_pulse_invalidate_widgets() {
 }
 
 void screen_pulse_update() {
+  ui_mark_motion_callback(screenRoots[SCREEN_PULSE], start_event_cb);
   if (!screens_is_active(SCREEN_PULSE)) return;
   if (!startBtn) return;
 

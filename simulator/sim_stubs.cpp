@@ -147,7 +147,7 @@ void dim_update() {}
 // Speed
 float speed_steps_per_gear_output_rev(void) { return microstep_get_steps_per_rev() * GEAR_RATIO; }
 float rpmToStepHz(float rpmWorkpiece) {
-  float rollerScale = D_EMNE / D_RULLE;
+  float rollerScale = (s_workpieceDiameterMm > 0 ? s_workpieceDiameterMm / 1000.0f : D_EMNE) / D_RULLE;
   return rpmWorkpiece * speed_steps_per_gear_output_rev() * rollerScale / 60.0f;
 }
 float rpmToStepHzCalibrated(float rpmCommand) { return rpmToStepHz(rpmCommand * calibration_get_factor()); }
@@ -155,15 +155,21 @@ long angleToSteps(float degrees) { return angleToStepsForDiameter(degrees, s_wor
 long angleToStepsForDiameter(float degrees, float mmOd) {
   float odM = (mmOd > 0.0f) ? (mmOd / 1000.0f) : D_EMNE;
   float steps = speed_steps_per_gear_output_rev() * (odM / D_RULLE) * (degrees / 360.0f);
-  return (long)(steps * calibration_get_factor() + 0.5f);
+  int32_t checked = 0; motion_checked_steps(double(steps) * calibration_get_factor(), checked); return checked;
 }
 void speed_set_workpiece_diameter_mm(float mmOd) { s_workpieceDiameterMm = mmOd < 0.0f ? 0.0f : mmOd; }
 float speed_get_workpiece_diameter_mm(void) { return s_workpieceDiameterMm; }
 void speed_init() {}
 void speed_update_adc() {}
 void speed_sync_rpm_limits_from_settings() {}
+float speed_get_rpm_min_for_diameter(float mm) {
+  const float hz = speed_steps_per_gear_output_rev() * (mm > 0 ? mm/1000.0f : D_EMNE) / D_RULLE * calibration_get_factor() / 60.0f;
+  return std::max(MIN_RPM, std::ceil(START_SPEED / hz * 1000.0f) / 1000.0f);
+}
+float speed_get_rpm_min() { return speed_get_rpm_min_for_diameter(s_workpieceDiameterMm); }
+float speed_clamp_rpm(float rpm) { return std::isfinite(rpm) && speed_get_rpm_min() <= sim_rpm_cap() ? constrain(rpm, speed_get_rpm_min(), sim_rpm_cap()) : 0; }
 float speed_get_rpm_max() { return sim_rpm_cap(); }
-void speed_slider_set(float rpm) { s_targetRpm = constrain(rpm, MIN_RPM, sim_rpm_cap()); }
+void speed_slider_set(float rpm) { s_targetRpm = speed_clamp_rpm(rpm); }
 void speed_set_slider_priority(bool on) { s_sliderPriority = on; }
 float speed_get_target_rpm() { return s_targetRpm; }
 float speed_get_actual_rpm() {
@@ -178,6 +184,7 @@ void speed_apply() {
   if ((control_get_state() == STATE_RUNNING || control_get_state() == STATE_PULSE) && motor_is_running())
     motor_set_target_milli_hz(motor_milli_hz_for_rpm_calibrated(s_targetRpm));
 }
+Direction speed_get_requested_direction() { return s_directionOverride ? s_directionOverrideValue : s_direction; }
 Direction speed_get_direction() { return speed_resolve_direction(s_directionOverride ? s_directionOverrideValue : s_direction); }
 void speed_set_direction(Direction dir) { s_direction = dir; }
 void speed_set_program_direction_override(Direction dir) {
@@ -255,7 +262,12 @@ void preset_clamp_mode_to_mask(Preset* p) {
 }
 void storage_init() {}
 bool storage_load_presets() { return true; }
-bool storage_save_presets() { simPresetsSave.request(); return true; }
+uint32_t storage_request_presets_save() { return simPresetsSave.request(); }
+StorageStatus storage_presets_save_status(uint32_t ticket) {
+  if (simPresetsSave.saved(ticket)) return STORAGE_SAVED;
+  return simPresetsSave.failed() ? STORAGE_ERROR : STORAGE_PENDING;
+}
+bool storage_save_presets() { storage_request_presets_save(); return true; }
 bool storage_load_settings() { return true; }
 void storage_save_settings() { simSettingsSave.request(); }
 void storage_flush() {
@@ -282,9 +294,10 @@ void storage_get_usage(size_t* used, size_t* total) {
   if (used) *used = 64u * 1024u;
   if (total) *total = 512u * 1024u;
 }
-void storage_format() {
+bool storage_format() {
   g_presets.clear();
   event_log_add("SIM STORAGE FORMAT");
+  return true;
 }
 void storageTask(void*) {}
 

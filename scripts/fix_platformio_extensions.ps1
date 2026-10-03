@@ -70,13 +70,13 @@ $davidGomes = Get-ChildItem -LiteralPath $extensionsRoot -Directory -ErrorAction
   Where-Object { $_.Name -like "davidgomes.platformio-ide-*" }
 if ($davidGomes) {
   Write-Host ""
-  Write-Host "=== MERK ===" -ForegroundColor Yellow
-  Write-Host "Du har en uoffisiell PlatformIO-pakke ($($davidGomes[0].Name))."
-  Write-Host "Den er ikke den offisielle utvidelsen. Versjon 0.0.1 henger ofte pa 'Initializing Core'."
-  Write-Host "Anbefaling:"
-  Write-Host "  1. Avinstaller den uoffisielle PlatformIO-pakken (davidgomes)"
-  Write-Host "  2. Installer 'PlatformIO IDE' fra PlatformIO (platformio.platformio-ide)"
-  Write-Host "  3. Kjor dette skriptet igjen, deretter Reload Window"
+  Write-Host "=== NOTICE ===" -ForegroundColor Yellow
+  Write-Host "An unofficial PlatformIO package is installed ($($davidGomes[0].Name))."
+  Write-Host "This is not the official extension. Version 0.0.1 can stall at 'Initializing Core'."
+  Write-Host "Recommended steps:"
+  Write-Host "  1. Uninstall the unofficial PlatformIO package (davidgomes)"
+  Write-Host "  2. Install 'PlatformIO IDE' by PlatformIO (platformio.platformio-ide)"
+  Write-Host "  3. Run this script again, then reload the window"
   Write-Host ""
 }
 
@@ -97,30 +97,30 @@ foreach ($d in $allDirs) {
 
 if ($dirsToPatch.Count -eq 0) {
   Write-Error @"
-Fant ingen offisiell PlatformIO-mappe (platformio.platformio-ide-*) under:
+No official PlatformIO extension folder (platformio.platformio-ide-*) was found under:
   $extensionsRoot
 
-Installer 'PlatformIO IDE' (ID: platformio.platformio-ide), fjern uoffisielle varianter,
-og kjor skriptet pa nytt (evt. med -ExtensionsRoot).
+Install 'PlatformIO IDE' (ID: platformio.platformio-ide), remove unofficial variants,
+and run this script again (use -ExtensionsRoot for a different folder).
 "@
 }
 
 foreach ($pioDir in ($dirsToPatch | Select-Object -Unique)) {
-  Write-Host "Patcher: $pioDir"
+  Write-Host "Patching: $pioDir"
 
   $packageJsonPath = Join-Path $pioDir "package.json"
   $pkgChanged = Patch-PackageJson $packageJsonPath
   if ($pkgChanged) {
-    Write-Host "  package.json: oppdatert (backup: package.json.bak)"
+    Write-Host "  package.json: updated (backup: package.json.bak)"
   } else {
-    Write-Host "  package.json: ingen ms-vscode.cpptools i extensionDependencies (allerede OK?)"
+    Write-Host "  package.json: no ms-vscode.cpptools in extensionDependencies (already configured)"
   }
 
   $manifestPath = Join-Path $pioDir ".vsixmanifest"
   if (Patch-VsixManifest $manifestPath) {
-    Write-Host "  .vsixmanifest: oppdatert (backup: .vsixmanifest.bak)"
+    Write-Host "  .vsixmanifest: updated (backup: .vsixmanifest.bak)"
   }
 }
 
 Write-Host ""
-Write-Host "Ferdig. Last inn editoren pa nytt (Reload Window)." -ForegroundColor Green
+Write-Host "Done. Reload the editor window (Reload Window)." -ForegroundColor Green

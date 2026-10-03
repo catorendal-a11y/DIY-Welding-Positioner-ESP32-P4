@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Motion, input and persistence corrections
+
+- Cancel countdown starts across STOP, faults/reset, stale control and navigation using the original control generation. Reset never renews a pending START.
+- Re-clamp Jog against the current RPM limit at execution. Reject non-finite inputs, overflowing signed move counts and invalid program/configuration requests.
+- Supervise Pulse deceleration and finite Step moves independently of the control loop, with wrap-safe completion budgets. Calculate move budgets from the commanded rate and acceleration.
+- Keep the 20 Hz operational floor, expose a geometry-dependent minimum RPM and reject infeasible commands instead of silently increasing the requested rate. Apply fine RPM adjustments consistently in Step and Jog.
+- Preserve requested/effective direction semantics in new programs and sub-editors. Capture the active analog input baseline so a stationary pedal cannot cancel a screen speed override.
+- Validate complete JSON serialization and exact NVS byte counts; bound blobs and program counts, validate object types, normalize program IDs and validate both legacy files before migration. Preserve valid legacy UTF-8 names; new editor names use printable ASCII supported by the screen font.
+- Show program and Display save receipts, lock program edits during pending writes, preserve the dim-time draft through theme reconstruction, review sequence/timing before program START and identify stale motion actions by explicit markers.
+- Bound USB receive work and partial-frame lifetime, release the viewer pointer on focus loss and close failed transmit links. Replace unsupported LVGL CLIB heap monitoring with ESP-IDF heap statistics.
+- Add real production speed/ADS and storage/migration test environments to CI, including allocation and short-write failures. See [the review and resolution report](docs/CODE_LOGIC_REVIEW_2026-10-03.md).
+
 ### Release packaging
 
 - Distinguish pioarduino's generated application and combined `.factory.bin` images. Exclude combined factory images from application-only release bundles and reject ambiguous or missing application outputs.

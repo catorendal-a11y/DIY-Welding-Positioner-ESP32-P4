@@ -5,8 +5,10 @@
 #include <Arduino.h>
 #include "../screens.h"
 #include "../theme.h"
+#include "../value_format.h"
 #include "../../control/control.h"
 #include "../../motor/speed.h"
+#include "../../motor/motor.h"
 #include "../../config.h"
 #include "../test_screen_logic.h"
 
@@ -61,7 +63,7 @@ static void purge_diameter_overlay_async() {
 
 static void step_clamp_target_rpm(void) {
   float cap = speed_get_rpm_max();
-  if (targetRpm < MIN_RPM) targetRpm = MIN_RPM;
+  if (targetRpm < speed_get_rpm_min()) targetRpm = speed_get_rpm_min();
   if (targetRpm > cap) targetRpm = cap;
 }
 
@@ -159,7 +161,9 @@ static void step_reset_btn_cb(lv_event_t* e) {
 static void preset_cb(lv_event_t* e) {
   int index = (int)(intptr_t)lv_event_get_user_data(e);
   if (index < 4) {
-    if (ui_control_state() == STATE_IDLE) {
+    const bool feasible = angleToSteps(currentAngle) > 0 && motor_milli_hz_for_rpm_calibrated(targetRpm) != 0;
+    lv_label_set_text(lv_obj_get_child(stepActionBtn,0), feasible ? "> STEP" : "OUT OF RANGE");
+    if (ui_control_state() == STATE_IDLE && feasible) {
       control_reset_step_accumulator();
     }
     currentAngle = STEP_PRESET_DEG[index];
@@ -176,7 +180,9 @@ static void custom_keyboard_cb(lv_event_t* e) {
       const char* txt = lv_textarea_get_text(customTa);
       float val = step_parse_first_float(txt);
       if (val > 0.0f && step_angle_valid(val)) {
-        if (ui_control_state() == STATE_IDLE) {
+        const bool feasible = angleToSteps(currentAngle) > 0 && motor_milli_hz_for_rpm_calibrated(targetRpm) != 0;
+    lv_label_set_text(lv_obj_get_child(stepActionBtn,0), feasible ? "> STEP" : "OUT OF RANGE");
+    if (ui_control_state() == STATE_IDLE && feasible) {
           control_reset_step_accumulator();
         }
         currentAngle = val;
@@ -302,13 +308,13 @@ static void target_card_cb(lv_event_t* e) {
 
 static void rpm_minus_cb(lv_event_t* e) {
   (void)e;
-  if (targetRpm > 0.1f) targetRpm -= 0.1f;
+  targetRpm -= ui_rpm_increment(targetRpm);
   step_push_rpm_to_speed_and_label();
 }
 
 static void rpm_plus_cb(lv_event_t* e) {
   (void)e;
-  targetRpm += 0.1f;
+  targetRpm += ui_rpm_increment(targetRpm);
   step_push_rpm_to_speed_and_label();
 }
 
@@ -576,6 +582,7 @@ void screen_step_invalidate_widgets() {
 }
 
 void screen_step_update() {
+  ui_mark_motion_callback(screenRoots[SCREEN_STEP], step_event_cb);
   if (numpadClosePending) {
     if (customNumpad) {
       lv_obj_t* old = customNumpad;
@@ -615,7 +622,9 @@ void screen_step_update() {
   if (!screens_is_active(SCREEN_STEP)) return;
 
   if (stepActionBtn) {
-    if (ui_control_state() == STATE_IDLE) {
+    const bool feasible = angleToSteps(currentAngle) > 0 && motor_milli_hz_for_rpm_calibrated(targetRpm) != 0;
+    lv_label_set_text(lv_obj_get_child(stepActionBtn,0), feasible ? "> STEP" : "OUT OF RANGE");
+    if (ui_control_state() == STATE_IDLE && feasible) {
       lv_obj_set_disabled(stepActionBtn, false);
     } else {
       lv_obj_set_disabled(stepActionBtn, true);

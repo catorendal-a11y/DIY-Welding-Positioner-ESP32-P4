@@ -81,15 +81,36 @@ static void publish_snapshot() {
 }
 static std::atomic<uint32_t> jogRenewedMs{0};
 static std::atomic<uint32_t> stopRequestedAt{0}, stoppingAt{0}, stoppingBudget{0};
+static std::atomic<uint32_t> motionDeadlineAt{0}, motionDeadlineBudget{0};
+static bool staleInvalidated = false;
+static std::atomic<SystemState> motionDeadlineState{STATE_IDLE};
+void control_clear_motion_deadline() { motionDeadlineState.store(STATE_IDLE, std::memory_order_release); }
+void control_expect_motion_completion(SystemState state, uint32_t timeout_ms) {
+  control_clear_motion_deadline();
+  motionDeadlineAt.store(millis()); motionDeadlineBudget.store(timeout_ms);
+  motionDeadlineState.store(state, std::memory_order_release);
+}
+uint32_t control_motion_generation() { return motionGate.ticket(); }
+bool control_deferred_start_valid(uint32_t generation) {
+  return motionGate.valid(generation) && control_get_state() == STATE_IDLE && !safety_inhibit_motion() &&
+         control_timestamp_fresh(millis(), lastCycleAt.load(), cyclePublished.load());
+}
 void control_check_stop_deadline(uint32_t now) {
+  const bool stale = cyclePublished.load() && !control_timestamp_fresh(now, lastCycleAt.load(), true);
+  if (stale && !staleInvalidated) motionGate.stop();
+  staleInvalidated = stale;
+  const SystemState deadlineState = motionDeadlineState.load(std::memory_order_acquire);
+  const uint32_t motionAge = now - motionDeadlineAt.load();
   const uint32_t requested = stopRequestedAt.load();
   const uint32_t stopping = stoppingAt.load();
-  if ((requested && now - (requested - 1u) >= 50u) ||
+  if ((requested && static_cast<int32_t>(now - (requested - 1u)) >= 50) ||
+      (deadlineState != STATE_IDLE && control_get_state() == deadlineState &&
+       motionAge <= INT32_MAX && motionAge >= motionDeadlineBudget.load()) ||
       (stopping && control_get_state() == STATE_STOPPING &&
-       now - (stopping - 1u) >= stoppingBudget.load())) {
+       static_cast<int32_t>(now - (stopping - 1u)) >= static_cast<int32_t>(stoppingBudget.load()))) {
     safety_report_motor_fault(FAULT_MOTOR_TIMEOUT);
     stopRequestedAt.store(0);
-    stoppingAt.store(0);
+    stoppingAt.store(0); control_clear_motion_deadline();
   }
 }
 
@@ -111,15 +132,17 @@ static void control_queue_init() {
   }
 }
 
-static bool queue_motion_command(const MotionCommand& cmd) {
+static bool queue_motion_command(const MotionCommand& cmd, uint32_t ticket) {
   if (!control_timestamp_fresh(millis(), lastCycleAt.load(), cyclePublished.load())) return false;
   if (controlQueue == nullptr) {
     LOG_W("Control queue not ready");
     return false;
   }
   if (calibrationActive.load() && (cmd.program || (cmd.type != MOTION_CMD_START_STEP && cmd.type != MOTION_CMD_START_JOG))) return false;
-  const uint32_t ticket = motionGate.ticket();
+  if (!motionGate.valid(ticket)) return false;
   if (motionGate.blocked() || control_get_state() != STATE_IDLE || safety_inhibit_motion()) return false;
+  if (!cmd.program && cmd.type != MOTION_CMD_CONFIG && cmd.type != MOTION_CMD_START_JOG &&
+      !motor_milli_hz_for_rpm_calibrated(speed_get_target_rpm())) return false;
   MotionCommand request = cmd;
   request.ticket = ticket;
   return xQueueSend(controlQueue, &request, 0) == pdPASS;
@@ -181,6 +204,7 @@ bool control_is_valid_transition(SystemState from, SystemState to) {
 // STATE MACHINE CORE
 // ───────────────────────────────────────────────────────────────────────────────
 void control_init() {
+  control_clear_motion_deadline(); staleInvalidated = false;
   control_queue_init();
   clear_pending_motion_requests();
   faultCleaned = false; cyclePublished.store(false);
@@ -192,6 +216,7 @@ void control_init() {
 
 bool control_transition_to(SystemState newState) {
   if (newState == STATE_ESTOP) {
+    control_clear_motion_deadline();
     digitalWrite(PIN_ENA, HIGH);
     motionGate.stop();
     previousState.store(currentState.exchange(STATE_ESTOP));
@@ -209,6 +234,7 @@ bool control_transition_to(SystemState newState) {
     return false;
   }
 
+  if (newState != STATE_STEP && newState != STATE_PULSE) control_clear_motion_deadline();
   previousState.store(expected, std::memory_order_release);
 
   LOG_I("State: %s -> %s", control_state_name(expected), control_state_name(newState));
@@ -276,7 +302,13 @@ bool control_start_continuous(bool soft_start, uint32_t auto_stop_ms) {
   cmd.type = MOTION_CMD_START_CONTINUOUS;
   cmd.continuous_soft_start = soft_start;
   cmd.continuous_auto_stop_ms = auto_stop_ms;
-  return queue_motion_command(cmd);
+  return queue_motion_command(cmd, motionGate.ticket());
+}
+
+bool control_start_deferred_continuous(uint32_t generation) {
+  if (!control_deferred_start_valid(generation)) return false;
+  MotionCommand cmd{}; cmd.type = MOTION_CMD_START_CONTINUOUS;
+  return queue_motion_command(cmd, generation); // Never mint a fresh ticket after a fault/reset.
 }
 
 bool control_stop() {
@@ -293,7 +325,7 @@ bool control_start_pulse(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
   cmd.pulse_on_ms = on_ms;
   cmd.pulse_off_ms = off_ms;
   cmd.pulse_cycles = cycles;
-  return queue_motion_command(cmd);
+  return queue_motion_command(cmd, motionGate.ticket());
 }
 
 bool control_start_step(float angle_deg) { return control_start_step_sequence(angle_deg, 1, 0.0f); }
@@ -302,10 +334,13 @@ bool control_start_step_sequence(float angle_deg, uint16_t repeats, float dwell_
   if (safety_inhibit_motion()) return false;
   MotionCommand cmd{};
   cmd.type = MOTION_CMD_START_STEP;
+  if (!std::isfinite(angle_deg) || angle_deg <= 0 || angle_deg > 3600 ||
+      !std::isfinite(dwell_sec) || dwell_sec < 0 || dwell_sec > 30 || repeats < 1 || repeats > 99) return false;
+  if (angleToSteps(angle_deg) <= 0) return false;
   cmd.step_angle = angle_deg;
   cmd.step_repeats = repeats;
   cmd.step_dwell_sec = dwell_sec;
-  return queue_motion_command(cmd);
+  return queue_motion_command(cmd, motionGate.ticket());
 }
 
 bool control_start_jog_cw() {
@@ -314,7 +349,7 @@ bool control_start_jog_cw() {
   cmd.type = MOTION_CMD_START_JOG;
   cmd.direction = DIR_CW;
   control_renew_jog();
-  return queue_motion_command(cmd);
+  return queue_motion_command(cmd, motionGate.ticket());
 }
 
 bool control_start_jog_ccw() {
@@ -323,7 +358,7 @@ bool control_start_jog_ccw() {
   cmd.type = MOTION_CMD_START_JOG;
   cmd.direction = DIR_CCW;
   control_renew_jog();
-  return queue_motion_command(cmd);
+  return queue_motion_command(cmd, motionGate.ticket());
 }
 
 bool control_stop_jog() {
@@ -405,6 +440,7 @@ static void process_pending_requests() {
     return;
   }
   if (cmd.program) {
+    if (!control_program_feasible(cmd.preset)) return;
     speed_set_program_direction_override(cmd.preset.direction == DIR_CCW ? DIR_CCW : DIR_CW);
     speed_set_workpiece_diameter_mm(cmd.preset.workpiece_diameter_mm);
     speed_slider_set(cmd.preset.rpm);
@@ -500,7 +536,18 @@ void controlTask(void* pvParameters) {
   }
 }
 
+bool control_program_feasible(const Preset& p) {
+  if (!std::isfinite(p.rpm) || p.rpm < MIN_RPM || p.rpm > speed_get_rpm_max() ||
+      !std::isfinite(p.workpiece_diameter_mm) || p.workpiece_diameter_mm < 0 || p.workpiece_diameter_mm > 20000 ||
+      !std::isfinite(p.step_angle) || !std::isfinite(p.step_dwell_sec) ||
+      (p.mode == STATE_STEP && (p.step_angle <= 0 || p.step_angle > 3600 || p.step_repeats < 1 ||
+                               p.step_repeats > 99 || p.step_dwell_sec < 0 || p.step_dwell_sec > 30))) return false;
+  if (p.rpm < speed_get_rpm_min_for_diameter(p.workpiece_diameter_mm)) return false;
+  if (p.mode == STATE_STEP && angleToStepsForDiameter(p.step_angle, p.workpiece_diameter_mm) <= 0) return false;
+  return p.mode == STATE_RUNNING || p.mode == STATE_PULSE || p.mode == STATE_STEP;
+}
 bool control_start_program(const Preset& p) {
+  if (!control_program_feasible(p)) return false;
   MotionCommand cmd{};
   cmd.program = true;
   cmd.preset = p;
@@ -525,15 +572,21 @@ bool control_start_program(const Preset& p) {
     default:
       return false;
   }
-  return queue_motion_command(cmd);
+  return queue_motion_command(cmd, motionGate.ticket());
 }
 
 bool control_apply_motor_settings(const SystemSettings& settings) {
+  if (!std::isfinite(settings.max_rpm) || settings.max_rpm < MIN_RPM || settings.max_rpm > MAX_RPM ||
+      !std::isfinite(settings.calibration_factor) || settings.calibration_factor < 0.5f || settings.calibration_factor > 1.5f ||
+      settings.acceleration < 1000 || settings.acceleration > 30000 || settings.stepper_driver > 1 ||
+      (settings.microstep != 4 && settings.microstep != 8 && settings.microstep != 16 && settings.microstep != 32)) {
+    configStatus.store(CONFIG_CANCELLED); return false;
+  }
   MotionCommand cmd{};
   cmd.type = MOTION_CMD_CONFIG;
   cmd.settings = settings;
   configStatus.store(CONFIG_PENDING);
-  if (queue_motion_command(cmd)) return true;
+  if (queue_motion_command(cmd, motionGate.ticket())) return true;
   configStatus.store(CONFIG_CANCELLED);
   return false;
 }

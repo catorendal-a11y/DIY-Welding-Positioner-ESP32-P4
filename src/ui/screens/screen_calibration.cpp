@@ -190,6 +190,7 @@ void screen_calibration_invalidate_widgets() {
   backBtn = nullptr;
 }
 void screen_calibration_update() {
+  ui_mark_motion_callback(screenRoots[SCREEN_CALIBRATION], move_cb); ui_mark_motion_callback(screenRoots[SCREEN_CALIBRATION], jog_cb);
   if (!title) return;
   if (entryClosePending) close_entry();
   const bool wasMoving = session.moving();

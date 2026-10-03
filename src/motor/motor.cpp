@@ -326,24 +326,16 @@ uint32_t motor_get_current_hz() {
 }
 
 uint32_t motor_milli_hz_for_rpm_calibrated(float rpm_workpiece_command) {
-  float hz = rpmToStepHzCalibrated(rpm_workpiece_command);
-  if (hz != hz || hz < 0.0f) {
-    hz = 0.0f;
-  }
-  double mhzD = (double)hz * 1000.0;
-  if (mhzD > (double)UINT32_MAX) {
-    mhzD = (double)UINT32_MAX;
-  }
-  uint32_t mhz = (uint32_t)mhzD;
-  if (mhz < (uint32_t)START_SPEED * 1000u) {
-    mhz = (uint32_t)START_SPEED * 1000u;
-  }
-  return mhz;
+  if (!std::isfinite(rpm_workpiece_command) || rpm_workpiece_command < MIN_RPM || rpm_workpiece_command > speed_get_rpm_max()) return 0;
+  const double milli_hz = double(rpmToStepHzCalibrated(rpm_workpiece_command)) * 1000.0;
+  if (!std::isfinite(milli_hz) || milli_hz < START_SPEED * 1000.0 || milli_hz > UINT32_MAX) return 0;
+  return static_cast<uint32_t>(milli_hz);
 }
 
 bool motor_apply_speed_for_rpm_locked(float rpm_workpiece_command) {
   if (stepper == nullptr) return false;
   uint32_t mhz = motor_milli_hz_for_rpm_calibrated(rpm_workpiece_command);
+  if (!mhz) return false;
   if (stepper->setSpeedInMilliHz(mhz) != 0) { motor_command_failed(); return false; }
   stepper->applySpeedAcceleration();
   return true;
@@ -431,7 +423,8 @@ bool motor_read_position(int32_t* position) {
   xSemaphoreGive(g_stepperMutex); return ok;
 }
 bool motor_move_steps(long steps, float rpm, int32_t* start_position) {
-  if (!start_position || !motor_lock()) return false;
+  if (!start_position || steps == 0 || steps < -INT32_MAX || steps > INT32_MAX ||
+      !motor_milli_hz_for_rpm_calibrated(rpm) || !motor_lock()) return false;
   bool ok = stepper && !safety_inhibit_motion() && !control_motion_blocked();
   if (ok) { *start_position = stepper->getCurrentPosition(); ok = motor_apply_speed_for_rpm_locked(rpm); }
   if (ok) {
@@ -443,6 +436,10 @@ bool motor_move_steps(long steps, float rpm, int32_t* start_position) {
   xSemaphoreGive(g_stepperMutex); return ok;
 }
 
+bool motor_move_timeout_ms(uint32_t pulses, float rpm, uint32_t& budget) {
+  const uint32_t rate = motor_milli_hz_for_rpm_calibrated(rpm);
+  return motion_move_timeout_ms(pulses, rate, motion_stop_timeout_ms(rate, configuredAcceleration.load()), budget);
+}
 uint32_t motor_stop_timeout_ms() {
   return motion_stop_timeout_ms(g_stepperMilliHzAbsCached.load(), configuredAcceleration.load());
 }

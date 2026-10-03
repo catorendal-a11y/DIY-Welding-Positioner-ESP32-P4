@@ -28,6 +28,9 @@ static const int dimTimeouts[] = {0, 30, 60, 120, 300};
 static const char* dimStrings[] = {"OFF", "30s", "1m", "2m", "5m"};
 static const int dimCount = 5;
 static int currentDimIdx = 0;
+static bool dimDraftLoaded = false;
+static uint32_t displaySaveTicket = 0;
+static lv_obj_t* displaySaveButton = nullptr;
 
 static bool displayScreenActive = false;
 static bool ignoreSliderCb = false;
@@ -54,11 +57,17 @@ static void update_slider_from_settings() {
   ignoreSliderCb = false;
 }
 
+static void display_changed() {
+  displaySaveTicket = 0;
+  if (displaySaveButton) lv_label_set_text(lv_obj_get_child(displaySaveButton,0),"SAVE");
+}
+
 static void back_cb(lv_event_t* e) { screens_show(SCREEN_SETTINGS); }
 
 static void brightness_slider_cb(lv_event_t* e) {
   if (ignoreSliderCb) return;
   if (!brightnessValueLabel || !brightnessSlider) return;
+  display_changed();
   int val = lv_slider_get_value(brightnessSlider);
   char buf[16];
   snprintf(buf, sizeof(buf), "%d%%", val);
@@ -71,6 +80,7 @@ static void brightness_slider_cb(lv_event_t* e) {
 }
 
 static void dim_cycle_cb(lv_event_t* e) {
+  display_changed();
   currentDimIdx = (currentDimIdx + 1) % dimCount;
   if (dimBtnLabel) {
     lv_label_set_text(dimBtnLabel, dimStrings[currentDimIdx]);
@@ -81,6 +91,7 @@ static void dim_cycle_cb(lv_event_t* e) {
 static std::atomic<bool> themeRefreshPending{false};
 
 static void theme_cycle_cb(lv_event_t* e) {
+  display_changed();
   uint8_t count = theme_get_count();
   uint8_t next = 0;
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
@@ -94,6 +105,7 @@ static void theme_cycle_cb(lv_event_t* e) {
 }
 
 static void scheme_cycle_cb(lv_event_t* e) {
+  display_changed();
   (void)e;
   uint8_t cur = 0;
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
@@ -111,7 +123,7 @@ static void save_cb(lv_event_t* e) {
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   g_settings.dim_timeout = dimTimeouts[currentDimIdx];
   xSemaphoreGive(g_settings_mutex);
-  storage_save_settings();
+  displaySaveTicket = storage_request_settings_save();
 }
 
 #if ENABLE_USB_UI_MIRROR
@@ -160,9 +172,11 @@ void screen_display_create() {
   scheme = g_settings.color_scheme;
   accent = g_settings.accent_color;
   xSemaphoreGive(g_settings_mutex);
-  currentDimIdx = 0;
-  for (int i = 0; i < dimCount; ++i)
-    if (dimTimeouts[i] == dimSec) currentDimIdx = i;
+  if (!dimDraftLoaded) {
+    currentDimIdx = 0;
+    for (int i = 0; i < dimCount; ++i) if (dimTimeouts[i] == dimSec) currentDimIdx = i;
+    dimDraftLoaded = true;
+  }
   ui_create_header(screen, "Display settings", "SCREEN & USB", nullptr);
   ui_create_text(screen, 24, 94, 400, "BRIGHTNESS", FONT_SUBTITLE, COL_TEXT_DIM);
   brightnessValueLabel = ui_create_text(screen, 656, 94, 120, "", FONT_LARGE, COL_TEXT);
@@ -196,10 +210,11 @@ void screen_display_create() {
   update_info_text();
 #endif
   ui_create_btn(screen, 24, 408, 152, 56, "BACK", FONT_BTN, UI_BTN_NORMAL, back_cb, nullptr);
-  ui_create_btn(screen, 496, 408, 280, 56, "SAVE", FONT_BTN, UI_BTN_ACCENT, save_cb, nullptr);
+  displaySaveButton = ui_create_btn(screen, 496, 408, 280, 56, "SAVE", FONT_BTN, UI_BTN_ACCENT, save_cb, nullptr);
 }
 
 void screen_display_invalidate_widgets() {
+  displaySaveButton = nullptr;
   brightnessSlider = nullptr;
   brightnessValueLabel = nullptr;
   dimBtn = nullptr;
@@ -217,6 +232,10 @@ void screen_display_invalidate_widgets() {
 }
 
 void screen_display_update() {
+  if (displaySaveTicket && displaySaveButton) {
+    const auto status = storage_settings_save_status(displaySaveTicket);
+    lv_label_set_text(lv_obj_get_child(displaySaveButton,0), status == STORAGE_SAVED ? "SAVED" : status == STORAGE_ERROR ? "FAILED / RETRYING" : "SAVING...");
+  }
   if (themeRefreshPending.load(std::memory_order_acquire)) {
     themeRefreshPending.store(false, std::memory_order_release);
     screens_request_theme_reinit();

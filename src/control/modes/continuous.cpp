@@ -25,7 +25,9 @@ void continuous_start(bool soft_start, uint32_t auto_stop_ms) {
     motor_apply_soft_start_acceleration();
   }
 
-  motor_set_target_milli_hz(motor_milli_hz_for_rpm_calibrated(speed_get_target_rpm()));
+  const uint32_t rate = motor_milli_hz_for_rpm_calibrated(speed_get_target_rpm());
+  if (!rate) return;
+  motor_set_target_milli_hz(rate);
 
   // Set direction and enable motor
   Direction dir = speed_get_direction();

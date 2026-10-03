@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <limits>
+#include <cmath>
 
 // Position moves are limited to less than half the 32-bit counter range.
 inline uint32_t motion_position_distance(int32_t current, int32_t start) {
@@ -62,3 +63,19 @@ class PulseTimeline {
   uint32_t since_ = 0, on_ = 0, off_ = 0, completed_ = 0;
   uint16_t limit_ = 0;
 };
+
+// FastAccelStepper relative moves and wrapped-position progress share this bound.
+// Reject before narrowing: no negative sentinel can become a reversed move.
+inline bool motion_checked_steps(double pulses, int32_t& out) {
+  out = 0;
+  if (!std::isfinite(pulses) || pulses < 1.0 || pulses > INT32_MAX) return false;
+  out = static_cast<int32_t>(pulses);
+  return true;
+}
+inline bool motion_move_timeout_ms(uint32_t pulses, uint32_t milli_hz, uint32_t stop_budget, uint32_t& out) {
+  if (!pulses || !milli_hz) return false;
+  const uint64_t budget = (uint64_t(pulses) * 1000000u + milli_hz - 1u) / milli_hz + 2ull * stop_budget;
+  if (budget > INT32_MAX) return false; // Keep deadline comparisons wrap-safe.
+  out = static_cast<uint32_t>(budget);
+  return true;
+}

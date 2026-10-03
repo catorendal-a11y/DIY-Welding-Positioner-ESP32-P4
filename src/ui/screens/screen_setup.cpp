@@ -134,6 +134,8 @@ void screen_setup_create() {
   screen_setup_update();
 }
 void screen_setup_update() {
+  ui_mark_motion_callback(screenRoots[SCREEN_SETUP], start_cb);
+  ui_mark_motion_callback(screenRoots[SCREEN_SETUP], hold_cb);
   if (!active) return;
   const bool fresh = ui_control_fresh(), idle = ui_control_state() == STATE_IDLE;
   const bool locked = safety_is_estop_locked() || safety_inhibit_motion();

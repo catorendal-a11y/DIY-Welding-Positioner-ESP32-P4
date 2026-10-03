@@ -71,18 +71,14 @@ void lvgl_unlock() {
 // STATE
 // ───────────────────────────────────────────────────────────────────────────────
 static lv_obj_t* staleBanner = nullptr;
-static bool movement_button(lv_obj_t* obj) {
-  if (!lv_obj_check_type(obj, &lv_button_class)) return false;
-  for (uint32_t i = 0; i < lv_obj_get_child_count(obj); ++i) {
-    auto label = lv_obj_get_child(obj, i);
-    if (!lv_obj_check_type(label, &lv_label_class)) continue;
-    const char* text = lv_label_get_text(label);
-    if (strstr(text, "START") || strstr(text, "HOLD CW") || strstr(text, "HOLD CCW") ||
-        (strcmp(text, "MOVE 360") == 0 || strcmp(text, "VERIFY 360") == 0) || strcmp(text, "> STEP") == 0 ||
-        strcmp(text, "JOG -") == 0 || strcmp(text, "JOG +") == 0) return true;
-  }
-  return false;
+void ui_mark_motion_action(lv_obj_t* obj) { if (obj) lv_obj_set_user_flag(obj, 0, true); }
+void ui_mark_motion_callback(lv_obj_t* root, lv_event_cb_t callback) {
+  if (!root) return;
+  for (uint32_t i=0; i<lv_obj_get_event_count(root); ++i)
+    if (lv_event_dsc_get_cb(lv_obj_get_event_dsc(root,i)) == callback) ui_mark_motion_action(root);
+  for (uint32_t i=0; i<lv_obj_get_child_count(root); ++i) ui_mark_motion_callback(lv_obj_get_child(root,i),callback);
 }
+static bool movement_button(lv_obj_t* obj) { return lv_obj_get_user_flag(obj, 0); }
 static void stale_controls(lv_obj_t* obj, bool disable) {
   if (!obj) return;
   if (!disable && lv_obj_is_state_user_2(obj)) {
@@ -279,6 +275,7 @@ void screens_show(ScreenId id) {
   if (id < 0 || id >= SCREEN_COUNT) return;
 
   ScreenId prev = currentScreen;
+  if (prev == SCREEN_TIMER && id != SCREEN_TIMER) screen_timer_leave();
   if (prev == SCREEN_CALIBRATION && id != SCREEN_CALIBRATION) screen_calibration_leave();
   if (prev == SCREEN_PROGRAM_EDIT && id != SCREEN_PROGRAM_EDIT) screen_program_edit_leave();
   screen_setup_leave(id);

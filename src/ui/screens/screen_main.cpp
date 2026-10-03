@@ -13,6 +13,7 @@ LV_FONT_DECLARE(rotator_digits_104);
 static lv_obj_t *rpmLabel, *speedCaption, *stateLabel, *sourceLabel, *surfaceLabel;
 static lv_obj_t *diameterLabel, *limitLabel, *detailLabel, *speedBar, *modeTitle;
 static lv_obj_t *startBtn, *stopBtn, *menuBtn, *minusBtn, *plusBtn, *cwBtn, *ccwBtn;
+static lv_obj_t* minimumLabel = nullptr;
 static lv_color_t ink() { return lv_color_hex(0x11191C); }
 static bool can_edit() { return ui_control_fresh() && ui_control_state() == STATE_IDLE && !safety_inhibit_motion(); }
 static void start_cb(lv_event_t*) {
@@ -68,7 +69,7 @@ void screen_main_create() {
     lv_obj_set_style_bg_color(tick, lv_color_hex(0x66301E), 0);
     lv_obj_set_style_bg_opa(tick, LV_OPA_COVER, 0);
   }
-  ui_create_text(hero, 22, 244, 100, "0.001", FONT_NORMAL, ink());
+  minimumLabel = ui_create_text(hero, 22, 244, 140, "", FONT_NORMAL, ink());
   limitLabel = ui_create_text(hero, 205, 244, 233, "", FONT_NORMAL, ink());
   lv_obj_set_style_text_align(limitLabel, LV_TEXT_ALIGN_RIGHT, 0);
   cwBtn = ui_create_btn(s, 504, 96, 132, 74, "CW", FONT_XL, UI_BTN_NORMAL, direction_cb,
@@ -98,11 +99,13 @@ void screen_main_create() {
   lv_obj_set_hidden(stopBtn, true);
 }
 void screen_main_update() {
+  ui_mark_motion_callback(screenRoots[SCREEN_MAIN], start_cb);
   if (!screens_is_active(SCREEN_MAIN) || !rpmLabel) return;
   const auto& view = ui_control_view();
   const SystemState st = ui_control_state();
   const bool moving = st != STATE_IDLE && st != STATE_ESTOP;
-  const bool blocked = !ui_control_fresh() || safety_inhibit_motion() || safety_is_estop_locked() || st == STATE_ESTOP;
+  const bool rangeBlocked = !motor_milli_hz_for_rpm_calibrated(view.target_rpm);
+  const bool blocked = rangeBlocked || !ui_control_fresh() || safety_inhibit_motion() || safety_is_estop_locked() || st == STATE_ESTOP;
   float rpm = st == STATE_ESTOP ? 0.0f : moving ? view.estimated_rpm : view.target_rpm;
   float diameter = speed_get_workpiece_diameter_mm();
   if (diameter <= 0) diameter = D_EMNE * 1000.0f;
@@ -110,6 +113,7 @@ void screen_main_update() {
   ui_format_rpm(rpmText, sizeof(rpmText), rpm);
   lv_label_set_text(rpmLabel, rpmText);
   lv_label_set_text(speedCaption, moving ? "01 / ESTIMATED SPEED" : "01 / TARGET SPEED");
+  lv_label_set_text_fmt(minimumLabel, "MIN %.3f", (double)speed_get_rpm_min());
   lv_label_set_text_fmt(limitLabel, "MAX %.3f RPM", (double)speed_get_rpm_max());
   lv_bar_set_value(speedBar, (int)(1000.0f * rpm / speed_get_rpm_max()), LV_ANIM_OFF);
   lv_label_set_text_fmt(surfaceLabel, "%.0f mm/min", (double)(rpm * diameter * 3.14159265f));
@@ -143,7 +147,8 @@ void screen_main_update() {
                                 : moving ? control_state_name(st)
                                          : "SYSTEM READY");
   lv_obj_set_style_text_color(stateLabel, blocked ? COL_RED : moving ? COL_ACCENT : COL_GREEN, 0);
-  lv_label_set_text(detailLabel, blocked                     ? "Clear fault before restart"
+  lv_label_set_text(detailLabel, rangeBlocked                ? "Speed outside motor range"
+                                 : blocked                   ? "Clear fault before restart"
                                  : moving                    ? "STOP ends motion"
                                  : speed_get_pedal_enabled() ? "Pedal control enabled"
                                                              : "Manual rotation");
@@ -162,6 +167,7 @@ void screen_main_update() {
                     blocked ? "START BLOCKED" : "START ROTATION  " LV_SYMBOL_PLAY);
 }
 void screen_main_invalidate_widgets() {
+  minimumLabel = nullptr;
   rpmLabel = speedCaption = stateLabel = sourceLabel = surfaceLabel = diameterLabel = limitLabel =
       detailLabel = speedBar = modeTitle = nullptr;
   startBtn = stopBtn = menuBtn = minusBtn = plusBtn = cwBtn = ccwBtn = nullptr;

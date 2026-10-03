@@ -5,6 +5,7 @@
 #include "../../utils/numeric_input.h"
 #include "../../config.h"
 #include "../../storage/storage.h"
+#include "../../storage/name_policy.h"
 #include "../../control/control.h"
 #include "../../motor/speed.h"
 #include <cstdio>
@@ -12,6 +13,10 @@
 #include <cmath>
 
 static int editSlot = -1;
+static uint32_t saveTicket = 0;
+static bool savePending = false;
+static lv_obj_t* saveButton = nullptr;
+static lv_obj_t* cancelButton = nullptr;
 static Preset editPreset{}, renderedPreset{};
 static bool renderedValid = false;
 static lv_obj_t *nameButton = nullptr, *rpmButton = nullptr, *modeSettingsBtn = nullptr, *detailLabel = nullptr;
@@ -33,7 +38,20 @@ static void do_cleanup_kb() {
   entryPanel = entryField = keyboard = entryError = nullptr; kbClosePending = false;
 }
 void screen_program_edit_leave() { do_cleanup_kb(); }
-void screen_program_edit_poll_keyboard() { if (kbClosePending) do_cleanup_kb(); }
+static void lock_pending_draft(lv_obj_t* obj) {
+  if (!savePending || !obj) return;
+  if (lv_obj_check_type(obj,&lv_button_class) && obj != saveButton && obj != cancelButton)
+    lv_obj_set_disabled(obj,true);
+  for (uint32_t i=0; i<lv_obj_get_child_count(obj); ++i)
+    lock_pending_draft(lv_obj_get_child(obj,i));
+}
+void screen_program_edit_poll_keyboard() {
+  if (kbClosePending) do_cleanup_kb();
+  if (!savePending) return;
+  const StorageStatus status = storage_presets_save_status(saveTicket);
+  if (status == STORAGE_SAVED) { savePending = false; screens_request_show(SCREEN_PROGRAMS); }
+  else if (saveButton) lv_label_set_text(lv_obj_get_child(saveButton,0),status == STORAGE_ERROR ? "SAVE FAILED / RETRYING" : "SAVING...");
+}
 static void input_cb(lv_event_t* e) {
   if (lv_event_get_code(e) == LV_EVENT_CANCEL) { kbClosePending = true; return; }
   if (lv_event_get_code(e) != LV_EVENT_READY) return;
@@ -51,13 +69,14 @@ static void input_cb(lv_event_t* e) {
     size_t length = strlen(value); while (length && value[length-1] == ' ') --length;
     // LVGL limits characters; the stored field limits UTF-8 bytes. Never split a character.
     if (length >= sizeof(editPreset.name)) { lv_label_set_text(entryError,"Name must fit 31 UTF-8 bytes. Shorten it and try again."); return; }
+    if (length && !program_name_valid(value, sizeof(editPreset.name), true)) { lv_label_set_text(entryError,"Use English letters, numbers and printable symbols (max 31)."); return; }
     if (!length) strlcpy(editPreset.name,"Untitled",sizeof(editPreset.name));
     else { memcpy(editPreset.name,value,length); editPreset.name[length] = 0; }
   }
   kbClosePending = true;
 }
 static void open_input_cb(lv_event_t* e) {
-  if (entryPanel) return;
+  if (savePending || entryPanel) return;
   entryRpm = (intptr_t)lv_event_get_user_data(e) == 1;
   entryPanel = lv_obj_create(lv_layer_top()); lv_obj_set_size(entryPanel,SCREEN_W,SCREEN_H);
   lv_obj_set_pos(entryPanel,0,0); lv_obj_set_style_pad_all(entryPanel,0,0);
@@ -66,14 +85,17 @@ static void open_input_cb(lv_event_t* e) {
   text(entryPanel,24,24,570,entryRpm ? "Program speed" : "Program name",FONT_XL,COL_TEXT);
   ui_create_btn(entryPanel,620,20,156,48,"CANCEL",FONT_BTN,UI_BTN_NORMAL,
                 [](lv_event_t*) { kbClosePending = true; },nullptr);
-  text(entryPanel,24,70,752,entryRpm ? "Set exact workpiece RPM. This edits the program only." : "Choose a short name. Confirm to update the draft; cancel to keep it.",FONT_SUBTITLE,COL_TEXT_DIM);
+  text(entryPanel,24,70,752,entryRpm ? "Set exact workpiece RPM. This edits the program only." : "English letters, numbers and symbols. Maximum 31 characters.",FONT_SUBTITLE,COL_TEXT_DIM);
   entryField = lv_textarea_create(entryPanel); lv_textarea_set_one_line(entryField,true);
   lv_obj_set_pos(entryField,24,112); lv_obj_set_size(entryField,752,54);
   lv_obj_set_style_text_font(entryField,entryRpm ? FONT_XL : FONT_LARGE,0);
   if (entryRpm) {
     lv_textarea_set_max_length(entryField,12); lv_textarea_set_accepted_chars(entryField,"0123456789.,");
     char value[24]; snprintf(value,sizeof(value),"%.3f",(double)editPreset.rpm); lv_textarea_set_text(entryField,value);
-  } else { lv_textarea_set_max_length(entryField,31); lv_textarea_set_text(entryField,editPreset.name); }
+  } else {
+    lv_textarea_set_max_length(entryField,31);
+    lv_textarea_set_text(entryField,editPreset.name);
+  }
   entryError = text(entryPanel,24,178,752,"",FONT_SUBTITLE,COL_RED); lv_label_set_max_lines(entryError,2);
   keyboard = lv_keyboard_create(entryPanel); lv_obj_set_size(keyboard,800,236);
   lv_obj_align(keyboard,LV_ALIGN_BOTTOM_MID,0,0);
@@ -82,21 +104,25 @@ static void open_input_cb(lv_event_t* e) {
   lv_obj_add_event_cb(keyboard,input_cb,LV_EVENT_READY,nullptr); lv_obj_add_event_cb(keyboard,input_cb,LV_EVENT_CANCEL,nullptr);
 }
 static void mode_select_cb(lv_event_t* e) {
+  if (savePending) return;
   editPreset.mode = modes[(intptr_t)lv_event_get_user_data(e)];
   editPreset.mode_mask |= preset_mode_to_mask(editPreset.mode);
   screen_program_edit_update_ui();
 }
 static void available_cb(lv_event_t* e) {
+  if (savePending) return;
   const SystemState mode = modes[(intptr_t)lv_event_get_user_data(e)];
   if (mode == editPreset.mode) return; // The active run mode must remain available.
   editPreset.mode_mask ^= preset_mode_to_mask(mode); screen_program_edit_update_ui();
 }
 static void rpm_adjust_cb(lv_event_t* e) {
+  if (savePending) return;
   const float increment = ui_rpm_increment(editPreset.rpm);
   editPreset.rpm = constrain(editPreset.rpm + ((intptr_t)lv_event_get_user_data(e) < 0 ? -increment : increment),MIN_RPM,speed_get_rpm_max());
   screen_program_edit_update_ui();
 }
 static void mode_settings_cb(lv_event_t*) {
+  if (savePending) return;
   if (editPreset.mode == STATE_PULSE) screens_show(SCREEN_EDIT_PULSE);
   else if (editPreset.mode == STATE_STEP) screens_show(SCREEN_EDIT_STEP);
   else screens_show(SCREEN_EDIT_CONT);
@@ -120,6 +146,7 @@ static void delete_preset_from_edit_do() {
 }
 
 static void delete_preset_prompt_cb(lv_event_t* e) {
+  if (savePending) return;
   (void)e;
   char buf[64];
   snprintf(buf, sizeof(buf), "Delete \"%s\"?", editPreset.name);
@@ -129,6 +156,7 @@ static void delete_preset_prompt_cb(lv_event_t* e) {
 
 
 static void save_preset_cb(lv_event_t*) {
+  if (savePending) return;
   preset_clamp_mode_to_mask(&editPreset);
   editPreset.rpm = constrain(editPreset.rpm,MIN_RPM,speed_get_rpm_max());
   xSemaphoreTake(g_presets_mutex,portMAX_DELAY);
@@ -139,14 +167,18 @@ static void save_preset_cb(lv_event_t*) {
       xSemaphoreGive(g_presets_mutex);
       screen_confirm_create("FULL","Maximum 16 programs reached.",nullptr,nullptr,SCREEN_NONE); return;
     }
+    editSlot = (int)g_presets.size();
     editPreset.id = g_presets.size()+1; g_presets.push_back(editPreset);
   }
-  xSemaphoreGive(g_presets_mutex); storage_save_presets(); screens_show(SCREEN_PROGRAMS);
+  xSemaphoreGive(g_presets_mutex); saveTicket = storage_request_presets_save(); savePending = true;
+  if (saveButton) lv_label_set_text(lv_obj_get_child(saveButton,0),"SAVING...");
+  lock_pending_draft(screenRoots[SCREEN_PROGRAM_EDIT]);
+  screen_programs_mark_dirty();
 }
 void screen_program_edit_create(int slot) {
   do_cleanup_kb(); auto root = screenRoots[SCREEN_PROGRAM_EDIT]; lv_obj_clean(root);
   lv_obj_set_scrollable(root,false); lv_obj_set_style_bg_color(root,COL_BG,0);
-  if (slot != -2) editSlot = slot;
+  if (slot != -2) { editSlot = slot; savePending = false; saveTicket = 0; }
   if (slot != -2) {
     xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
     if (slot >= 0 && slot < (int)g_presets.size()) {
@@ -174,7 +206,7 @@ void screen_program_edit_create(int slot) {
       editPreset.step_angle = 90.0f;
       editPreset.workpiece_diameter_mm = speed_get_workpiece_diameter_mm();
       editPreset.timer_ms = 30000;
-      editPreset.direction = (uint8_t)speed_get_direction();
+      editPreset.direction = (uint8_t)speed_get_requested_direction();
       editPreset.pulse_cycles = 0;  // infinite
       editPreset.step_repeats = 1;
       editPreset.step_dwell_sec = 0.0f;
@@ -218,13 +250,14 @@ void screen_program_edit_create(int slot) {
   detailLabel = text(modeSettingsBtn,14,43,344,"",FONT_SMALL,COL_TEXT_DIM); lv_label_set_max_lines(detailLabel,3);
   if (editSlot >= 0) {
     ui_create_btn(root,20,408,168,54,"DELETE",FONT_BTN,UI_BTN_DANGER,delete_preset_prompt_cb,nullptr);
-    ui_create_btn(root,204,408,186,54,"CANCEL",FONT_BTN,UI_BTN_NORMAL,cancel_cb,nullptr);
-    ui_create_btn(root,406,408,374,54,"SAVE",FONT_BTN,UI_BTN_ACCENT,save_preset_cb,nullptr);
+    cancelButton = ui_create_btn(root,204,408,186,54,"CANCEL",FONT_BTN,UI_BTN_NORMAL,cancel_cb,nullptr);
+    saveButton = ui_create_btn(root,406,408,374,54,"SAVE",FONT_BTN,UI_BTN_ACCENT,save_preset_cb,nullptr);
   } else {
-    ui_create_btn(root,20,408,240,54,"CANCEL",FONT_BTN,UI_BTN_NORMAL,cancel_cb,nullptr);
-    ui_create_btn(root,276,408,504,54,"SAVE",FONT_BTN,UI_BTN_ACCENT,save_preset_cb,nullptr);
+    cancelButton = ui_create_btn(root,20,408,240,54,"CANCEL",FONT_BTN,UI_BTN_NORMAL,cancel_cb,nullptr);
+    saveButton = ui_create_btn(root,276,408,504,54,"SAVE",FONT_BTN,UI_BTN_ACCENT,save_preset_cb,nullptr);
   }
   screen_program_edit_update_ui();
+  lock_pending_draft(root);
 }
 void screen_program_edit_update_ui() {
   screen_program_edit_poll_keyboard();
@@ -259,7 +292,7 @@ void screen_program_edit_update_ui() {
     lv_label_set_text(lv_obj_get_child(allowed,0),status);
     lv_obj_set_style_text_color(lv_obj_get_child(allowed,0),included ? COL_TEXT : COL_TEXT_VDIM,0);
   }
-  char detail[160]; const char* direction = editPreset.direction == DIR_CCW ? "CCW" : "CW";
+  char detail[160]; const char* direction = speed_resolve_direction((Direction)editPreset.direction) == DIR_CCW ? "CCW" : "CW";
   if (editPreset.mode == STATE_PULSE) {
     char cycles[24]; if (editPreset.pulse_cycles) snprintf(cycles,sizeof(cycles),"%u cycles",editPreset.pulse_cycles); else strlcpy(cycles,"Repeat continuously",sizeof(cycles));
     snprintf(detail,sizeof(detail),"%s / ON %.2fs / OFF %.2fs\n%s",direction,editPreset.pulse_on_ms/1000.0,editPreset.pulse_off_ms/1000.0,cycles);
@@ -271,10 +304,11 @@ void screen_program_edit_update_ui() {
     snprintf(detail,sizeof(detail),"%s / Soft start %s\n%s",direction,editPreset.cont_soft_start ? "ON" : "OFF",timer);
   }
   lv_label_set_text(detailLabel,detail);
+  lock_pending_draft(screenRoots[SCREEN_PROGRAM_EDIT]);
 }
 Preset* screen_program_edit_get_preset() { return &editPreset; }
 void screen_program_edit_invalidate_widgets() {
-  do_cleanup_kb(); nameButton = rpmButton = modeSettingsBtn = detailLabel = nullptr; renderedValid = false;
+  do_cleanup_kb(); saveButton = cancelButton = nullptr; nameButton = rpmButton = modeSettingsBtn = detailLabel = nullptr; renderedValid = false;
   for (auto& button : runButtons) button = nullptr;
   for (auto& button : availableButtons) button = nullptr;
 }

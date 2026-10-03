@@ -16,7 +16,9 @@ static void publish_pulse() {
   publishedPhase.store(timeline.phase());
 }
 static bool start_motor() {
-  motor_set_target_milli_hz(motor_milli_hz_for_rpm_calibrated(speed_get_target_rpm()));
+  const uint32_t rate = motor_milli_hz_for_rpm_calibrated(speed_get_target_rpm());
+  if (!rate) return false;
+  motor_set_target_milli_hz(rate);
   return speed_get_direction() == DIR_CW ? motor_run_cw() : motor_run_ccw();
 }
 void pulse_start(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
@@ -37,7 +39,9 @@ void pulse_update() {
   if (control_get_state() != STATE_PULSE) return; // Query may latch a driver fault.
   const PulseAction action = timeline.update(millis(), moving);
   switch (action) {
-    case PulseAction::Stop: motor_stop(); break;
+    case PulseAction::Stop:
+      control_expect_motion_completion(STATE_PULSE, motor_stop_timeout_ms());
+      motor_stop(); break;
     case PulseAction::Start:
       if (!start_motor()) {
         timeline.cancel();
@@ -47,6 +51,7 @@ void pulse_update() {
     case PulseAction::Complete: control_transition_to(STATE_STOPPING); break;
     default: break;
   }
+  if (timeline.phase() != PulsePhase::Decelerating) control_clear_motion_deadline();
   publish_pulse();
 }
 void pulse_stop() {

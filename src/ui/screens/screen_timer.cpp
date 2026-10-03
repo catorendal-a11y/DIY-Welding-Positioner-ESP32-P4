@@ -19,7 +19,9 @@
 static int countdownSec = 3;
 static std::atomic<bool> countingDown{false};
 static std::atomic<bool> startPending{false};
-static uint32_t countdownStartMs = 0;
+static bool countdownCancelled = false;
+static uint32_t countdownStartMs = 0, countdownGeneration = 0;
+void screen_timer_leave() { countingDown.store(false); startPending.store(false); }
 static int lastDisplayedSec = -1;
 static int lastIdleCountdownSec = -1;
 static int lastArcEndAngle = -1;
@@ -95,13 +97,16 @@ static void start_event_cb(lv_event_t* e) {
   if (safety_inhibit_motion()) return;
   if (ui_control_state() != STATE_IDLE) return;
 
+  countdownCancelled = false;
+  countdownGeneration = control_motion_generation();
+  if (!control_deferred_start_valid(countdownGeneration)) return;
   save_countdown_setting();
   countingDown.store(true, std::memory_order_release);
   lastDisplayedSec = -1;
   countdownStartMs = millis();
   speed_slider_set(speed_get_target_rpm());
   if (warnDetailLbl) {
-    lv_label_set_text(warnDetailLbl, "Motor remains disabled until zero");
+    lv_label_set_text(warnDetailLbl, countdownCancelled ? "Cancelled - press START again" : "Motor remains disabled until zero");
     lv_obj_set_style_text_color(warnDetailLbl, COL_TEXT, 0);
   }
 }
@@ -109,9 +114,7 @@ static void start_event_cb(lv_event_t* e) {
 static void stop_event_cb(lv_event_t* e) {
   countingDown.store(false, std::memory_order_release);
   startPending.store(false, std::memory_order_release);
-  if (ui_control_state() != STATE_IDLE && ui_control_state() != STATE_ESTOP) {
-    control_stop();
-  }
+  control_stop();
 }
 
 static lv_obj_t* timer_make_info_card(lv_obj_t* scr, int y, const char* title, bool isWarn) {
@@ -230,7 +233,7 @@ void screen_timer_create() {
 
   lv_obj_t* warnCard = timer_make_info_card(screen, 294, "SAFETY HOLD", true);
   warnDetailLbl = lv_label_create(warnCard);
-  lv_label_set_text(warnDetailLbl, "Motor remains disabled until zero");
+  lv_label_set_text(warnDetailLbl, countdownCancelled ? "Cancelled - press START again" : "Motor remains disabled until zero");
   lv_obj_set_style_text_font(warnDetailLbl, FONT_NORMAL, 0);
   lv_obj_set_style_text_color(warnDetailLbl, COL_TEXT, 0);
   lv_obj_set_pos(warnDetailLbl, 16, 44);
@@ -261,8 +264,14 @@ void screen_timer_invalidate_widgets() {
 }
 
 void screen_timer_update() {
+  ui_mark_motion_callback(screenRoots[SCREEN_TIMER], start_event_cb);
   if (!screens_is_active(SCREEN_TIMER)) return;
 
+  if ((countingDown.load() || startPending.load()) && !control_deferred_start_valid(countdownGeneration)) {
+    screen_timer_leave(); countdownCancelled = true;
+    if (warnDetailLbl) { lv_label_set_text(warnDetailLbl, "Countdown cancelled - press START again"); lv_obj_set_style_text_color(warnDetailLbl, COL_RED, 0); }
+    return;
+  }
   if (backPending.load(std::memory_order_acquire)) {
     backPending.store(false, std::memory_order_release);
     countingDown.store(false, std::memory_order_release);
@@ -282,7 +291,7 @@ void screen_timer_update() {
       }
       return;
     }
-    if (control_start_continuous()) {
+    if (control_start_deferred_continuous(countdownGeneration)) {
       screens_request_show(SCREEN_MAIN);
     } else if (warnDetailLbl) {
       lv_label_set_text(warnDetailLbl, "START BLOCKED");
@@ -337,7 +346,7 @@ void screen_timer_update() {
     }
 
     if (warnDetailLbl) {
-      lv_label_set_text(warnDetailLbl, "Motor remains disabled until zero");
+      lv_label_set_text(warnDetailLbl, countdownCancelled ? "Cancelled - press START again" : "Motor remains disabled until zero");
       lv_obj_set_style_text_color(warnDetailLbl, COL_TEXT, 0);
     }
 
@@ -361,7 +370,7 @@ void screen_timer_update() {
         lv_obj_set_style_transform_pivot_y(bigNumberLabel, lv_obj_get_height(bigNumberLabel) / 2, 0);
       }
       if (warnDetailLbl) {
-        lv_label_set_text(warnDetailLbl, "Motor remains disabled until zero");
+        lv_label_set_text(warnDetailLbl, countdownCancelled ? "Cancelled - press START again" : "Motor remains disabled until zero");
         lv_obj_set_style_text_color(warnDetailLbl, COL_TEXT, 0);
       }
       set_countdown_arc_angle(360, COL_GREEN);

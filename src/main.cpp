@@ -24,6 +24,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include <esp_timer.h>
+#include <esp_heap_caps.h>
 #include "esp_task_wdt.h"
 #include <cstdint>
 #include "onchip_temp.h"
@@ -242,13 +243,12 @@ void storageTask(void* pvParameters) {
             uxTaskGetStackHighWaterMark(safetyHandle), uxTaskGetStackHighWaterMark(motorHandle),
             uxTaskGetStackHighWaterMark(controlHandle), uxTaskGetStackHighWaterMark(lvglHandle));
       LOG_I("Heap: %lu B free   PSRAM: %lu B free", ESP.getFreeHeap(), ESP.getFreePsram());
-      lv_mem_monitor_t m;
-      lv_mem_monitor_core(&m);
-      LOG_I("LVGL: %u%% heap used", (unsigned)m.used_pct);
+      LOG_I("Internal heap: largest=%u B minimum=%u B",
+            (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
+            (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
       if (uxTaskGetStackHighWaterMark(safetyHandle) < 256) LOG_E("SAFETY STACK LOW");
       if (uxTaskGetStackHighWaterMark(motorHandle) < 512) LOG_E("MOTOR STACK LOW");
       if (uxTaskGetStackHighWaterMark(lvglHandle) < 512) LOG_E("LVGL STACK LOW");
-      if (m.used_pct > 80) LOG_E("LVGL HEAP >80%%");
       LOG_I("────────────────────────────────────────────");
 #endif
     }

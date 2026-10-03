@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include "../screens.h"
 #include "../theme.h"
+#include "../value_format.h"
 #include "../../control/control.h"
 #include "../../motor/speed.h"
 #include "../../config.h"
@@ -42,9 +43,9 @@ static void rpm_adj_cb(lv_event_t* e) {
   int delta = (intptr_t)lv_event_get_user_data(e);
   float currentRpm = control_get_jog_speed();
   if (delta > 0)
-    currentRpm += 0.1f;
-  else if (currentRpm > 0.1f)
-    currentRpm -= 0.1f;
+    currentRpm += ui_rpm_increment(currentRpm);
+  else
+    currentRpm -= ui_rpm_increment(currentRpm);
   float mx = speed_get_rpm_max();
   if (currentRpm < MIN_RPM) currentRpm = MIN_RPM;
   if (currentRpm > mx) currentRpm = mx;
@@ -149,6 +150,7 @@ void screen_jog_invalidate_widgets() {
 }
 
 void screen_jog_update() {
+  ui_mark_motion_callback(screenRoots[SCREEN_JOG], cw_hold_event_cb); ui_mark_motion_callback(screenRoots[SCREEN_JOG], ccw_hold_event_cb);
   if (!screens_is_active(SCREEN_JOG)) return;
 
   SystemState state = ui_control_state();

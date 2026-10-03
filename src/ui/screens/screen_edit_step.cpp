@@ -61,8 +61,8 @@ static void update_computed() {
   // Total motor steps must use the same calibration path as runtime step mode.
   long stepCount = angleToStepsForDiameter(editAngle, editDiameterMm);
   if (stepCount < 0) stepCount = -stepCount;
-  long totalSteps = stepCount * editRepeats;
-  if (stepsLabel) lv_label_set_text_fmt(stepsLabel, "%ld", totalSteps);
+  const uint64_t totalSteps = uint64_t(stepCount > 0 ? stepCount : 0) * editRepeats;
+  if (stepsLabel) lv_label_set_text_fmt(stepsLabel, "%llu", (unsigned long long)totalSteps);
 }
 
 static void update_diameter_label() {
@@ -156,7 +156,7 @@ static void save_cb(lv_event_t* e) {
     p->step_angle = editAngle;
     p->rpm = editRpm;
     p->workpiece_diameter_mm = editDiameterMm;
-    p->direction = (uint8_t)editDir;
+    p->direction = (uint8_t)speed_resolve_direction((Direction)editDir);
     p->step_repeats = (uint16_t)editRepeats;
     p->step_dwell_sec = editDwell;
   }
@@ -189,7 +189,7 @@ void screen_edit_step_create() {
   editAngle = p ? p->step_angle : 90.0f;
   editRpm = p ? p->rpm : 2.0f;
   editDiameterMm = p ? p->workpiece_diameter_mm : 0.0f;
-  editDir = p ? p->direction : 0;
+  editDir = p ? speed_resolve_direction((Direction)p->direction) : DIR_CW;
   editRepeats = p ? p->step_repeats : 1;
   editDwell = p ? p->step_dwell_sec : 0.0f;
   ui_create_header(screen, "Step settings", "PROGRAM EDIT", nullptr);

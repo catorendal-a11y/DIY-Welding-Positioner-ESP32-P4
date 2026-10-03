@@ -34,6 +34,11 @@ const char* control_state_name(SystemState s);  // Internal: state enum to strin
 // Continuous mode
 bool control_start_continuous(bool soft_start = false, uint32_t auto_stop_ms = 0);
 bool control_stop();
+uint32_t control_motion_generation();
+bool control_deferred_start_valid(uint32_t generation);
+bool control_start_deferred_continuous(uint32_t generation);
+void control_expect_motion_completion(SystemState state, uint32_t timeout_ms);
+void control_clear_motion_deadline();
 void control_check_stop_deadline(uint32_t now); // Safety task, no blocking locks
 bool control_motion_blocked();
 void control_renew_jog();
@@ -43,6 +48,7 @@ bool control_apply_motor_settings(const SystemSettings& settings);
 ConfigApplyStatus control_config_status();
 uint32_t control_config_save_ticket();
 struct Preset;
+bool control_program_feasible(const Preset& preset);
 bool control_start_program(const Preset& preset);
 
 // Pulse mode (cycles=0 means infinite)

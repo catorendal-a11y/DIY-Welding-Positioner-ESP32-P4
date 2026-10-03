@@ -73,7 +73,7 @@ void screen_confirm_create_static() {
 }
 
 void screen_confirm_create(const char* title, const char* message, void (*on_confirm)(), void (*on_cancel)(),
-                           ScreenId confirm_success_screen) {
+                           ScreenId confirm_success_screen, bool motion_action) {
   LOG_I("Confirm dialog: title='%s'", title ? title : "null");
 
   if (!title || !message) {
@@ -86,6 +86,7 @@ void screen_confirm_create(const char* title, const char* message, void (*on_con
     return;
   }
 
+  lv_obj_set_user_flag(lv_obj_get_parent(dangerBtnLabel), 0, motion_action);
   onConfirmCallback = on_confirm;
   onCancelCallback = on_cancel;
   returnScreen = screens_get_current();

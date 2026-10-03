@@ -159,6 +159,7 @@ static std::atomic<uint8_t> programDirectionOverride{DIR_CW};
 static std::atomic<bool> programDirectionOverrideActive{false};
 static std::atomic<bool> buttonsActive{false};
 static std::atomic<float> lastPotAdc{2047.5f};
+static std::atomic<bool> baselinePedal{false};
 static std::atomic<bool> pedalEnabled{false};
 static std::atomic<bool> pedalApplyPending{false};
 static std::atomic<float> pedalFiltered{2047.5f};
@@ -187,7 +188,7 @@ static float diameter_mm_to_m(float mm) {
 }
 
 void speed_set_workpiece_diameter_mm(float mm_od) {
-  if (mm_od < 1.0f || mm_od > 20000.0f) {
+  if (!std::isfinite(mm_od) || mm_od < 1.0f || mm_od > 20000.0f) {
     g_workpiece_od_mm.store(0.0f, std::memory_order_relaxed);
   } else {
     g_workpiece_od_mm.store(mm_od, std::memory_order_relaxed);
@@ -219,8 +220,9 @@ long angleToSteps(float degrees) {
 long angleToStepsForDiameter(float degrees, float mm_od) {
   const float d_m = diameter_mm_to_m(mm_od);
   const float steps_per_wp_rev = speed_steps_per_gear_output_rev() * (d_m / D_RULLE);
-  long steps = (long)((degrees / 360.0f) * steps_per_wp_rev);
-  return calibration_apply_steps(steps);
+  int32_t steps = 0;
+  motion_checked_steps(double(degrees) / 360.0 * double(steps_per_wp_rev) * calibration_get_factor(), steps);
+  return steps;
 }
 
 void speed_init() {
@@ -314,6 +316,7 @@ void speed_sync_rpm_limits_from_settings() {
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   mx = g_settings.max_rpm;
   xSemaphoreGive(g_settings_mutex);
+  if (!std::isfinite(mx)) mx = MAX_RPM;
   if (mx < MIN_RPM) mx = MIN_RPM;
   if (mx > MAX_RPM) mx = MAX_RPM;
   rpmMaxUi.store(mx, std::memory_order_release);
@@ -325,6 +328,18 @@ void speed_sync_rpm_limits_from_settings() {
   if (ct > cap) cachedTargetRpm.store(cap, std::memory_order_relaxed);
 }
 
+float speed_get_rpm_min() { return speed_get_rpm_min_for_diameter(speed_get_workpiece_diameter_mm()); }
+float speed_get_rpm_min_for_diameter(float mm) {
+  const float hz = speed_steps_per_gear_output_rev() * diameter_mm_to_m(mm) / D_RULLE * calibration_get_factor() / 60.0f;
+  if (!std::isfinite(hz) || hz <= 0) return MAX_RPM + 1;
+  // Round upwards to the UI's 0.001 RPM precision, never hide a rate increase.
+  return std::max(MIN_RPM, std::ceil(START_SPEED / hz * 1000.0f) / 1000.0f);
+}
+float speed_clamp_rpm(float rpm) {
+  const float minimum = speed_get_rpm_min(), maximum = speed_get_rpm_max();
+  if (!std::isfinite(rpm) || minimum > maximum) return 0;
+  return constrain(rpm, minimum, maximum);
+}
 float speed_get_rpm_max() { return rpmMaxUi.load(std::memory_order_acquire); }
 
 void speed_update_adc() {
@@ -348,7 +363,8 @@ void speed_update_adc() {
     float pedalAdc = (float)adsVal * ADS1115_TO_ADC_SCALE;
     if (fresh && pedalSettingsTick) {
       pedalFiltered = pedalAdc;
-      lastPotAdc.store(filtered, std::memory_order_release);
+      lastPotAdc.store(pedalAdc, std::memory_order_release);
+      baselinePedal.store(true);
     } else if (fresh) {
       pedalFiltered = IIR_ALPHA * pedalAdc + (1.0f - IIR_ALPHA) * pedalFiltered;
     }
@@ -365,12 +381,14 @@ void speed_update_adc() {
 }
 
 void speed_slider_set(float rpm) {
-  float cap = rpmMaxUi.load(std::memory_order_relaxed);
-  float r = constrain(rpm, MIN_RPM, cap);
+  if (!std::isfinite(rpm)) return;
+  float r = speed_clamp_rpm(rpm);
   sliderRPM.store(r, std::memory_order_release);
   lastSliderMs.store(millis(), std::memory_order_release);
+  const bool pedal = speed_get_pedal_enabled() && ENABLE_ADS1115_PEDAL;
+  lastPotAdc.store(pedal ? pedalFiltered.load() : adcFiltered.load(), std::memory_order_release);
+  baselinePedal.store(pedal);
   buttonsActive.store(true, std::memory_order_release);
-  lastPotAdc.store(adcFiltered.load(std::memory_order_acquire), std::memory_order_release);
   // Immediate: controlTask may call step_execute before next speed_apply tick.
   cachedTargetRpm.store(r, std::memory_order_release);
 }
@@ -418,17 +436,19 @@ void speed_apply() {
     normalized = 1.0f;
   }
   float cap = rpmMaxUi.load(std::memory_order_relaxed);
-  float pot_rpm = MIN_RPM + normalized * (cap - MIN_RPM);
+  const float minimum = speed_get_rpm_min();
+  float pot_rpm = speed_clamp_rpm(minimum + normalized * (cap - minimum));
 
   bool active = buttonsActive.load(std::memory_order_acquire);
-  float srpm = sliderRPM.load(std::memory_order_relaxed);
+  float srpm = speed_clamp_rpm(sliderRPM.load(std::memory_order_relaxed));
 
   if (sliderPriorityOverride.load(std::memory_order_acquire) || programDirectionOverrideActive.load()) {
     cachedTargetRpm.store(srpm, std::memory_order_relaxed);
   } else if (active) {
+    if (baselinePedal.exchange(usePedal) != usePedal) lastPotAdc.store(activeAdc);
     float lastAdc = lastPotAdc.load(std::memory_order_relaxed);
     float adcDelta = fabsf(activeAdc - lastAdc);
-    if (adcDelta > 200.0f) {
+    if (adcDelta > POT_UI_TAKEOVER_ADC_DELTA) {
       buttonsActive.store(false, std::memory_order_release);
       sliderRPM.store(pot_rpm, std::memory_order_relaxed);
       cachedTargetRpm.store(pot_rpm, std::memory_order_relaxed);
@@ -453,7 +473,7 @@ void speed_apply() {
   motor_set_target_milli_hz(mhz);
 }
 
-Direction speed_get_direction() {
+Direction speed_get_requested_direction() {
   Direction dir;
   if (programDirectionOverrideActive.load(std::memory_order_acquire)) {
     dir = (Direction)programDirectionOverride.load(std::memory_order_acquire);
@@ -462,11 +482,11 @@ Direction speed_get_direction() {
   } else {
     dir = (Direction)currentDir.load(std::memory_order_acquire);
   }
-  bool invert = false;
-  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  invert = g_settings.invert_direction;
-  xSemaphoreGive(g_settings_mutex);
-  return motion_direction_cw(dir == DIR_CW, invert) ? DIR_CW : DIR_CCW;
+  return dir;
+}
+
+Direction speed_get_direction() {
+  return speed_resolve_direction(speed_get_requested_direction());
 }
 
 void speed_set_direction(Direction dir) {

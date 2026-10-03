@@ -10,6 +10,7 @@
 #include "../src/control/control.h"
 #include "../src/safety/safety.h"
 #include "../src/motor/speed.h"
+#include "../src/motor/motor.h"
 #include "../src/motor/calibration.h"
 #include "../src/ui/screens.h"
 #include "../src/ui/theme.h"
@@ -458,6 +459,70 @@ static unsigned audit_labels(lv_obj_t* obj, const char* screen);
 static int run_commissioning_test(const char* directory = nullptr);
 static int run_calibration_test(const char* directory = nullptr);
 static int run_program_edit_test(const char* directory = nullptr);
+static bool sim_test_countdown_cancellation_and_direction() {
+  simulator_set_scenario("none"); safety_reset_estop(); control_stop(); sim_pump(100);
+  g_settings.countdown_seconds=1;
+  for (unsigned elapsed : {50u,900u}) {
+    screens_show(SCREEN_TIMER); sim_pump(40);
+    if (!sim_click_label("> START")) return false;
+    sim_pump(elapsed);
+    // Fault/reset happen without a UI tick: current safety state alone cannot detect this history.
+    simulator_set_estop_input(true); control_run_cycle();
+    simulator_set_estop_input(false); safety_reset_estop(); control_run_cycle();
+    sim_pump(1200);
+    if (!sim_expect(control_get_state()==STATE_IDLE && !motor_is_running(),"old countdown restarted after fault/reset")) return false;
+  }
+  screens_show(SCREEN_TIMER); sim_pump(40);
+  if (!sim_click_label("> START")) return false;
+  control_stop(); sim_pump(1200);
+  if (!sim_expect(control_get_state()==STATE_IDLE,"idle STOP did not cancel countdown")) return false;
+  if (!sim_click_label("> START")) return false;
+  screens_show(SCREEN_MAIN); sim_pump(1200);
+  if (!sim_expect(control_get_state()==STATE_IDLE,"navigation did not cancel countdown")) return false;
+  screens_show(SCREEN_TIMER); sim_pump(40);
+  if (!sim_click_label("> START")) return false;
+  sim_pump(1200);
+  if (!sim_expect(control_get_state()==STATE_RUNNING,"fresh countdown START failed")) return false;
+  control_stop(); sim_pump(300);
+  g_settings.invert_direction=true; speed_set_direction(DIR_CW);
+  screens_show(SCREEN_PROGRAMS); sim_pump(40);
+  if (!sim_click_label("+ NEW")) return false;
+  const auto draft=screen_program_edit_get_preset();
+  if (!sim_expect(draft->direction==DIR_CW && speed_resolve_direction((Direction)draft->direction)==DIR_CCW,
+                  "new program inherited an already inverted direction")) return false;
+  if (!sim_click_label("CANCEL")) return false;
+  g_settings.invert_direction=false;
+  speed_set_workpiece_diameter_mm(300); speed_slider_set(0.02f);
+  screens_show(SCREEN_STEP); sim_pump(40);
+  if (!sim_send_label_event("-", LV_EVENT_SHORT_CLICKED)) return false;
+  if (!sim_expect(fabs(speed_get_target_rpm()-0.019f)<0.00001f,"Step fine adjustment failed")) return false;
+  if (!sim_expect(audit_labels(screenRoots[SCREEN_STEP],"Step fine adjustment")==0,"Step labels overflowed")) return false;
+  // Boundary geometry must produce an explanation, never a narrowed/reversed move.
+  g_settings.microstep=32; g_settings.calibration_factor=1.5f;
+  speed_set_workpiece_diameter_mm(20000);
+  if (!sim_click_label("TARGET")) return false;
+  auto field=sim_find_type(screenRoots[SCREEN_STEP],&lv_textarea_class);
+  auto keyboard=sim_find_type(screenRoots[SCREEN_STEP],&lv_keyboard_class);
+  if (!sim_expect(field && keyboard,"custom Step input missing")) return false;
+  lv_textarea_set_text(field,"3600"); lv_obj_send_event(keyboard,LV_EVENT_READY,nullptr); sim_pump(80);
+  auto blockedMove=sim_find_active_label_target("OUT OF RANGE");
+  if (!sim_expect(blockedMove && lv_obj_is_disabled(blockedMove),"overflowing move was not visibly blocked")) return false;
+  if (!sim_expect(audit_labels(screenRoots[SCREEN_STEP],"Step boundary values")==0,"boundary Step labels overflowed")) return false;
+  g_settings.microstep=16; g_settings.calibration_factor=1; speed_set_workpiece_diameter_mm(300);
+  if (!sim_click_label("90")) return false;
+  screens_show(SCREEN_DISPLAY); sim_pump(40);
+  lv_obj_t* dim=nullptr;
+  for (const char* value : {"OFF","30s","1m","2m","5m"})
+    if (!dim) dim=sim_find_active_label_target(value);
+  if (!sim_expect(dim!=nullptr,"Display dim setting missing")) return false;
+  lv_obj_send_event(dim,LV_EVENT_CLICKED,nullptr); sim_pump(40);
+  const std::string expected=lv_label_get_text(lv_obj_get_child(dim,0));
+  screens_reinit(); sim_pump(60);
+  if (!sim_expect(sim_find_label_target(screenRoots[SCREEN_DISPLAY],expected.c_str(),false,true)!=nullptr,
+                  "theme reconstruction discarded the dim draft")) return false;
+  screens_show(SCREEN_MAIN); sim_pump(40);
+  return true;
+}
 static int run_self_test() {
   std::puts("SIM SELFTEST: start");
   g_settings.countdown_seconds = 1;
@@ -500,6 +565,8 @@ static int run_self_test() {
   if (!sim_expect(control_get_state() == STATE_ESTOP, "stalled executor did not fault on STOP")) return 13;
   simulator_set_scenario("none"); safety_reset_estop(); sim_pump(80);
   std::puts("SIM SELFTEST: stale control and independent STOP deadline ok");
+  if (!sim_test_countdown_cancellation_and_direction()) return 16;
+  std::puts("SIM SELFTEST: countdown cancellation/direction/fine Step adjustment ok");
   std::puts("SIM SELFTEST: PASS");
   return 0;
 }
@@ -628,7 +695,22 @@ static int run_program_edit_test(const char* directory) {
   capture("05_pulse_program.bmp");
   if (!sim_click_label("MODE SETTINGS >") || !sim_click_label("SAVE")) return 15;
   if (!sim_expect(strcmp(draft->name,"ROOT PASS") == 0 && fabs(draft->rpm-0.076f) < 0.00001f,"sub-editor return lost program draft")) return 16;
+  simulator_set_scenario("nvs-failure");
   if (!sim_click_label("SAVE")) return 17;
+  sim_pump(600);
+  if (!sim_expect(screens_get_current() == SCREEN_PROGRAM_EDIT &&
+       sim_find_label_target(screenRoots[SCREEN_PROGRAM_EDIT],"SAVE FAILED / RETRYING",false,false),
+       "program save failure was hidden")) return 33;
+  auto pendingPlus = sim_find_label_target(screenRoots[SCREEN_PROGRAM_EDIT],"+",false,true);
+  auto pendingMode = sim_find_label_target(screenRoots[SCREEN_PROGRAM_EDIT],"STEP",false,true);
+  if (!sim_expect(pendingPlus && pendingMode && lv_obj_has_state(pendingPlus,LV_STATE_DISABLED) &&
+       lv_obj_has_state(pendingMode,LV_STATE_DISABLED),"saving draft remained editable")) return 35;
+  lv_obj_send_event(pendingPlus,LV_EVENT_CLICKED,nullptr);
+  lv_obj_send_event(pendingMode,LV_EVENT_CLICKED,nullptr);
+  if (!sim_expect(draft->mode == STATE_PULSE && fabs(draft->rpm-0.076f) < 0.00001f,
+       "late edit changed the in-flight saved draft")) return 36;
+  simulator_set_scenario("none"); sim_pump(1500);
+  if (!sim_expect(screens_get_current() == SCREEN_PROGRAMS,"program save did not wait for durable receipt")) return 34;
   if (!sim_expect(g_presets.size() == before.size()+1 && strcmp(g_presets.back().name,"ROOT PASS") == 0 &&
                   g_presets.back().mode == STATE_PULSE && fabs(g_presets.back().rpm-0.076f) < 0.00001f,"saved program does not match draft")) return 18;
   capture("06_saved_programs.bmp");

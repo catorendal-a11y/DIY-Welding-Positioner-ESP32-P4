@@ -14,6 +14,8 @@ lv_obj_t* ui_create_text(lv_obj_t* parent, int x, int y, int width, const char* 
                          lv_color_t color);
 lv_obj_t* ui_create_adjust_card(lv_obj_t* parent, int x, int y, int width, const char* title,
                                 lv_event_cb_t callback, int step = 1);
+void ui_mark_motion_action(lv_obj_t* obj);
+void ui_mark_motion_callback(lv_obj_t* root, lv_event_cb_t callback);
 enum UiActionId { UI_ACTION_START = 1, UI_ACTION_STOP, UI_ACTION_DIRECTION };
 void ui_highlight_value_card(lv_obj_t* value);
 void lvgl_lock();
@@ -91,6 +93,7 @@ void screen_pulse_create();
 void screen_step_create();
 void screen_jog_create();
 void screen_timer_create();
+void screen_timer_leave();
 void screen_programs_create();
 void screen_program_edit_create(int slot);
 void screen_settings_create();
@@ -99,7 +102,7 @@ void screen_confirm_create_static();  // Static init
 // If confirm_success_screen is not SCREEN_NONE, that screen is shown after confirm (cancel still uses prior
 // screen).
 void screen_confirm_create(const char* title, const char* message, void (*on_confirm)(), void (*on_cancel)(),
-                           ScreenId confirm_success_screen = SCREEN_NONE);
+                           ScreenId confirm_success_screen = SCREEN_NONE, bool motion_action = false);
 void screen_confirm_update();
 
 // Boot screen

@@ -109,7 +109,9 @@ public:
 
   bool write_all(const uint8_t* data, DWORD len) {
     if (!valid()) return false;
+    const ULONGLONG began = GetTickCount64();
     while (len > 0) {
+      if (GetTickCount64() - began >= 250u) return false;
       DWORD written = 0;
       if (!WriteFile(handle_, data, len, &written, nullptr)) {
         return false;
@@ -129,6 +131,7 @@ private:
 };
 
 struct Parser {
+  uint32_t lastByteAt = 0;
   uint8_t magicPos = 0;
   uint8_t headerPos = 0;
   uint32_t payloadPos = 0;
@@ -157,8 +160,8 @@ static bool send_packet(SerialPort& serial, uint8_t type, const uint8_t* payload
   h.payload_crc = payloadLen ? usb_mirror_crc32(payload, payloadLen) : 0;
 
   if (!usb_mirror_write_header(h, headerBuf, sizeof(headerBuf))) return false;
-  if (!serial.write_all(headerBuf, sizeof(headerBuf))) return false;
-  if (payloadLen > 0 && !serial.write_all(payload, payloadLen)) return false;
+  if (!serial.write_all(headerBuf, sizeof(headerBuf))) { serial.close(); return false; }
+  if (payloadLen > 0 && !serial.write_all(payload, payloadLen)) { serial.close(); return false; }
   return true;
 }
 
@@ -234,7 +237,9 @@ static void parse_bytes(Parser& p, const uint8_t* data, int len,
                         uint32_t& lastVideoMs, bool& helloSeen) {
   static const uint8_t magicBytes[4] = {'R', 'M', 'R', '1'};
 
+  if ((p.magicPos || p.headerPos || p.payloadPos) && now_ms() - p.lastByteAt > 250u) parser_reset(p);
   for (int i = 0; i < len; i++) {
+    p.lastByteAt = now_ms();
     uint8_t b = data[i];
 
     if (p.headerPos == 0) {
@@ -336,6 +341,9 @@ int main(int argc, char** argv) {
     while (SDL_PollEvent(&ev)) {
       if (ev.type == SDL_QUIT) {
         running = false;
+      } else if (ev.type == SDL_WINDOWEVENT &&
+                 (ev.window.event == SDL_WINDOWEVENT_FOCUS_LOST || ev.window.event == SDL_WINDOWEVENT_HIDDEN)) {
+        mouseDown = false; send_pointer(serial,0,0,false,txSequence);
       } else if (ev.type == SDL_MOUSEBUTTONDOWN && ev.button.button == SDL_BUTTON_LEFT) {
         int ww = 0, wh = 0;
         SDL_GetWindowSize(window, &ww, &wh);

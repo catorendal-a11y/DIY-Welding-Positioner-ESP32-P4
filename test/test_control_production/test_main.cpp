@@ -44,8 +44,12 @@ void speed_clear_program_direction_override() {}
 void speed_set_workpiece_diameter_mm(float) {}
 void speed_slider_set(float rpm) { testRpm = rpm; }
 float speed_get_target_rpm() { return testRpm; }
-float speed_get_rpm_max() { return MAX_RPM; }
+float speed_get_rpm_min_for_diameter(float) { return 0.020f; }
+float speed_get_rpm_min() { return 0.020f; }
+float speed_clamp_rpm(float r) { return std::isfinite(r) ? constrain(r, speed_get_rpm_min(), speed_get_rpm_max()) : 0; }
+float speed_get_rpm_max() { return g_settings.max_rpm; }
 float rpmToStepHzCalibrated(float rpm) { return rpm * 1000.0f; }
+long angleToStepsForDiameter(float angle,float) { return static_cast<long>(angle*100.0f); }
 long angleToSteps(float angle) { return static_cast<long>(angle * 100.0f); }
 uint32_t microstep_get_steps_per_rev() { return 3200; }
 
@@ -59,6 +63,7 @@ void setUp() {
   if (!g_settings_mutex) g_settings_mutex = xSemaphoreCreateMutex();
   if (g_stepperMutex) g_stepperMutex->unavailable = false;
   calibration_discard_draft(); calibration_process_pending(); g_settings.calibration_factor = 1.0f;
+  g_settings.max_rpm = MAX_RPM; g_settings.microstep = 16; g_settings.stepper_driver = STEPPER_DRIVER_DM542T; jog_set_speed(0.5f);
   g_settings.acceleration = 7500; g_settings.invert_direction = false;
   event_log_init();
   control_init();
@@ -120,6 +125,8 @@ void test_snapshot_staleness_handles_wrap_and_boundary() {
   TEST_ASSERT_FALSE(control_timestamp_fresh(101, 0, true));
   TEST_ASSERT_FALSE(control_timestamp_fresh(0, 0, false));
   TEST_ASSERT_TRUE(control_timestamp_fresh(20, UINT32_MAX - 10, true));
+  TEST_ASSERT_TRUE(control_timestamp_fresh(100,101,true));
+  TEST_ASSERT_FALSE(control_timestamp_fresh(100,106,true));
 }
 void test_snapshot_mailbox_never_tears_concurrent_reads() {
   struct Pair { uint32_t value, inverse; };
@@ -362,8 +369,75 @@ void test_calibration_blocks_unrelated_motion_and_pedal_mode() {
   TEST_ASSERT_TRUE(control_start_step(360)); control_stop(); control_run_cycle();
   control_set_calibration_active(false); TEST_ASSERT_FALSE(control_setup_active());
 }
+
+void test_jog_reclamps_after_config_lowered_cap() {
+  jog_set_speed(1.0f);
+  auto settings = g_settings; settings.max_rpm = 0.1f;
+  TEST_ASSERT_TRUE(control_apply_motor_settings(settings)); control_run_cycle();
+  TEST_ASSERT_TRUE(control_start_jog_cw()); control_run_cycle();
+  TEST_ASSERT_FLOAT_WITHIN(0.00001f, 0.1f, jog_get_speed());
+  TEST_ASSERT_EQUAL_UINT32(100000, testStepper.milliHz);
+}
+void test_internal_pulse_stop_has_independent_deadline() {
+  control_start_pulse(100,100,1); control_run_cycle();
+  simTestMillis += 100; pulse_update();
+  simTestMillis += motor_stop_timeout_ms(); control_check_stop_deadline(simTestMillis);
+  TEST_ASSERT_EQUAL(FAULT_MOTOR_TIMEOUT, testFault);
+  TEST_ASSERT_EQUAL(HIGH, simTestPins[PIN_ENA]);
+}
+
+
+void test_deferred_start_never_survives_fault_reset_or_stop() {
+  for (int fault=0; fault<2; ++fault) {
+    const uint32_t ticket = control_motion_generation();
+    TEST_ASSERT_TRUE(control_deferred_start_valid(ticket));
+    if (fault) safety_report_motor_fault(FAULT_MOTOR_COMMAND); else control_stop();
+    control_run_cycle(); testFault = FAULT_NONE;
+    if (control_get_state() == STATE_ESTOP) control_transition_to(STATE_IDLE);
+    control_run_cycle();
+    TEST_ASSERT_FALSE(control_start_deferred_continuous(ticket));
+    TEST_ASSERT_EQUAL(0, testStepper.starts);
+  }
+  TEST_ASSERT_TRUE(control_start_deferred_continuous(control_motion_generation()));
+  control_run_cycle(); TEST_ASSERT_EQUAL(STATE_RUNNING, control_get_state());
+}
+void test_finite_move_deadline_and_completed_move_cancellation() {
+  step_execute(90); TEST_ASSERT_EQUAL(STATE_STEP,control_get_state());
+  simTestMillis += motionDeadlineBudget.load(); control_check_stop_deadline(simTestMillis);
+  TEST_ASSERT_EQUAL(FAULT_MOTOR_TIMEOUT,testFault);
+  setUp(); step_execute(90); testStepper.running = false;
+  simTestMillis += 100; step_update(); control_run_cycle();
+  TEST_ASSERT_EQUAL(STATE_IDLE,control_get_state());
+  simTestMillis += 10000; control_check_stop_deadline(simTestMillis);
+  TEST_ASSERT_EQUAL(FAULT_NONE,testFault);
+}
+void test_motion_checked_range_and_invalid_commands() {
+  int32_t out = 123; TEST_ASSERT_TRUE(motion_checked_steps(INT32_MAX,out));
+  TEST_ASSERT_EQUAL_INT32(INT32_MAX,out);
+  for (double value : {double(INT32_MAX)+1, -1.0, 0.0, double(NAN), double(INFINITY)}) {
+    TEST_ASSERT_FALSE(motion_checked_steps(value,out)); TEST_ASSERT_EQUAL(0,out);
+  }
+  TEST_ASSERT_FALSE(control_start_step(NAN)); TEST_ASSERT_FALSE(control_start_step(INFINITY));
+  TEST_ASSERT_FALSE(control_start_step_sequence(90,1,NAN));
+  int32_t start; TEST_ASSERT_FALSE(motor_move_steps(-2147483647L-1,0.5f,&start));
+  TEST_ASSERT_FALSE(motor_move_steps(100,NAN,&start));
+  TEST_ASSERT_EQUAL(0,testStepper.moves);
+}
+void test_below_floor_rate_is_rejected_without_silent_speedup() {
+  TEST_ASSERT_EQUAL(0,motor_milli_hz_for_rpm_calibrated(0.001f));
+  TEST_ASSERT_EQUAL(0,motor_milli_hz_for_rpm_calibrated(NAN));
+  testRpm = 0.001f; TEST_ASSERT_FALSE(control_start_continuous());
+  TEST_ASSERT_FALSE(control_start_pulse(100,100,1)); TEST_ASSERT_EQUAL(0,testStepper.starts);
+}
+
 int main() {
   UNITY_BEGIN();
+  RUN_TEST(test_deferred_start_never_survives_fault_reset_or_stop);
+  RUN_TEST(test_finite_move_deadline_and_completed_move_cancellation);
+  RUN_TEST(test_motion_checked_range_and_invalid_commands);
+  RUN_TEST(test_below_floor_rate_is_rejected_without_silent_speedup);
+  RUN_TEST(test_jog_reclamps_after_config_lowered_cap);
+  RUN_TEST(test_internal_pulse_stop_has_independent_deadline);
   RUN_TEST(test_calibration_blocks_unrelated_motion_and_pedal_mode);
   RUN_TEST(test_calibration_draft_is_not_persisted_before_save);
   RUN_TEST(test_calibration_requires_two_completed_moves);

@@ -36,7 +36,7 @@ Board illustration and pin reference above. The product illustration shows vendo
 ## What it does
 
 - **Continuous, Jog, Pulse and Step** rotation, with a configurable countdown before starting.
-- Workpiece speed from **0.001 to 3.0 RPM**, subject to the configured limit and drivetrain.
+- Workpiece speed within **0.001–3.0 RPM**, subject to geometry, calibration and the configured ceiling. The screen shows the effective minimum; for example, microstep 4 with a 300 mm part requires at least 0.004 RPM at the retained 20 Hz floor.
 - Panel potentiometer, physical direction switch and optional foot pedal control.
 - **16 saved programs**, with speed, direction, diameter and mode settings.
 - Physical **E-STOP input**, driver-alarm monitoring and guarded reset.
@@ -145,6 +145,8 @@ Calibration guides you through **Align → Measure → Verify → Save**. The co
 [Calibration screens](docs/CALIBRATION_WORKFLOW.md) · [Program editor screens](docs/PROGRAM_EDITOR.md) · [USB mirror](simulator/README.md#usb-c-live-mirror).
 
 ## Validation and limitations
+
+Unreleased source fixes cover cancelled countdowns, motion bounds/timeouts, pedal takeover, program direction and verified saves. [Changes and local validation](docs/CODE_LOGIC_REVIEW_2026-10-03.md). Published v2.1.1 downloads remain a separate release.
 
 v2.1.1 passes **438 native/production-control tests**, packaging regressions, actual upstream RMT encoder tests, Linux/Windows simulator checks, a zero-failure layout audit and three firmware builds. Published binaries come from the exact validated master CI commit. [Evidence](docs/validation/2026-10-03/fastaccelstepper/README.md).
 

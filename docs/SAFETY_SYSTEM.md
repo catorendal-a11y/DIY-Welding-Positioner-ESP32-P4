@@ -9,7 +9,7 @@ The system transitions through a rigorous state machine (defined in `control.h`)
 - **STATE_PULSE:** Pulse mode (ON/OFF cycles).
 - **STATE_STEP:** Step mode (exact angle rotation).
 - **STATE_JOG:** Touch-and-hold jog control.
-- **STATE_TIMER:** Countdown before continuous rotation starts; program auto-stop is a separate setting.
+- **Countdown UI:** Countdown precedes an explicit continuous-mode request; it is not a separate control state. Program auto-stop is a separate setting.
 - **STATE_STOPPING:** Deceleration ramp before IDLE.
 - **STATE_ESTOP:** Latched fault. ENA is driven HIGH; mechanical stopping behavior depends on the driver and load.
 
@@ -31,8 +31,8 @@ The system transitions through a rigorous state machine (defined in `control.h`)
 - **Live Speed Changes:** `applySpeedAcceleration()` after `setSpeedInMilliHz()` for immediate effect during rotation.
 
 ## 4. Thread Safety
-- **Stepper mutex:** `g_stepperMutex` (`SemaphoreHandle_t`, FreeRTOS mutex) protects all FastAccelStepper calls. Uses `xSemaphoreTake`/`xSemaphoreGive` — keeps tick interrupts enabled during cross-core contention (prevents IWDT crashes). Non-motor modules call `motor_set_target_milli_hz()` (encapsulated lock) instead of taking the mutex directly.
-- **Safety stepper stop:** ENA is disabled before cleanup. The driver-alarm path attempts `forceStop()` under a bounded mutex wait; controlTask also performs fault cleanup. The E-STOP transition publishes its state without waiting for blocking motor cleanup.
+- **Stepper mutex:** `g_stepperMutex` (`SemaphoreHandle_t`, FreeRTOS mutex) protects all FastAccelStepper calls. Uses `xSemaphoreTake`/`xSemaphoreGive` — keeps tick interrupts enabled during cross-core contention (prevents IWDT crashes). Only controlTask calls runtime motor adapter functions after ownership binding. UI/input tasks submit requests; the raw stepper pointer is not exposed.
+- **Safety stepper stop:** ENA is disabled before cleanup. Physical E-STOP/driver-alarm handling does not call the stepper library. controlTask alone performs bounded `forceStop()` cleanup and retries until `isRunning()` confirms that queued pulses drained. Reset remains blocked during cleanup; ENA stays inhibited. The E-STOP transition publishes its state without waiting for blocking motor cleanup.
 - **Atomic variables:** Cross-core shared state uses `std::atomic` with explicit memory ordering. All such flags are declared in `src/app_state.h` and defined in `src/app_state.cpp` — no scattered declarations.
 - **Pending-flag pattern:** UI callbacks `.store()` atomic flags with `memory_order_release`; Core 0 tasks `.load()` with `memory_order_acquire` and execute within their cycle. No direct motor calls from UI thread.
 - **Storage mutex:** `g_presets_mutex` semaphore protects preset vector access.
@@ -52,3 +52,9 @@ If a subscribed task stops feeding the watchdog, the configured watchdog action 
 
 ## 6. EMI Protection
 For detailed EMI mitigation (Shielding, Ferrites, TVS Diodes), see the [EMI Mitigation Guide](EMI_MITIGATION.md).
+
+## Guided commissioning and stale control
+
+The [Setup Wizard](SETUP_WIZARD.md) requires observations of the physical E-STOP input, release/reset and a separate start/stop sequence plus user confirmation. This records an operator check, not a physical stop-time measurement. Pedal starts are inhibited during setup.
+
+Coherent control snapshots feed 40 ms UI updates. Status older than 100 ms blocks new movement requests and shows a warning. Normal STOP remains unconditional; safetyTask checks its acknowledgement/completion deadlines independently of controlTask. Physical E-STOP ENA inhibition remains independent. See [implementation boundaries and device checks](CONTROL_SETUP_IMPLEMENTATION.md).

@@ -31,6 +31,7 @@ void screen_settings_create() {
     ui_create_text(card, 18, 44, 330, details[i], FONT_SUBTITLE, COL_TEXT_DIM);
   }
   ui_create_btn(screen, 24, 408, 152, 56, "<  BACK", FONT_BTN, UI_BTN_NORMAL, back_event_cb, nullptr);
+  ui_create_btn(screen, 192, 408, 288, 56, "SETUP WIZARD", FONT_BTN, UI_BTN_NORMAL, nav_click_cb, (void*)(intptr_t)SCREEN_SETUP);
   ui_create_btn(screen, 496, 408, 280, 56, "About", FONT_BTN, UI_BTN_NORMAL, nav_click_cb,
                 (void*)(intptr_t)SCREEN_ABOUT);
 }

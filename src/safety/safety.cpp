@@ -17,7 +17,6 @@ static std::atomic<bool> estopLocked{false};
 static std::atomic<uint32_t> readyTasks{0};
 void safety_task_ready(uint32_t bit) { readyTasks.fetch_or(bit); }
 
-static FastAccelStepper* estopStepper = nullptr;
 static std::atomic<bool> estopResetPending{false};
 static std::atomic<uint8_t> s_faultReason{FAULT_NONE};
 void safety_report_motor_fault(FaultReason reason) {
@@ -43,15 +42,6 @@ static void safety_set_fault_reason(FaultReason reason) {
   s_faultReason.store((uint8_t)reason, std::memory_order_release);
 }
 
-static void safety_force_stop_stepper() {
-  if (estopStepper == nullptr || g_stepperMutex == nullptr) return;
-  if (xSemaphoreTake(g_stepperMutex, 0) != pdTRUE) {
-    // Motor cleanup is retried by controlTask.
-    return;
-  }
-  estopStepper->forceStop();
-  xSemaphoreGive(g_stepperMutex);
-}
 
 #if DEBUG_BUILD
 static uint32_t g_estopConfirmed = 0;
@@ -60,15 +50,7 @@ static uint32_t g_estopConfirmed = 0;
 // ───────────────────────────────────────────────────────────────────────────────
 // SAFETY INITIALIZATION — Cache stepper pointer for ISR
 // ───────────────────────────────────────────────────────────────────────────────
-void safety_cache_stepper() {
-  if (g_stepperMutex) {
-    xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
-  }
-  estopStepper = motor_get_stepper();
-  if (g_stepperMutex) {
-    xSemaphoreGive(g_stepperMutex);
-  }
-}
+void safety_cache_stepper() {} // Compatibility: no library pointer crosses task boundaries.
 
 // ───────────────────────────────────────────────────────────────────────────────
 // ESTOP INTERRUPT SERVICE ROUTINE
@@ -191,7 +173,7 @@ static void safety_poll_driver_alarm(void) {
       safety_set_fault_reason(FAULT_DRIVER_ALARM);
       digitalWrite(PIN_ENA, HIGH);
       g_wakePending.store(true, std::memory_order_release);
-      safety_force_stop_stepper();
+      // controlTask owns forceStop cleanup.
       if (control_get_state() != STATE_ESTOP) {
         control_transition_to(STATE_ESTOP);
         estopLocked.store(true, std::memory_order_release);
@@ -234,7 +216,7 @@ void safetyTask(void* pvParameters) {
       if (trigMs == 0) {
         trigMs = millis();
         g_estopTriggerMs.store(trigMs, std::memory_order_release);
-        safety_force_stop_stepper();
+        // controlTask owns forceStop cleanup.
       }
 
       uint32_t elapsedMs = millis() - trigMs;

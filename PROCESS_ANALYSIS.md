@@ -1,19 +1,19 @@
-# Process flow analysis — v2.1.0
+# Process flow analysis — v2.1.1
 
-Updated 2 October 2026. This document describes current production flow; the [earlier analysis is archived](docs/archive/PROCESS_ANALYSIS_v2.0.5.md). Physical response times require measurement.
+Updated 3 October 2026. This document describes current production flow; the [earlier analysis is archived](docs/archive/PROCESS_ANALYSIS_v2.0.5.md). Physical response times require measurement.
 
 ## Task architecture
 
 | Task | Core | Priority | Stack | Responsibility |
 | --- | --- | --- | --- | --- |
 | safetyTask | 0 | 5 | 4 KB | Fault polling, E-STOP debounce, driver alarm, watchdog |
-| motorTask | 0 | 4 | 5 KB | Speed source/ADC, pedal interlock, speed application |
+| inputTask | 0 | 4 | 5 KB | GPIO/ADC sampling, pedal interlock and coherent input publication |
 | controlTask | 0 | 3 | 4 KB | Motion commands, STOP latch, mode state, settings application, fault cleanup/reset |
 | lvglTask | 1 | 2 | 64 KB | Actual LVGL screens, touch, dimming, blocking fault overlay |
 | storageTask | 1 | 1 | 12 KB | Debounced NVS writes/retries and housekeeping |
 | usbMirrorTask, optional | 1 | 1 | 8 KB | Bounded pixel transport and gated remote pointer input |
 
-Task creation is checked. Motion stays inhibited until four critical tasks report ready. Watchdog setup, registration and feed failures are checked. Storage/UI are not watchdog subscribers; motor/control/safety are.
+Task creation is checked. Motion stays inhibited until four critical tasks report ready. Watchdog setup, registration and feed failures are checked. Storage/UI are not watchdog subscribers; input/control/safety are. FastAccelStepper has its own Core 0 task at priority 24; the table lists application tasks. RMT channel allocation also runs on Core 0 during boot. Task priorities do not establish a physical latency guarantee.
 
 ## Motion dispatch and STOP
 
@@ -26,10 +26,10 @@ flowchart LR
   Latch --> Invalidate[Invalidate pending starts]
   Invalidate --> Control
   Control --> Gate[Readiness / fault / pedal / state checks]
-  Gate --> Motor[Serialized motor API]
+  Gate --> Motor[Single-owner motor API]
 ```
 
-Commands are received once before dispatch. STOP is not overwritten by START; it invalidates older start tickets. JOG release cancels queued JOG and active JOG requires UI renewal within 150 ms. These software intervals are not measurements of physical standstill.
+Runtime motor calls belong to controlTask; inputTask publishes sampled inputs and UI reads coherent control snapshots. Commands are received once before dispatch. STOP is not overwritten by START; it invalidates older start tickets. JOG release cancels queued JOG and active JOG requires UI renewal within 150 ms. These software intervals are not measurements of physical standstill.
 
 Motor configuration applies through controlTask only while idle. UI reports applied/cancelled and storage status rather than claiming persistence immediately. Program start snapshots parameters; program speed/direction ownership does not depend on an untouched panel's static RPM difference.
 
@@ -43,7 +43,7 @@ Calculated RPM comes from step timing and geometry, not an encoder. Source/direc
 
 GPIO34 expects HIGH healthy / LOW fault. A FALLING ISR writes ENA HIGH and stores pending/wake flags. ISR avoids motor calls, logging, allocation and ordinary flash functions. ENA HIGH disable is a driver/interface assumption that must be verified.
 
-The safety task publishes a latched ESTOP transition; potentially blocking motor cleanup runs in controlTask. Driver-alarm handling disables ENA first and attempts bounded initial mutex cleanup. The control task retries fault cleanup as needed. A brief input glitch also remains faulted until explicit reset.
+The safety task publishes a latched ESTOP transition; potentially blocking motor cleanup runs in controlTask. Driver-alarm handling disables ENA first. Only the control task performs and retries library cleanup; reset remains blocked until the asynchronous FastAccelStepper queue drains. A brief input glitch also remains faulted until explicit reset.
 
 The overlay displays fault/input state, wakes the backlight and blocks underlying controls. RESET TO IDLE is available only when physical input/alarm/pedal conditions permit it; callback and control processing both guard reset. Reset never starts motion.
 
@@ -65,7 +65,7 @@ Flash commits may interfere with rendering/cache access. `g_flashWriting` signal
 
 Navigation requests and theme recreation are deferred through the UI loop, outside callback deletion of triggering widgets. Static widget pointers are invalidated before screen reconstruction. Program draft lifetime is separate from screen widgets, preserving edits across child screens.
 
-V5 shares a graphite/orange theme, 14 px body floor and generated 104 px numeric font across firmware/simulator. Twenty-two ScreenIds and a separate fault overlay are registered. Calibration keeps scrollable content and fixed motion actions. GT911 read failure reports RELEASED, and JOG renewal protects against stalled UI input.
+V5 shares a graphite/orange theme, 14 px body floor and generated 104 px numeric font across firmware/simulator. Twenty-three ScreenIds and a separate fault overlay are registered. Calibration uses fixed Align → Measure → Verify → Save stages; measured and verification moves must complete, and only a verified draft with its save receipt becomes persistent. Setup adds a four-stage wizard. New/Edit Program uses fixed positions, separate run/available modes and full-screen validated name/RPM input. GT911 read failure reports RELEASED, and JOG renewal protects against stalled UI input.
 
 ## USB mirror
 
@@ -73,4 +73,4 @@ Mirror firmware sends dirty RGB565 rectangles through bounded writes. Failed tra
 
 ## Verification and remaining work
 
-The published integration passed 403 native tests, actual LVGL self-test and release/debug/mirror CI builds. Tests directly cover several production policies; older suites model other behavior and simulator motor/storage are stubbed. Device fault injection, physical stop response, power loss, cable-break behavior, USB backpressure and TIG HF conditions remain separate checks. See [improvement report](docs/IMPROVEMENTS_2026-10-01.md), [current status](STATUS.md), [hardware guide](docs/HARDWARE_SETUP.md) and [flashing guide](docs/releases/FLASHING.md).
+Local validation passed 438 native/production-control cases, six packaging regressions, actual upstream RMT encoder profiles, actual LVGL self-test, a zero-failure layout audit and release/debug/mirror compilation. Publication requires all six CI jobs on the exact tagged master commit. Tests directly cover several production policies; older suites model other behavior and simulator motor/storage are stubbed. Device fault injection, physical stop response, power loss, cable-break behavior, USB backpressure and TIG HF conditions remain separate checks. See [FastAccelStepper re-audit](docs/FASTACCELSTEPPER_1_4_REAUDIT.md), [control/calibration implementation](docs/CONTROL_SETUP_IMPLEMENTATION.md), [current status](STATUS.md), [hardware guide](docs/HARDWARE_SETUP.md) and [flashing guide](docs/releases/FLASHING.md).

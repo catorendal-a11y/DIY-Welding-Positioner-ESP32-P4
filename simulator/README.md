@@ -2,7 +2,7 @@
 
 ## Download and try
 
-[Download the portable Windows x64 ZIP](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.1.0/welding-positioner-v2.1.0-simulator-windows-x64.zip). Extract all files and double-click **Start Simulator.cmd**. No development tools or hardware are required. Runtime libraries and license notices are included. See the [portable guide](../docs/releases/SIMULATOR.md). The build instructions below are for source development.
+[Download the portable Windows x64 ZIP](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.1.1/welding-positioner-v2.1.1-simulator-windows-x64.zip). Extract all files and double-click **Start Simulator.cmd**. No development tools or hardware are required. Runtime libraries and license notices are included. See the [portable guide](../docs/releases/SIMULATOR.md). The build instructions below are for source development.
 
 Runs the existing LVGL screens on Windows using SDL2. This is a UI simulator only:
 no ESP32 hardware, motor driver, GPIO, ESTOP input, flash, or serial protocol is
@@ -76,6 +76,10 @@ PC clicks are ignored until armed.
 
 PlatformIO Monitor cannot use COM5 while the viewer is connected.
 
+## Source dependency update
+
+v2.1.1 uses LVGL **9.6.0** with an explicit SDL software renderer. SDL2 **2.32.10** is current in the compatible SDL2 series on the local Windows toolchain; Linux CI uses its distro SDL2 package. SDL3 is a different API and is not used by the LVGL SDL2 driver. The simulated drive models asynchronous force-stop drain, and movement result codes match the typed 1.4.0 API. [Full migration report](../docs/DEPENDENCY_UPGRADE_2026-10-02.md).
+
 ## Requirements
 
 - CMake
@@ -111,7 +115,7 @@ xvfb-run -a simulator/build/rotator_simulator --self-test
 
 ## Maintenance checks and scenarios (source v2.1.1)
 
-The source simulator now shares the production program executor, pulse timing policy and persistence-generation policy. Other hardware/control adapters remain simulated. The v2.1.0 public ZIP predates these additions.
+The source simulator now compiles the production command dispatcher, motor adapter, all four motion modes and program executor. Only hardware/input/safety/storage adapters are simulated; the save-generation policy is shared. Control runs every 5 ms, independently of 40 ms UI updates. Simulator timing and drive deceleration are models, not measurements. The v2.1.1 portable ZIP includes these additions; the historical v2.1.0 ZIP predates them.
 
 ```powershell
 simulator/build/rotator_simulator.exe --audit-layout
@@ -119,8 +123,32 @@ simulator/build/rotator_simulator.exe --build-info
 simulator/build/rotator_simulator.exe --scenario nvs-failure
 ```
 
-Scenarios: `estop`, `driver-alarm`, `stale-adc`, `i2c-failure`, `rejected-motion`, `nvs-failure`. Rejected motion faults when START is pressed. Input faults block reset until cleared; restart the simulator to select another scenario. These scenarios never connect to hardware.
+Scenarios: `estop`, `driver-alarm`, `stale-adc`, `i2c-failure`, `rejected-motion`, `nvs-failure`, `stalled-control`. Rejected motion faults when START is pressed. Input faults block reset until cleared; restart the simulator to select another scenario. These scenarios never connect to hardware.
 
 The layout audit measures actual LVGL fonts on registered screens and fault overlays at 800×480. It checks clipped text, insufficient label height and labels outside non-scrolling parents; explicit ellipsis/scrolling and compact event summaries are intentional. Operator-generated text still needs practical visual review.
 
 CMake accepts `LVGL_DIR`, `ARDUINOJSON_DIR` and `SIMULATOR_DEPENDENCY_ROOT` overrides. Windows CI builds, tests and packages the portable EXE from the same source commit. Packaging rejects mismatched/dirty binaries and missing license files; `--allow-dirty` is only for labeled local development archives.
+
+## Setup wizard regression and preview
+
+`--self-test` navigates the actual wizard, motor configuration and calibration editor; observes simulated E-STOP/release/reset; checks separate start/stop; injects failed completion writes and checks retry. It also checks new/existing installation entry, cancellation and stale control/STOP supervision. Simulated physical travel is accelerated only during the commissioning regression; control timers remain unchanged.
+
+```powershell
+simulator/build/rotator_simulator.exe --commissioning-preview .pio/setup-preview
+```
+
+This runs the same regression and exports the four stages plus failed-save and completed views as BMP files. It never connects to the device.
+
+## Calibration regression and preview
+
+The simulator compiles the actual calibration module and session policy alongside production control. `--self-test` checks interrupted motion, draft isolation, failed/passing verification and save failure/retry, including STOP while saving. `--calibration-preview <directory>` exports eight actual LVGL states and checks their label layouts. See [the calibration guide](../docs/CALIBRATION_WORKFLOW.md). LVGL argument and widget-tree validation are enabled in the simulator; invalid calls abort the test. Diagnostics uses cached driver/DIR timing information without calling the stepper from the UI.
+
+## Program editor regression and preview
+
+The actual LVGL self-test checks idempotent run-mode selection, availability, invalid RPM, decimal commas, UTF-8 byte limits, a 31-character wide name, fine RPM adjustment in Continuous/Pulse/Step settings, draft preservation, save/cancel and keyboard cleanup during navigation.
+
+```powershell
+simulator/build/rotator_simulator.exe --program-preview .pio/program-preview
+```
+
+This runs the same interaction regression and exports seven actual LVGL states with label-layout checks. [Program editor guide](../docs/PROGRAM_EDITOR.md). It does not connect to hardware.

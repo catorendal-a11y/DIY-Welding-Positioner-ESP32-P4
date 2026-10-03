@@ -150,7 +150,7 @@ static void back_event_cb(lv_event_t* e) {
 
 static void step_reset_btn_cb(lv_event_t* e) {
   (void)e;
-  if (control_get_state() == STATE_IDLE) {
+  if (ui_control_state() == STATE_IDLE) {
     control_reset_step_accumulator();
     update_info_panel();
   }
@@ -159,7 +159,7 @@ static void step_reset_btn_cb(lv_event_t* e) {
 static void preset_cb(lv_event_t* e) {
   int index = (int)(intptr_t)lv_event_get_user_data(e);
   if (index < 4) {
-    if (control_get_state() == STATE_IDLE) {
+    if (ui_control_state() == STATE_IDLE) {
       control_reset_step_accumulator();
     }
     currentAngle = STEP_PRESET_DEG[index];
@@ -176,7 +176,7 @@ static void custom_keyboard_cb(lv_event_t* e) {
       const char* txt = lv_textarea_get_text(customTa);
       float val = step_parse_first_float(txt);
       if (val > 0.0f && step_angle_valid(val)) {
-        if (control_get_state() == STATE_IDLE) {
+        if (ui_control_state() == STATE_IDLE) {
           control_reset_step_accumulator();
         }
         currentAngle = val;
@@ -199,7 +199,7 @@ static void diameter_keyboard_cb(lv_event_t* e) {
     if (diaTa) {
       const char* txt = lv_textarea_get_text(diaTa);
       float mm = step_parse_first_float(txt);
-      if (control_get_state() == STATE_IDLE && mm >= 1.0f && mm <= 20000.0f) {
+      if (ui_control_state() == STATE_IDLE && mm >= 1.0f && mm <= 20000.0f) {
         speed_set_workpiece_diameter_mm(mm);
         refresh_diameter_summary();
         update_info_panel();
@@ -212,7 +212,7 @@ static void diameter_keyboard_cb(lv_event_t* e) {
 }
 
 static void diameter_btn_cb(lv_event_t* e) {
-  if (control_get_state() != STATE_IDLE) return;
+  if (ui_control_state() != STATE_IDLE) return;
   (void)e;
   if (diaKb) return;
   if (customNumpad) {
@@ -314,7 +314,7 @@ static void rpm_plus_cb(lv_event_t* e) {
 
 static void step_event_cb(lv_event_t* e) {
   (void)e;
-  if (control_get_state() != STATE_IDLE) return;
+  if (ui_control_state() != STATE_IDLE) return;
   step_push_rpm_to_speed_and_label();
   control_start_step(currentAngle);
 }
@@ -336,7 +336,7 @@ void screen_step_create() {
   targetRpm = speed_get_target_rpm();
   step_clamp_target_rpm();
 
-  ui_create_settings_header(screen, "STEP MODE", "ANGLE MOVE", COL_HDR_MUTED);
+  ui_create_settings_header(screen, "STEP MODE", "EST. ANGLE MOVE", COL_HDR_MUTED);
 
   // POST mockup #6: gauge left, stack right; keep x+w <= SCREEN_W (800) for presets + aux row + footer
   const int kProSz = 276;
@@ -357,7 +357,7 @@ void screen_step_create() {
   const int kFooterW = 246;
 
   lv_obj_t* leftCard = ui_create_post_card(screen, kGaugeX, kGaugeY, kProSz, kProSz);
-  lv_obj_remove_flag(leftCard, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+  lv_obj_set_overflow_visible(leftCard, false);
 
   lv_obj_t* protractor = lv_obj_create(leftCard);
   lv_obj_set_size(protractor, kProSz, kProSz);
@@ -367,7 +367,7 @@ void screen_step_create() {
   lv_obj_set_style_border_width(protractor, 1, 0);
   lv_obj_set_style_border_color(protractor, COL_BORDER, 0);
   lv_obj_set_style_pad_all(protractor, 0, 0);
-  lv_obj_remove_flag(protractor, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(protractor, false);
 
   {
     lv_obj_t* tick0 = lv_line_create(protractor);
@@ -406,8 +406,8 @@ void screen_step_create() {
   lv_obj_set_style_arc_color(arcWidget, COL_GAUGE_BG, LV_PART_MAIN);
   lv_obj_set_style_arc_width(arcWidget, 12, LV_PART_MAIN);
   lv_obj_set_style_opa(arcWidget, 0, LV_PART_KNOB);
-  lv_obj_remove_flag(arcWidget, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_remove_flag(arcWidget, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_clickable(arcWidget, false);
+  lv_obj_set_scrollable(arcWidget, false);
 
   angleArcLabel = lv_label_create(protractor);
   {
@@ -421,8 +421,8 @@ void screen_step_create() {
   lv_obj_center(angleArcLabel);
 
   lv_obj_t* targetCard = ui_create_post_card(screen, kTargetX, kTargetY, kTargetW, kTargetH);
-  lv_obj_remove_flag(targetCard, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_add_flag(targetCard, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_scrollable(targetCard, false);
+  lv_obj_set_clickable(targetCard, true);
   lv_obj_add_event_cb(targetCard, target_card_cb, LV_EVENT_CLICKED, nullptr);
 
   lv_obj_t* targetLbl = lv_label_create(targetCard);
@@ -442,7 +442,7 @@ void screen_step_create() {
   lv_obj_set_pos(angleLabel, 144, 18);
 
   lv_obj_t* rpmCard = ui_create_post_card(screen, kTargetX, kRpmY, kTargetW, kTargetH);
-  lv_obj_remove_flag(rpmCard, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_clickable(rpmCard, false);
 
   lv_obj_t* rpmTitle = lv_label_create(rpmCard);
   lv_label_set_text(rpmTitle, "RPM");
@@ -615,16 +615,16 @@ void screen_step_update() {
   if (!screens_is_active(SCREEN_STEP)) return;
 
   if (stepActionBtn) {
-    if (control_get_state() == STATE_IDLE) {
-      lv_obj_remove_state(stepActionBtn, LV_STATE_DISABLED);
+    if (ui_control_state() == STATE_IDLE) {
+      lv_obj_set_disabled(stepActionBtn, false);
     } else {
-      lv_obj_add_state(stepActionBtn, LV_STATE_DISABLED);
+      lv_obj_set_disabled(stepActionBtn, true);
     }
   }
 
-  SystemState state = control_get_state();
+  SystemState state = ui_control_state();
   if (state == STATE_STEP) {
-    float accum = control_get_step_accumulated();
+    float accum = ui_control_view().progress_degrees;
     char buf[32];
     snprintf(buf, sizeof(buf), "%.0f / %.0f deg", accum, currentAngle);
     if (angleArcLabel) lv_label_set_text(angleArcLabel, buf);

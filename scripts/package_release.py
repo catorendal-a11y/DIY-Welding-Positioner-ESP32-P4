@@ -27,7 +27,7 @@ def license_notices():
                dependencies / 'lvgl/COPYRIGHTS.md',
                dependencies / 'lvgl/src/stdlib/builtin/LICENSE_TLSF.txt',
                dependencies / 'lvgl/src/stdlib/builtin/LICENSE_SPRINTF.txt',
-               dependencies / 'lvgl/scripts/built_in_font/font_license/FontAwesome5/LICENSE.txt']
+               dependencies / 'lvgl/scripts/generators/built_in_font/font_license/FontAwesome5/LICENSE.txt']
     notices.extend(sorted((ROOT / 'lib').glob('*/license.txt')))
     sections = ['Project, font and direct dependency notices. Framework and other components retain their original licenses in the pinned source distributions.\n']
     for path in notices:

@@ -161,7 +161,7 @@ static std::atomic<bool> buttonsActive{false};
 static std::atomic<float> lastPotAdc{2047.5f};
 static std::atomic<bool> pedalEnabled{false};
 static std::atomic<bool> pedalApplyPending{false};
-static float pedalFiltered = 2047.5f;
+static std::atomic<float> pedalFiltered{2047.5f};
 static std::atomic<float> cachedTargetRpm{MIN_RPM};
 static std::atomic<bool> sliderPriorityOverride{false};
 static uint8_t lastDirSwitchState = 1;
@@ -305,7 +305,7 @@ void speed_init() {
   pedalEnabled.store(pedalPersist, std::memory_order_release);
 
   LOG_I("Speed control init: pot=%.0f pedal=%.0f ads=%d pedal_on=%d",
-        adcFiltered.load(std::memory_order_acquire), pedalFiltered, (int)ads1115Connected,
+        adcFiltered.load(std::memory_order_acquire), pedalFiltered.load(), (int)ads1115Connected,
         (int)pedalEnabled.load(std::memory_order_acquire));
 }
 
@@ -409,7 +409,7 @@ void speed_apply() {
     if (state != STATE_IDLE && state != STATE_ESTOP) safety_report_input_fault();
     return;
   }
-  float activeAdc = usePedal ? pedalFiltered : adcFiltered.load(std::memory_order_acquire);
+  float activeAdc = usePedal ? pedalFiltered.load(std::memory_order_acquire) : adcFiltered.load(std::memory_order_acquire);
   float adc = constrain(activeAdc, 0.0f, 4095.0f);
   float normalized = (3315.0f - adc) / 3315.0f;
   normalized = constrain(normalized, 0.0f, 1.0f);

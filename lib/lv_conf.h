@@ -1,4 +1,4 @@
-// LVGL 9.5 Configuration File for TIG Rotator Controller
+// LVGL 9.6 Configuration File for TIG Rotator Controller
 // ESP32-P4 4.3" Touch Display (800x480, 16-bit color, PSRAM)
 
 #ifndef LV_CONF_H
@@ -11,7 +11,13 @@
 // ───────────────────────────────────────────────────────────────────────────────
 // COLOR SETTINGS
 // ───────────────────────────────────────────────────────────────────────────────
-#define LV_COLOR_DEPTH          16
+#define LV_COLOR_FORMAT_DEFAULT LV_COLOR_FORMAT_RGB565
+
+// LVGL 9.6 software blending/style caching improve rendering without a GPU.
+#define LV_OBJ_STYLE_CACHE 1
+#define LV_USE_CHECK_ARG 1
+#define LV_USE_CHECK_OBJ_CLASSTYPE 0
+#define LV_USE_CHECK_OBJ_VALIDITY 0
 
 // ───────────────────────────────────────────────────────────────────────────────
 // MEMORY SETTINGS
@@ -48,7 +54,7 @@
 #define LV_FONT_DEFAULT          &lv_font_montserrat_14
 
 // ───────────────────────────────────────────────────────────────────────────────
-// WIDGETS — LVGL 9.5 names (some renamed from 8.x)
+// WIDGETS — LVGL 9.6 names (some renamed from 8.x)
 // ───────────────────────────────────────────────────────────────────────────────
 #define LV_USE_ANIMIMG           0     // Was LV_USE_ANIMIMAGE in LVGL 8 — renamed in 9!
 #define LV_USE_ARC               1     // For RPM gauge arc
@@ -63,10 +69,11 @@
 #define LV_USE_IMAGE             1
 #define LV_USE_IMAGEBUTTON       0
 #define LV_USE_KEYBOARD          1     // For program name entry
+#define LV_USE_SPAN              0     // Unused; upstream 9.6 validator treats spans as widgets
 #define LV_USE_LABEL             1
 #define LV_USE_LED               0
 #define LV_USE_LINE              1
-#define LV_USE_LIST              1     // For programs list
+#define LV_USE_LIST              0     // Lists use the supported flex container API
 #define LV_USE_MENU              0
 #define LV_USE_MSGBOX            1     // For confirm dialogs
 #define LV_USE_ROLLER            0
@@ -79,7 +86,7 @@
 #define LV_USE_TABLE             0
 #define LV_USE_TABVIEW           0
 #define LV_USE_TILEVIEW          0
-#define LV_USE_WIN               1
+#define LV_USE_WIN               0
 
 // ───────────────────────────────────────────────────────────────────────────────
 // LVGL 9 SPECIFIC FEATURES

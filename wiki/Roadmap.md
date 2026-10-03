@@ -1,6 +1,16 @@
 # Roadmap
 
-## v2.1.0 - Current Release (V5 UI and input reliability)
+## v2.1.1 - Current Release
+
+### v2.1.1 (2026-10-03)
+- [x] LVGL 9.6 / FastAccelStepper 1.4, explicit RMT and Core 0 channel allocation
+- [x] Single-owner runtime motor control and coherent snapshots
+- [x] Guided setup and Align → Measure → Verify → Save calibration
+- [x] Revised New/Edit Program with validated name/RPM input and fine adjustment
+- [x] Portable Windows simulator and three firmware variants from exact validated CI artifacts
+- [x] English documentation, runtime screenshots and complete download checksums
+
+## v2.1.0 - V5 UI and input reliability
 
 ### v2.1.0 (2026-10-02)
 - [x] V5 UI across 22 screens, idle RPM +/− and visible fault reset
@@ -17,7 +27,7 @@
 
 ## v2.0.8 - version alignment
 
-Historical release; v2.1.0 above is current.
+Historical release; v2.1.1 above is current.
 
 ### v2.0.8 (2026-04-29)
 - [x] **`FW_VERSION` v2.0.8** — README, STATUS, wiki, implementation docs, UI SVGs, issue templates synced to canonical release tag

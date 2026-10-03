@@ -14,7 +14,7 @@ static lv_obj_t *rpmLabel, *speedCaption, *stateLabel, *sourceLabel, *surfaceLab
 static lv_obj_t *diameterLabel, *limitLabel, *detailLabel, *speedBar, *modeTitle;
 static lv_obj_t *startBtn, *stopBtn, *menuBtn, *minusBtn, *plusBtn, *cwBtn, *ccwBtn;
 static lv_color_t ink() { return lv_color_hex(0x11191C); }
-static bool can_edit() { return control_get_state() == STATE_IDLE && !safety_inhibit_motion(); }
+static bool can_edit() { return ui_control_fresh() && ui_control_state() == STATE_IDLE && !safety_inhibit_motion(); }
 static void start_cb(lv_event_t*) {
   if (can_edit()) control_start_continuous();
 }
@@ -36,9 +36,9 @@ static void direction_cb(lv_event_t* e) {
 }
 static void enabled(lv_obj_t* o, bool yes) {
   if (yes)
-    lv_obj_remove_state(o, LV_STATE_DISABLED);
+    lv_obj_set_disabled(o, false);
   else
-    lv_obj_add_state(o, LV_STATE_DISABLED);
+    lv_obj_set_disabled(o, true);
 }
 void screen_main_create() {
   lv_obj_t* s = screenRoots[SCREEN_MAIN];
@@ -95,14 +95,15 @@ void screen_main_create() {
                           stop_cb, nullptr);
   lv_obj_set_user_data(startBtn, (void*)(uintptr_t)UI_ACTION_START);
   lv_obj_set_user_data(stopBtn, (void*)(uintptr_t)UI_ACTION_STOP);
-  lv_obj_add_flag(stopBtn, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_hidden(stopBtn, true);
 }
 void screen_main_update() {
   if (!screens_is_active(SCREEN_MAIN) || !rpmLabel) return;
-  const SystemState st = control_get_state();
+  const auto& view = ui_control_view();
+  const SystemState st = ui_control_state();
   const bool moving = st != STATE_IDLE && st != STATE_ESTOP;
-  const bool blocked = safety_inhibit_motion() || safety_is_estop_locked() || st == STATE_ESTOP;
-  float rpm = st == STATE_ESTOP ? 0.0f : moving ? speed_get_actual_rpm() : speed_get_target_rpm();
+  const bool blocked = !ui_control_fresh() || safety_inhibit_motion() || safety_is_estop_locked() || st == STATE_ESTOP;
+  float rpm = st == STATE_ESTOP ? 0.0f : moving ? view.estimated_rpm : view.target_rpm;
   float diameter = speed_get_workpiece_diameter_mm();
   if (diameter <= 0) diameter = D_EMNE * 1000.0f;
   char rpmText[16];
@@ -113,7 +114,7 @@ void screen_main_update() {
   lv_bar_set_value(speedBar, (int)(1000.0f * rpm / speed_get_rpm_max()), LV_ANIM_OFF);
   lv_label_set_text_fmt(surfaceLabel, "%.0f mm/min", (double)(rpm * diameter * 3.14159265f));
   lv_label_set_text_fmt(diameterLabel, "WORKPIECE DIA %.0f mm", (double)diameter);
-  bool cw = moving ? motor_direction_is_cw() : speed_get_direction() == DIR_CW;
+  bool cw = view.direction == DIR_CW;
   for (lv_obj_t* b : {cwBtn, ccwBtn}) {
     const bool chosen = (b == cwBtn) == cw;
     lv_obj_set_style_bg_color(b, chosen ? ink() : COL_BTN_BG, 0);
@@ -132,14 +133,14 @@ void screen_main_update() {
   enabled(menuBtn, !moving);
   enabled(minusBtn, !moving && !blocked);
   enabled(plusBtn, !moving && !blocked);
-  SpeedInputSource source = speed_get_input_source();
+  SpeedInputSource source = view.source;
   lv_label_set_text(sourceLabel, st == STATE_JOG                ? "Jog setting"
                                  : st == STATE_STEP             ? "Step setting"
                                  : source == SPEED_SOURCE_PEDAL ? "Pedal analog"
                                  : source == SPEED_SOURCE_UI    ? "Screen / program"
                                                                 : "Panel dial");
-  lv_label_set_text(stateLabel, blocked  ? "MOTION LOCKED"
-                                : moving ? control_get_state_string()
+  lv_label_set_text(stateLabel, !ui_control_fresh() ? "STATUS UNAVAILABLE" : blocked ? "MOTION LOCKED"
+                                : moving ? control_state_name(st)
                                          : "SYSTEM READY");
   lv_obj_set_style_text_color(stateLabel, blocked ? COL_RED : moving ? COL_ACCENT : COL_GREEN, 0);
   lv_label_set_text(detailLabel, blocked                     ? "Clear fault before restart"
@@ -149,12 +150,12 @@ void screen_main_update() {
   if (storage_status() != STORAGE_SAVED)
     lv_label_set_text(
         detailLabel, storage_status() == STORAGE_ERROR ? "SAVE FAILED / retry pending" : "Saving changes...");
-  if (moving) {
-    lv_obj_add_flag(startBtn, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_remove_flag(stopBtn, LV_OBJ_FLAG_HIDDEN);
+  if (moving || !ui_control_fresh()) {
+    lv_obj_set_hidden(startBtn, true);
+    lv_obj_set_hidden(stopBtn, false);
   } else {
-    lv_obj_remove_flag(startBtn, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(stopBtn, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(startBtn, false);
+    lv_obj_set_hidden(stopBtn, true);
   }
   enabled(startBtn, !blocked);
   lv_label_set_text(lv_obj_get_child(startBtn, 0),

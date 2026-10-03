@@ -1,0 +1,11 @@
+SIM SELFTEST: start
+SIM SELFTEST: screens ok
+SIM SELFTEST: main controls ok
+SIM SELFTEST: run mode flows ok
+SIM SELFTEST: settings/programs ok
+SIM SELFTEST: confirm/overlay ok
+SIM SELFTEST: fault scenarios/save generations ok
+SIM SELFTEST: calibration interruption/draft/verify/save ok
+SIM SELFTEST: commissioning UI/save failure/retry ok
+SIM SELFTEST: stale control and independent STOP deadline ok
+SIM SELFTEST: PASS

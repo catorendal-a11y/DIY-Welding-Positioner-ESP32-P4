@@ -1,0 +1,12 @@
+RAM:   [=         ]  10.0% (used 32692 bytes from 327680 bytes)
+Flash: [==        ]  16.9% (used 1109552 bytes from 6553600 bytes)
+========================= [SUCCESS] Took 19.99 seconds =========================
+RAM:   [=         ]  10.0% (used 32884 bytes from 327680 bytes)
+Flash: [==        ]  17.5% (used 1143686 bytes from 6553600 bytes)
+========================= [SUCCESS] Took 19.62 seconds =========================
+RAM:   [=         ]  10.0% (used 32868 bytes from 327680 bytes)
+Flash: [==        ]  17.0% (used 1112782 bytes from 6553600 bytes)
+========================= [SUCCESS] Took 19.22 seconds =========================
+esp32p4-release  SUCCESS   00:00:19.994
+esp32p4-debug    SUCCESS   00:00:19.617
+esp32p4-mirror   SUCCESS   00:00:19.224

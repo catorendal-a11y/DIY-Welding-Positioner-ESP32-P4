@@ -1,0 +1,11 @@
+test_clean_staging_excludes_previous_files_and_preserves_identity (test_package_simulator.SimulatorPackagingTests.test_clean_staging_excludes_previous_files_and_preserves_identity) ... ok
+test_packages_split_runtime_license_notices (test_package_simulator.SimulatorPackagingTests.test_packages_split_runtime_license_notices) ... ok
+test_rejects_dirty_binary_for_publication (test_package_simulator.SimulatorPackagingTests.test_rejects_dirty_binary_for_publication) ... ok
+test_rejects_mislabeled_binary (test_package_simulator.SimulatorPackagingTests.test_rejects_mislabeled_binary) ... ok
+test_rejects_missing_split_cpp_runtime_license (test_package_simulator.SimulatorPackagingTests.test_rejects_missing_split_cpp_runtime_license) ... ok
+test_requires_license_notices (test_package_simulator.SimulatorPackagingTests.test_requires_license_notices) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.200s
+
+OK

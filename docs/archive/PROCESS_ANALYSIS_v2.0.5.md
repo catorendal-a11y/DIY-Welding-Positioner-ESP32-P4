@@ -1,6 +1,6 @@
 # Historical process analysis — superseded
 
-This archive records the earlier analysis and proposals. It contains outdated flows and unmeasured timing estimates. Use [current process analysis](../../PROCESS_ANALYSIS.md) for v2.1.0 behavior.
+This archive records the earlier analysis and proposals. It contains outdated flows and unmeasured timing estimates. Use [current process analysis](../../PROCESS_ANALYSIS.md) for the current firmware behavior.
 
 # Process Flow Analysis — TIG Rotator Controller
 

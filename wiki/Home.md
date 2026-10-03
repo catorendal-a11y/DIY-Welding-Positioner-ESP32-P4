@@ -2,15 +2,15 @@
 
 **ESP32-P4 / C6 GUITION JC4880P443C** | Open-source firmware for TIG/MIG welding rotators
 
-## Current Status: v2.1.0 - V5 UI and input reliability
+## Current Status: v2.1.1 - LVGL 9.6, guided calibration and program editing
 
-Release **v2.1.0** is the current firmware identifier (**`FW_VERSION`**), with V5 UI, STOP/pedal/JOG interlocks and persistence fixes. The previous v2.0.9 release documented TIG welding validation: the controller works during welding when the ESP32-P4 screen, stepper driver, and motor PSU are installed inside the same grounded metal enclosure.
+Release **v2.1.1** is the current firmware identifier (**`FW_VERSION`**), retaining V5 styling with LVGL 9.6, FastAccelStepper 1.4, single-owner control, guided setup/calibration and the revised program editor. This update is host-tested and has not been flashed or physically tested during publication. The previous v2.0.9 release documented TIG welding validation: the controller works during welding when the ESP32-P4 screen, stepper driver, and motor PSU are installed inside the same grounded metal enclosure.
 
 Earlier releases include v2.0.8 version alignment and v2.0.7 dark/light mode. See the repository changelog for history.
 
 ## Current release and UI
 
-[Download v2.1.0](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.1.0) · [Flashing instructions](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/releases/FLASHING.md) · [Validation and improvements](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/IMPROVEMENTS_2026-10-01.md)
+[Download v2.1.1](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.1.1) · [Flashing instructions](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/releases/FLASHING.md) · [Validation and improvements](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/FASTACCELSTEPPER_1_4_REAUDIT.md)
 
 ![V5 main screen](https://raw.githubusercontent.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/master/docs/images/ui_runtime_v5/01_MAIN.png)
 
@@ -22,7 +22,8 @@ Implemented features (latest update verified in native tests and simulator; phys
 - All 5 welding modes (Continuous, Jog, Pulse, Step, Timer)
 - E-STOP input disables ENA and latches a fault; explicit guarded UI reset
 - 16 program preset save/load (NVS JSON blobs; legacy LittleFS migration on first boot if needed)
-- 22 registered LVGL root screens (`ScreenId`) plus E-STOP overlay; settings, diagnostics, pedal settings, system info, calibration
+- 23 registered LVGL root screens (`ScreenId`) plus E-STOP overlay; settings, diagnostics, pedal settings, system info, guided calibration and Setup Wizard
+- Portable Windows simulator: extract all files and open Start Simulator.cmd; no hardware or development tools needed
 - USB-C live mirror for the real device UI, plus simulator screenshot export for all screens
 - Direction switch (GPIO29), foot pedal support
 - 8 accent color themes, dark or light UI mode (Display UI MODE), brightness control, dim timeout
@@ -49,8 +50,8 @@ Open-source welding positioner controller for rotary welding tables, pipe weldin
 | MCU | ESP32-P4 (360MHz, dual-core RISC-V) |
 | Display | GUITION JC4880P443C, 800x480 landscape, MIPI-DSI ST7701S |
 | Touch | GT911 capacitive |
-| UI Framework | LVGL 9.5.0 |
-| Motor Driver | FastAccelStepper 0.33.x (RMT hardware pulses) |
+| UI Framework | LVGL 9.6.0 |
+| Motor Driver | FastAccelStepper 1.4.0 (upstream `f24a659`) (RMT hardware pulses) |
 | Gear Ratio | **1:108** total (60 x 72/40, NMRV030 + spur) |
 | Microstepping | 1/4, 1/8, 1/16, 1/32 (selectable) |
 | RPM Range | 0.001-3.0 RPM (`MIN_RPM`/`MAX_RPM`); UI max <= cap via Motor Config (NVS). Roadmap: higher limits with DM542T |

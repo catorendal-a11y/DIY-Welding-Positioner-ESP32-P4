@@ -1,19 +1,22 @@
 # Project Status
 
-**Last Updated:** 2026-10-02
-**Firmware:** v2.1.0
-**Build:** V5 local validation passed native tests (403), simulator and release/debug/mirror builds. Exact v2.1.0 release commit is checked by GitHub CI.
+**Last Updated:** 2026-10-03
+**Published firmware:** v2.1.1
+**Source:** v2.1.1 with control/setup, dependency, calibration and program-editor improvements
+**Build:** Source validation passed 438 native/production-control cases, six packaging cases, the full simulator setup/self-test and layout audit, and release/debug/mirror builds. The source update has not been flashed. Historical v2.1.0 assets remain unchanged.
 
 ---
 
 ## Completed
 
 ### Core Motor Control
+
+Runtime stepper calls belong to controlTask; inputTask samples ADC/pedal separately. See [implementation and validation](docs/CONTROL_SETUP_IMPLEMENTATION.md).
 - [x] **ESP32-P4 MIPI-DSI display** (ST7701S 480x800, RGB565, landscape rotation)
 - [x] **GT911 capacitive touch** (I2C, coordinate mapping)
-- [x] **LVGL 9.5.x UI framework** (800x480 landscape, 22 registered `ScreenId` roots + E-STOP overlay)
-- [x] **FastAccelStepper motor control** (hardware RMT pulses, v0.33.x)
-- [x] **FreeRTOS dual-core architecture** (Core 0: Motor/Safety, Core 1: UI)
+- [x] **LVGL 9.6.0 UI framework** (800x480 landscape, 23 registered `ScreenId` roots + E-STOP overlay)
+- [x] **FastAccelStepper motor control** (hardware RMT pulses, v1.4.0, pinned upstream commit)
+- [x] **FreeRTOS dual-core architecture** (Core 0: Input/Control/Safety, Core 1: UI/Storage)
 - [x] **5 welding modes:** Continuous, Jog, Pulse, Step, Timer
 - [x] **RPM adjustment** (live potentiometer input; idle main-screen +/−; Jog and program/edit controls)
 - [x] **Thread-safe cross-core speed updates** (atomic + request flag pattern, FreeRTOS mutex for stepper)
@@ -26,17 +29,17 @@
 ### Safety
 - [x] **E-STOP input** (GPIO34 HIGH healthy / LOW fault; ISR drives ENA HIGH and wakes dimmed display; physical latency requires measurement)
 - [x] **Motion-start safety re-checks** (ENA is re-disabled if E-STOP/ALM appears during the final start window)
-- [x] **Task Watchdog Timer** (motor, control and safety tasks; checked setup/feed)
+- [x] **Task Watchdog Timer** (input, control and safety tasks; checked setup/feed)
 - [x] **Boot-safe ENA pin** (motor disabled on startup)
 - [x] **CAS state transitions** (race-free between safetyTask and controlTask)
 - [x] **E-STOP UI overlay** (full-screen red, blocks all interaction)
 - [x] **UI reset from ESTOP** (via Core 0 pending flag pattern)
 
 ### UI/UX
-- [x] **22 registered root screens** with lazy creation pattern + ESTOP overlay
+- [x] **23 registered root screens** with lazy creation pattern + ESTOP overlay
 - [x] **8 accent color themes** (switchable from Display Settings; combines with dark/light neutral UI mode)
 - [x] **Dark / Light UI mode** (Display Settings **UI MODE**, persisted as `color_scheme` in NVS `cfg`)
-- [x] **Settings hub** (Motor Config, Calibration, Display, Pedal Settings, Diagnostics, System Info, About)
+- [x] **Settings hub** (Motor Config, Calibration, Setup Wizard, Display, Pedal Settings, Diagnostics, System Info, About)
 - [x] **Display Settings** (brightness slider, dim timeout, UI MODE dark/light, accent theme)
 - [x] **USB-C live mirror** (mirror firmware + Windows SDL viewer; armed from Display Settings; PC input is LVGL touch only)
 - [x] **System Info** (CPU core load, heap, PSRAM, uptime)
@@ -44,9 +47,11 @@
 - [x] **Pedal Settings** (pedal arm/disarm, GPIO33 switch status, ADS1115 analog status)
 - [x] **Workpiece diameter per preset** (`workpiece_diameter_mm`, 0 = default reference diameter)
 - [x] **Motor Config** (microstepping, acceleration, direction switch, pedal enable)
-- [x] **Calibration verify-before-save** (larger calibration screen; save blocked until verification passes)
+- [x] **Guided calibration** (non-scrolling stages, same-page diameter, interrupted-move rejection, isolated draft, verification and storage receipt)
 - [x] **About screen** (firmware version, hardware info)
-- [x] **Program Edit** (full preset editor with on-screen keyboard)
+- [x] **Program Edit** (fixed layout, explicit run/available modes, exact RPM, full-screen input and retained drafts)
+- [x] **Guided setup** (motor, direction, verified calibration and physical E-STOP function check; compatible legacy settings)
+- [x] **Snapshot freshness** (40 ms UI updates, 100 ms stale motion blocking; STOP stays available)
 - [x] **Consistent footer navigation** and back buttons
 
 ### Storage
@@ -64,7 +69,7 @@
 - [x] **TIG HF field validation** (welding works with ESP32-P4 screen, driver, and PSU inside one grounded metal enclosure)
 
 ### Documentation
-- [x] **README** (v2.1.0, feature list, wiring diagram, BOM, TIG HF enclosure requirement; synced with `config.h`)
+- [x] **README** (source and release v2.1.1, feature list, wiring diagram, BOM, TIG HF enclosure requirement; synced with `config.h`)
 - [x] **Wiki** (Home, Getting Started, Hardware Setup, Troubleshooting, Roadmap, Architecture)
 - [x] **docs/** (Hardware Setup, Safety System, EMI Mitigation, Implementation, Instructables)
 - [x] **Wiring diagram v2** (SVG, GPIO29 on correct side, clean cable routing)
@@ -80,7 +85,7 @@
 - [x] **Screen reinit safety** (screens_reinit calls invalidate_widgets for all screens with static pointers)
 - [x] **Confirm dialog validation** (returnScreen range check prevents invalid screen navigation)
 - [x] **E-STOP display wake** (v2.0.3 — `g_wakePending` + `dim_reset_activity()` so dimmed MIPI panel shows fault UI)
-- [x] **Safety-task stepper serialization** (E-STOP/ALM `forceStop()` path uses `g_stepperMutex`; no unsynchronized FastAccelStepper calls)
+- [x] **Owner-task fault cleanup** (physical E-STOP/ALM disables ENA independently; bounded `forceStop()` cleanup belongs exclusively to controlTask)
 - [x] **Step-screen rebuild cleanup** (no async object delete immediately before `lv_obj_clean()`)
 - [x] **USB mirror partial flush** (dirty rectangles instead of full 800x480 mirror traffic)
 
@@ -89,7 +94,7 @@
 - [x] **`fatal_halt()`** utility (logs reason via `LOG_E`, drains serial, reboots) — replaces scattered `ESP.restart()` calls in storage and motor init paths
 - [x] **`LOG_E` always compiled in** (release + debug) so field failures are serial-visible; `LOG_W/I/D` stay debug-only
 - [x] **Boot-time ESTOP de-floating** (3-sample majority vote, 500 µs spacing, on `INPUT_PULLUP` settle) — avoids false ESTOP from unstabilised GPIO34 at power-on
-- [x] **Non-blocking ADS1115 pedal ADC** (state-machine `ads_poll_and_start()` in `motorTask`; blocking helper reserved for `speed_init()`)
+- [x] **Non-blocking ADS1115 pedal ADC** (state-machine `ads_poll_and_start()` in `inputTask`; blocking helper reserved for `speed_init()`)
 - [x] **`motor_set_target_milli_hz()`** encapsulates stepper mutex + speed + acceleration (keeps `g_stepperMutex` inside the motor module)
 - [x] **`lvglTask` boot sequence** now runs all `lv_timer_handler()` calls under `lvgl_lock()`/`lvgl_unlock()`
 - [x] **Native tests extended** (`milli_hz_floor_testable` edge cases: zero / negative / NaN / floor / saturation)
@@ -107,14 +112,16 @@
 
 ## Build Info
 
+See the [dependency inventory and migration analysis](docs/DEPENDENCY_UPGRADE_2026-10-02.md). Metrics describe the v2.1.1 release build; prior v2.1.0 artifacts are unchanged.
+
 | Metric | Value |
 |--------|-------|
-| **Platform** | pioarduino (ESP-IDF 5.5.x) |
+| **Platform** | pioarduino 55.03.312-1 (Arduino 3.3.12 / ESP-IDF 5.5.5) |
 | **Board** | GUITION JC4880P443C (ESP32-P4 + ESP32-C6) |
-| **RAM Usage** | ~10.0% (32 KB / 320 KB, release build) |
-| **Flash Usage** | ~16.1% (1.06 MB / 6.5 MB, release build) |
-| **FastAccelStepper** | 0.33.x |
-| **LVGL** | 9.5.0 (RGB565) |
+| **RAM Usage** | 10.0% (32,692 bytes / 327,680 bytes, release build) |
+| **Flash Usage** | 16.9% (1,109,552 bytes / 6,553,600 bytes, release build) |
+| **FastAccelStepper** | 1.4.0, upstream `f24a659` |
+| **LVGL** | 9.6.0 (RGB565) |
 | **ArduinoJson** | 7.4.3 |
 
 ---

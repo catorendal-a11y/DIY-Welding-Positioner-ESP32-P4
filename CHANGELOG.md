@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-10-03
+
+### FastAccelStepper re-audit and release
+
+- Verify installed FastAccelStepper HEAD against upstream tag 1.4.0. Retain asynchronous force-stop drain handling, explicit RMT selection and typed movement results.
+- Allocate the RMT channel in a bounded Core 0 boot task; engine task affinity alone does not select the interrupt allocation core. Keep ENA inhibited throughout initialization and stop boot on allocation/timeout failure.
+- Correct IRQ-affinity and jitter claims. Publish firmware and the portable simulator from the exact green master CI commit with English release notes and complete download checksums.
+- Keep the release-build check name aligned with the existing master branch protection so validated pull requests can merge without bypassing required checks.
+
+### Dependency refresh and API migration
+
+- Upgrade LVGL 9.5.0 to 9.6.0, use RGB565 default-format configuration, public driver/snapshot headers and dedicated object setters; retain the V5 screen design and English labels.
+- Upgrade pioarduino to 55.03.312-1 (Arduino 3.3.12 / ESP-IDF 5.5.5), and pin PlatformIO Core 6.2.0 and native platform 1.2.1.
+- Upgrade FastAccelStepper 0.33.14 to the upstream 1.4.0 tag commit `f24a659`; the registry artifact omits the corrected IDF5 RMT implementation. Select RMT explicitly and use typed movement results. Keep fault cleanup/reset pending until queued pulses drain, and reject DIR reconfiguration while moving.
+- Upgrade Unity to the upstream 2.7.0 commit; prevent PlatformIO's registry runner from replacing it with 2.6.1.
+- Refresh vendored GT911 1.2.1, ST7701 2.0.2~2 and EK79007 2.0.2~1 metadata/source. Use the official LDO header and C++-compatible touch configuration.
+- Keep already-current ArduinoJson 7.4.3, esp_lcd_touch 1.2.1 and compatible SDL2; update packaging for LVGL's moved font-license directory.
+- Add upstream RMT encoder regression to Linux/Windows CI and three production-control migration cases. Document the full 0.33.14-to-1.4.0 analysis and outstanding device measurements.
+
+### Guided calibration and updated library features
+
+- Replace the crowded calibration page with fixed Align → Measure → Verify → Save stages, same-page diameter entry and a full-screen numeric editor. Retain the V5 palette and visible normal STOP.
+- Require completed moves for measurement; reject interruption, stale status, context changes, invalid input and out-of-range corrections. Keep unverified corrections outside saved settings; Restart restores the saved factor. Confirm the verified save receipt, including retry and STOP during saving.
+- Inhibit unrelated mode/program and pedal starts during calibration. Add eight production regressions and the complete LVGL interaction flow (438 host cases total).
+- Adopt LVGL 9.6 dedicated state queries/setters, explicit style caching, simulator argument/widget-tree validation and bounded label lines. Cache FastAccelStepper driver/DIR budgets for Diagnostics.
+- Fix program editor positioning by resolving LVGL layout before shifting controls; add footer/mode-position audit checks and refresh runtime images.
+
+### Program editor and touch API
+
+- Replace the program editor's layout-offset workaround with fixed 800×480 positions, separate run-mode and availability buttons, a visible mode-settings summary and separate full-screen name/RPM editors.
+- Keep the active run mode available, make mode selection idempotent, validate complete numeric input and UTF-8 byte capacity, retain drafts across mode editors and clean up keyboards on navigation.
+- Restore low-RPM display precision in Continuous settings; use 0.001 RPM increments below 0.1 and 0.01 otherwise in all mode editors. Show Step duration at the minimum valid RPM.
+- Apply explicit LVGL checked-state contrast and valid zero-duration transitions; skip repeated text/style updates for unchanged drafts.
+- Replace deprecated touch-coordinate arrays with the typed `esp_lcd_touch_get_data()` API while retaining release-on-error and rotation handling.
+- Add actual LVGL regressions for every sub-editor's precision, invalid entries, UTF-8 limits, mode availability, save/cancel and modal cleanup; refresh runtime screenshots and the complete library-feature review.
+
+### Control ownership and guided setup
+
+- Single control-task owner of runtime stepper calls; input task publishes ADC/pedal inputs separately. Physical E-STOP directly inhibits ENA without waiting for the executor.
+- Try-only coherent control snapshots, 40 ms UI refresh and 100 ms freshness checks; stale control blocks new motion while STOP remains available.
+- Four-stage Setup Wizard in the existing V5 design with actual physical-switch observations, verified manual calibration and durable completion receipt. Existing valid settings migrate without forcing setup.
+- Precise fault titles and save receipts, shared production dispatcher/motor/modes in the simulator, commissioning UI regression tests and runtime screenshots.
+
 ### v2.1.1 maintenance
 
 - Bounded motor access, rejected-command faults and independently supervised STOP acknowledgement/deceleration deadlines; physical latency still requires measurement.

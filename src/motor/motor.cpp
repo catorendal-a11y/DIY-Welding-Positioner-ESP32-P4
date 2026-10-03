@@ -12,6 +12,7 @@
 #include "../control/motion_policy.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include "freertos/task.h"
 #include <FastAccelStepper.h>
 #include <atomic>
 #include <cstdint>
@@ -21,6 +22,8 @@
 // ───────────────────────────────────────────────────────────────────────────────
 static FastAccelStepperEngine engine = FastAccelStepperEngine();
 static FastAccelStepper* stepper = nullptr;
+static SnapshotMailbox<MotorDriverInfo> driverInfoMailbox;
+bool motor_read_driver_info(MotorDriverInfo& out) { return driverInfoMailbox.read(out); }
 static std::atomic<bool> commandedCw{true};
 bool motor_direction_is_cw() { return commandedCw.load(); }
 void motor_record_direction(bool cw) { commandedCw.store(cw); }
@@ -37,7 +40,16 @@ void motor_command_failed() {
   cleanupPending.store(true);
   safety_report_motor_fault(FAULT_MOTOR_COMMAND);
 }
+#if defined(ARDUINO_ARCH_ESP32)
+static TaskHandle_t motorOwner = nullptr;
+void motor_bind_owner() { motorOwner = xTaskGetCurrentTaskHandle(); }
+static bool motor_owner_ok() { return !motorOwner || motorOwner == xTaskGetCurrentTaskHandle(); }
+#else
+void motor_bind_owner() {}
+static bool motor_owner_ok() { return true; }
+#endif
 bool motor_lock() {
+  if (!motor_owner_ok()) { motor_command_failed(); return false; }
   if (g_stepperMutex && xSemaphoreTake(g_stepperMutex, pdMS_TO_TICKS(2)) == pdTRUE) return true;
   cleanupPending.store(true);
   safety_report_motor_fault(FAULT_MOTOR_TIMEOUT);
@@ -66,17 +78,26 @@ static uint32_t motor_clamp_acceleration(uint32_t accel) {
   return accel;
 }
 
-static void motor_apply_stepper_dir_timing(uint16_t want) {
-  if (stepper == nullptr) return;
-  if (s_dir_timing_applied && want == s_applied_dir_delay_us) return;
+static bool motor_apply_stepper_dir_timing(uint16_t want) {
+  if (stepper == nullptr) return false;
+  if (s_dir_timing_applied && want == s_applied_dir_delay_us) return true;
 
   if (s_dir_timing_applied && want != s_applied_dir_delay_us && stepper->isRunning()) {
-    stepper->forceStop();
     digitalWrite(PIN_ENA, HIGH);
+    // forceStop() drains the RMT queue asynchronously. Do not reconfigure DIR
+    // while that queue can still emit pulses; owner-task fault cleanup retries.
+    motor_command_failed();
+    return false;
   }
   stepper->setDirectionPin(PIN_DIR, true, want);
+  MotorDriverInfo info;
+  info.name = stepper->driverTypeString();
+  info.direction_before_us = uint32_t(stepper->getDirChangeBeforeTicks()) * stepper->getDirChangeBeforePauseCount() / (TICKS_PER_S / 1000000);
+  info.direction_after_us = stepper->getDirChangeAfterTicks() / (TICKS_PER_S / 1000000);
+  driverInfoMailbox.publish(info);
   s_applied_dir_delay_us = want;
   s_dir_timing_applied = true;
+  return true;
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -111,19 +132,21 @@ void motor_gpio_init() {
 // ───────────────────────────────────────────────────────────────────────────────
 // FASTACCELSTEPPER INITIALIZATION
 // ───────────────────────────────────────────────────────────────────────────────
-void motor_init() {
-  motor_gpio_init();
-
+static void motor_init_on_control_core() {
   g_stepperMutex = xSemaphoreCreateMutex();
   if (!g_stepperMutex) fatal_halt("motor: stepper mutex alloc");
 
-  // Pin stepper engine to Core 0 — motorTask, controlTask and safetyTask all run here.
-  // Without pinning, FastAccelStepper's internal timer ISR may fire on Core 1
-  // causing inter-core contention and jitter in step pulse timing.
+  // init(0) pins the library task only. IDF allocates the RMT interrupt on
+  // the caller's core, so channel allocation must also execute on Core 0.
+#if defined(ARDUINO_ARCH_ESP32)
+  configASSERT(xPortGetCoreID() == 0);
+  LOG_I("FastAccelStepper channel allocation: Core %d", xPortGetCoreID());
+#endif
   engine.init(0);
 
   // Connect stepper to step pin with RMT driver
-  stepper = engine.stepperConnectToPin(PIN_STEP);
+  // 1.4.0 can fall back to I2S when RMT is exhausted. This machine requires RMT.
+  stepper = engine.stepperConnectToPin(PIN_STEP, FasDriver::RMT);
   if (stepper == nullptr) fatal_halt("motor: FastAccelStepper init");
 
   int accelSteps = 7500;
@@ -154,6 +177,26 @@ void motor_init() {
   LOG_I("  Start speed: %d Hz", START_SPEED);
 }
 
+void motor_init() {
+  motor_gpio_init(); // Keep ENA inhibited before allocation or any boot failure.
+#if defined(ARDUINO_ARCH_ESP32)
+  if (xPortGetCoreID() != 0) {
+    const TaskHandle_t caller = xTaskGetCurrentTaskHandle();
+    const auto initialize = [](void* context) {
+      motor_init_on_control_core();
+      xTaskNotifyGive(static_cast<TaskHandle_t>(context));
+      vTaskDelete(nullptr);
+    };
+    if (xTaskCreatePinnedToCore(initialize,"motor-init",8192,caller,5,nullptr,0) != pdPASS)
+      fatal_halt("motor: initialization task allocation");
+    if (ulTaskNotifyTake(pdTRUE,pdMS_TO_TICKS(5000)) == 0)
+      fatal_halt("motor: initialization timeout");
+    return;
+  }
+#endif
+  motor_init_on_control_core();
+}
+
 // ───────────────────────────────────────────────────────────────────────────────
 // MOTOR CONTROL FUNCTIONS
 // ───────────────────────────────────────────────────────────────────────────────
@@ -177,7 +220,7 @@ bool motor_run_cw() {
     return false;
   }
   motor_record_direction(true);
-  if (stepper->runForward() != MOVE_OK) {
+  if (stepper->runForward() != MoveResultCode::OK) {
     motor_command_failed();
     xSemaphoreGive(g_stepperMutex);
     return false;
@@ -205,7 +248,7 @@ bool motor_run_ccw() {
     return false;
   }
   motor_record_direction(false);
-  if (stepper->runBackward() != MOVE_OK) {
+  if (stepper->runBackward() != MoveResultCode::OK) {
     motor_command_failed();
     xSemaphoreGive(g_stepperMutex);
     return false;
@@ -230,9 +273,12 @@ bool motor_halt() {
   digitalWrite(PIN_ENA, HIGH); // Inhibit before waiting on library cleanup.
   if (!motor_lock()) return false;
   if (stepper) stepper->forceStop();
-  cleanupPending.store(false);
+  // forceStop() stops adding commands, not necessarily the pulses already
+  // queued. Keep reset inhibited until isRunning() confirms the queue drained.
+  const bool stopped = !stepper || !stepper->isRunning();
+  cleanupPending.store(!stopped);
   xSemaphoreGive(g_stepperMutex);
-  return true;
+  return stopped;
 }
 
 void motor_disable() { digitalWrite(PIN_ENA, HIGH); }
@@ -253,7 +299,7 @@ float motor_get_step_frequency_hz() {
 
 void motor_refresh_hz_cache(void) {
   uint32_t absMilli = 0;
-  if (g_stepperMutex != nullptr && xSemaphoreTake(g_stepperMutex, 0) == pdTRUE) {
+  if (motor_owner_ok() && g_stepperMutex != nullptr && xSemaphoreTake(g_stepperMutex, 0) == pdTRUE) {
     if (stepper != nullptr) {
       int32_t mhZ = stepper->getCurrentSpeedInMilliHz();
       int64_t a = (int64_t)mhZ;
@@ -322,10 +368,10 @@ void motor_apply_settings() {
 
   if (!motor_lock()) return;
   if (stepper != nullptr) {
+    if (!motor_apply_stepper_dir_timing(dirDelayUs)) { xSemaphoreGive(g_stepperMutex); return; }
     if (stepper->setAcceleration(accelSteps) != 0) motor_command_failed();
     configuredAcceleration.store(static_cast<uint32_t>(accelSteps));
     stepper->setLinearAcceleration(200);
-    motor_apply_stepper_dir_timing(dirDelayUs);
   }
   xSemaphoreGive(g_stepperMutex);
   LOG_I("Motor: accel=%d driver=%s (DIR delay %u us)", accelSteps,
@@ -376,7 +422,24 @@ void motor_restore_configured_acceleration() {
   LOG_I("Motor: restored accel=%u", (unsigned)configured);
 }
 
-FastAccelStepper* motor_get_stepper() { return stepper; }
+bool motor_read_position(int32_t* position) {
+  if (!position || !motor_lock()) return false;
+  const bool ok = stepper != nullptr;
+  if (ok) *position = stepper->getCurrentPosition();
+  xSemaphoreGive(g_stepperMutex); return ok;
+}
+bool motor_move_steps(long steps, float rpm, int32_t* start_position) {
+  if (!start_position || !motor_lock()) return false;
+  bool ok = stepper && !safety_inhibit_motion() && !control_motion_blocked();
+  if (ok) { *start_position = stepper->getCurrentPosition(); ok = motor_apply_speed_for_rpm_locked(rpm); }
+  if (ok) {
+    digitalWrite(PIN_ENA, LOW);
+    if (safety_inhibit_motion() || control_motion_blocked()) ok = false;
+    else { motor_record_direction(steps >= 0); ok = stepper->move(steps) == MoveResultCode::OK; if (!ok) motor_command_failed(); }
+  }
+  if (!ok) digitalWrite(PIN_ENA, HIGH);
+  xSemaphoreGive(g_stepperMutex); return ok;
+}
 
 uint32_t motor_stop_timeout_ms() {
   return motion_stop_timeout_ms(g_stepperMilliHzAbsCached.load(), configuredAcceleration.load());

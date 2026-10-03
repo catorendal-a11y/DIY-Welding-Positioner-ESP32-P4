@@ -3,7 +3,9 @@
 **Board**: GUITION JC4880P443C ESP32-P4 4.3" Touch Display (with ESP32-C6 co-processor)
 **Display**: ST7701S 480x800 MIPI-DSI (rotated to 800x480 landscape)
 **Touch**: GT911 capacitive touch controller
-**Firmware**: v2.1.0 (`FW_VERSION` in `src/config.h`)
+**Source**: v2.1.1 (`FW_VERSION` in `src/config.h`); published firmware is v2.1.1; historical v2.1.0 artifacts are unchanged.
+
+See [control/setup implementation and validation](CONTROL_SETUP_IMPLEMENTATION.md) for the single-owner executor, coherent snapshots and guided commissioning.
 
 ---
 
@@ -51,12 +53,12 @@
 | Task | Core | Priority | Stack | Purpose |
 |------|------|----------|-------|---------|
 | safetyTask | 0 | 5 | 4 KB | E-STOP ISR processing, state guard |
-| motorTask | 0 | 4 | 5 KB | Speed apply, ADC poll and pedal input |
-| controlTask | 0 | 3 | 4 KB | Motion dispatch, mode logic, motor settings and fault cleanup |
+| inputTask | 0 | 4 | 5 KB | GPIO pedal at 5 ms, ADC at 20 ms; no stepper calls |
+| controlTask | 0 | 3 | 4 KB | Sole runtime stepper owner at 5 ms: dispatch, modes, live speed, settings and fault cleanup |
 | lvglTask | 1 | 2 | 64 KB | LVGL rendering, screen updates, dim, ESTOP overlay |
 | storageTask | 1 | 1 | 12 KB | NVS flush (settings/presets), periodic housekeeping |
 
-- motorTask, controlTask, safetyTask: subscribed to WDT
+- inputTask, controlTask, safetyTask: subscribed to WDT
 - lvglTask, storageTask: NOT subscribed (blocking I/O can exceed WDT timeout)
 - storageTask removed from WDT after causing reboot loops during flash writes
 
@@ -64,14 +66,14 @@
 
 ## 3. Motor Control & Live Speed Adjustment
 
-- **FastAccelStepper 0.33.x** with RMT driver on GPIO 50
+- **FastAccelStepper 1.4.0** (pinned upstream commit `f24a659`) with RMT driver on GPIO 50
 - **Live speed**: `applySpeedAcceleration()` required after `setSpeedInMilliHz()` for changes during running
 - **Cross-core**: Shared RPM variables use `std::atomic<float>` with explicit `.load(memory_order_*)` / `.store(...)`. All cross-core atomic flags are declared in `src/app_state.h` / defined in `src/app_state.cpp` (single source of truth).
-- **Stepper mutex**: `g_stepperMutex` (`SemaphoreHandle_t`, FreeRTOS mutex) protects all stepper calls — uses `xSemaphoreTake`/`xSemaphoreGive`, keeps interrupts enabled during cross-core contention. Non-motor modules should call `motor_set_target_milli_hz()` instead of taking the mutex directly (it wraps `setSpeedInMilliHz` + `applySpeedAcceleration`).
+- **Stepper mutex**: `g_stepperMutex` (`SemaphoreHandle_t`, FreeRTOS mutex) protects all stepper calls — uses `xSemaphoreTake`/`xSemaphoreGive`, keeps interrupts enabled during cross-core contention. Only controlTask calls runtime motor adapter functions. UI/input producers submit control commands; no raw stepper pointer is exposed. The adapter retains a bounded mutex and rejects calls from a different task after owner binding.
 - **Motion-start guard**: start paths check `safety_inhibit_motion()` before ENA is enabled and again immediately after `digitalWrite(PIN_ENA, LOW)`. If E-STOP/ALM appears in that final window, ENA is driven HIGH and no run/move command is issued.
 - **Control dispatch**: START/JOG/program requests carry parameter snapshots and a generation. STOP uses a separate latch and invalidates pending starts; release also cancels queued JOG. Control-task dispatch rechecks motion interlocks.
-- **Pending-flag pattern**: UI `.store()`s atomic flags with `memory_order_release` for non-motion flags; motorTask/controlTask `.load()`s them with `memory_order_acquire` and executes within the owning task cycle.
-- **Non-blocking pedal ADC**: When `ENABLE_ADS1115_PEDAL=1`, `motorTask` uses a state-machine (`ads_poll_and_start()` in `src/motor/speed.cpp`) that starts a single-shot conversion in one tick and reads the result in a later tick. Runtime I2C transactions use a short timeout; the longer timeout is reserved for `speed_init()` probe/init.
+- **Pending-flag pattern**: UI `.store()`s atomic flags with `memory_order_release` for non-motion flags; inputTask/controlTask `.load()`s them with `memory_order_acquire` and executes within the owning task cycle.
+- **Non-blocking pedal ADC**: When `ENABLE_ADS1115_PEDAL=1`, `inputTask` uses a state-machine (`ads_poll_and_start()` in `src/motor/speed.cpp`) that starts a single-shot conversion in one tick and reads the result in a later tick. Runtime I2C transactions use a short timeout; the longer timeout is reserved for `speed_init()` probe/init.
 
 ---
 
@@ -81,7 +83,7 @@
 - **ISR**: GPIO register write (ENA HIGH) + `g_estopPending.store(true, std::memory_order_release)` + `g_wakePending.store(true, ...)` (NO function calls — flash may be disabled)
 - **Boot sampling**: `safety_init()` takes 3 samples of `PIN_ESTOP` with 500 µs spacing after `INPUT_PULLUP` + 2 ms settle, requires ≥2/3 LOW (mitigates floating GPIO34 at power-on — verify the electrical interface independently)
 - **Debounce**: 5ms in safetyTask before STATE_ESTOP transition; `g_estopTriggerMs` is set by `safetyTask` on the debounced edge (not by the ISR)
-- **Stepper API safety**: ENA is disabled first. Driver-alarm handling attempts bounded cleanup under `g_stepperMutex`; controlTask performs fault cleanup and retries when needed. E-STOP state publication does not wait for control-task cleanup.
+- **Stepper API safety**: ENA is disabled first. Safety handles ENA inhibition and fault publication without stepper-library calls; controlTask performs bounded fault cleanup and retries when needed. E-STOP state publication does not wait for control-task cleanup.
 - **CAS transitions**: `control_transition_to()` uses `compare_exchange_strong` for race-free state changes
 - **UI reset**: `g_uiResetPending.store(true, std::memory_order_release)` from UI, processed in controlTask on Core 0
 - **Overlay**: lvglTask auto-shows/hides ESTOP overlay based on current state
@@ -106,7 +108,7 @@
 
 ## 6. UI Screen System
 
-- **22 registered `ScreenId` root screens** with lazy creation (only boot, main, confirm created at init) plus separate **E-STOP overlay** (`screen_estop_overlay.cpp`)
+- **23 registered `ScreenId` root screens** with lazy creation (only boot, main, confirm created at init) plus separate **E-STOP overlay** (`screen_estop_overlay.cpp`)
 - **Screen management**: `screens_show()` dispatches create/update, tracks `screenCreated[]` array
 - **Reinit**: `screens_reinit()` destroys all screens + ESTOP overlay, restores boot/main/confirm
 - **Keyboard**: Deferred cleanup pattern — set flag in callback, cleanup in next update cycle
@@ -156,11 +158,9 @@ bool control_transition_to(SystemState newState) {
 
 ### Mutex-Protected Stepper
 ```cpp
-// g_stepperMutex is SemaphoreHandle_t (FreeRTOS mutex, NOT spinlock)
-xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
-stepper->setSpeedInMilliHz(mhz);
-stepper->applySpeedAcceleration();
-xSemaphoreGive(g_stepperMutex);
+// Runtime owner: controlTask. The motor adapter handles the bounded lock
+// and checks rejected speed/acceleration commands. Other tasks post requests.
+motor_set_target_milli_hz(mhz);
 ```
 
 ### Deferred keyboard cleanup

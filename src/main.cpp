@@ -82,7 +82,7 @@ void lvglTask(void* pvParameters) {
   boot_step(100, "READY HANDOFF", 50);
 
   lvgl_lock();
-  screens_show(SCREEN_MAIN);
+  screens_show_startup();
   lvgl_unlock();
   safety_task_ready(8u);
 
@@ -113,9 +113,9 @@ void lvglTask(void* pvParameters) {
       screen_program_edit_poll_keyboard();
     }
 
-    // Update current screen (200ms interval for smooth UI)
+    // Refresh snapshots well inside the 100ms freshness budget.
     static uint32_t lastScreenUpdate = 0;
-    if (millis() - lastScreenUpdate >= 200) {
+    if (millis() - lastScreenUpdate >= 40) {
       lastScreenUpdate = millis();
       screens_update_current();
     }
@@ -158,9 +158,9 @@ void lvglTask(void* pvParameters) {
   }
 }
 
-// Motor control task (Core 0, priority 4) — updates speed every 5ms, ADC every 20ms
-void motorTask(void* pvParameters) {
-  LOG_I("Motor task started on Core %d", xPortGetCoreID());
+// Input task (Core 0): GPIO pedal every 5ms, ADC every 20ms; never calls stepper API.
+void inputTask(void* pvParameters) {
+  LOG_I("Input task started on Core %d", xPortGetCoreID());
   safety_register_watchdog();
   uint8_t adcCycle = 0;
   PedalInterlock pedal;
@@ -183,20 +183,15 @@ void motorTask(void* pvParameters) {
     int32_t loopStart = (int32_t)esp_timer_get_time();
 #endif
 
-    speed_apply();
     if (++adcCycle >= 4) {
       speed_update_adc();
       adcCycle = 0;
     }
 
-    if (control_get_state() == STATE_IDLE && acceleration_has_pending_apply()) {
-      acceleration_clear_pending();
-      motor_apply_settings();
-    }
 
     const bool safe = !safety_inhibit_motion() && control_get_state() != STATE_ESTOP;
     const PedalEdge edge =
-        pedal.update(speed_get_pedal_enabled(), safe, digitalRead(PIN_PEDAL_SW) == LOW, millis());
+        pedal.update(speed_get_pedal_enabled() && !control_setup_active(), safe, digitalRead(PIN_PEDAL_SW) == LOW, millis());
     if (edge == PedalEdge::Start && control_get_state() == STATE_IDLE) {
       pedalOwnsMotion = control_start_continuous();
     } else if (edge == PedalEdge::Stop && pedalOwnsMotion) {
@@ -223,7 +218,6 @@ void motorTask(void* pvParameters) {
     }
 #endif
 
-    motor_refresh_hz_cache();
 
     vTaskDelayUntil(&t, pdMS_TO_TICKS(5));
   }
@@ -328,13 +322,13 @@ void setup() {
 
   // ─────────────────────────────────────────────────────────────────────────
   // CREATE FREERTOS TASKS
-  // Priority: safety(5) > motor(4) > control(3) > lvgl(2) > storage(1)
+  // Priority: safety(5) > inputs(4) > control(3) > lvgl(2) > storage(1)
   // ESP32-P4 HP cores: Core 0 and Core 1 (RISC-V dual-core @ 360 MHz)
   // Task handles for health monitoring (FIX-09)
   // ─────────────────────────────────────────────────────────────────────────
   if (xTaskCreatePinnedToCore(safetyTask, "safety", 4096, nullptr, 5, &safetyHandle, 0) != pdPASS)
     fatal_halt("task allocation failed");
-  if (xTaskCreatePinnedToCore(motorTask, "motor", 5120, nullptr, 4, &motorHandle, 0) != pdPASS)
+  if (xTaskCreatePinnedToCore(inputTask, "inputs", 5120, nullptr, 4, &motorHandle, 0) != pdPASS)
     fatal_halt("task allocation failed");
   if (xTaskCreatePinnedToCore(controlTask, "control", 4096, nullptr, 3, &controlHandle, 0) != pdPASS)
     fatal_halt("task allocation failed");

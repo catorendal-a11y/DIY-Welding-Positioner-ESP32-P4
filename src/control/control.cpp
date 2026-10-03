@@ -1,7 +1,9 @@
+#include "../motor/calibration.h"
 // Control - State machine core with motion command mailbox
 #include "control.h"
 #include "../app_state.h"
 #include "modes.h"
+#include "../motor/acceleration.h"
 #include "input_policy.h"
 #include "../storage/storage.h"
 #include "../config.h"
@@ -50,8 +52,33 @@ struct MotionCommand {
 static QueueHandle_t controlQueue = nullptr;
 static MotionGate motionGate;
 static std::atomic<ConfigApplyStatus> configStatus{CONFIG_NONE};
+static std::atomic<uint32_t> configSaveTicket{0};
+uint32_t control_config_save_ticket() { return configSaveTicket.load(); }
 ConfigApplyStatus control_config_status() { return configStatus.load(); }
 static std::atomic<bool> resetStepPending{false};
+static std::atomic<bool> setupActive{false}, calibrationActive{false};
+static SnapshotMailbox<ControlSnapshot> snapshotMailbox;
+static uint32_t snapshotSequence = 0;
+static std::atomic<uint32_t> lastCycleAt{0};
+static std::atomic<bool> cyclePublished{false};
+static bool faultCleaned = false;
+void control_set_setup_active(bool active) { setupActive.store(active); }
+bool control_setup_active() { return setupActive.load() || calibrationActive.load(); }
+void control_set_calibration_active(bool active) { if (active) control_stop(); calibrationActive.store(active); }
+bool control_read_snapshot(ControlSnapshot& out) { return snapshotMailbox.read(out); }
+static void publish_snapshot() {
+  ControlSnapshot s;
+  s.sequence = ++snapshotSequence; s.timestamp_ms = millis();
+  s.state = control_get_state(); s.target_rpm = speed_get_target_rpm();
+  s.estimated_rpm = speed_get_actual_rpm(); s.direction = motor_direction_is_cw() ? DIR_CW : DIR_CCW;
+  if (s.state == STATE_IDLE) s.direction = speed_get_direction();
+  s.source = speed_get_input_source(); s.progress_degrees = step_get_accumulated();
+  s.completed_steps = step_get_count(); s.pulse_cycles = pulse_get_cycle_count();
+  s.motor_running = motor_is_running();
+  s.state = control_get_state(); // Motor queries may have latched a fault.
+  snapshotMailbox.publish(s);
+  lastCycleAt.store(s.timestamp_ms); cyclePublished.store(true);
+}
 static std::atomic<uint32_t> jogRenewedMs{0};
 static std::atomic<uint32_t> stopRequestedAt{0}, stoppingAt{0}, stoppingBudget{0};
 void control_check_stop_deadline(uint32_t now) {
@@ -85,10 +112,12 @@ static void control_queue_init() {
 }
 
 static bool queue_motion_command(const MotionCommand& cmd) {
+  if (!control_timestamp_fresh(millis(), lastCycleAt.load(), cyclePublished.load())) return false;
   if (controlQueue == nullptr) {
     LOG_W("Control queue not ready");
     return false;
   }
+  if (calibrationActive.load() && (cmd.program || (cmd.type != MOTION_CMD_START_STEP && cmd.type != MOTION_CMD_START_JOG))) return false;
   const uint32_t ticket = motionGate.ticket();
   if (motionGate.blocked() || control_get_state() != STATE_IDLE || safety_inhibit_motion()) return false;
   MotionCommand request = cmd;
@@ -154,6 +183,7 @@ bool control_is_valid_transition(SystemState from, SystemState to) {
 void control_init() {
   control_queue_init();
   clear_pending_motion_requests();
+  faultCleaned = false; cyclePublished.store(false);
   currentState.store(STATE_IDLE, std::memory_order_release);
   previousState.store(STATE_IDLE, std::memory_order_release);
   event_log_add("CONTROL INIT");
@@ -364,12 +394,13 @@ static void process_pending_requests() {
     g_settings.max_rpm = cmd.settings.max_rpm;
     g_settings.dir_switch_enabled = cmd.settings.dir_switch_enabled;
     g_settings.invert_direction = cmd.settings.invert_direction;
+    g_settings.stepper_driver = cmd.settings.stepper_driver;
     xSemaphoreGive(g_settings_mutex);
     g_dir_switch_cache.store(cmd.settings.dir_switch_enabled);
     speed_sync_rpm_limits_from_settings();
     motor_apply_settings();
     if (safety_inhibit_motion()) { configStatus.store(CONFIG_CANCELLED); return; }
-    storage_save_settings();
+    configSaveTicket.store(storage_request_settings_save());
     configStatus.store(CONFIG_APPLIED);
     return;
   }
@@ -391,7 +422,7 @@ static void process_pending_requests() {
       step_execute_sequence(cmd.step_angle, cmd.step_repeats, cmd.step_dwell_sec);
       break;
     case MOTION_CMD_START_JOG:
-      jog_start(cmd.direction);
+      jog_start(speed_resolve_direction(cmd.direction));
       break;
     default:
       break;
@@ -403,25 +434,22 @@ static void process_pending_requests() {
 // ───────────────────────────────────────────────────────────────────────────────
 // CONTROL TASK — Main state machine loop
 // ───────────────────────────────────────────────────────────────────────────────
-void controlTask(void* pvParameters) {
-  LOG_I("Control task started on Core %d", xPortGetCoreID());
-  safety_register_watchdog();
-  safety_task_ready(4u);
-  bool faultCleaned = false;
-
-  TickType_t t = xTaskGetTickCount();
-  for (;;) {
-    safety_feed_watchdog();
-
+void control_run_cycle() {
+  if (control_get_state() == STATE_IDLE) calibration_process_pending();
+  // STOP/ESTOP dispatch precedes any live speed changes.
     if (control_get_state() == STATE_IDLE && resetStepPending.exchange(false)) step_reset_accumulator();
     process_pending_requests();
+    speed_apply();
+    if (control_get_state() == STATE_IDLE && acceleration_has_pending_apply()) {
+      acceleration_clear_pending(); motor_apply_settings();
+    }
 
     SystemState curState = currentState.load(std::memory_order_acquire);
 
     if (curState == STATE_ESTOP) {
       // Potentially blocking library cleanup never runs in safetyTask.
       if (!faultCleaned) {
-        if (!motor_halt()) { vTaskDelay(pdMS_TO_TICKS(1)); continue; }
+        if (!motor_halt()) { publish_snapshot(); return; }
         motor_restore_configured_acceleration();
         speed_clear_program_direction_override();
         event_log_addf("FAULT %s", safety_fault_reason_name(safety_get_fault_reason()));
@@ -458,7 +486,17 @@ void controlTask(void* pvParameters) {
         break;
     }
 
-    vTaskDelayUntil(&t, pdMS_TO_TICKS(10));
+  motor_refresh_hz_cache();
+  publish_snapshot();
+}
+void controlTask(void* pvParameters) {
+  LOG_I("Control task started on Core %d", xPortGetCoreID());
+  motor_bind_owner();
+  safety_register_watchdog(); safety_task_ready(4u);
+  TickType_t t = xTaskGetTickCount();
+  for (;;) {
+    safety_feed_watchdog(); control_run_cycle();
+    vTaskDelayUntil(&t, pdMS_TO_TICKS(5));
   }
 }
 

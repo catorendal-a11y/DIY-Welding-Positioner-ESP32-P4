@@ -1,0 +1,10 @@
+------ native-control:test_control_production [PASSED] Took 1.51 seconds ------
+
+=================================== SUMMARY ===================================
+Environment     Test                     Status    Duration
+--------------  -----------------------  --------  ------------
+native          test_logic               PASSED    00:00:01.445
+native          test_screens             PASSED    00:00:01.433
+native          test_utils               PASSED    00:00:01.740
+native-control  test_control_production  PASSED    00:00:01.515
+================ 438 test cases: 438 succeeded in 00:00:06.133 ================

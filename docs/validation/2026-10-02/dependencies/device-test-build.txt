@@ -1,0 +1,4 @@
+Build-only validation, no upload or device execution.
+Command: pio test -e esp32p4-test --without-uploading --without-testing
+GPIO, storage and system test programs compiled successfully.
+PlatformIO reports execution SKIPPED for all three suites.

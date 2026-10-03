@@ -1,6 +1,6 @@
 # EMI Test — TIG Welder HF Arc Start
 
-Historical v2.0.9 field record. Repeat this procedure for v2.1.0 and record new measurements separately; these results do not validate the latest input or STOP changes.
+Historical v2.0.9 field record. Repeat this procedure for v2.1.1 and record new measurements separately; these results do not validate the latest input or STOP changes.
 
 ## Hardware: GUITION JC4880P443C (ESP32-P4 + ESP32-C6)
 ## Firmware: v2.0.9

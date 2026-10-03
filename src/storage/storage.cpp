@@ -2,6 +2,7 @@
 #include "storage.h"
 #include "settings_policy.h"
 #include "save_request.h"
+#include "../control/setup_policy.h"
 #include "../motor/speed.h"
 #include "../event_log.h"
 #include <cmath>
@@ -315,6 +316,7 @@ static int storage_sanitize_microstep(int value) {
 static bool storage_apply_settings_doc(JsonObjectConst doc) {
   if (!std::isfinite(doc["max_rpm"] | MAX_RPM) || !std::isfinite(doc["calibration_factor"] | 1.0f))
     return false;
+  if (!doc["setup_completed"].isNull() && !doc["setup_completed"].is<bool>()) return false;
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   g_settings.acceleration = constrain(doc["acceleration"] | 5000, (int)1000, (int)30000);
   g_settings.microstep = storage_sanitize_microstep(doc["microstep"] | 16);
@@ -336,6 +338,7 @@ static bool storage_apply_settings_doc(JsonObjectConst doc) {
   g_settings.stepper_driver = constrain(doc["stepper_driver"] | (int)STEPPER_DRIVER_DM542T, 0, 1);
   g_settings.pedal_enabled = doc["pedal_enabled"] | false;
   g_settings.settings_version = doc["settings_version"] | 0;
+  g_settings.setup_completed = setup_migration_completed(!doc["setup_completed"].isNull(), doc["setup_completed"] | false);
   const bool dirSw = g_settings.dir_switch_enabled;
   xSemaphoreGive(g_settings_mutex);
 
@@ -364,6 +367,7 @@ static bool storage_save_settings_internal() {
   doc["stepper_driver"] = snap.stepper_driver;
   doc["pedal_enabled"] = snap.pedal_enabled;
   doc["settings_version"] = snap.settings_version;
+  doc["setup_completed"] = snap.setup_completed;
 
   const size_t need = measureJson(doc);
   std::vector<uint8_t> buf(need + 1);

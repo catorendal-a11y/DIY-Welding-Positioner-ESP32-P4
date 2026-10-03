@@ -166,13 +166,13 @@ void screen_programs_update() {
   if (isFull) {
     ui_btn_style_post(newBtn, UI_BTN_NORMAL);
     lv_obj_set_style_opa(newBtn, LV_OPA_50, 0);
-    lv_obj_remove_flag(newBtn, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_clickable(newBtn, false);
     lv_obj_t* nl = lv_obj_get_child(newBtn, 0);
     if (nl) lv_obj_set_style_text_color(nl, COL_TEXT_VDIM, 0);
   } else {
     ui_btn_style_post(newBtn, UI_BTN_ACCENT);
     lv_obj_set_style_opa(newBtn, LV_OPA_COVER, 0);
-    lv_obj_add_flag(newBtn, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_clickable(newBtn, true);
     lv_obj_t* nl = lv_obj_get_child(newBtn, 0);
     if (nl) lv_obj_set_style_text_color(nl, ui_btn_label_color_post(UI_BTN_ACCENT), 0);
   }
@@ -197,8 +197,8 @@ void screen_programs_update() {
     lv_obj_set_style_border_width(card, hilite ? 2 : 1, 0);
     lv_obj_set_style_border_color(card, hilite ? COL_ACCENT : COL_BORDER, 0);
     lv_obj_set_style_pad_all(card, 0, 0);
-    lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_remove_flag(card, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_scrollable(card, false);
+    lv_obj_set_clickable(card, false);
 
     char detailBuf[96];
     format_details(detailBuf, sizeof(detailBuf), p);

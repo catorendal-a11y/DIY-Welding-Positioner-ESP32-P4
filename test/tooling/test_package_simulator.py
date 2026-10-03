@@ -29,7 +29,7 @@ class SimulatorPackagingTests(unittest.TestCase):
                  '.pio/libdeps/esp32p4-release/lvgl/COPYRIGHTS.md',
                  '.pio/libdeps/esp32p4-release/lvgl/src/stdlib/builtin/LICENSE_TLSF.txt',
                  '.pio/libdeps/esp32p4-release/lvgl/src/stdlib/builtin/LICENSE_SPRINTF.txt',
-                 '.pio/libdeps/esp32p4-release/lvgl/scripts/built_in_font/font_license/FontAwesome5/LICENSE.txt']
+                 '.pio/libdeps/esp32p4-release/lvgl/scripts/generators/built_in_font/font_license/FontAwesome5/LICENSE.txt']
         for file in files:
             target = self.root / file
             target.parent.mkdir(parents=True, exist_ok=True)

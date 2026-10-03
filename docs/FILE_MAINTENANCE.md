@@ -1,8 +1,8 @@
-# File maintenance review — 2026-10-02
+# File maintenance review — updated 2026-10-03
 
 GitHub displays the last commit that changed each file. A six-month-old date does not indicate that the file is missing from the current build or release.
 
-The v2.1.0 update includes the complete source tree, not only files with recent dates. Firmware builds and regression tests compile and exercise older files alongside the updated implementation. This does not imply every line or physical hardware behavior is covered by tests.
+The v2.1.1 update includes the complete source tree, not only files with recent dates. Firmware builds and regression tests compile and exercise older files alongside the updated implementation. This does not imply every line or physical hardware behavior is covered by tests.
 
 ## Follow-up corrections
 
@@ -11,7 +11,9 @@ The v2.1.0 update includes the complete source tree, not only files with recent 
 - The simulator launcher stops immediately when CMake configuration fails.
 - The old browser demo is explicitly marked as an offline historical concept, with no device connection or Wi-Fi support.
 - May USB mirror plans are marked historical and link to the implemented viewer guide.
-- EMI guidance distinguishes historical field experience from qualification of v2.1.0.
+- EMI guidance distinguishes historical field experience from qualification of the current firmware.
+
+The subsequent v2.1.1 migration updates dependency pins, driver metadata, control/calibration/program behavior, current process/wiki/issue guidance and release packaging. Historical reports and original font/hardware provenance remain dated records. See the [dependency report](DEPENDENCY_UPGRADE_2026-10-02.md) and [1.4.0 re-audit](FASTACCELSTEPPER_1_4_REAUDIT.md).
 
 ## Older files retained
 
@@ -25,4 +27,4 @@ The v2.1.0 update includes the complete source tree, not only files with recent 
 | `CODEOWNERS` and issue configuration | Ownership and issue routing remain valid. |
 | Earlier UI concepts and validation logs | Historical records; current UI images are in `docs/images/ui_runtime_v5/`. |
 
-Files are not rewritten solely to reset their GitHub timestamp. Current release documentation is in [v2.1.0.md](releases/v2.1.0.md), with installation instructions in [FLASHING.md](releases/FLASHING.md).
+Files are not rewritten solely to reset their GitHub timestamp. Current release documentation is in [v2.1.1.md](releases/v2.1.1.md), with installation instructions in [FLASHING.md](releases/FLASHING.md).

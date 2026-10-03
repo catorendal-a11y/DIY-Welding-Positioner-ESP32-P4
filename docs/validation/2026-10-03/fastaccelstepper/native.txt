@@ -1,0 +1,42 @@
+Testing...
+test\test_control_production\test_main.cpp:367: test_calibration_blocks_unrelated_motion_and_pedal_mode	[PASSED]
+test\test_control_production\test_main.cpp:368: test_calibration_draft_is_not_persisted_before_save	[PASSED]
+test\test_control_production\test_main.cpp:369: test_calibration_requires_two_completed_moves	[PASSED]
+test\test_control_production\test_main.cpp:370: test_calibration_abort_and_fault_never_allow_save	[PASSED]
+test\test_control_production\test_main.cpp:371: test_calibration_rejected_move_timeout_and_clock_wrap	[PASSED]
+test\test_control_production\test_main.cpp:372: test_calibration_context_change_rejects_move	[PASSED]
+test\test_control_production\test_main.cpp:373: test_calibration_rejects_silent_factor_clamp_and_invalid_numbers	[PASSED]
+test\test_control_production\test_main.cpp:374: test_calibration_parser_accepts_comma_rejects_trailing_text	[PASSED]
+test\test_control_production\test_main.cpp:376: test_force_stop_drain_keeps_cleanup_pending_and_ena_disabled	[PASSED]
+test\test_control_production\test_main.cpp:377: test_direction_timing_never_changes_during_queued_motion	[PASSED]
+test\test_control_production\test_main.cpp:378: test_rmt_driver_is_selected_explicitly	[PASSED]
+test\test_control_production\test_main.cpp:379: test_snapshot_and_dispatch_use_one_control_cycle	[PASSED]
+test\test_control_production\test_main.cpp:380: test_stale_control_blocks_start_but_stop_is_unconditional	[PASSED]
+test\test_control_production\test_main.cpp:381: test_config_apply_publishes_receipt_and_driver_kind	[PASSED]
+test\test_control_production\test_main.cpp:382: test_jog_inversion_and_lease_expiry	[PASSED]
+test\test_control_production\test_main.cpp:383: test_snapshot_staleness_handles_wrap_and_boundary	[PASSED]
+test\test_control_production\test_main.cpp:384: test_snapshot_mailbox_never_tears_concurrent_reads	[PASSED]
+test\test_control_production\test_main.cpp:385: test_setup_requires_observed_sequence_and_confirmed_stages	[PASSED]
+test\test_control_production\test_main.cpp:386: test_setup_migration_preserves_existing_installations	[PASSED]
+test\test_control_production\test_main.cpp:387: test_rejected_commands_never_run_or_complete	[PASSED]
+test\test_control_production\test_main.cpp:388: test_speed_and_acceleration_errors_latch_fault	[PASSED]
+test\test_control_production\test_main.cpp:389: test_stop_mutex_failure_inhibits_and_blocks_cleanup	[PASSED]
+test\test_control_production\test_main.cpp:390: test_stop_cancels_queued_start_in_real_dispatcher	[PASSED]
+test\test_control_production\test_main.cpp:391: test_stop_request_and_deceleration_deadlines	[PASSED]
+test\test_control_production\test_main.cpp:392: test_stop_deadline_survives_clock_wrap	[PASSED]
+test\test_control_production\test_main.cpp:393: test_stop_budget_tracks_soft_start_acceleration	[PASSED]
+test\test_control_production\test_main.cpp:394: test_pulse_counts_completed_on_and_final_pause	[PASSED]
+test\test_control_production\test_main.cpp:395: test_pulse_two_cycles_and_rejected_restart	[PASSED]
+test\test_control_production\test_main.cpp:396: test_step_progress_crosses_counter_boundary	[PASSED]
+test\test_control_production\test_main.cpp:397: test_continuous_auto_stop_and_jog_speed_use_production_modes	[PASSED]
+test\test_control_production\test_main.cpp:398: test_event_snapshot_contention_retries_and_counts_drops	[PASSED]
+------ native-control:test_control_production [PASSED] Took 1.78 seconds ------
+
+=================================== SUMMARY ===================================
+Environment     Test                     Status    Duration
+--------------  -----------------------  --------  ------------
+native          test_logic               PASSED    00:00:00.874
+native          test_screens             PASSED    00:00:00.935
+native          test_utils               PASSED    00:00:01.008
+native-control  test_control_production  PASSED    00:00:01.783
+================ 438 test cases: 438 succeeded in 00:00:04.600 ================

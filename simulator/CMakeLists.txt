@@ -79,6 +79,13 @@ add_executable(rotator_simulator
   main.cpp
   sim_stubs.cpp
   "${PROJECT_ROOT}/src/control/program_executor.cpp"
+  "${PROJECT_ROOT}/src/control/control.cpp"
+  "${PROJECT_ROOT}/src/control/modes/continuous.cpp"
+  "${PROJECT_ROOT}/src/control/modes/pulse.cpp"
+  "${PROJECT_ROOT}/src/control/modes/step_mode.cpp"
+  "${PROJECT_ROOT}/src/control/modes/jog.cpp"
+  "${PROJECT_ROOT}/src/motor/motor.cpp"
+  "${PROJECT_ROOT}/src/motor/calibration.cpp"
   "${PROJECT_ROOT}/src/app_state.cpp"
   "${PROJECT_ROOT}/src/ui/theme.cpp"
   "${PROJECT_ROOT}/src/ui/fonts/rotator_digits_104.c"

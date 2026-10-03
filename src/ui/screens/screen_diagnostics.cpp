@@ -1,3 +1,4 @@
+#include "../../motor/motor.h"
 // TIG Rotator Controller - Diagnostics Screen
 // POST mockup #18: twin cards, compact GPIO + runtime, single event strip, BACK only
 
@@ -19,6 +20,7 @@ static lv_obj_t* stateVal = nullptr;
 static lv_obj_t* targetRpmVal = nullptr;
 static lv_obj_t* actualRpmVal = nullptr;
 static lv_obj_t* enaVal = nullptr;
+static lv_obj_t* driverInfoLabel = nullptr;
 static lv_obj_t* eventStripLabel = nullptr;
 static uint32_t lastEventLogVersion = UINT32_MAX;
 
@@ -74,7 +76,7 @@ void screen_diagnostics_create() {
   ui_create_settings_header(screen, "DIAGNOSTICS", "LIVE", COL_GREEN);
 
   lv_obj_t* gpioPanel = ui_create_post_card(screen, 24, 94, 368, 224);
-  lv_obj_remove_flag(gpioPanel, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(gpioPanel, false);
 
   lv_obj_t* gpioTitle = lv_label_create(gpioPanel);
   lv_label_set_text(gpioTitle, "GPIO INPUTS");
@@ -92,7 +94,7 @@ void screen_diagnostics_create() {
   pedalSwVal = add_gpio_row(gpioPanel, gy, "PEDAL SW");
 
   lv_obj_t* rtPanel = ui_create_post_card(screen, 424, 94, 368, 224);
-  lv_obj_remove_flag(rtPanel, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(rtPanel, false);
 
   lv_obj_t* rtTitle = lv_label_create(rtPanel);
   lv_label_set_text(rtTitle, "RUNTIME STATUS");
@@ -109,8 +111,14 @@ void screen_diagnostics_create() {
   ry += 32;
   enaVal = add_rt_row(rtPanel, ry, "ENA");
 
+  driverInfoLabel = lv_label_create(rtPanel);
+  lv_obj_set_pos(driverInfoLabel, 12, 180); lv_obj_set_width(driverInfoLabel, 344);
+  lv_obj_set_style_text_font(driverInfoLabel, FONT_SMALL, 0);
+  lv_obj_set_style_text_color(driverInfoLabel, COL_TEXT_DIM, 0);
+  lv_label_set_long_mode(driverInfoLabel, LV_LABEL_LONG_MODE_DOTS);
+
   lv_obj_t* eventPanel = ui_create_post_card(screen, 24, 334, 752, 48);
-  lv_obj_remove_flag(eventPanel, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(eventPanel, false);
   eventStripLabel = lv_label_create(eventPanel);
   lv_label_set_text(eventStripLabel, "-");
   lv_obj_set_style_text_font(eventStripLabel, FONT_NORMAL, 0);
@@ -133,7 +141,7 @@ void screen_diagnostics_invalidate_widgets() {
   targetRpmVal = nullptr;
   actualRpmVal = nullptr;
   enaVal = nullptr;
-  eventStripLabel = nullptr;
+  eventStripLabel = nullptr; driverInfoLabel = nullptr;
   lastEventLogVersion = UINT32_MAX;
 }
 
@@ -155,6 +163,14 @@ void screen_diagnostics_update() {
   set_value(targetRpmVal, buf, COL_TEXT);
   snprintf(buf, sizeof(buf), "%.3f", (double)speed_get_actual_rpm());
   set_value(actualRpmVal, buf, COL_TEXT);
+
+  MotorDriverInfo info;
+  if (driverInfoLabel && motor_read_driver_info(info)) {
+    char timing[80];
+    snprintf(timing, sizeof(timing), "%s / DIR %lu + %lu us", info.name,
+             (unsigned long)info.direction_before_us, (unsigned long)info.direction_after_us);
+    set_value(driverInfoLabel, timing, COL_TEXT_DIM);
+  }
 
   uint32_t eventVersion = event_log_version();
   if (eventVersion != lastEventLogVersion && eventStripLabel) {

@@ -8,13 +8,15 @@ The controller runs on ESP32-P4's dual-core RISC-V processor.
 CORE 0 (Real-time)              CORE 1 (UI)
 ========================         ========================
 safetyTask  (pri 5, 4KB)        lvglTask    (pri 2, 64KB)
-motorTask   (pri 4, 5KB)        storageTask (pri 1, 12KB)
+inputTask   (pri 4, 5KB)        storageTask (pri 1, 12KB)
 controlTask (pri 3, 4KB)
 ```
 
+Runtime FastAccelStepper calls have one owner: controlTask. inputTask publishes sampled inputs; the UI reads fresh coherent control snapshots. FastAccelStepper has its own priority-24 Core 0 task. A bounded boot task allocates the RMT channel on Core 0 because engine-task affinity alone does not place the IRQ. See the [1.4.0 re-audit](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/FASTACCELSTEPPER_1_4_REAUDIT.md).
+
 **Critical rule:** All `lv_*` calls must come from `lvglTask` on Core 1 only. Motor control functions on Core 0 must never call LVGL directly.
 
-**WDT:** motorTask, controlTask, safetyTask are subscribed to TWDT. lvglTask and storageTask are NOT subscribed (they do blocking I/O that can exceed WDT timeout).
+**WDT:** inputTask, controlTask, safetyTask are subscribed to TWDT. lvglTask and storageTask are NOT subscribed (they do blocking I/O that can exceed WDT timeout).
 
 **Flash safety:** `CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y` + `CONFIG_SPIRAM_RODATA=y` keeps code reachable when flash cache is disabled during **NVS** (and any filesystem) writes. Settings/presets use NVS `putBytes`, not LittleFS `.tmp` + rename. IWDT timeout is 2000ms (`CONFIG_ESP_INT_WDT_TIMEOUT_MS=2000`).
 
@@ -40,7 +42,7 @@ Any  ──> ESTOP   ──> IDLE (manual reset via Core 0)
 | `STATE_JOG` | Run while button held, stop on release |
 | `STATE_TIMER` | Run for configurable duration |
 | `STATE_STOPPING` | Decelerating to stop (smooth ramp) |
-| `STATE_ESTOP` | Emergency stop, motor halted instantly |
+| `STATE_ESTOP` | Latched fault, ENA inhibited; physical stop time unmeasured |
 
 ## Thread Safety Patterns
 
@@ -51,10 +53,10 @@ UI callbacks on Core 1 set `std::atomic` flags with `memory_order_release`. Core
 UI callback (Core 1)                   Core 0 task (every 5ms)
 ─────────────────────                ────────────────────────
 speed_slider_set(rpm)     ──>
-  stores atomic target RPM            motorTask polls pot/pedal/input
-                                      speed_apply() computes milli-Hz
-                                      and calls motor_set_target_milli_hz()
-                                      (encapsulates g_stepperMutex)
+  stores atomic target RPM            inputTask polls pot/pedal/input
+                                      publishes sampled input snapshot
+                                      controlTask computes/applies milli-Hz
+                                      and publishes coherent ControlSnapshot
 ```
 
 ### CAS State Transition
@@ -72,15 +74,16 @@ bool control_transition_to(SystemState newState) {
 ```
 
 ### Mutex-Protected Stepper
-All FastAccelStepper calls wrapped in `g_stepperMutex` (`SemaphoreHandle_t`, FreeRTOS mutex — NOT a spinlock):
+Runtime FastAccelStepper calls require controlTask ownership and bounded `g_stepperMutex` access (`SemaphoreHandle_t`, FreeRTOS mutex). Initialization precedes owner binding. A failed 2 ms lock acquisition latches a motor fault. Example:
 ```
-xSemaphoreTake(g_stepperMutex, portMAX_DELAY);
-stepper->setSpeedInMilliHz(mhz);
-stepper->applySpeedAcceleration();
-xSemaphoreGive(g_stepperMutex);
+if (motor_lock()) {
+  // Typed move results and speed/acceleration errors are checked.
+  // Runtime calls execute only in controlTask.
+  xSemaphoreGive(g_stepperMutex);
+}
 ```
 
-Previously a `portMUX_TYPE` spinlock, which disabled interrupts and caused IWDT crashes when contended across cores. FreeRTOS mutex blocks via scheduler, keeping tick interrupts enabled.
+Previously a `portMUX_TYPE` spinlock, which disabled interrupts and caused IWDT crashes when contended across cores. The bounded FreeRTOS mutex keeps tick interrupts enabled. ENA inhibition does not wait for the mutex; library cleanup remains in controlTask and reset waits for asynchronous queue drain.
 
 ### Storage Mutex
 Preset vector access protected by `g_presets_mutex` semaphore. Copy-based API: `storage_get_preset()` returns a copy, never a pointer.
@@ -97,7 +100,7 @@ Preset vector access protected by `g_presets_mutex` semaphore. Copy-based API: `
 | File | Responsibility |
 |------|---------------|
 | `motor.cpp` | FastAccelStepper init, enable/disable, direction, ESTOP halt |
-| `motor.h` | Public API: `motor_init()`, `motor_get_stepper()`, `motor_is_running()` |
+| `motor.h` | Public API: `motor_init()`, `motor_read_driver_info()`, `motor_is_running()` |
 | `speed.cpp` | RPM-to-Hz conversion, ADC pot filtering, direction switch, pedal |
 | `microstep.cpp` | Microstepping config persistence |
 | `calibration.cpp` | Calibration factor validation |
@@ -139,17 +142,16 @@ All shared flags (`g_estopPending`, `g_estopTriggerMs`, `g_uiResetPending`, `g_w
 | `lvgl_hal.cpp` | LVGL display driver, flush callback, dim control |
 | `screens.cpp` | Screen registry, lazy creation, show/hide management |
 | `theme.h` / `theme.cpp` | Color palette: runtime **`g_col_*`** from **`NEUT_DARK`/`NEUT_LIGHT`** via `theme_sync_colors()` (`color_scheme` in settings); **`COL_HDR_MUTED`** for header secondary labels; fonts; layout constants (**`MAIN_GAUGE_*`**, **`MAIN_RPM_*`**, **`JOG_RPM_*`**, settings `SET_*`, etc.) |
-| `screens/` | `screen_*.cpp` — 22 registered `ScreenId` roots + ESTOP overlay module |
+| `screens/` | `screen_*.cpp` — 23 registered `ScreenId` roots + ESTOP overlay module |
 
-**V5 layout:** Large orange main speed panel with a native 104 px numeric font, idle RPM +/− controls, CW/CCW selection and wide START/STOP. Shared graphite/orange styles apply across all 22 screens; calibration and some instrument controls retain their existing layout.
+**V5 layout:** Large orange main speed panel with a native 104 px numeric font, idle RPM +/− controls, CW/CCW selection and wide START/STOP. Shared graphite/orange styles apply across all registered screens. Calibration uses fixed Align → Measure → Verify → Save stages; New/Edit Program separates run mode, availability and full-screen name/RPM input. Setup Wizard adds four-stage commissioning.
 
 **USB mirror note:** mirror builds use LVGL partial rendering so `lvgl_hal.cpp`
 streams dirty RGB565 rectangles to the Windows viewer instead of repeatedly
 sending full 800x480 frames. PC input is registered as a second LVGL pointer
 device and is accepted only while **Settings > Display > USB MIRROR** is armed.
 
-**Calibration note:** the calibration screen uses larger bench-readable controls
-and blocks SAVE until the verify move result passes tolerance.
+**Calibration note:** measurements require completed moves. The correction is a runtime draft until verification passes 360 ± 0.5 degrees and its Save receipt succeeds; Restart restores the saved factor.
 
 ## Display Pipeline
 
@@ -171,7 +173,7 @@ Rotation formula:
 UI (Core 1)                         Motor (Core 0)
 ─────────────                        ─────────────
 speed_slider_set(rpm)  ──────────>  speed_get_target_rpm() reads atomic
-pot / pedal update     ──────────>  speed_apply() computes and applies speed
+inputTask pot/pedal     ──────────>  controlTask applies speed from sampled inputs
 control_start_continuous() ──────>  controlTask receives generation-checked MotionCommand
                                         motor_set_target_milli_hz() wraps stepper mutex
 ```

@@ -24,7 +24,7 @@
 
 <br>
 
-Open-source controller for a stepper-driven welding positioner / pipe rotator, with a touch UI designed for workshop use, real-time motor tasking, persistent presets, foot pedal support, and hardwired E-STOP behavior.
+Open-source controller for a stepper-driven welding positioner / pipe rotator, with a touch UI designed for workshop use, a dedicated motion executor, persistent presets, foot pedal support, and hardwired E-STOP behavior.
 
 Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/wiki) for getting started, hardware setup, troubleshooting, architecture, and roadmap.
 
@@ -61,11 +61,11 @@ Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Posit
 
 [Implementation details](docs/IMPROVEMENTS_2026-10-01.md) · [V5 integration and upload record](docs/UI_V5_DEPLOYMENT.md) · [Changelog](CHANGELOG.md)
 
-**Current release: v2.1.0, updated 2 October 2026.** V5 identifies the UI design iteration. [Download firmware and read the release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.1.0). Runtime screenshots below were refreshed from the v2.1.1 source simulator; the downloadable stable binaries remain v2.1.0.
+**Current release: v2.1.1, updated 3 October 2026.** V5 identifies the UI design iteration. [Download firmware and read the release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.1.1). The current firmware and simulator include LVGL 9.6, FastAccelStepper 1.4, guided setup/calibration and the revised program editor.
+
+v2.1.1 adds bounded motor error handling, precise RPM values, durable calibration confirmation and production motion tests. This release is validated on the host and has not been flashed or physically tested as part of publication. [Maintenance implementation report](docs/MAINTENANCE_2026-10-02.md) · [FastAccelStepper re-audit](docs/FASTACCELSTEPPER_1_4_REAUDIT.md).
 
 ---
-
-The source maintenance update targets **v2.1.1**; the published download above remains **v2.1.0** until a new release is published. It adds bounded motor error handling, precise RPM values on all screens, durable calibration save confirmation and tests of the production motion code. See the [maintenance implementation report](docs/MAINTENANCE_2026-10-02.md) for validation and hardware limits.
 
 ## Quick Navigation
 
@@ -183,12 +183,12 @@ Most DIY welding rotator projects stop at "turn a stepper at a set speed." This 
 
 | Compared With | Typical Limitation | This Project |
 |:---|:---|:---|
-| Basic Arduino stepper sketch | Single loop, no UI state machine, limited fault handling | Dual-core FreeRTOS with separate motor, control, safety, UI, and storage tasks |
+| Basic Arduino stepper sketch | Single loop, no UI state machine, limited fault handling | Dual-core FreeRTOS with separate input, control, safety, UI, and storage tasks |
 | Generic CNC / GRBL controller | Optimized for G-code rather than a dedicated welding workflow | Purpose-built TIG rotator UI with Continuous, Jog, Pulse, Step, Timer, presets, and foot pedal support |
 | Cheap speed-controller modules | Pot-only control, no saved jobs, weak diagnostics | NVS presets, workpiece diameter fields, diagnostics screen, event log, and display/system info |
 | Open-bench ESP32 projects | Often unstable near HF-start TIG welding | Field-tested with TIG after moving ESP32-P4 screen, DM542T driver, and PSU into one grounded metal enclosure |
 | Simple E-STOP input | Software polling or unsafe enable assumptions | GPIO34 ISR forces ENA HIGH, state machine latches fault, and motion-start paths re-check E-STOP/ALM after ENA LOW |
-| Display demos | Pretty screen but no realtime motor isolation | LVGL 9 UI isolated to Core 1; FastAccelStepper and safety-critical logic stay on Core 0 |
+| Display demos | Pretty screen but no realtime motor isolation | LVGL runs on Core 1; motion tasks and RMT channel allocation use Core 0 |
 | Fixed motor configs | Hardcoded microstep/speed assumptions | Touch-configurable microstepping, acceleration, direction invert, max RPM clamp, calibration, and storage validation |
 
 The project combines dedicated welding modes, input diagnostics and documented enclosure experience from TIG HF testing. The latest software changes have native and simulator coverage; physical motor and safety checks for this update remain bench work.
@@ -209,7 +209,7 @@ The project combines dedicated welding modes, input diagnostics and documented e
 
 ## UI Screens
 
-The UI is built from **22 registered screen types** plus a separate full-screen fault overlay. The table below maps the firmware registry.
+The UI is built from **23 registered screen types** (including the Setup Wizard) plus a separate full-screen fault overlay. The table below maps the firmware registry.
 
 ![Emergency-stop overlay](docs/images/ui_runtime_v5/ESTOP_ACTIVE.png)
 
@@ -219,7 +219,7 @@ Simulated active fault: the physical input must be cleared before reset is avail
 
 [V5 SVG proposals](docs/images/ui_mockup_v5/all_screens.svg) · [Design bundle](docs/images/ui_mockup_v5.zip) · [Readability review](docs/images/ui_mockup_v5/READABILITY_REVIEW.md) · [Previous UI map](docs/images/ui_screens.svg)
 
-The 30 design views cover all 22 screen types, additional states and keyboards. The SVG audit measured 581 text elements at 800 × 480. Those results apply to the mockups; actual firmware captures are shown above. Calibration, step and countdown retain some existing controls and layouts; see the [integration notes](docs/UI_V5_DEPLOYMENT.md).
+The 30 design views cover all 22 screen types, additional states and keyboards. The SVG audit measured 581 text elements at 800 × 480. Those results apply to the mockups; actual firmware captures are shown above. Calibration now uses a guided, non-scrolling workflow; step and countdown retain some existing controls and layouts; see the [integration notes](docs/UI_V5_DEPLOYMENT.md).
 
 <details>
 <summary><b>ScreenId registry</b></summary>
@@ -230,19 +230,20 @@ The 30 design views cover all 22 screen types, additional states and keyboards. 
 | **Main** | `SCREEN_MAIN` | Large orange RPM panel, idle RPM +/−, CW/CCW and wide START/STOP |
 | **Menu** | `SCREEN_MENU` | Advanced mode selection and settings |
 | **Run Modes** | `SCREEN_RUN_MODES` | Pulse / Step / Jog / Timer selection |
+| **Setup Wizard** | `SCREEN_SETUP` | Motor, direction, verified calibration and physical E-STOP function check (v2.1.1) |
 | **Jog** | `SCREEN_JOG` | Touch-and-hold rotation for manual positioning (has its own RPM +/-) |
 | **Pulse** | `SCREEN_PULSE` | ON/OFF cycle for tack welding |
 | **Step** | `SCREEN_STEP` | Rotate exact angle, then stop |
 | **Timer (Countdown)** | `SCREEN_TIMER` | Visual 3-2-1 countdown before continuous rotation starts (1-10 s configurable) |
 | **Programs** | `SCREEN_PROGRAMS` | Preset list with save, load, delete |
-| **Program Edit** | `SCREEN_PROGRAM_EDIT` | Full preset editor with on-screen keyboard |
+| **Program Edit** | `SCREEN_PROGRAM_EDIT` | Fixed layout, separate run/available modes, exact RPM and full-screen name editor |
 | **Edit Pulse** | `SCREEN_EDIT_PULSE` | Quick preset edit for pulse parameters |
 | **Edit Step** | `SCREEN_EDIT_STEP` | Quick preset edit for step parameters |
 | **Edit Continuous** | `SCREEN_EDIT_CONT` | Quick preset edit for continuous / RPM preset fields |
 | **Settings** | `SCREEN_SETTINGS` | Hub for Motor Config, Calibration, Display, Pedal Settings, Diagnostics, System Info and About |
 | **Display** | `SCREEN_DISPLAY` | Brightness, dim timeout, **UI MODE** (DARK/LIGHT), accent theme selection |
 | **System Info** | `SCREEN_SYSINFO` | Core load, heap, PSRAM, uptime |
-| **Calibration** | `SCREEN_CALIBRATION` | Motor calibration factor adjustment with mandatory verify-before-save |
+| **Calibration** | `SCREEN_CALIBRATION` | Guided Align → Measure → Verify → Save, with isolated draft correction |
 | **Motor Config** | `SCREEN_MOTOR_CONFIG` | Microstepping, acceleration, direction switch, pedal enable |
 | **Pedal Settings** | `SCREEN_PEDAL_SETTINGS` | Pedal arm/disarm plus live GPIO33 and ADS1115 status |
 | **Diagnostics** | `SCREEN_DIAGNOSTICS` | Live GPIO/fault page for ESTOP, ALM, DIR switch, pedal switch, ENA, direction, RPM state and recent event log |
@@ -262,7 +263,7 @@ Dual-core **FreeRTOS** design separating realtime motor control from UI renderin
 Core 0 (Realtime)                Core 1 (UI)
 ─────────────────                ──────────────────
 safetyTask   (pri 5, 4 KB)      lvglTask    (pri 2, 64 KB)
-motorTask    (pri 4, 5 KB)      storageTask (pri 1, 12 KB)
+inputTask    (pri 4, 5 KB)      storageTask (pri 1, 12 KB)
 controlTask  (pri 3, 4 KB)
 ```
 
@@ -271,7 +272,7 @@ controlTask  (pri 3, 4 KB)
 | Principle | Implementation |
 |:---|:---|
 | **Task Isolation** | UI rendering cannot block motor pulse generation |
-| **Hardware Timers** | RMT peripheral for jitter-free micro-stepping |
+| **Hardware Timers** | Hardware-timed RMT STEP output; refill latency and physical pulse timing require measurement |
 | **Fail-Safe** | E-STOP ISR drives ENA HIGH; stop latency requires measurement; motion-start paths re-check E-STOP/ALM after ENA LOW and disable again if unsafe |
 | **Thread Safety** | FreeRTOS mutex on stepper access, atomic cross-core variables, pending-flag patterns |
 | **Live Speed** | `applySpeedAcceleration()` for immediate RPM changes during rotation |
@@ -337,15 +338,35 @@ Default environment: `esp32p4-release`. Build output goes to `.pio/build-fw` to 
 | Native tests | `pio test -e native -e native-control` |
 | On-device tests | `pio test -e esp32p4-test` |
 
-`COM5` is configured in `platformio.ini`; change `upload_port` / `monitor_port` if Windows assigns another port. Native tests do not need hardware. Use `pio device list` and override the configured port with `--upload-port COM3` (example).
+Serial ports are detected automatically. Use `pio device list` and override the port with `--upload-port COM3` (example) if needed. Native tests do not need hardware.
 
-Pinned dependencies: pioarduino `55.03.37`, LVGL `v9.5.0`, FastAccelStepper `0.33.14`, ArduinoJson `7.4.3`.
+Pinned source dependencies: PlatformIO Core `6.2.0`, pioarduino `55.03.312-1` (Arduino `3.3.12` / ESP-IDF `5.5.5`), LVGL `9.6.0`, FastAccelStepper `1.4.0` at commit `f24a659`, ArduinoJson `7.4.3`, and Unity `2.7.0`. FastAccelStepper uses the upstream Git commit because the registry package with the same version lacks the corrected RMT implementation. [Dependency inventory, migration analysis and validation](docs/DEPENDENCY_UPGRADE_2026-10-02.md). Older v2.1.0 binaries retain their original dependencies.
 
 ---
 
+## Dependency Update (v2.1.1)
+
+The source now uses **LVGL 9.6.0** and **FastAccelStepper 1.4.0** with the current Arduino ESP32 framework. The V5 visual style and English labels are retained; Calibration now has a guided, non-scrolling layout. Motor initialization selects RMT explicitly; reset waits for queued pulses to finish after `forceStop()`. The actual upstream RMT encoder is tested on the PC as well as the production control code. [Complete dependency and migration report](docs/DEPENDENCY_UPGRADE_2026-10-02.md).
+
+## Program Editor (v2.1.1)
+
+**New Program** keeps the V5 dark/orange style with a fixed 800×480 layout. Select one **RUN MODE**, choose the other modes the preset allows, enter an exact RPM, and open **MODE SETTINGS** for direction and timing. Name and RPM have separate full-screen editors; invalid input keeps the draft unchanged. Low-speed adjustments preserve 0.001 RPM precision in every mode editor. Save stores the program without starting rotation.
+
+<img src="docs/images/program_v2/01_new_program.png" width="800" alt="Actual LVGL New Program page with run mode, availability, exact speed and mode settings">
+
+[All editor screens and workflow](docs/PROGRAM_EDITOR.md). Included in v2.1.1 firmware and simulator. Older v2.1.0 downloads retain their original UI.
+
+## Guided Setup (v2.1.1)
+
+The source includes a four-step **Setup Wizard** using the existing V5 dark/orange UI: motor settings, hold-to-run direction checks, verified manual calibration, and a user-confirmed function check of the **physical E-STOP switch**, reset and normal START/STOP. New installations open the wizard; existing valid settings without the new field remain configured. Re-run it from **Settings → Setup Wizard**. Completing setup does not start motion, and completion is confirmed only after its save succeeds.
+
+<img src="docs/images/setup_v1/01_motor.png" width="800" alt="Actual LVGL setup wizard motor stage">
+
+[All wizard screens and instructions](docs/SETUP_WIZARD.md) · [Control architecture and validation](docs/CONTROL_SETUP_IMPLEMENTATION.md). Included in v2.1.1; older v2.1.0 binaries do not contain this addition.
+
 ## PC UI Simulator
 
-**Try it without installing development tools:** [Download the Windows x64 simulator ZIP](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.1.0/welding-positioner-v2.1.0-simulator-windows-x64.zip), extract all files, and double-click **Start Simulator.cmd**. No hardware is needed. [Portable simulator guide](docs/releases/SIMULATOR.md).
+**Try it without installing development tools:** [Download the Windows x64 simulator ZIP](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.1.1/welding-positioner-v2.1.1-simulator-windows-x64.zip), extract all files, and double-click **Start Simulator.cmd**. No hardware is needed. [Portable simulator guide](docs/releases/SIMULATOR.md).
 
 The Windows simulator runs the real LVGL screen code on the PC using SDL2. It is useful for UI review, navigation testing, and quick logic checks without flashing the ESP32-P4.
 
@@ -359,7 +380,7 @@ Automated UI smoke test:
 .\simulator\run.ps1 -SelfTest
 ```
 
-The self-test creates every screen, runs update loops, clicks key navigation/control buttons against fake simulator state, and exits non-zero on failure.
+The self-test creates every screen, runs update loops, clicks key navigation/control buttons through the shared production dispatcher and simulated hardware, and exits non-zero on failure.
 
 Export screenshots of every registered screen:
 
@@ -431,7 +452,7 @@ Remote control is fail-closed: it starts disabled after boot, requires **Setting
 | **Microstepping** | 1/4, 1/8, 1/16 (default), 1/32 — selectable in Motor Config, persisted to NVS |
 | **Motor Torque** | 3.0 Nm (NEMA 23) |
 | **Control Resolution** | Sub-milli-RPM (speed is computed in milli-Hz and applied via `setSpeedInMilliHz()` + `applySpeedAcceleration()`) |
-| **Display** | 800 x 480, landscape, LVGL 9.5.0, RGB565, 2-lane MIPI-DSI |
+| **Display** | 800 x 480, landscape, LVGL 9.6.0, RGB565, 2-lane MIPI-DSI |
 | **Flash partition** | 16 MB total; two 0x640000-byte app slots, 0x360000-byte SPIFFS area, NVS/OTA metadata and coredump. See [flashing guide](docs/releases/FLASHING.md). |
 | **RAM Usage** | ~10% &ensp; (about 32 KB / 320 KB internal SRAM in release build) — LVGL buffers live in PSRAM (`CONFIG_SPIRAM_FETCH_INSTRUCTIONS`) |
 
@@ -501,7 +522,9 @@ Open `src/config.h` to adjust hardware parameters:
 
 Settings can also be changed from the touchscreen via **Settings > Motor Config** and are persisted to **NVS** (see [Persistence (NVS)](#persistence-nvs)).
 
-Calibration is changed from **Settings > Calibration**. The screen now requires a verify pass before saving: set workpiece OD on Step, command a 360-degree move, enter the measured angle, apply, run verify, and save only after the result is within tolerance. This prevents storing an unverified calibration factor by accident.
+Open **Settings → Calibration** for the guided **Align → Measure → Verify → Save** workflow. Set workpiece diameter on the same page, align with hold-to-run Jog, measure a completed 360-degree move, and verify the correction with another completed move. Save requires 360 ± 0.5 degrees and confirms the actual storage receipt. STOP cancels a measurement; unverified corrections remain temporary and cannot leak into autosaves. Restart restores the saved factor. See the [calibration guide](docs/CALIBRATION_WORKFLOW.md).
+
+![Guided calibration](docs/images/calibration_v2/01_align.png)
 
 ---
 
@@ -649,7 +672,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - [ ] Enclosure CAD / printable panel files
 - [ ] Assembly guide with real build photos
 - [ ] Wider DM542T speed/current tuning data
-- [ ] Optional binary release workflow for builders without PlatformIO
+- [x] Binary firmware and portable Windows simulator release workflow for builders without PlatformIO
 
 ---
 
@@ -657,13 +680,13 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 
 | Local check | Result |
 | --- | --- |
-| Native suites | 419 / 419 passed (native and production-control suites) |
-| LVGL self-test | Passed: navigation, program edits, RPM adjustment and blocked/available reset |
+| Native suites | 438 / 438 passed (native and production-control suites) |
+| LVGL self-test | Passed: navigation, program edits, RPM adjustment, fault reset, full setup/calibration workflows, save failure/retry and stale control |
 | Firmware builds | Release, debug and mirror passed |
-| Device upload | Release uploaded to COM3; esptool verified data hash and issued reset |
+| Device upload | This control/setup update has not been flashed. The earlier V5 upload to COM3 is recorded in the deployment report. |
 | Physical motor/safety testing | Not performed as part of this update |
 
-[Validation logs](docs/validation/2026-10-01/ui-v5/) record local runs. Native tests include direct production-policy tests, but older tests also model behavior separately; simulator hardware is stubbed. CI runs native tests, three firmware variants and SDL navigation checks. The badge links to the current GitHub result.
+[Dependency validation logs](docs/validation/2026-10-02/dependencies/) and [program editor validation](docs/validation/2026-10-03/program-editor/README.md) record local runs. Native tests include direct production-policy tests, but older tests also model behavior separately; simulator hardware is stubbed. CI runs native tests, three firmware variants and SDL navigation checks. The badge links to the current GitHub result.
 
 ---
 
@@ -678,6 +701,10 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 | [docs/SAFETY_SYSTEM.md](docs/SAFETY_SYSTEM.md) | E-STOP behavior, watchdog model, safety assumptions |
 | [docs/PROJECT_IMPLEMENTATION.md](docs/PROJECT_IMPLEMENTATION.md) | RTOS architecture, storage, display pipeline, known workarounds |
 | [docs/INSTRUCTABLES.md](docs/INSTRUCTABLES.md) | Builder-friendly article content and assembly flow |
+| [docs/PROGRAM_EDITOR.md](docs/PROGRAM_EDITOR.md) | New Program workflow, exact input, available modes and actual screenshots |
+| [docs/CALIBRATION_WORKFLOW.md](docs/CALIBRATION_WORKFLOW.md) | Guided measurement, verification, temporary correction and runtime screenshots |
+| [docs/SETUP_WIZARD.md](docs/SETUP_WIZARD.md) | Guided setup, physical switch checks and runtime screenshots |
+| [docs/CONTROL_SETUP_IMPLEMENTATION.md](docs/CONTROL_SETUP_IMPLEMENTATION.md) | Motion ownership, snapshot freshness, compatibility and validation |
 | [docs/UI_V5_DEPLOYMENT.md](docs/UI_V5_DEPLOYMENT.md) | V5 UI implementation, screenshots and device upload evidence |
 | [docs/IMPROVEMENTS_2026-10-01.md](docs/IMPROVEMENTS_2026-10-01.md) | Code improvements, checks and remaining bench work |
 | [docs/estop_timing.md](docs/estop_timing.md) | Physical E-STOP measurement procedure |
@@ -723,7 +750,7 @@ src/
     lvgl_hal.cpp              Flush callback (manual 90° rotation), dim, touch polling
     theme.cpp/h               Runtime neutral palettes (dark/light), accent themes, `COL_HDR_MUTED`, fonts, layout constants
     screens.cpp/h             Screen management, lazy creation, g_lvgl_mutex
-    screens/                  screen_*.cpp (22 registered ScreenId roots + ESTOP overlay module)
+    screens/                  screen_*.cpp (23 registered ScreenId roots + ESTOP overlay module)
 test/
   test_logic/               Native Unity tests (no hardware required)
   test_device_*/            On-device integration tests (require ESP32-P4)

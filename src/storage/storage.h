@@ -34,6 +34,7 @@ struct SystemSettings {
   uint8_t stepper_driver;     // STEPPER_DRIVER_STANDARD or STEPPER_DRIVER_DM542T (pulse/dir timing)
   bool pedal_enabled;         // Foot pedal GPIO33 start/stop armed; ADS1115 only adds analog speed
   uint8_t settings_version;
+  bool setup_completed = false; // Missing key in a valid legacy settings document migrates to true.
 };
 
 // Preset struct matching the system's control capabilities

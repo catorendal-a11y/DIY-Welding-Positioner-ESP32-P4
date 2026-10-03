@@ -1,0 +1,14 @@
+RAM:   [=         ]   9.9% (used 32564 bytes from 327680 bytes)
+Flash: [==        ]  16.9% (used 1108124 bytes from 6553600 bytes)
+========================= [SUCCESS] Took 19.62 seconds =========================
+RAM:   [=         ]  10.0% (used 32756 bytes from 327680 bytes)
+Flash: [==        ]  17.4% (used 1142440 bytes from 6553600 bytes)
+========================= [SUCCESS] Took 19.38 seconds =========================
+RAM:   [=         ]  10.0% (used 32740 bytes from 327680 bytes)
+Flash: [==        ]  17.0% (used 1111364 bytes from 6553600 bytes)
+========================= [SUCCESS] Took 19.01 seconds =========================
+Environment      Status    Duration
+esp32p4-release  SUCCESS   00:00:19.620
+esp32p4-debug    SUCCESS   00:00:19.376
+esp32p4-mirror   SUCCESS   00:00:19.015
+========================= 3 succeeded in 00:00:58.011 =========================

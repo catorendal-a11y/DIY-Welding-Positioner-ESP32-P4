@@ -59,7 +59,7 @@ static lv_obj_t* make_bar(lv_obj_t* parent, int x, int y, int w, int h, lv_color
   lv_bar_set_range(bar, 0, 100);
   lv_bar_set_value(bar, 0, LV_ANIM_OFF);
   lv_obj_set_style_bg_color(bar, color, LV_PART_INDICATOR);
-  lv_obj_remove_flag(bar, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_clickable(bar, false);
   return bar;
 }
 

@@ -93,7 +93,7 @@ static void sec_adj_cb(lv_event_t* e) {
 static void start_event_cb(lv_event_t* e) {
   if (countingDown.load(std::memory_order_acquire)) return;
   if (safety_inhibit_motion()) return;
-  if (control_get_state() != STATE_IDLE) return;
+  if (ui_control_state() != STATE_IDLE) return;
 
   save_countdown_setting();
   countingDown.store(true, std::memory_order_release);
@@ -109,7 +109,7 @@ static void start_event_cb(lv_event_t* e) {
 static void stop_event_cb(lv_event_t* e) {
   countingDown.store(false, std::memory_order_release);
   startPending.store(false, std::memory_order_release);
-  if (control_get_state() != STATE_IDLE && control_get_state() != STATE_ESTOP) {
+  if (ui_control_state() != STATE_IDLE && ui_control_state() != STATE_ESTOP) {
     control_stop();
   }
 }
@@ -129,8 +129,8 @@ static lv_obj_t* timer_make_info_card(lv_obj_t* scr, int y, const char* title, b
   lv_obj_set_style_border_width(c, 1, 0);
   lv_obj_set_style_radius(c, RADIUS_CARD, 0);
   lv_obj_set_style_pad_all(c, 0, 0);
-  lv_obj_remove_flag(c, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_remove_flag(c, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_scrollable(c, false);
+  lv_obj_set_clickable(c, false);
 
   lv_obj_t* t = lv_label_create(c);
   lv_label_set_text(t, title);
@@ -168,7 +168,7 @@ void screen_timer_create() {
   lv_obj_set_style_border_width(ringCard, 1, 0);
   lv_obj_set_style_radius(ringCard, RADIUS_CARD, 0);
   lv_obj_set_style_pad_all(ringCard, 0, 0);
-  lv_obj_remove_flag(ringCard, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_scrollable(ringCard, false);
 
   const int arcSz = 224;
   const int arcPad = (296 - arcSz) / 2;
@@ -182,7 +182,7 @@ void screen_timer_create() {
   lv_obj_set_style_arc_width(arcRing, 14, LV_PART_MAIN);
   lv_obj_set_style_arc_color(arcRing, COL_GREEN, LV_PART_INDICATOR);
   lv_obj_set_style_arc_width(arcRing, 12, LV_PART_INDICATOR);
-  lv_obj_remove_flag(arcRing, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_clickable(arcRing, false);
   lv_obj_set_style_bg_opa(arcRing, LV_OPA_TRANSP, LV_PART_MAIN);
   lv_obj_remove_style(arcRing, nullptr, LV_PART_KNOB);
 
@@ -275,7 +275,7 @@ void screen_timer_update() {
   if (startPending.load(std::memory_order_acquire)) {
     startPending.store(false, std::memory_order_release);
     countingDown.store(false, std::memory_order_release);
-    if (safety_inhibit_motion() || control_get_state() != STATE_IDLE) {
+    if (safety_inhibit_motion() || ui_control_state() != STATE_IDLE) {
       if (warnDetailLbl) {
         lv_label_set_text(warnDetailLbl, "START BLOCKED");
         lv_obj_set_style_text_color(warnDetailLbl, COL_RED, 0);

@@ -1,8 +1,9 @@
 // TIG Rotator Controller - Display Settings Screen
-// Brightness, dim timeout, accent color selection
+// Brightness, screen-saver timeout, accent color selection
 #include "../screens.h"
 #include "../theme.h"
 #include "../display.h"
+#include "../screen_saver.h"
 #include "../../config.h"
 #include "../../mirror/usb_mirror.h"
 #include "../../storage/storage.h"
@@ -31,6 +32,7 @@ static int currentDimIdx = 0;
 static bool dimDraftLoaded = false;
 static uint32_t displaySaveTicket = 0;
 static lv_obj_t* displaySaveButton = nullptr;
+static lv_obj_t* previewButton = nullptr;
 
 static bool displayScreenActive = false;
 static bool ignoreSliderCb = false;
@@ -153,9 +155,9 @@ static void update_info_text() {
   if (!infoLabel) return;
   char buf[64];
   if (dimTimeouts[currentDimIdx] == 0) {
-    snprintf(buf, sizeof(buf), "Auto-dim is disabled");
+    snprintf(buf, sizeof(buf), "Screen saver is OFF. Preview it below.");
   } else {
-    snprintf(buf, sizeof(buf), "Display dims after %s of inactivity", dimStrings[currentDimIdx]);
+    snprintf(buf, sizeof(buf), "Screen saver after %s idle. First touch wakes only.", dimStrings[currentDimIdx]);
   }
   lv_label_set_text(infoLabel, buf);
 }
@@ -194,7 +196,7 @@ void screen_display_create() {
     ui_create_text(row, 16, 16, 470, title, FONT_SUBTITLE, COL_TEXT);
     return ui_create_btn(row, 554, 2, 194, 48, value, FONT_BTN, UI_BTN_NORMAL, cb, nullptr);
   };
-  dimBtn = setting(172, "Dim after", dimStrings[currentDimIdx], dim_cycle_cb);
+  dimBtn = setting(172, "Screen saver after", dimStrings[currentDimIdx], dim_cycle_cb);
   dimBtnLabel = lv_obj_get_child(dimBtn, 0);
   schemeBtn = setting(230, "Appearance", theme_get_scheme_name(scheme), scheme_cycle_cb);
   schemeBtnLabel = lv_obj_get_child(schemeBtn, 0);
@@ -210,10 +212,13 @@ void screen_display_create() {
   update_info_text();
 #endif
   ui_create_btn(screen, 24, 408, 152, 56, "BACK", FONT_BTN, UI_BTN_NORMAL, back_cb, nullptr);
+  previewButton = ui_create_btn(screen, 192, 408, 280, 56, "PREVIEW", FONT_BTN, UI_BTN_NORMAL,
+                [](lv_event_t*) { screen_saver_request_preview(); }, nullptr);
   displaySaveButton = ui_create_btn(screen, 496, 408, 280, 56, "SAVE", FONT_BTN, UI_BTN_ACCENT, save_cb, nullptr);
 }
 
 void screen_display_invalidate_widgets() {
+  previewButton = nullptr;
   displaySaveButton = nullptr;
   brightnessSlider = nullptr;
   brightnessValueLabel = nullptr;
@@ -232,6 +237,7 @@ void screen_display_invalidate_widgets() {
 }
 
 void screen_display_update() {
+  if (previewButton) lv_obj_set_disabled(previewButton, !screen_saver_available());
   if (displaySaveTicket && displaySaveButton) {
     const auto status = storage_settings_save_status(displaySaveTicket);
     lv_label_set_text(lv_obj_get_child(displaySaveButton,0), status == STORAGE_SAVED ? "SAVED" : status == STORAGE_ERROR ? "FAILED / RETRYING" : "SAVING...");

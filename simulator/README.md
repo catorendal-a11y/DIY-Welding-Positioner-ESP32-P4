@@ -29,6 +29,10 @@ failure. The tests include main-screen RPM +/− and both blocked and available 
 
 ## Screen Screenshot Dump
 
+The source build also includes the [idle screen saver](../docs/SCREEN_SAVER.md). Open **Settings → Display → PREVIEW** to inspect it. Automatic activation is OFF in the simulator's initial settings; choose a timeout and SAVE to enable it. The published v2.1.1 ZIP predates this source update.
+
+`rotator_simulator.exe --screensaver-preview <directory>` runs the dedicated screen-saver regression checks and exports its idle/movement/wake/fault/settings captures. The full `--self-test` includes these checks as well.
+
 ```powershell
 .\simulator\run.ps1 -Screenshots artifacts\sim_screens
 ```
@@ -152,3 +156,13 @@ simulator/build/rotator_simulator.exe --program-preview .pio/program-preview
 ```
 
 This runs the same interaction regression and exports seven actual LVGL states with label-layout checks. [Program editor guide](../docs/PROGRAM_EDITOR.md). It does not connect to hardware.
+
+## Motor settings regression and preview
+
+The LVGL self-test verifies direct maximum-RPM/acceleration entry, decimal commas, invalid ranges, fractional acceleration rejection, Cancel, isolated drafts, save failure/retry and edit locks. It also covers input cleanup on navigation/theme reconstruction and stale control status. Shared input-panel tests cover external deletion and replacement before queued deletion. Layout audits require a flat UI with no shadows.
+
+```powershell
+simulator/build/rotator_simulator.exe --motor-preview .pio/motor-preview
+```
+
+This exports seven actual LVGL states with label-layout checks. It does not connect to hardware.

@@ -132,10 +132,9 @@ void lvglTask(void* pvParameters) {
     if (estop_overlay_visible()) {
       estop_overlay_update();
     }
-    lvgl_unlock();
-
-    // Outside LVGL mutex: backlight dim uses GT911 read — must not nest with lv_indev touch read
+    // Screen-saver widgets and brightness belong to the LVGL task.
     dim_update();
+    lvgl_unlock();
 
 #if DEBUG_BUILD
     static uint32_t lastLvglStackLog = 0;

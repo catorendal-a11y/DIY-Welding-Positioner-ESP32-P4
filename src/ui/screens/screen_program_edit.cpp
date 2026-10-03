@@ -1,6 +1,8 @@
 // Program drafts: explicit run mode, independent available modes and full-screen input.
 #include "../screens.h"
 #include "../theme.h"
+#include "../text_metrics.h"
+#include "../input_panel.h"
 #include "../value_format.h"
 #include "../../utils/numeric_input.h"
 #include "../../config.h"
@@ -21,7 +23,7 @@ static Preset editPreset{}, renderedPreset{};
 static bool renderedValid = false;
 static lv_obj_t *nameButton = nullptr, *rpmButton = nullptr, *modeSettingsBtn = nullptr, *detailLabel = nullptr;
 static lv_obj_t *runButtons[3]{}, *availableButtons[3]{};
-static lv_obj_t *entryPanel = nullptr, *entryField = nullptr, *keyboard = nullptr, *entryError = nullptr;
+static UiInputPanel entry;
 static bool entryRpm = false, kbClosePending = false;
 static lv_style_transition_dsc_t instantTransition;
 static const lv_style_prop_t transitionProps[] = {LV_STYLE_BG_COLOR,LV_STYLE_BG_OPA,LV_STYLE_OPA,LV_STYLE_BORDER_COLOR,LV_STYLE_OUTLINE_OPA,LV_STYLE_RECOLOR,LV_STYLE_RECOLOR_OPA,0};
@@ -33,10 +35,7 @@ static lv_obj_t* text(lv_obj_t* parent, int x, int y, int width, const char* val
   lv_label_set_text(obj,value); lv_label_set_long_mode(obj,LV_LABEL_LONG_MODE_WRAP);
   lv_obj_set_style_text_font(obj,font,0); lv_obj_set_style_text_color(obj,color,0); return obj;
 }
-static void do_cleanup_kb() {
-  if (entryPanel) { lv_keyboard_set_textarea(keyboard,nullptr); lv_obj_delete_async(entryPanel); }
-  entryPanel = entryField = keyboard = entryError = nullptr; kbClosePending = false;
-}
+static void do_cleanup_kb() { entry.close(); kbClosePending = false; }
 void screen_program_edit_leave() { do_cleanup_kb(); }
 static void lock_pending_draft(lv_obj_t* obj) {
   if (!savePending || !obj) return;
@@ -54,54 +53,36 @@ void screen_program_edit_poll_keyboard() {
 }
 static void input_cb(lv_event_t* e) {
   if (lv_event_get_code(e) == LV_EVENT_CANCEL) { kbClosePending = true; return; }
-  if (lv_event_get_code(e) != LV_EVENT_READY) return;
-  const char* value = lv_textarea_get_text(entryField);
+  if (lv_event_get_code(e) != LV_EVENT_READY || !entry.active() || savePending) return;
+  const char* value = entry.text();
   if (entryRpm) {
     float rpm = 0;
     if (!parse_float_entry(value,rpm) || rpm < MIN_RPM || rpm > speed_get_rpm_max()) {
       char error[96], minimum[16], maximum[16];
       ui_format_rpm(minimum,sizeof(minimum),MIN_RPM); ui_format_rpm(maximum,sizeof(maximum),speed_get_rpm_max());
-      snprintf(error,sizeof(error),"Enter a speed from %s to %s RPM.",minimum,maximum); lv_label_set_text(entryError,error); return;
+      snprintf(error,sizeof(error),"Enter a speed from %s to %s RPM.",minimum,maximum); entry.error(error); return;
     }
     editPreset.rpm = rpm;
   } else {
     while (*value == ' ') ++value;
     size_t length = strlen(value); while (length && value[length-1] == ' ') --length;
     // LVGL limits characters; the stored field limits UTF-8 bytes. Never split a character.
-    if (length >= sizeof(editPreset.name)) { lv_label_set_text(entryError,"Name must fit 31 UTF-8 bytes. Shorten it and try again."); return; }
-    if (length && !program_name_valid(value, sizeof(editPreset.name), true)) { lv_label_set_text(entryError,"Use English letters, numbers and printable symbols (max 31)."); return; }
+    if (length >= sizeof(editPreset.name)) { entry.error("Name must fit 31 UTF-8 bytes. Shorten it and try again."); return; }
+    if (length && !program_name_valid(value, sizeof(editPreset.name), true)) { entry.error("Use English letters, numbers and printable symbols (max 31)."); return; }
     if (!length) strlcpy(editPreset.name,"Untitled",sizeof(editPreset.name));
     else { memcpy(editPreset.name,value,length); editPreset.name[length] = 0; }
   }
   kbClosePending = true;
 }
 static void open_input_cb(lv_event_t* e) {
-  if (savePending || entryPanel) return;
+  if (savePending || entry.active()) return;
   entryRpm = (intptr_t)lv_event_get_user_data(e) == 1;
-  entryPanel = lv_obj_create(lv_layer_top()); lv_obj_set_size(entryPanel,SCREEN_W,SCREEN_H);
-  lv_obj_set_pos(entryPanel,0,0); lv_obj_set_style_pad_all(entryPanel,0,0);
-  lv_obj_set_style_bg_color(entryPanel,COL_BG,0); lv_obj_set_style_bg_opa(entryPanel,LV_OPA_COVER,0);
-  lv_obj_set_scrollable(entryPanel,false);
-  text(entryPanel,24,24,570,entryRpm ? "Program speed" : "Program name",FONT_XL,COL_TEXT);
-  ui_create_btn(entryPanel,620,20,156,48,"CANCEL",FONT_BTN,UI_BTN_NORMAL,
-                [](lv_event_t*) { kbClosePending = true; },nullptr);
-  text(entryPanel,24,70,752,entryRpm ? "Set exact workpiece RPM. This edits the program only." : "English letters, numbers and symbols. Maximum 31 characters.",FONT_SUBTITLE,COL_TEXT_DIM);
-  entryField = lv_textarea_create(entryPanel); lv_textarea_set_one_line(entryField,true);
-  lv_obj_set_pos(entryField,24,112); lv_obj_set_size(entryField,752,54);
-  lv_obj_set_style_text_font(entryField,entryRpm ? FONT_XL : FONT_LARGE,0);
-  if (entryRpm) {
-    lv_textarea_set_max_length(entryField,12); lv_textarea_set_accepted_chars(entryField,"0123456789.,");
-    char value[24]; snprintf(value,sizeof(value),"%.3f",(double)editPreset.rpm); lv_textarea_set_text(entryField,value);
-  } else {
-    lv_textarea_set_max_length(entryField,31);
-    lv_textarea_set_text(entryField,editPreset.name);
-  }
-  entryError = text(entryPanel,24,178,752,"",FONT_SUBTITLE,COL_RED); lv_label_set_max_lines(entryError,2);
-  keyboard = lv_keyboard_create(entryPanel); lv_obj_set_size(keyboard,800,236);
-  lv_obj_align(keyboard,LV_ALIGN_BOTTOM_MID,0,0);
-  lv_keyboard_set_mode(keyboard,entryRpm ? LV_KEYBOARD_MODE_NUMBER : LV_KEYBOARD_MODE_TEXT_LOWER);
-  lv_keyboard_set_textarea(keyboard,entryField);
-  lv_obj_add_event_cb(keyboard,input_cb,LV_EVENT_READY,nullptr); lv_obj_add_event_cb(keyboard,input_cb,LV_EVENT_CANCEL,nullptr);
+  char value[24]; snprintf(value,sizeof(value),"%.3f",(double)editPreset.rpm);
+  entry.open(entryRpm ? "Program speed" : "Program name",
+             entryRpm ? "Set exact workpiece RPM. This edits the program only." :
+                        "English letters, numbers and symbols. Maximum 31 characters.",
+             entryRpm ? value : editPreset.name, entryRpm ? "0123456789.," : nullptr,
+             entryRpm ? 12 : 31, entryRpm ? LV_KEYBOARD_MODE_NUMBER : LV_KEYBOARD_MODE_TEXT_LOWER, input_cb);
 }
 static void mode_select_cb(lv_event_t* e) {
   if (savePending) return;
@@ -156,7 +137,7 @@ static void delete_preset_prompt_cb(lv_event_t* e) {
 
 
 static void save_preset_cb(lv_event_t*) {
-  if (savePending) return;
+  if (savePending || entry.active()) return;
   preset_clamp_mode_to_mask(&editPreset);
   editPreset.rpm = constrain(editPreset.rpm,MIN_RPM,speed_get_rpm_max());
   xSemaphoreTake(g_presets_mutex,portMAX_DELAY);
@@ -258,6 +239,7 @@ void screen_program_edit_create(int slot) {
   }
   screen_program_edit_update_ui();
   lock_pending_draft(root);
+  ui_trim_text_leading(root);
 }
 void screen_program_edit_update_ui() {
   screen_program_edit_poll_keyboard();

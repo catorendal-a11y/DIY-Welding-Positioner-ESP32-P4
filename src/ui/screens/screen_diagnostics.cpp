@@ -4,6 +4,7 @@
 
 #include "../screens.h"
 #include "../theme.h"
+#include "../value_binding.h"
 #include "../../config.h"
 #include "../../control/control.h"
 #include "../../event_log.h"
@@ -23,6 +24,10 @@ static lv_obj_t* enaVal = nullptr;
 static lv_obj_t* driverInfoLabel = nullptr;
 static lv_obj_t* eventStripLabel = nullptr;
 static uint32_t lastEventLogVersion = UINT32_MAX;
+enum DiagnosticRow { ESTOP, ALARM, DIRECTION, PEDAL, STATE, TARGET_RPM, ESTIMATED_RPM, ENABLE, ROW_COUNT };
+static UiTextBinding<24> values[ROW_COUNT];
+static UiTextBinding<80> driverInfo;
+static UiTextBinding<220> eventText;
 
 static void back_cb(lv_event_t* e) {
   (void)e;
@@ -50,25 +55,25 @@ static lv_obj_t* add_gpio_row(lv_obj_t* panel, int y, const char* key) {
 
 static lv_obj_t* add_rt_row(lv_obj_t* panel, int y, const char* key) { return add_gpio_row(panel, y, key); }
 
-static void set_value(lv_obj_t* obj, const char* text, lv_color_t color) {
+template <size_t Capacity>
+static void set_value(UiTextBinding<Capacity>& binding, lv_obj_t* obj, const char* text, lv_color_t color) {
   if (!obj) return;
-  const char* current = lv_label_get_text(obj);
-  if (current == nullptr || strcmp(current, text) != 0) {
-    lv_label_set_text(obj, text);
-  }
-  lv_obj_set_style_text_color(obj, color, 0);
+  binding.set(text);
+  if (!lv_color_eq(lv_obj_get_style_text_color(obj, LV_PART_MAIN), color))
+    lv_obj_set_style_text_color(obj, color, 0);
 }
 
-static void set_pin_value(lv_obj_t* obj, int pinState, const char* highText, const char* lowText,
+static void set_pin_value(DiagnosticRow row, lv_obj_t* obj, int pinState, const char* highText, const char* lowText,
                           bool lowIsFault) {
   const bool low = (pinState == LOW);
   const char* text = low ? lowText : highText;
   lv_color_t color = (low && lowIsFault) ? COL_RED : COL_GREEN;
   if (low && !lowIsFault) color = COL_ACCENT;
-  set_value(obj, text, color);
+  set_value(values[row], obj, text, color);
 }
 
 void screen_diagnostics_create() {
+  screen_diagnostics_invalidate_widgets();
   lv_obj_t* screen = screenRoots[SCREEN_DIAGNOSTICS];
   lv_obj_clean(screen);
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
@@ -129,10 +134,15 @@ void screen_diagnostics_create() {
 
   ui_create_btn(screen, 24, SET_FOOTER_Y, 152, SET_FOOTER_H, "<  BACK", FONT_SUBTITLE, UI_BTN_NORMAL, back_cb,
                 nullptr);
+  lv_obj_t* rows[] = {estopVal, almVal, dirSwVal, pedalSwVal, stateVal, targetRpmVal, actualRpmVal, enaVal};
+  for (size_t i = 0; i < ROW_COUNT; ++i) values[i].bind(rows[i]);
+  driverInfo.bind(driverInfoLabel); eventText.bind(eventStripLabel);
   screen_diagnostics_update();
 }
 
 void screen_diagnostics_invalidate_widgets() {
+  for (auto& value : values) value.reset();
+  driverInfo.reset(); eventText.reset();
   estopVal = nullptr;
   almVal = nullptr;
   dirSwVal = nullptr;
@@ -148,28 +158,31 @@ void screen_diagnostics_invalidate_widgets() {
 void screen_diagnostics_update() {
   if (!stateVal) return;
 
-  SystemState state = control_get_state();
+  const auto& view = ui_control_view();
+  const bool fresh = ui_control_fresh();
+  const SystemState state = ui_control_state();
 
-  set_value(stateVal, control_state_name(state), state == STATE_IDLE ? COL_GREEN : COL_ACCENT);
+  set_value(values[STATE], stateVal, fresh ? control_state_name(state) : "STATUS STALE",
+            !fresh || state == STATE_ESTOP ? COL_RED : state == STATE_IDLE ? COL_GREEN : COL_ACCENT);
 
-  set_pin_value(estopVal, digitalRead(PIN_ESTOP), "HIGH OK", "LOW PRESSED", true);
-  set_pin_value(almVal, digitalRead(PIN_DRIVER_ALM), "HIGH OK", "LOW FAULT", true);
-  set_pin_value(dirSwVal, digitalRead(PIN_DIR_SWITCH), "HIGH CW", "LOW CCW", false);
-  set_pin_value(pedalSwVal, digitalRead(PIN_PEDAL_SW), "HIGH OPEN", "LOW PRESSED", false);
-  set_pin_value(enaVal, digitalRead(PIN_ENA), "HIGH DISABLED", "LOW ENABLED", false);
+  set_pin_value(ESTOP, estopVal, digitalRead(PIN_ESTOP), "HIGH OK", "LOW PRESSED", true);
+  set_pin_value(ALARM, almVal, digitalRead(PIN_DRIVER_ALM), "HIGH OK", "LOW FAULT", true);
+  set_pin_value(DIRECTION, dirSwVal, digitalRead(PIN_DIR_SWITCH), "HIGH CW", "LOW CCW", false);
+  set_pin_value(PEDAL, pedalSwVal, digitalRead(PIN_PEDAL_SW), "HIGH OPEN", "LOW PRESSED", false);
+  set_pin_value(ENABLE, enaVal, digitalRead(PIN_ENA), "HIGH DISABLED", "LOW ENABLED", false);
 
   char buf[24];
-  snprintf(buf, sizeof(buf), "%.3f", (double)speed_get_target_rpm());
-  set_value(targetRpmVal, buf, COL_TEXT);
-  snprintf(buf, sizeof(buf), "%.3f", (double)speed_get_actual_rpm());
-  set_value(actualRpmVal, buf, COL_TEXT);
+  snprintf(buf, sizeof(buf), "%.3f", (double)view.target_rpm);
+  set_value(values[TARGET_RPM], targetRpmVal, fresh ? buf : "---", fresh ? COL_TEXT : COL_TEXT_DIM);
+  snprintf(buf, sizeof(buf), "%.3f", (double)view.estimated_rpm);
+  set_value(values[ESTIMATED_RPM], actualRpmVal, fresh ? buf : "---", fresh ? COL_TEXT : COL_TEXT_DIM);
 
   MotorDriverInfo info;
   if (driverInfoLabel && motor_read_driver_info(info)) {
     char timing[80];
     snprintf(timing, sizeof(timing), "%s / DIR %lu + %lu us", info.name,
              (unsigned long)info.direction_before_us, (unsigned long)info.direction_after_us);
-    set_value(driverInfoLabel, timing, COL_TEXT_DIM);
+    set_value(driverInfo, driverInfoLabel, timing, COL_TEXT_DIM);
   }
 
   uint32_t eventVersion = event_log_version();
@@ -198,6 +211,6 @@ void screen_diagnostics_update() {
     if (line[0] == '\0') {
       snprintf(line, sizeof(line), "-");
     }
-    lv_label_set_text(eventStripLabel, line);
+    eventText.set(line);
   }
 }

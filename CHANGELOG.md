@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Idle screen saver
+
+- Add a flat graphite/orange screen saver with slow rotator-marker movement, English text and no shadows.
+- Reuse the saved dim timeout as OFF/30s/1m/2m/5m, add Display PREVIEW and restore configured brightness on wake.
+- Consume the complete wake touch through release on touchscreen, USB mirror and simulator. A held wake touch cannot reach START.
+- Keep motion, commissioning, editors, overlays, stale status and pending/failed saves visible. Fault/E-STOP takes priority; waking preserves the previous page.
+- Run the shared production inactivity policy in the simulator, with real LVGL pointer, timeout, brightness-command and lifecycle regression checks. See [screen-saver behavior](docs/SCREEN_SAVER.md).
+
+### LVGL 9.6 UI refinement
+
+- Trim unused text leading on Calibration and New Program/Edit Program, including their input overlays, while retaining descender space and the V5 layout.
+- Bind main-screen text, speed-bar values and button visibility/availability through LVGL 9.6 typed observers. Skip unchanged text updates and keep all subject operations in the UI task.
+- Bind Diagnostics to the same control snapshot used by the operating panel. Show `STATUS STALE` and suppress stale RPM values; keep GPIO readings separate from calculated motion status.
+- Release subjects and observer callbacks during screen reconstruction. Keep direct update fallbacks for allocation failure and clear widget references on deletion.
+- Add simulator coverage for observer notification, copied text, reset/rebind/delete, repeated screen reconstruction and stale-status recovery. Make the layout audit account for text leading trim without skipping clipping checks.
+- Apply shared text leading trim across screen labels while retaining compound widget metrics. Keep fonts without cap-height metadata untrimmed. Dim unavailable buttons/sliders, show button availability immediately and retain the flat UI without shadows.
+- Unify program/calibration/motor full-screen input panels, add visible Cancel, and clean up on close, navigation, deletion and theme reconstruction.
+- Keep the fault/E-STOP overlay above open input panels and report interrupted calibration input explicitly.
+- Rework Motor Configuration into larger cards with exact RPM/acceleration entry, integer/range/precision validation, isolated drafts, pending-save edit locks and fresh snapshot status. Bind calibration and motor text updates through typed observers.
+- See [LVGL 9.6 UI implementation notes](docs/LVGL_9_6_UI_IMPROVEMENTS.md).
+
 ### Motion, input and persistence corrections
 
 - Cancel countdown starts across STOP, faults/reset, stale control and navigation using the original control generation. Reset never renews a pending START.

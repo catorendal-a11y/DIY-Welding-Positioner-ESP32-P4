@@ -54,6 +54,8 @@ void estop_overlay_create() {
 void estop_overlay_show() {
   dim_reset_activity();
   if (!overlay) return;
+  // Input panels are created later on the same top layer. A fault must cover them.
+  lv_obj_move_foreground(overlay);
   lv_obj_set_hidden(overlay, false);
   visible = true;
   lastUpdate = millis() - 500;

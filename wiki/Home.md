@@ -26,7 +26,7 @@ Implemented features (latest update verified in native tests and simulator; phys
 - Portable Windows simulator: extract all files and open Start Simulator.cmd; no hardware or development tools needed
 - USB-C live mirror for the real device UI, plus simulator screenshot export for all screens
 - Direction switch (GPIO29), foot pedal support
-- 8 accent color themes, dark or light UI mode (Display UI MODE), brightness control, dim timeout
+- 8 accent color themes, dark or light UI mode (Display Appearance), brightness control and an idle screen saver with preview
 - TIG HF welding works when electronics are inside one grounded metal enclosure
 
 ## Quick Links
@@ -74,3 +74,5 @@ docs/
   images/               - SVG wiring diagrams, UI mockups
 wiki/                   - GitHub Wiki pages
 ```
+
+Current source includes an [idle screen saver](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/SCREEN_SAVER.md) with preview and wake-touch consumption. Published v2.1.1 downloads predate this feature.

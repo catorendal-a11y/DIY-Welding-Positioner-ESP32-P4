@@ -231,7 +231,7 @@ Navigate to **Settings** from the menu screen.
 
 | Setting | Options |
 |---|---|
-| Display | Brightness slider (20-100%), dim timeout |
+| Display | Brightness slider (20-100%), idle screen-saver timeout and preview (current source) |
 | System Info | Core load, heap, PSRAM, uptime |
 | Calibration | Motor calibration factor |
 | Motor Config | Microstepping, acceleration, direction switch, pedal enable |

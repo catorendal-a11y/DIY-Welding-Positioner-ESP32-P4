@@ -25,7 +25,7 @@ extern std::atomic<uint32_t> g_estopTriggerMs;  // safetyTask sets debounce star
 extern std::atomic<bool> g_uiResetPending;      // UI (Core 1) set; safetyTask consumes
 
 // ───────────────────────────────────────────────────────────────────────────────
-// Display / input wake (Core 0 sets on activity; Core 1 clears in dim_update)
+// Display / input wake (Core 0 sets on activity; Core 1 clears in dim_update (UI task))
 // ───────────────────────────────────────────────────────────────────────────────
 extern std::atomic<bool> g_wakePending;
 

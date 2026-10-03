@@ -60,7 +60,7 @@ Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Posit
 - Pedal control requires stable release before arming. Stale/failed active pedal data blocks motion instead of silently selecting the panel potentiometer.
 - Touch read errors release input; JOG requires regular UI renewal. Motion is blocked until critical tasks are ready.
 - Program drafts survive navigation. Program parameters and motor configuration are applied through the control task.
-- Failed NVS writes stay pending and retry; UI reports pending/failed saves. Five-minute dimming stores correctly.
+- Failed NVS writes stay pending and retry; UI reports pending/failed saves. Five-minute inactivity timeouts store correctly. Current source adds a flat idle screen saver with wake-touch consumption.
 - Pulse pause timing begins after the motor library reports stopped. USB mirror writes have bounded waits and release remote input on failure.
 
 [Implementation details](../docs/IMPROVEMENTS_2026-10-01.md) · [V5 integration and upload record](../docs/UI_V5_DEPLOYMENT.md) · [Changelog](../CHANGELOG.md)
@@ -245,7 +245,7 @@ The 30 design views cover all 22 screen types, additional states and keyboards. 
 | **Edit Step** | `SCREEN_EDIT_STEP` | Quick preset edit for step parameters |
 | **Edit Continuous** | `SCREEN_EDIT_CONT` | Quick preset edit for continuous / RPM preset fields |
 | **Settings** | `SCREEN_SETTINGS` | Hub for Motor Config, Calibration, Display, Pedal Settings, Diagnostics, System Info and About |
-| **Display** | `SCREEN_DISPLAY` | Brightness, dim timeout, **UI MODE** (DARK/LIGHT), accent theme selection |
+| **Display** | `SCREEN_DISPLAY` | Brightness, screen-saver timeout/preview, **Appearance** (DARK/LIGHT), accent theme selection |
 | **System Info** | `SCREEN_SYSINFO` | Core load, heap, PSRAM, uptime |
 | **Calibration** | `SCREEN_CALIBRATION` | Guided Align → Measure → Verify → Save, with isolated draft correction |
 | **Motor Config** | `SCREEN_MOTOR_CONFIG` | Microstepping, acceleration, direction switch, pedal enable |
@@ -547,7 +547,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - **Load order:** settings load before presets, so preset RPM values are clamped against the saved **Max RPM** setting. Invalid persisted microstep values are sanitized to the safe default `1/16`.
 - **Display / UI:** the settings blob includes e.g. **`color_scheme`** (`0` = dark neutral palette, `1` = light), **`accent_color`** (0–7), brightness and dim-timeout fields — see `SystemSettings` / `storage.cpp` for the authoritative list.
 - **Saves** run on **Core 1** in `storageTask`: debounced **~500 ms** after preset changes and **~1 s** after settings changes (`storage_flush()`). UI code sets a pending flag; it does not write flash directly.
-- **Write failures:** failed saves remain pending and retry with backoff; the UI shows pending/error state. Changes arriving during a write remain queued for another save. Dimming timeout uses a 16-bit field so 300 seconds persists correctly.
+- **Write failures:** failed saves remain pending and retry with backoff; the UI shows pending/error state. Changes arriving during a write remain queued for another save. The inactivity timeout uses a 16-bit field so 300 seconds persists correctly.
 - **Flash cache:** NVS commits can disable the flash cache briefly. The firmware sets `g_flashWriting` so the UI can avoid glitches during writes; PSRAM code/rodata mitigations still apply (`CONFIG_SPIRAM_FETCH_INSTRUCTIONS`, `CONFIG_SPIRAM_RODATA` in sdkconfig).
 
 **Troubleshooting**
@@ -777,3 +777,7 @@ MIT License — see [LICENSE](../LICENSE) for details. Dependencies retain their
 <sub>DIY welding positioner &middot; ESP32-P4 &middot; Rotary welding table &middot; Pipe welding rotator &middot; Stepper driver &middot; NEMA 23 &middot; LVGL touch UI &middot; FreeRTOS</sub>
 
 </div>
+
+## Idle screen saver (current source)
+
+Open Settings > Display > Screen saver after, choose OFF/30s/1m/2m/5m and SAVE. PREVIEW shows the design immediately. The first touch wakes only; motion, faults and editing stay visible. Published v2.1.1 binaries predate this feature. See [behavior and captures](SCREEN_SAVER.md).

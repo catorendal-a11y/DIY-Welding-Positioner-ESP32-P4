@@ -130,7 +130,9 @@ void simulator_tick() {
 // Display / LVGL HAL
 void display_init() {}
 i2c_master_bus_handle_t display_touch_i2c_bus_handle() { return nullptr; }
-void display_set_brightness(uint8_t) {}
+static uint8_t simulatedBrightness = 180;
+void display_set_brightness(uint8_t value) { simulatedBrightness = value; }
+uint8_t simulator_display_brightness() { return simulatedBrightness; }
 void display_fill_black() {}
 void display_fill_black_sync() {}
 extern "C" bool display_lvgl_vsync_callback(esp_lcd_panel_handle_t, esp_lcd_dpi_panel_event_data_t*, void*) {
@@ -141,8 +143,6 @@ void lvgl_hal_init() {}
 void lvgl_alloc_buffers() {}
 void lvgl_flush_cb(lv_display_t* disp, const lv_area_t*, uint8_t*) { lv_display_flush_ready(disp); }
 void lvgl_touchpad_read_cb(lv_indev_t*, lv_indev_data_t* data) { data->state = LV_INDEV_STATE_RELEASED; }
-void dim_reset_activity() {}
-void dim_update() {}
 
 // Speed
 float speed_steps_per_gear_output_rev(void) { return microstep_get_steps_per_rev() * GEAR_RATIO; }

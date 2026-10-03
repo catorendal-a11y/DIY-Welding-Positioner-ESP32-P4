@@ -35,7 +35,7 @@ Historical release; v2.1.1 above is current.
 ## v2.0.7 — dark/light UI + header contrast
 
 ### v2.0.7 (2026-04-27)
-- [x] **Display Settings > UI MODE** — DARK (POST industrial) vs LIGHT (warm cream HMI reference), persisted as NVS `cfg` JSON **`color_scheme`** (`0`/`1`)
+- [x] **Display Settings > Appearance** — DARK (POST industrial) vs LIGHT (warm cream HMI reference), persisted as NVS `cfg` JSON **`color_scheme`** (`0`/`1`)
 - [x] Runtime neutral palettes (`NEUT_DARK` / `NEUT_LIGHT`) + **`COL_HDR_MUTED`** for secondary header text on the dark header bar
 - [x] README, STATUS, wiki, implementation docs, UI SVG sync
 
@@ -101,7 +101,7 @@ Historical release; v2.1.1 above is current.
 - [x] ESTOP reset via Core 0 pending pattern
 - [x] Storage reliability (mutex, debounce, copy-based API)
 - [x] 8 accent color themes with live switching
-- [x] Display settings (brightness slider, dim timeout)
+- [x] Display settings (brightness slider, screen-saver timeout/preview)
 - [x] System info screen (core load, heap, PSRAM, uptime)
 - [x] Diagnostics screen (live ESTOP/ALM/DIR/pedal/ENA/RPM status)
 - [x] Pedal settings screen (GPIO33 arm/disarm + ADS1115 status)

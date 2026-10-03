@@ -126,6 +126,7 @@ void screen_calibration_enter();
 void screen_calibration_update();
 void screen_motor_config_create();
 void screen_motor_config_update();
+void screen_motor_config_leave();
 void screen_display_create();
 void screen_display_update();
 void screen_display_mark_dirty();

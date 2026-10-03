@@ -1,6 +1,6 @@
 # Workpiece calibration
 
-Included in v2.1.1 firmware and simulator. These are actual 800 × 480 LVGL 9.6 simulator captures, using the V5 dark graphite/orange design. The simulator validates interaction and state transitions; the operator must measure the real workpiece.
+The calibration workflow is included in v2.1.1 firmware and simulator. These current source captures also show the unreleased text/input refinements. They are actual 800 × 480 LVGL 9.6 simulator captures, using the V5 dark graphite/orange design. The simulator validates interaction and state transitions; the operator must measure the real workpiece.
 
 ## Align
 

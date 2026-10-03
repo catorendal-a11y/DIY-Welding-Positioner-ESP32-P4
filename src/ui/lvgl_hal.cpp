@@ -10,6 +10,7 @@
 #include "../app_state.h"
 #include "../mirror/usb_mirror.h"
 #include "display.h"
+#include "screen_saver.h"
 #include "../storage/storage.h"
 
 #include "freertos/FreeRTOS.h"
@@ -19,47 +20,6 @@
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_touch.h"
 
-static uint32_t lastActivityMs = 0;
-static bool isDimmed = false;
-static uint8_t dimBrightness = 15;
-
-void dim_reset_activity() {
-  lastActivityMs = millis();
-  if (isDimmed) {
-    isDimmed = false;
-    uint8_t b = 150;
-    xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-    b = g_settings.brightness;
-    xSemaphoreGive(g_settings_mutex);
-    display_set_brightness(b);
-  }
-}
-
-void dim_update() {
-  uint16_t dimSec = 0;
-  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  dimSec = g_settings.dim_timeout;
-  xSemaphoreGive(g_settings_mutex);
-  if (dimSec == 0) return;
-
-  // Producers use release (ISR, speed_update_adc, safety_init); acquire here sees their publication.
-  if (g_wakePending.exchange(false, std::memory_order_acq_rel)) {
-    dim_reset_activity();
-    return;
-  }
-
-  // While dimmed, do NOT touch GT911 here — lvgl_touchpad_read_cb runs inside
-  // lv_timer_handler() first each frame and calls dim_reset_activity() on press.
-  // A second I2C read here cleared the chip buffer and starved LVGL of events.
-  if (isDimmed) {
-    return;
-  }
-
-  if (millis() - lastActivityMs > (uint32_t)dimSec * 1000) {
-    isDimmed = true;
-    display_set_brightness(dimBrightness);
-  }
-}
 
 // ───────────────────────────────────────────────────────────────────────────────
 // TICK TIMER — 1ms tick for LVGL animations and timers
@@ -197,8 +157,13 @@ void lvgl_touchpad_read_cb(lv_indev_t* indev_drv, lv_indev_data_t* data) {
   esp_lcd_touch_point_data_t point{};
   uint8_t touch_cnt = 0;
   const esp_err_t result = esp_lcd_touch_get_data(display_touch, &point, &touch_cnt, 1);
+  if (result != ESP_OK) {
+    // A failed read is not proof that the wake finger was lifted.
+    data->state = LV_INDEV_STATE_RELEASED;
+    return;
+  }
 
-  if (result == ESP_OK && touch_cnt == 1) {
+  if (touch_cnt == 1) {
     uint16_t px = point.x;
     uint16_t py = point.y;
 
@@ -211,19 +176,19 @@ void lvgl_touchpad_read_cb(lv_indev_t* indev_drv, lv_indev_data_t* data) {
     data->point.x = (lv_coord_t)lx;
     data->point.y = (lv_coord_t)ly;
     data->state = LV_INDEV_STATE_PRESSED;
-    dim_reset_activity();
   } else {
     data->state = LV_INDEV_STATE_RELEASED;
   }
+  static ScreenSaverInput input;
+  screen_saver_filter_input(data, input);
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
 #if ENABLE_USB_UI_MIRROR
 static void lvgl_usb_mirror_read_cb(lv_indev_t*, lv_indev_data_t* data) {
   usb_mirror_read_pointer(data);
-  if (data && data->state == LV_INDEV_STATE_PRESSED) {
-    dim_reset_activity();
-  }
+  static ScreenSaverInput input;
+  screen_saver_filter_input(data, input);
 }
 #endif
 
@@ -231,7 +196,6 @@ static void lvgl_usb_mirror_read_cb(lv_indev_t*, lv_indev_data_t* data) {
 // ───────────────────────────────────────────────────────────────────────────────
 void lvgl_hal_init() {
   LOG_I("LVGL HAL init starting...");
-  lastActivityMs = millis();
 
   lv_init();
 

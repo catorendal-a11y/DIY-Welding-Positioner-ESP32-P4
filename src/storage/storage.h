@@ -25,7 +25,7 @@ struct SystemSettings {
   float max_rpm;  // UI/pot ceiling [MIN_RPM .. MAX_RPM], default MAX_RPM
   float calibration_factor;
   uint8_t brightness;         // 0-255 backlight PWM
-  uint16_t dim_timeout;       // Seconds before auto-dim (0=off, 30, 60, 120, 300)
+  uint16_t dim_timeout;       // Seconds before idle screen saver (0=off, 30, 60, 120, 300)
   bool dir_switch_enabled;    // CW/CCW hardware switch (PIN_DIR_SWITCH)
   bool invert_direction;      // Invert CW/CCW direction
   uint8_t accent_color;       // Index into theme palette (0=Orange, 1=Cyan, etc.)

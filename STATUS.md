@@ -36,11 +36,13 @@ Runtime stepper calls belong to controlTask; inputTask samples ADC/pedal separat
 - [x] **UI reset from ESTOP** (via Core 0 pending flag pattern)
 
 ### UI/UX
+
+Current source also includes the [idle screen saver](docs/SCREEN_SAVER.md) and [LVGL UI refinements](docs/LVGL_9_6_UI_IMPROVEMENTS.md), beyond the published v2.1.1 downloads.
 - [x] **23 registered root screens** with lazy creation pattern + ESTOP overlay
 - [x] **8 accent color themes** (switchable from Display Settings; combines with dark/light neutral UI mode)
-- [x] **Dark / Light UI mode** (Display Settings **UI MODE**, persisted as `color_scheme` in NVS `cfg`)
+- [x] **Dark / Light UI mode** (Display Settings **Appearance**, persisted as `color_scheme` in NVS `cfg`)
 - [x] **Settings hub** (Motor Config, Calibration, Setup Wizard, Display, Pedal Settings, Diagnostics, System Info, About)
-- [x] **Display Settings** (brightness slider, dim timeout, UI MODE dark/light, accent theme)
+- [x] **Display Settings** (brightness slider, screen-saver timeout/preview, Appearance dark/light, accent theme)
 - [x] **USB-C live mirror** (mirror firmware + Windows SDL viewer; armed from Display Settings; PC input is LVGL touch only)
 - [x] **System Info** (CPU core load, heap, PSRAM, uptime)
 - [x] **Diagnostics** (live ESTOP, ALM, DIR switch, pedal switch, ENA, direction, RPM, motion-block state, recent event log)

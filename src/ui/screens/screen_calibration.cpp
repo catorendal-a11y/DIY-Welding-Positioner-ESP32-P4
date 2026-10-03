@@ -1,6 +1,8 @@
 // Guided manual workpiece calibration. Measurements require a completed move.
 #include "../screens.h"
 #include "../theme.h"
+#include "../text_metrics.h"
+#include "../input_panel.h"
 #include "../../motor/calibration.h"
 #include "../../motor/calibration_session.h"
 #include "../../motor/motor.h"
@@ -17,11 +19,21 @@ static lv_obj_t *measurement = nullptr, *measurementCaption = nullptr, *applyBtn
 static lv_obj_t *runBtn = nullptr, *stopBtn = nullptr, *saveBtn = nullptr, *restartBtn = nullptr, *backBtn = nullptr;
 static lv_obj_t *jogMinus = nullptr, *jogPlus = nullptr, *factorValue = nullptr, *context = nullptr;
 static lv_obj_t *diameterBtn = nullptr, *progress = nullptr;
-static lv_obj_t *entryPanel = nullptr, *entryField = nullptr, *entryKeyboard = nullptr, *entryError = nullptr;
+static UiInputPanel entry;
 static bool entryClosePending = false, editingDiameter = false;
 static uint32_t saveTicket = 0;
+struct CalibrationBindings {
+  UiTextBinding<64> title, measurement, diameter, factor, run;
+  UiTextBinding<192> hint, context, progress;
+  void reset() {
+    title.reset(); measurement.reset(); diameter.reset(); factor.reset(); run.reset();
+    hint.reset(); context.reset(); progress.reset();
+  }
+};
+static CalibrationBindings bindings;
 
 static void enabled(lv_obj_t* obj, bool yes) {
+  if (!obj || lv_obj_is_disabled(obj) == !yes) return;
   lv_obj_set_style_bg_color(obj, COL_BG_INPUT, LV_STATE_DISABLED);
   lv_obj_set_style_bg_opa(obj, LV_OPA_50, LV_STATE_DISABLED);
   lv_obj_set_disabled(obj, !yes);
@@ -42,13 +54,7 @@ static bool context_matches() {
          microstep() == session.microstep && std::fabs(workpiece_diameter() - session.diameter) < 0.01f &&
          std::fabs(calibration_get_factor() - session.factor) < 0.000001f;
 }
-static void close_entry() {
-  if (entryPanel) {
-    lv_keyboard_set_textarea(entryKeyboard, nullptr);
-    lv_obj_delete_async(entryPanel);
-  }
-  entryPanel = entryField = entryKeyboard = entryError = nullptr; entryClosePending = false;
-}
+static void close_entry() { entry.close(); entryClosePending = false; }
 void screen_calibration_enter() {
   control_set_calibration_active(true);
   calibration_discard_draft();
@@ -75,7 +81,7 @@ static void stop_cb(lv_event_t*) {
   control_stop(); screen_calibration_update();
 }
 static void move_cb(lv_event_t*) {
-  if (!safe_idle() || entryPanel) return;
+  if (!safe_idle() || entry.active()) return;
   if (session.stage != CalibrationSession::Prepare && !context_matches()) {
     session.abort("Machine settings changed. Restart calibration."); screen_calibration_update(); return;
   }
@@ -92,7 +98,7 @@ static void move_cb(lv_event_t*) {
 static void jog_cb(lv_event_t* e) {
   const auto code = lv_event_get_code(e);
   if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) { control_stop_jog(); return; }
-  if (session.stage != CalibrationSession::Prepare || entryPanel) return;
+  if (session.stage != CalibrationSession::Prepare || entry.active()) return;
   if (code == LV_EVENT_PRESSING) control_renew_jog();
   else if (code == LV_EVENT_PRESSED && safe_idle()) {
     control_set_jog_speed(constrain(0.1f, MIN_RPM, speed_get_rpm_max()));
@@ -115,41 +121,36 @@ static lv_obj_t* label(lv_obj_t* parent, int x, int y, int w, const char* text, 
 }
 static void entry_cb(lv_event_t* e) {
   if (lv_event_get_code(e) == LV_EVENT_CANCEL) { entryClosePending = true; return; }
-  if (lv_event_get_code(e) != LV_EVENT_READY) return;
+  if (lv_event_get_code(e) != LV_EVENT_READY || !entry.active()) return;
   float value = 0;
-  bool valid = safe_idle() && calibration_parse_angle(lv_textarea_get_text(entryField), value);
+  if (!safe_idle()) { entry.error("Stop the motor and restore fresh status before confirming."); return; }
+  if (editingDiameter ? session.stage != CalibrationSession::Prepare :
+      (session.stage != CalibrationSession::Measure && session.stage != CalibrationSession::VerifyMeasure)) {
+    entry.error("Calibration changed or was interrupted. Cancel and restart."); return;
+  }
+  if (!editingDiameter && !context_matches()) { entry.error("Machine settings changed. Cancel and restart calibration."); return; }
+  bool valid = calibration_parse_angle(entry.text(), value);
   if (editingDiameter) {
     valid = valid && session.stage == CalibrationSession::Prepare && value >= 1 && value <= 2000;
     if (valid) { speed_set_workpiece_diameter_mm(value); session.diameter = value; }
   } else valid = valid && context_matches() && session.measurement(value);
-  if (!valid) { lv_label_set_text(entryError, editingDiameter ? "Enter a diameter from 1 to 2000 mm." : "Enter an angle from 0.5 to 720 degrees."); return; }
+  if (!valid) { entry.error( editingDiameter ? "Enter a diameter from 1 to 2000 mm." : "Enter an angle from 0.5 to 720 degrees."); return; }
   entryClosePending = true;
 }
 static void open_entry(lv_event_t* e) {
-  if (!safe_idle() || entryPanel) return;
+  if (!safe_idle() || entry.active()) return;
   editingDiameter = (intptr_t)lv_event_get_user_data(e) == 1;
   if (editingDiameter ? session.stage != CalibrationSession::Prepare :
       (session.stage != CalibrationSession::Measure && session.stage != CalibrationSession::VerifyMeasure)) return;
-  entryPanel = lv_obj_create(lv_layer_top()); lv_obj_set_size(entryPanel, SCREEN_W, SCREEN_H);
-  lv_obj_set_pos(entryPanel, 0, 0); lv_obj_set_style_pad_all(entryPanel, 0, 0);
-  lv_obj_set_style_bg_color(entryPanel, COL_BG, 0); lv_obj_set_style_bg_opa(entryPanel, LV_OPA_COVER, 0);
-  lv_obj_set_scrollable(entryPanel, false);
-  label(entryPanel, 24, 24, 750, editingDiameter ? "Workpiece diameter" : "Measured workpiece angle", FONT_XL, COL_TEXT);
-  label(entryPanel, 24, 70, 750, editingDiameter ? "Enter the outside diameter in mm." : "Enter the total actual rotation, including any overshoot.", FONT_SUBTITLE, COL_TEXT_DIM);
-  entryField = lv_textarea_create(entryPanel); lv_obj_set_pos(entryField, 24, 112); lv_obj_set_size(entryField, 752, 54);
-  lv_textarea_set_one_line(entryField, true); lv_textarea_set_max_length(entryField, 12);
-  lv_textarea_set_accepted_chars(entryField, "0123456789.,");
-  lv_obj_set_style_text_font(entryField, FONT_XL, 0);
-  if (editingDiameter) { char text[24]; snprintf(text, sizeof(text), "%.1f", (double)session.diameter); lv_textarea_set_text(entryField, text); }
-  entryError = label(entryPanel, 24, 180, 752, "", FONT_SUBTITLE, COL_RED);
-  lv_label_set_max_lines(entryError, 2);
-  entryKeyboard = lv_keyboard_create(entryPanel); lv_keyboard_set_mode(entryKeyboard, LV_KEYBOARD_MODE_NUMBER);
-  lv_keyboard_set_textarea(entryKeyboard, entryField); lv_obj_set_size(entryKeyboard, 800, 236);
-  lv_obj_align(entryKeyboard, LV_ALIGN_BOTTOM_MID, 0, 0);
-  lv_obj_add_event_cb(entryKeyboard, entry_cb, LV_EVENT_READY, nullptr);
-  lv_obj_add_event_cb(entryKeyboard, entry_cb, LV_EVENT_CANCEL, nullptr);
+  char value[24] = "";
+  if (editingDiameter) snprintf(value, sizeof(value), "%.1f", (double)session.diameter);
+  entry.open(editingDiameter ? "Workpiece diameter" : "Measured workpiece angle",
+             editingDiameter ? "Enter the outside diameter in mm. Range: 1 to 2000." :
+                               "Enter the total actual rotation, including any overshoot.",
+             value, "0123456789.,", 12, LV_KEYBOARD_MODE_NUMBER, entry_cb);
 }
 void screen_calibration_create() {
+  bindings.reset();
   auto root = screenRoots[SCREEN_CALIBRATION]; lv_obj_clean(root);
   lv_obj_set_style_bg_color(root, COL_BG, 0); lv_obj_set_scrollable(root, false);
   ui_create_settings_header(root, "Calibration", "WORKPIECE", COL_ACCENT);
@@ -180,10 +181,16 @@ void screen_calibration_create() {
   backBtn = ui_create_btn(root, 20, 408, 152, 54, "<  BACK", FONT_SUBTITLE, UI_BTN_NORMAL, back_cb, nullptr);
   restartBtn = ui_create_btn(root, 188, 408, 192, 54, "RESTART", FONT_SUBTITLE, UI_BTN_NORMAL, restart_cb, nullptr);
   saveBtn = ui_create_btn(root, 396, 408, 384, 54, "SAVE CALIBRATION", FONT_SUBTITLE, UI_BTN_ACCENT, save_cb, nullptr);
+  bindings.title.bind(title); bindings.hint.bind(hint); bindings.factor.bind(factorValue);
+  bindings.context.bind(context); bindings.progress.bind(progress);
+  bindings.measurement.bind(lv_obj_get_child(measurement, 0));
+  bindings.diameter.bind(lv_obj_get_child(diameterBtn, 0));
+  bindings.run.bind(lv_obj_get_child(runBtn, 0));
   session.reset(calibration_get_factor(), workpiece_diameter()); saveTicket = 0; screen_calibration_update();
+  ui_trim_text_leading(root);
 }
 void screen_calibration_invalidate_widgets() {
-  close_entry();
+  close_entry(); bindings.reset();
   for (auto& obj : stageBtns) obj = nullptr;
   hint = title = measurement = measurementCaption = applyBtn = runBtn = stopBtn = saveBtn = restartBtn = nullptr;
   jogMinus = jogPlus = factorValue = context = diameterBtn = progress = nullptr;
@@ -204,7 +211,14 @@ void screen_calibration_update() {
   }
   const int stage = session.stage <= CalibrationSession::Moving ? 0 : session.stage == CalibrationSession::Measure ? 1 :
                     session.stage <= CalibrationSession::VerifyMeasure || (session.stage == CalibrationSession::Result && !session.passed()) ? 2 : 3;
-  for (int i=0; i<4; ++i) ui_btn_style_post(stageBtns[i], i == stage ? UI_BTN_ACCENT : UI_BTN_NORMAL);
+  for (int i=0; i<4; ++i) {
+    const auto style = i == stage ? UI_BTN_ACCENT : UI_BTN_NORMAL;
+    ui_btn_style_post(stageBtns[i], style);
+    lv_obj_set_checked(stageBtns[i], i == stage);
+    lv_obj_set_style_bg_color(stageBtns[i], COL_ACCENT, LV_STATE_CHECKED);
+    lv_obj_set_style_recolor_opa(stageBtns[i], LV_OPA_TRANSP, LV_STATE_CHECKED);
+    lv_obj_set_style_text_color(lv_obj_get_child(stageBtns[i], 0), ui_btn_label_color_post(style), 0);
+  }
   const char* heading = "Align the reference mark";
   const char* instructions = "Set diameter below. Use JOG to align a clear mark. Then run one full workpiece revolution.";
   if (session.moving()) { heading = session.stage == CalibrationSession::Verifying ? "Verification in progress" : "Rotation in progress"; instructions = "Wait for the complete revolution. STOP cancels this measurement."; }
@@ -214,7 +228,7 @@ void screen_calibration_update() {
   else if (session.stage == CalibrationSession::Result) { heading = session.passed() ? "Verification passed" : "Verification needs another try"; instructions = session.passed() ? "The correction is verified. SAVE CALIBRATION stores it permanently." : "Outside tolerance. Repeat verification or restart to take a new measurement."; }
   else if (session.stage == CalibrationSession::Saving) { heading = "Saving calibration"; instructions = storage_settings_save_status(saveTicket) == STORAGE_ERROR ? "Write failed. Retrying automatically; keep power on." : "Waiting for storage confirmation. Keep power on."; }
   else if (session.stage == CalibrationSession::Saved) { heading = "Calibration saved"; instructions = "The verified correction is stored. Return to setup or normal operation."; }
-  lv_label_set_text(title, heading); lv_label_set_text(hint, session.error ? session.error : instructions);
+  bindings.title.set(heading); bindings.hint.set(session.error ? session.error : instructions);
   lv_obj_set_style_text_color(hint, session.error ? COL_RED : COL_TEXT_DIM, 0);
   const bool measuring = session.stage == CalibrationSession::Measure || session.stage == CalibrationSession::VerifyMeasure;
   lv_obj_set_hidden(measurement, !measuring); lv_obj_set_hidden(measurementCaption, !measuring);
@@ -224,24 +238,24 @@ void screen_calibration_update() {
   char text[96];
   const float angle = session.stage == CalibrationSession::VerifyMeasure ? session.verified : session.measured;
   if (angle > 0) snprintf(text, sizeof(text), "%.2f", (double)angle); else snprintf(text, sizeof(text), "---");
-  lv_label_set_text(lv_obj_get_child(measurement, 0), text);
-  snprintf(text, sizeof(text), "%.1f mm", (double)session.diameter); lv_label_set_text(lv_obj_get_child(diameterBtn, 0), text);
-  snprintf(text, sizeof(text), "%.4f", (double)session.factor); lv_label_set_text(factorValue, text);
+  bindings.measurement.set(text);
+  snprintf(text, sizeof(text), "%.1f mm", (double)session.diameter); bindings.diameter.set(text);
+  snprintf(text, sizeof(text), "%.4f", (double)session.factor); bindings.factor.set(text);
   snprintf(text, sizeof(text), "OD %.1f mm\n%s / %.3f RPM\n~%.1f min / turn\nManual measurement", (double)session.diameter,
            speed_get_direction() == DIR_CW ? "CW" : "CCW", (double)constrain(0.25f, MIN_RPM, speed_get_rpm_max()),
-           (double)(1.0f / constrain(0.25f, MIN_RPM, speed_get_rpm_max()))); lv_label_set_text(context, text);
+           (double)(1.0f / constrain(0.25f, MIN_RPM, speed_get_rpm_max()))); bindings.context.set(text);
   if (session.moving()) snprintf(text, sizeof(text), "Estimated travel %.0f / 360 deg", (double)view.progress_degrees);
   else snprintf(text, sizeof(text), "Measured %.2f deg  |  Error %+.2f deg", (double)session.verified, (double)(session.verified - 360));
-  lv_label_set_text(progress, text);
+  bindings.progress.set(text);
   lv_obj_set_style_text_color(progress, session.stage == CalibrationSession::Result && !session.passed() ? COL_RED : COL_ACCENT, 0);
-  enabled(runBtn, safe_idle() && !entryPanel && (session.stage == CalibrationSession::Prepare || session.stage == CalibrationSession::VerifyReady || session.stage == CalibrationSession::Result));
-  lv_label_set_text(lv_obj_get_child(runBtn, 0), session.stage == CalibrationSession::Prepare || session.stage == CalibrationSession::Moving ? "MOVE 360" : "VERIFY 360");
+  enabled(runBtn, safe_idle() && !entry.active() && (session.stage == CalibrationSession::Prepare || session.stage == CalibrationSession::VerifyReady || session.stage == CalibrationSession::Result));
+  bindings.run.set( session.stage == CalibrationSession::Prepare || session.stage == CalibrationSession::Moving ? "MOVE 360" : "VERIFY 360");
   enabled(measurement, safe_idle()); enabled(diameterBtn, safe_idle());
   enabled(applyBtn, safe_idle() && session.measured > 0);
   enabled(saveBtn, safe_idle() && session.passed() && context_matches());
   enabled(restartBtn, safe_idle() && session.stage != CalibrationSession::Saving);
   enabled(backBtn, session.stage != CalibrationSession::Saving);
-  const bool canJog = session.stage == CalibrationSession::Prepare && !entryPanel && ui_control_fresh() &&
+  const bool canJog = session.stage == CalibrationSession::Prepare && !entry.active() && ui_control_fresh() &&
                       (view.state == STATE_IDLE || view.state == STATE_JOG) && !safety_inhibit_motion();
   enabled(jogMinus, canJog); enabled(jogPlus, canJog);
 }

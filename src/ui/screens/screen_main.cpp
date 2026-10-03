@@ -2,18 +2,34 @@
 #include "../screens.h"
 #include "../theme.h"
 #include "../value_format.h"
+#include "../value_binding.h"
 #include "../../config.h"
 #include "../../motor/speed.h"
 #include "../../motor/motor.h"
 #include "../../control/control.h"
 #include "../../safety/safety.h"
 #include <cmath>
+#include <cstdio>
 LV_FONT_DECLARE(rotator_digits_104);
 
 static lv_obj_t *rpmLabel, *speedCaption, *stateLabel, *sourceLabel, *surfaceLabel;
 static lv_obj_t *diameterLabel, *limitLabel, *detailLabel, *speedBar, *modeTitle;
 static lv_obj_t *startBtn, *stopBtn, *menuBtn, *minusBtn, *plusBtn, *cwBtn, *ccwBtn;
 static lv_obj_t* minimumLabel = nullptr;
+struct MainBindings {
+  UiTextBinding<16> rpm;
+  UiTextBinding<40> caption, minimum, maximum, surface, diameter, title, source, state, startText;
+  UiTextBinding<64> detail;
+  UiIntBinding speed;
+  UiBoolBinding startHidden, stopHidden, startDisabled, menuDisabled, minusDisabled, plusDisabled;
+  void reset() {
+    rpm.reset(); detail.reset(); speed.reset();
+    for (auto* text : {&caption, &minimum, &maximum, &surface, &diameter, &title, &source, &state, &startText}) text->reset();
+    for (auto* flag : {&startHidden, &stopHidden, &startDisabled, &menuDisabled, &minusDisabled, &plusDisabled}) flag->reset();
+  }
+};
+static MainBindings bindings;
+static void set_bar(lv_obj_t* bar, int32_t value) { lv_bar_set_value(bar, value, LV_ANIM_OFF); }
 static lv_color_t ink() { return lv_color_hex(0x11191C); }
 static bool can_edit() { return ui_control_fresh() && ui_control_state() == STATE_IDLE && !safety_inhibit_motion(); }
 static void start_cb(lv_event_t*) {
@@ -42,6 +58,7 @@ static void enabled(lv_obj_t* o, bool yes) {
     lv_obj_set_disabled(o, true);
 }
 void screen_main_create() {
+  bindings.reset();
   lv_obj_t* s = screenRoots[SCREEN_MAIN];
   lv_obj_clean(s);
   lv_obj_t* h = ui_create_header(s, "Continuous rotation", "SYSTEM READY", &stateLabel);
@@ -97,6 +114,19 @@ void screen_main_create() {
   lv_obj_set_user_data(startBtn, (void*)(uintptr_t)UI_ACTION_START);
   lv_obj_set_user_data(stopBtn, (void*)(uintptr_t)UI_ACTION_STOP);
   lv_obj_set_hidden(stopBtn, true);
+  bindings.rpm.bind(rpmLabel); bindings.caption.bind(speedCaption);
+  bindings.minimum.bind(minimumLabel); bindings.maximum.bind(limitLabel);
+  bindings.surface.bind(surfaceLabel); bindings.diameter.bind(diameterLabel);
+  bindings.title.bind(modeTitle); bindings.source.bind(sourceLabel);
+  bindings.state.bind(stateLabel); bindings.detail.bind(detailLabel);
+  bindings.startText.bind(lv_obj_get_child(startBtn, 0));
+  bindings.speed.bind(speedBar, set_bar);
+  bindings.startHidden.bind(startBtn, lv_obj_set_hidden);
+  bindings.stopHidden.bind(stopBtn, lv_obj_set_hidden, true);
+  bindings.startDisabled.bind(startBtn, lv_obj_set_disabled, true);
+  bindings.menuDisabled.bind(menuBtn, lv_obj_set_disabled);
+  bindings.minusDisabled.bind(minusBtn, lv_obj_set_disabled);
+  bindings.plusDisabled.bind(plusBtn, lv_obj_set_disabled);
 }
 void screen_main_update() {
   ui_mark_motion_callback(screenRoots[SCREEN_MAIN], start_cb);
@@ -111,13 +141,16 @@ void screen_main_update() {
   if (diameter <= 0) diameter = D_EMNE * 1000.0f;
   char rpmText[16];
   ui_format_rpm(rpmText, sizeof(rpmText), rpm);
-  lv_label_set_text(rpmLabel, rpmText);
-  lv_label_set_text(speedCaption, moving ? "01 / ESTIMATED SPEED" : "01 / TARGET SPEED");
-  lv_label_set_text_fmt(minimumLabel, "MIN %.3f", (double)speed_get_rpm_min());
-  lv_label_set_text_fmt(limitLabel, "MAX %.3f RPM", (double)speed_get_rpm_max());
-  lv_bar_set_value(speedBar, (int)(1000.0f * rpm / speed_get_rpm_max()), LV_ANIM_OFF);
-  lv_label_set_text_fmt(surfaceLabel, "%.0f mm/min", (double)(rpm * diameter * 3.14159265f));
-  lv_label_set_text_fmt(diameterLabel, "WORKPIECE DIA %.0f mm", (double)diameter);
+  bindings.rpm.set(rpmText);
+  bindings.caption.set(moving ? "01 / ESTIMATED SPEED" : "01 / TARGET SPEED");
+  char text[40];
+  const float maximum = speed_get_rpm_max();
+  snprintf(text, sizeof(text), "MIN %.3f", (double)speed_get_rpm_min()); bindings.minimum.set(text);
+  snprintf(text, sizeof(text), "MAX %.3f RPM", (double)maximum); bindings.maximum.set(text);
+  const float ratio = maximum > 0 && std::isfinite(rpm) ? constrain(rpm / maximum, 0.0f, 1.0f) : 0;
+  bindings.speed.set((int32_t)(1000.0f * ratio));
+  snprintf(text, sizeof(text), "%.0f mm/min", (double)(rpm * diameter * 3.14159265f)); bindings.surface.set(text);
+  snprintf(text, sizeof(text), "WORKPIECE DIA %.0f mm", (double)diameter); bindings.diameter.set(text);
   bool cw = view.direction == DIR_CW;
   for (lv_obj_t* b : {cwBtn, ccwBtn}) {
     const bool chosen = (b == cwBtn) == cw;
@@ -129,44 +162,39 @@ void screen_main_update() {
     lv_obj_set_style_text_color(lv_obj_get_child(b, 0), chosen ? COL_TEXT : COL_TEXT_DIM, 0);
     lv_obj_set_user_data(b, chosen ? nullptr : (void*)(uintptr_t)UI_ACTION_DIRECTION);
   }
-  lv_label_set_text(modeTitle, st == STATE_PULSE      ? "Pulse rotation"
+  bindings.title.set(st == STATE_PULSE      ? "Pulse rotation"
                                : st == STATE_STEP     ? "Angle move"
                                : st == STATE_JOG      ? "Jog"
                                : st == STATE_STOPPING ? "Stopping"
                                                       : "Continuous rotation");
-  enabled(menuBtn, !moving);
-  enabled(minusBtn, !moving && !blocked);
-  enabled(plusBtn, !moving && !blocked);
+  bindings.menuDisabled.set(moving);
+  bindings.minusDisabled.set(moving || blocked);
+  bindings.plusDisabled.set(moving || blocked);
   SpeedInputSource source = view.source;
-  lv_label_set_text(sourceLabel, st == STATE_JOG                ? "Jog setting"
+  bindings.source.set(st == STATE_JOG                ? "Jog setting"
                                  : st == STATE_STEP             ? "Step setting"
                                  : source == SPEED_SOURCE_PEDAL ? "Pedal analog"
                                  : source == SPEED_SOURCE_UI    ? "Screen / program"
                                                                 : "Panel dial");
-  lv_label_set_text(stateLabel, !ui_control_fresh() ? "STATUS UNAVAILABLE" : blocked ? "MOTION LOCKED"
+  bindings.state.set(!ui_control_fresh() ? "STATUS UNAVAILABLE" : blocked ? "MOTION LOCKED"
                                 : moving ? control_state_name(st)
                                          : "SYSTEM READY");
   lv_obj_set_style_text_color(stateLabel, blocked ? COL_RED : moving ? COL_ACCENT : COL_GREEN, 0);
-  lv_label_set_text(detailLabel, rangeBlocked                ? "Speed outside motor range"
+  const StorageStatus storage = storage_status();
+  bindings.detail.set(storage == STORAGE_ERROR ? "SAVE FAILED / retry pending"
+                                 : storage != STORAGE_SAVED ? "Saving changes..."
+                                 : rangeBlocked                ? "Speed outside motor range"
                                  : blocked                   ? "Clear fault before restart"
                                  : moving                    ? "STOP ends motion"
                                  : speed_get_pedal_enabled() ? "Pedal control enabled"
                                                              : "Manual rotation");
-  if (storage_status() != STORAGE_SAVED)
-    lv_label_set_text(
-        detailLabel, storage_status() == STORAGE_ERROR ? "SAVE FAILED / retry pending" : "Saving changes...");
-  if (moving || !ui_control_fresh()) {
-    lv_obj_set_hidden(startBtn, true);
-    lv_obj_set_hidden(stopBtn, false);
-  } else {
-    lv_obj_set_hidden(startBtn, false);
-    lv_obj_set_hidden(stopBtn, true);
-  }
-  enabled(startBtn, !blocked);
-  lv_label_set_text(lv_obj_get_child(startBtn, 0),
-                    blocked ? "START BLOCKED" : "START ROTATION  " LV_SYMBOL_PLAY);
+  const bool showStop = moving || !ui_control_fresh();
+  bindings.startHidden.set(showStop); bindings.stopHidden.set(!showStop);
+  bindings.startDisabled.set(blocked);
+  bindings.startText.set(blocked ? "START BLOCKED" : "START ROTATION  " LV_SYMBOL_PLAY);
 }
 void screen_main_invalidate_widgets() {
+  bindings.reset();
   minimumLabel = nullptr;
   rpmLabel = speedCaption = stateLabel = sourceLabel = surfaceLabel = diameterLabel = limitLabel =
       detailLabel = speedBar = modeTitle = nullptr;

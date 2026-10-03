@@ -1,6 +1,6 @@
-# Program editor (v2.1.1)
+# Program editor
 
-The editor uses the existing V5 palette at 800×480, with no page scrolling. These captures come from the actual LVGL 9.6 simulator, not design mockups. Included in v2.1.1; historical v2.1.0 downloads retain their original editor.
+The editor uses the existing V5 palette at 800×480, with no page scrolling. These captures come from the actual LVGL 9.6 simulator, not design mockups. The core editor is included in v2.1.1; these current source captures also show the unreleased text/input refinements. Historical downloads retain their original appearance.
 
 ## Create or edit
 

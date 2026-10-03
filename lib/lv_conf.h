@@ -94,5 +94,6 @@
 #define LV_USE_OBJ_PROPERTIES    0
 #define LV_USE_FLEX              1     // Used for dynamic list containers
 #define LV_USE_GRID              0
+#define LV_USE_OBSERVER          1     // UI-thread status bindings (LVGL 9.6 public API)
 
 #endif /* LV_CONF_H */

@@ -92,7 +92,7 @@ For simulator-only UI review:
 - [ ] Clear fault, press RESET TO IDLE, then use a separate START
 - [ ] Try each mode: JOG, PULSE, STEP, TIMER
 - [ ] Navigate to Settings > Motor Config — enable direction switch
-- [ ] Navigate to Settings > Display — adjust brightness, optional **UI MODE** (dark/light), and accent theme
+- [ ] Navigate to Settings > Display — adjust brightness, optional **Appearance** (dark/light), and accent theme
 
 ## Configuration
 

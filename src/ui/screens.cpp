@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include "screens.h"
 #include "theme.h"
+#include "text_metrics.h"
+#include "screen_saver.h"
 #include "../config.h"
 #include "../motor/speed.h"
 #include "../safety/safety.h"
@@ -31,6 +33,7 @@ lv_obj_t* ui_create_text(lv_obj_t* parent, int x, int y, int width, const char* 
   lv_label_set_long_mode(label, LV_LABEL_LONG_MODE_DOTS);
   lv_obj_set_style_text_font(label, font, 0);
   lv_obj_set_style_text_color(label, color, 0);
+  ui_trim_text_leading(label);
   return label;
 }
 
@@ -98,7 +101,7 @@ static int pendingEditSlot = -2;
 
 static bool screen_needs_rebuild(ScreenId id) {
   return id == SCREEN_SETUP || id == SCREEN_PROGRAM_EDIT || id == SCREEN_EDIT_CONT || id == SCREEN_EDIT_PULSE ||
-         id == SCREEN_EDIT_STEP || id == SCREEN_STEP;
+         id == SCREEN_EDIT_STEP || id == SCREEN_STEP || id == SCREEN_MOTOR_CONFIG;
 }
 
 static void create_screen(ScreenId id) {
@@ -185,6 +188,7 @@ static void create_screen(ScreenId id) {
       break;
   }
 
+  ui_trim_text_leading(screenRoots[id]);
   screenCreated[id] = true;
 }
 
@@ -219,6 +223,7 @@ void screens_init() {
 }
 
 void screens_reinit() {
+  screen_saver_destroy();
   ScreenId prev = currentScreen;
   if (prev == SCREEN_CALIBRATION) screen_calibration_leave();
 
@@ -273,11 +278,13 @@ void screens_show_startup() {
 
 void screens_show(ScreenId id) {
   if (id < 0 || id >= SCREEN_COUNT) return;
+  dim_reset_activity();
 
   ScreenId prev = currentScreen;
   if (prev == SCREEN_TIMER && id != SCREEN_TIMER) screen_timer_leave();
   if (prev == SCREEN_CALIBRATION && id != SCREEN_CALIBRATION) screen_calibration_leave();
   if (prev == SCREEN_PROGRAM_EDIT && id != SCREEN_PROGRAM_EDIT) screen_program_edit_leave();
+  if (prev == SCREEN_MOTOR_CONFIG && id != SCREEN_MOTOR_CONFIG) screen_motor_config_leave();
   screen_setup_leave(id);
   const bool leavingSliderPriorityScreen =
       (prev == SCREEN_STEP || prev == SCREEN_CALIBRATION) && (id != SCREEN_STEP && id != SCREEN_CALIBRATION);
@@ -569,7 +576,21 @@ void ui_btn_style_post(lv_obj_t* btn, UiBtnStyle style) {
   lv_obj_set_style_shadow_width(btn, 0, 0);
   lv_obj_set_style_pad_all(btn, 0, 0);
   lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
-  lv_obj_set_style_opa(btn, LV_OPA_COVER, LV_STATE_DISABLED);
+  // Show command availability immediately; theme fades can leave enabled text
+  // on a disabled background after calibration or a storage receipt.
+  static const lv_style_prop_t immediateProperties[] = {
+      LV_STYLE_BG_COLOR, LV_STYLE_BG_OPA, LV_STYLE_OPA, LV_STYLE_BORDER_COLOR,
+      LV_STYLE_BORDER_WIDTH, LV_STYLE_OUTLINE_OPA, LV_STYLE_OUTLINE_WIDTH,
+      LV_STYLE_RECOLOR, LV_STYLE_RECOLOR_OPA, 0};
+  static lv_style_transition_dsc_t immediate;
+  static bool immediateInitialized = false;
+  if (!immediateInitialized) {
+    lv_style_transition_dsc_init(&immediate, immediateProperties, lv_anim_path_linear, 0, 0, nullptr);
+    immediateInitialized = true;
+  }
+  for (auto state : {LV_STATE_DEFAULT, LV_STATE_PRESSED, LV_STATE_CHECKED, LV_STATE_DISABLED})
+    lv_obj_set_style_transition(btn, &immediate, state);
+  lv_obj_set_style_opa(btn, LV_OPA_70, LV_STATE_DISABLED);
   lv_obj_set_style_recolor_opa(btn, LV_OPA_TRANSP, LV_STATE_DISABLED);
 }
 
@@ -603,6 +624,7 @@ lv_obj_t* ui_create_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t
   lv_label_set_text(lbl, text);
   lv_obj_set_style_text_font(lbl, label_font, 0);
   lv_obj_set_style_text_color(lbl, ui_btn_label_color_post(style), 0);
+  ui_trim_text_leading(lbl);
   lv_obj_center(lbl);
   return btn;
 }
@@ -624,6 +646,7 @@ lv_obj_t* ui_create_pm_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, const c
   lv_label_set_text(lbl, text);
   lv_obj_set_style_text_font(lbl, label_font, 0);
   lv_obj_set_style_text_color(lbl, ui_btn_label_color_post(style), 0);
+  ui_trim_text_leading(lbl);
   lv_obj_center(lbl);
   return btn;
 }
@@ -631,6 +654,7 @@ lv_obj_t* ui_create_pm_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, const c
 // Shared slider style — dark track with accent indicator/knob. Individual callers may still
 // override knob size or per-part padding afterwards if needed.
 void ui_style_slider(lv_obj_t* slider) {
+  lv_obj_set_style_opa(slider, LV_OPA_70, LV_STATE_DISABLED);
   lv_obj_set_style_bg_color(slider, COL_SLIDER_TRACK2, LV_PART_MAIN);
   lv_obj_set_style_bg_opa(slider, LV_OPA_COVER, LV_PART_MAIN);
   lv_obj_set_style_border_color(slider, COL_BORDER, LV_PART_MAIN);

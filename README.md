@@ -41,6 +41,7 @@ Board illustration and pin reference above. The product illustration shows vendo
 - **16 saved programs**, with speed, direction, diameter and mode settings.
 - Physical **E-STOP input**, driver-alarm monitoring and guarded reset.
 - Guided **setup and calibration**, touch diagnostics and a USB-C live mirror.
+- Source update: an optional **[idle screen saver](docs/SCREEN_SAVER.md)** in the V5 design, with touch-to-wake and a Display preview.
 
 **v2.1.1** adds LVGL 9.6, FastAccelStepper 1.4, single-owner motion control, verified calibration and a clearer program editor. [Release notes](docs/releases/v2.1.1.md) · [Changelog](CHANGELOG.md).
 
@@ -146,7 +147,7 @@ Calibration guides you through **Align → Measure → Verify → Save**. The co
 
 ## Validation and limitations
 
-Unreleased source fixes cover cancelled countdowns, motion bounds/timeouts, pedal takeover, program direction and verified saves. [Changes and local validation](docs/CODE_LOGIC_REVIEW_2026-10-03.md). Published v2.1.1 downloads remain a separate release.
+Unreleased source fixes cover cancelled countdowns, motion bounds/timeouts, pedal takeover, program direction and verified saves. [Changes and local validation](docs/CODE_LOGIC_REVIEW_2026-10-03.md). [LVGL 9.6 UI refinements](docs/LVGL_9_6_UI_IMPROVEMENTS.md) improve text placement, status updates and exact motor-settings entry while preserving the flat design. Published v2.1.1 downloads remain a separate release.
 
 v2.1.1 passes **438 native/production-control tests**, packaging regressions, actual upstream RMT encoder tests, Linux/Windows simulator checks, a zero-failure layout audit and three firmware builds. Published binaries come from the exact validated master CI commit. [Evidence](docs/validation/2026-10-03/fastaccelstepper/README.md).
 

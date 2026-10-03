@@ -105,7 +105,8 @@ static bool motor_apply_stepper_dir_timing(uint16_t want) {
 // ───────────────────────────────────────────────────────────────────────────────
 void motor_gpio_init() {
   // ENA pin — output, start HIGH (motor disabled)
-  // Wiring: ENA+ → 5V, ENA- → GPIO52. LOW = enable, HIGH = disable (active LOW)
+  // GPIO contract: LOW requests enable, HIGH inhibits. The actual driver
+  // interface must preserve this polarity; see docs/HARDWARE_SETUP.md.
   pinMode(PIN_ENA, OUTPUT);
   digitalWrite(PIN_ENA, HIGH);  // Motor disabled on boot
 
@@ -161,7 +162,8 @@ static void motor_init_on_control_core() {
   // Configure stepper (DIR delay depends on stepper_driver snapshot)
   motor_apply_stepper_dir_timing(motor_dir_delay_us_from_driver(driverKind));
   // NOTE: Do NOT call setEnablePin() — ENA is controlled manually via digitalWrite()
-  // Wiring: ENA+→5V, ENA-→GPIO52. LOW=enable, HIGH=disable (active LOW)
+  // Keep the LOW=enable / HIGH=inhibit GPIO contract independent of the
+  // chosen optocoupler/interface topology. Verify it at the actual driver.
   // FastAccelStepper's setEnablePin conflicts with manual control.
 
   // Set acceleration and start speed

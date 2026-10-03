@@ -4,7 +4,7 @@
 
 | Component | Model | Qty | Notes |
 |-----------|-------|-----|-------|
-| **MCU Board** | GUITION JC4880P443C (800x480) | 1 | ESP32-P4 + ESP32-C6, MIPI-DSI, GT911 touch |
+| **MCU Board** | GUITION JC4880P443C 4.3" touch display board | 1 | ESP32-P4 + ESP32-C6, 800×480 landscape, MIPI-DSI, GT911 touch |
 | **Stepper Driver** | PUL/DIR or DM542T | 1 | Motor Config: Standard vs DM542T |
 | **Stepper Motor** | NEMA 23 (3 Nm) | 1 | |
 | **Gearbox** | NMRV030 + spur | 1 | **1:108** total (60:1 x 72/40) |
@@ -18,7 +18,7 @@
 
 ## TIG HF Enclosure Requirement
 
-Real TIG welding validation has been completed. The controller works during welding when the ESP32-P4 screen, stepper driver, and motor PSU are installed inside the same grounded metal enclosure.
+Earlier hardware was exercised during TIG welding with the ESP32-P4 screen, stepper driver and motor PSU inside the same grounded metal enclosure. This is historical field experience; it does not qualify v2.1.1 or establish its physical stop response.
 
 Do not weld with open bench wiring near an HF-start TIG machine. HF noise can reset the ESP32-P4, freeze touch/I2C, or create false GPIO/ADC inputs.
 
@@ -37,13 +37,17 @@ Set microstepping to match the Settings screen on the device:
 | Microsteps | Must match UI Settings > Microstepping |
 | Current | Match your NEMA 23 rating (typically 2.5-3.0A) |
 
-Default firmware uses **1/16** (3200 pulses/rev with DM542T). Motor Config also offers 1/8 and 1/32.
+Default firmware uses **1/16** (3200 pulses/rev with a 200-step motor). Motor Config also offers 1/4, 1/8 and 1/32. Driver current is set by SW1–SW3 and microstep by SW5–SW8; follow the actual driver label.
 
 ## Wiring Connections
 
+[![Reviewed wiring diagram in the V5 UI design](https://raw.githubusercontent.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/master/docs/images/Wiring_diagram.v2.svg?rev=2.6)](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/images/Wiring_diagram.v2.svg)
+
+Revision 2.6 retains the original hardware layout, corrects pedal endpoints and pin labels, and uses the V5 graphite/orange design. Dashed blocks specify interface functions, not verified installed components. Open the SVG at full size for terminal details. See the [complete electrical guide](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/HARDWARE_SETUP.md) and [diagram review](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/WIRING_DIAGRAM_REVIEW.md).
+
 ### ESP32-P4 to driver (signal wires)
 
-Most PUL/DIR boards use optically isolated inputs. The following is a legacy common-ground illustration; verify signal voltage, optocoupler current and **ENA HIGH disables** behavior for the exact driver before using it:
+Most PUL/DIR boards use optically isolated inputs. The diagram retains common-cathode routing; verify signal voltage/current and **ENA HIGH inhibits** behavior for the actual driver. Use a suitable 3.3 V-to-driver interface where required. ESP32 GPIO is not 5 V tolerant.
 
 1. Connect **PUL-**, **DIR-**, and **ENA-** together -> ESP32-P4 **GND**
 2. **PUL+** (Step) -> **GPIO 50**
@@ -62,7 +66,7 @@ Measured ADC range: 0-3315 (with 11dB attenuation on ESP32-P4).
 
 ### E-STOP (GPIO 34)
 
-Wire the conditioned interface so **healthy = HIGH** and **pressed / fault = LOW** at GPIO34. A bare NC contact to GND gives the opposite logic. Verify cable-break and supply-loss behavior, plus ENA HIGH disable, before motor power. See the repository hardware guide and E-STOP measurement procedure.
+Wire the conditioned interface so **healthy = HIGH** and **pressed / fault = LOW** at GPIO34. A bare NC contact to GND gives the opposite logic. Verify cable-break and supply-loss behavior, plus ENA HIGH disable, before motor power. See the [repository hardware guide](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/HARDWARE_SETUP.md) and [E-STOP input truth table and measurement procedure](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/estop_timing.md).
 
 ### Direction Switch (CW/CCW)
 
@@ -99,7 +103,7 @@ GPIO 28, GPIO 14-19, and GPIO 54 may be PCB-routed toward the ESP32-C6 co-proces
 
 1. Power ESP32-P4 first (USB-C or DC-DC)
 2. Then power the motor supply (24V or 36V on driver VM)
-3. Firmware holds ENA HIGH (motor disabled) on boot — safe by default
+3. Firmware requests inhibit with ENA HIGH on boot; verify that the actual interface establishes the driver-disabled state, including when controller power is absent.
 
 ## Historical hardware experience
 

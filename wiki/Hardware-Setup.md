@@ -124,3 +124,7 @@ GPIO 28, GPIO 14-19, and GPIO 54 may be PCB-routed toward the ESP32-C6 co-proces
 - Motor resonance at 100-300 motor RPM causes stalling at coarse microstepping (1/4)
 - Use 1/8 or finer for stable operation
 - DM542T is supported; set Motor Config -> Driver to DM542T and match the DIP microstep to the UI
+
+## Owner build status - 2026-10-03
+
+On 2026-10-03 the owner confirmed that all currently assembled controller functions work. Pedal/ADS1115 wiring and commissioning are unfinished and intentionally deferred. This is owner-reported functional confirmation; no quantitative stop-time, calibration-accuracy, rendering or HF test measurements were supplied.

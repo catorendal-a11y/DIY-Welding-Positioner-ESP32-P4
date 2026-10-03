@@ -67,7 +67,7 @@ Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Posit
 
 **Current release: v2.2.0, updated 3 October 2026.** V5 identifies the UI design iteration. [Download firmware and read the release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.2.0). The current firmware and simulator include LVGL 9.6, FastAccelStepper 1.4, guided setup/calibration and the revised program editor.
 
-v2.2.0 adds an idle screen saver, exact motor-settings input and flat LVGL UI refinements, plus motion/input/storage corrections. A functional pre-release build was uploaded and flash-verified; release-tagged hardware behavior still requires measurement. [Release notes](releases/v2.2.0.md) · [Logic review](CODE_LOGIC_REVIEW_2026-10-03.md) · [Screen saver](SCREEN_SAVER.md).
+v2.2.0 adds an idle screen saver, exact motor-settings input and flat LVGL UI refinements, plus motion/input/storage corrections. A functional pre-release build was uploaded and flash-verified; the owner confirms assembled functions work, except unfinished/deferred pedal/ADS1115; quantitative measurements have not been reported. [Release notes](releases/v2.2.0.md) · [Logic review](CODE_LOGIC_REVIEW_2026-10-03.md) · [Screen saver](SCREEN_SAVER.md).
 
 ---
 
@@ -687,7 +687,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 | Native suites | 459 / 459 passed (native/control/speed/storage suites) |
 | LVGL self-test | Passed: navigation, program edits, RPM adjustment, fault reset, full setup/calibration workflows, save failure/retry and stale control |
 | Firmware builds | Release, debug and mirror passed |
-| Device upload | Functional pre-release commit 673e078 uploaded to COM3 and flash data verified on 2026-10-03. Release-tagged physical behavior remains unmeasured. |
+| Device upload | Functional pre-release commit 673e078 uploaded to COM3 and flash data verified on 2026-10-03. Owner confirms assembled functions work; pedal/ADS1115 is unfinished and deferred. No quantitative stop-time measurements were supplied. |
 | Physical motor/safety testing | Not performed as part of this update |
 
 [Dependency validation logs](../docs/validation/2026-10-02/dependencies) and [program editor validation](../docs/validation/2026-10-03/program-editor/README.md) record local runs. Native tests include direct production-policy tests, but older tests also model behavior separately; simulator hardware is stubbed. CI runs native tests, three firmware variants and SDL navigation checks. The badge links to the current GitHub result.

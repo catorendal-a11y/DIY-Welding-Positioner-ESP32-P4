@@ -4,6 +4,9 @@ skills-lock.json
 # Claude / AI settings
 .claude/
 
+# Local chat attachment cache
+.codex-remote-attachments/
+
 # Cursor: local ECC / profile junction (personal machine paths; do not commit)
 .cursor/
 .kilocode/

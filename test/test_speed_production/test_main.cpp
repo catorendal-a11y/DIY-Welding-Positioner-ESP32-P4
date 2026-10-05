@@ -38,6 +38,7 @@ void setUp() {
   sliderPriorityOverride = false; buttonsActive = false; programDirectionOverrideActive = false;
   pedalEnabled = false; adcFiltered = 3000; pedalFiltered = 1000;
   simTestMillis = 100; adsSampleValid = true; adsSampleMs = 100;
+  ads1115Connected = true;
 }
 void tearDown() {}
 void test_real_geometry_rejects_overflow_and_nonfinite() {
@@ -81,6 +82,21 @@ void test_requested_and_effective_directions_are_distinct() {
   TEST_ASSERT_EQUAL(DIR_CW,speed_get_requested_direction()); TEST_ASSERT_EQUAL(DIR_CCW,speed_get_direction());
   speed_set_program_direction_override(speed_get_requested_direction()); TEST_ASSERT_EQUAL(DIR_CCW,speed_get_direction());
 }
+void test_pedal_enabled_without_ads_stays_healthy_and_uses_panel_pot() {
+  pedalEnabled = true; ads1115Connected = false; buttonsActive = false; adcFiltered = 3000;
+  TEST_ASSERT_TRUE(speed_pedal_input_healthy());
+  speed_apply();
+  TEST_ASSERT_EQUAL(SPEED_SOURCE_POT, speed_get_input_source());
+}
+void test_pedal_with_detected_ads_still_blocks_on_stale_samples() {
+  pedalEnabled = true; ads1115Connected = true; buttonsActive = false;
+  adsSampleValid = false;
+  TEST_ASSERT_FALSE(speed_pedal_input_healthy());
+  adsSampleValid = true; adsSampleMs = simTestMillis - 500;
+  TEST_ASSERT_FALSE(speed_pedal_input_healthy());
+  adsSampleMs = simTestMillis;
+  TEST_ASSERT_TRUE(speed_pedal_input_healthy());
+}
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_real_geometry_rejects_overflow_and_nonfinite);
@@ -89,5 +105,7 @@ int main() {
   RUN_TEST(test_stationary_pedal_keeps_ui_override_then_movement_takes_over);
   RUN_TEST(test_source_change_rebases_instead_of_simulating_movement);
   RUN_TEST(test_requested_and_effective_directions_are_distinct);
+  RUN_TEST(test_pedal_enabled_without_ads_stays_healthy_and_uses_panel_pot);
+  RUN_TEST(test_pedal_with_detected_ads_still_blocks_on_stale_samples);
   return UNITY_END();
 }

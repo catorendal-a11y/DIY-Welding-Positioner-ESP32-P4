@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Foot-pedal enable no longer locks out motion when no ADS1115 is present. `speed_pedal_input_healthy()` now reports an enabled pedal as healthy when no ADS1115 answered the boot probe, so GPIO33 start/stop and the panel pot work switch-only; `speed_apply()` and `speed_slider_set()` select the analog pedal source from runtime ADS presence (`speed_ads1115_pedal_present()`) instead of the `ENABLE_ADS1115_PEDAL` compile flag. A detected ADS1115 that stops delivering fresh samples still blocks motion and latches PEDAL INPUT. Two new native-speed regression tests cover the chain; all native suites pass (453 cases).
+- Wiring diagram (rev 2.7) now draws the 10-pin ADS1115 module (VDD, GND, SCL, SDA, ADDR, ALRT, A0–A3) with the required **ADDR → GND** wire for I2C address 0x48. The previous revision drew a castellated variant with ADDR pre-wired on the PCB, which does not match the common 10-pin breakout where a floating ADDR prevents any I2C ACK. Installation note 6, the pin reference, `docs/HARDWARE_SETUP.md` pedal troubleshooting and the `speed_init()` no-device error message now all state the ADDR → GND requirement.
+
 ## [2.2.0] - 2026-10-03
 
 ### Idle screen saver

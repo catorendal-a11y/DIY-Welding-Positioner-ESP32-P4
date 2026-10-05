@@ -280,8 +280,8 @@ void speed_init() {
     }
     if (!ads1115Connected) {
       LOG_E(
-          "ADS1115: no device at 0x48-0x4B on touch I2C - check V,G to 3V3/GND; S,D to GPIO7/8; "
-          "pot wiper to pad 0 (AIN0). Scan showed other devices only.");
+          "ADS1115: no device at 0x48-0x4B on touch I2C - check VDD,GND to 3V3/GND; SDA,SCL to GPIO7/8; "
+          "ADDR to GND (required on 10-pin modules); pot wiper to A0. Scan showed other devices only.");
     }
   }
 #endif
@@ -385,7 +385,7 @@ void speed_slider_set(float rpm) {
   float r = speed_clamp_rpm(rpm);
   sliderRPM.store(r, std::memory_order_release);
   lastSliderMs.store(millis(), std::memory_order_release);
-  const bool pedal = speed_get_pedal_enabled() && ENABLE_ADS1115_PEDAL;
+  const bool pedal = speed_get_pedal_enabled() && speed_ads1115_pedal_present();
   lastPotAdc.store(pedal ? pedalFiltered.load() : adcFiltered.load(), std::memory_order_release);
   baselinePedal.store(pedal);
   buttonsActive.store(true, std::memory_order_release);
@@ -421,7 +421,7 @@ void speed_apply() {
   const bool liveSpeedState = (state == STATE_RUNNING || state == STATE_PULSE);
   const bool motorRunning = liveSpeedState && motor_is_running();
 
-  const bool usePedal = speed_get_pedal_enabled() && ENABLE_ADS1115_PEDAL;
+  const bool usePedal = speed_get_pedal_enabled() && speed_ads1115_pedal_present();
   if (usePedal && !speed_pedal_input_healthy()) {
     cachedTargetRpm.store(MIN_RPM);
     if (state != STATE_IDLE && state != STATE_ESTOP) safety_report_input_fault();
@@ -536,9 +536,11 @@ bool speed_ads1115_pedal_present(void) {
 }
 
 bool speed_pedal_input_healthy() {
-  if (!speed_get_pedal_enabled()) return true;
 #if ENABLE_ADS1115_PEDAL
-  return input_sample_fresh(adsSampleValid.load(), adsSampleMs.load(), millis());
+  // GPIO33 switch stays usable when no ADS1115 answered at boot; only an
+  // ADS1115 that was actually detected must keep delivering fresh samples.
+  return pedal_input_healthy(speed_get_pedal_enabled(), ads1115Connected, adsSampleValid.load(),
+                             adsSampleMs.load(), millis());
 #else
   return true;  // Explicit switch-only build.
 #endif

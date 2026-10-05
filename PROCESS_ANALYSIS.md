@@ -35,7 +35,7 @@ Motor configuration applies through controlTask only while idle. UI reports appl
 
 ## Pedal and speed input
 
-Pedal arming requires 50 ms stable release at boot, enable and reset. Release cancels the pedal's pending start. Active analog input requires a valid, fresh sample; stale/failed enabled pedal input blocks motion instead of selecting the panel. Switch-only builds intentionally use panel speed. ADS1115 conversion polling is split across task cycles.
+Pedal arming requires 50 ms stable release at boot, enable and reset. Release cancels the pedal's pending start. Active analog input requires a valid, fresh sample; stale/failed enabled pedal input blocks motion instead of selecting the panel. With no ADS1115 detected at boot, an enabled pedal runs switch-only (GPIO33 start/stop, panel-pot speed); a detected ADS1115 that stops delivering fresh samples still blocks motion. ADS1115 conversion polling is split across task cycles.
 
 Calculated RPM comes from step timing and geometry, not an encoder. Source/direction are visible on the main screen. Idle-screen RPM +/− and direction controls are disabled during motion; the physical direction switch retains priority when enabled.
 

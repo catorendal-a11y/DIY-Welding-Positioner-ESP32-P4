@@ -58,3 +58,13 @@ class PedalInterlock {
 inline bool input_sample_fresh(bool valid, uint32_t sample, uint32_t now, uint32_t deadline = 150u) {
   return valid && now - sample <= deadline;
 }
+
+// An enabled pedal is healthy when no ADS1115 was detected at boot (GPIO33
+// switch-only operation with panel-pot speed) or when the ADS1115 sample is
+// fresh. A detected ADS1115 that stops delivering samples stays unhealthy so
+// motion blocks instead of silently falling back to the panel pot.
+inline bool pedal_input_healthy(bool enabled, bool adsConnected, bool adsValid, uint32_t adsSampleMs,
+                                uint32_t now, uint32_t deadline = 150u) {
+  if (!enabled || !adsConnected) return true;
+  return input_sample_fresh(adsValid, adsSampleMs, now, deadline);
+}

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-30 0 1430 1360" width="1430" height="1360">
-  <title>TIG Rotator — wiring diagram, revision 2.6</title>
+  <title>TIG Rotator — wiring diagram, revision 2.7</title>
   <desc>Original project wiring layout in the V5 graphite and orange design. Firmware input requirements are explicit; interface blocks are functional requirements, not verified installed hardware.</desc>
   <defs>
     <marker id="arr-cyan" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="5" orient="auto">
@@ -92,7 +92,7 @@
   <text x="30" y="72" font-family="sans-serif" font-size="32" font-weight="bold" fill="#E8EAE2">Wiring diagram</text>
   <text x="1270" y="38" text-anchor="end" font-family="sans-serif" font-size="18" font-weight="bold" fill="#FF7448">GUITION JC4880P443C</text>
   <text x="1270" y="62" text-anchor="end" font-family="sans-serif" font-size="14" fill="#E8EAE2">4.3" touch display board / ESP32-P4</text>
-  <text x="1270" y="84" text-anchor="end" font-family="sans-serif" font-size="12" fill="#E8EAE2">REV 2.6 / Firmware v2.1.1 / 03 OCT 2026</text>
+  <text x="1270" y="84" text-anchor="end" font-family="sans-serif" font-size="12" fill="#E8EAE2">REV 2.7 / Firmware v2.2.0 / 05 OCT 2026</text>
   <line x1="30" y1="94" x2="1270" y2="94" stroke="#364145"/>
 
   <!-- ============================================================= -->
@@ -338,7 +338,6 @@
   <!--  BOTTOM ROW COMPONENTS                                         -->
   <!-- ============================================================= -->
   <rect x="8" y="826" width="1248" height="152" rx="10" class="device-band"/>
-  <text x="22" y="846" class="zone-text" fill="#E8EAE2">FIELD DEVICES / OPERATOR CONTROLS</text>
 
   <!-- E-STOP -->
   <g transform="translate(20, 860)" filter="url(#card-shadow)">
@@ -415,7 +414,7 @@
     <rect y="28" width="195" height="12" fill="#303D3F" fill-opacity="1"/>
     <text x="98" y="22" font-family="sans-serif" font-size="16" fill="#E8EAE2" text-anchor="middle" font-weight="bold" letter-spacing="1">FOOT PEDAL</text>
     <text x="98" y="36" font-family="sans-serif" font-size="11" fill="#E8EAE2" text-anchor="middle">Analog POT + momentary SW</text>
-    <text x="98" y="66" font-family="sans-serif" font-size="12" fill="#E8EAE2" text-anchor="middle">POT  -&gt;  ADS1115 pad 0 (AIN0)</text>
+    <text x="98" y="66" font-family="sans-serif" font-size="12" fill="#E8EAE2" text-anchor="middle">POT  -&gt;  ADS1115 pin A0</text>
     <text x="98" y="84" font-family="sans-serif" font-size="12" fill="#E8EAE2" text-anchor="middle">SW    -&gt;  GPIO33</text>
     <text x="98" y="104" font-family="sans-serif" font-size="11" fill="#E8EAE2" text-anchor="middle">Speed (via I2C ADC) + Start</text>
     <circle cx="36" cy="0" r="5" fill="#CC88FF"/>
@@ -528,14 +527,14 @@
   <circle cx="571" cy="860" r="4" fill="#26C6DA"/>
   <circle cx="348" cy="389" r="4" fill="#26C6DA"/>
 
-  <!-- FOOT PEDAL POT -> ADS1115 AIN0 -->
-  <path d="M 1076,860 L 1076,775 L 1240,775 L 1240,654 L 1214,654"
+  <!-- FOOT PEDAL POT -> ADS1115 A0 (routed below the card into the left-edge pin row) -->
+  <path d="M 1076,860 L 1076,782 L 1006,782 L 1006,718 L 1016,718"
         fill="none" stroke="#B58CC8" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
   <circle cx="1076" cy="860" r="4" fill="#CC44FF"/>
-  <circle cx="1214" cy="654" r="4" fill="#CC44FF"/>
+  <circle cx="1016" cy="718" r="4" fill="#CC44FF"/>
 
-  <!-- FOOT PEDAL SW -> ESP GPIO33 (right header row 4) -->
-  <path d="M 1164,860 L 1164,756 L 400,756 L 400,299 L 348,299"
+  <!-- FOOT PEDAL SW -> ESP GPIO33 (right header row 4; routed below the ADS card) -->
+  <path d="M 1164,860 L 1164,800 L 400,800 L 400,299 L 348,299"
         fill="none" stroke="#B58CC8" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
   <circle cx="1164" cy="860" r="4" fill="#CC88FF"/>
   <circle cx="348" cy="299" r="4" fill="#CC88FF"/>
@@ -544,58 +543,74 @@
   <line x1="1200" y1="860" x2="1200" y2="790" stroke="#849394" stroke-width="2" stroke-linecap="round"/>
   <circle cx="1200" cy="790" r="3.5" fill="#849394"/>
 
-  <!-- FOOT PEDAL 3V3 -> ADS1115 VDD -->
-  <path d="M 1120,860 L 1120,818 Q 1120,810 1112,810 L 1030,810 Q 1022,810 1022,802 L 1022,714 L 1016,714"
-        fill="none" stroke="#FF5252" stroke-width="1.5" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" opacity="0.4"/>
-  <circle cx="1120" cy="860" r="3" fill="#FF5252" opacity="0.4"/>
+  <!-- FOOT PEDAL 3V3 -> ADS1115 VDD (rises left of the card, straight into the rail junction) -->
+  <path d="M 1120,860 L 1120,818 Q 1120,810 1112,810 L 1008,810 Q 1000,810 1000,802 L 1000,714"
+        fill="none" stroke="#FF5252" stroke-width="1.5" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+  <circle cx="1120" cy="860" r="3" fill="#FF5252" opacity="0.7"/>
 
   <!-- ============================================================= -->
-  <!--  ADS1115 (I2C ADC)                                             -->
+  <!--  ADS1115 (I2C ADC) — drawn like the physical module:           -->
+  <!--  one pin row, top to bottom: VDD GND SCL SDA ADDR ALRT A0-A3   -->
   <!-- ============================================================= -->
   <g transform="translate(1010, 600)" filter="url(#card-shadow)">
-    <rect width="220" height="124" rx="10" fill="#202B2D" stroke="#465252" stroke-width="1.5"/>
-    <rect width="220" height="38" rx="10" fill="#303D3F" fill-opacity="1"/>
-    <rect y="24" width="220" height="12" fill="#303D3F" fill-opacity="1"/>
-    <text x="110" y="20" font-family="sans-serif" font-size="14" fill="#E8EAE2" text-anchor="middle" font-weight="bold" letter-spacing="1">ADS1115 (castellated)</text>
-    <text x="110" y="34" font-family="sans-serif" font-size="9" fill="#E8EAE2" text-anchor="middle">V = 3.3 V  |  G = GND  |  S = SCL  |  D = SDA</text>
-    <text x="110" y="46" font-family="sans-serif" font-size="9" fill="#E8EAE2" text-anchor="middle">S + D: many boards include 10k pull-ups</text>
-    <rect x="8" y="52" width="204" height="60" rx="4" fill="#05080b" fill-opacity="0.38" stroke="#33264a" stroke-width="0.6"/>
+    <rect width="150" height="176" rx="10" fill="#202B2D" stroke="#465252" stroke-width="1.5"/>
+    <rect width="150" height="30" rx="10" fill="#303D3F" fill-opacity="1"/>
+    <rect y="18" width="150" height="12" fill="#303D3F" fill-opacity="1"/>
+    <text x="75" y="17" font-family="sans-serif" font-size="12" fill="#E8EAE2" text-anchor="middle" font-weight="bold" letter-spacing="1">ADS1115</text>
+    <text x="75" y="27" font-family="sans-serif" font-size="7.5" fill="#E8EAE2" text-anchor="middle">module pin order</text>
 
-    <text x="14" y="62" font-family="monospace" font-size="10" fill="#E8EAE2">VCC (V)</text>
-    <text x="14" y="78" font-family="monospace" font-size="10" fill="#E8EAE2">GND (G)</text>
-    <text x="14" y="94" font-family="monospace" font-size="10" fill="#E8EAE2">SCL (S)</text>
-    <text x="14" y="110" font-family="monospace" font-size="10" fill="#E8EAE2">SDA (D)</text>
-    <text x="206" y="62" font-family="monospace" font-size="10" fill="#E8EAE2" text-anchor="end">AIN0 (pad 0)</text>
-    <text x="206" y="78" font-family="monospace" font-size="8" fill="#E8EAE2" text-anchor="end">AIN1-3 (1-3) NC</text>
-    <text x="110" y="118" font-family="sans-serif" font-size="8" fill="#E8EAE2" text-anchor="middle">I2C 0x48 when ADDR is on PCB to GND (typical)</text>
+    <text x="16" y="44" font-family="monospace" font-size="10" fill="#E8EAE2">VDD</text>
+    <text x="16" y="57" font-family="monospace" font-size="10" fill="#E8EAE2">GND</text>
+    <text x="16" y="70" font-family="monospace" font-size="10" fill="#E8EAE2">SCL</text>
+    <text x="16" y="83" font-family="monospace" font-size="10" fill="#E8EAE2">SDA</text>
+    <text x="16" y="96" font-family="monospace" font-size="10" font-weight="bold" fill="#E5B873">ADDR</text>
+    <text x="16" y="109" font-family="monospace" font-size="10" fill="#E8EAE2" opacity="0.5">ALRT</text>
+    <text x="16" y="122" font-family="monospace" font-size="10" font-weight="bold" fill="#DD99FF">A0</text>
+    <text x="16" y="135" font-family="monospace" font-size="10" fill="#E8EAE2" opacity="0.5">A1</text>
+    <text x="16" y="148" font-family="monospace" font-size="10" fill="#E8EAE2" opacity="0.5">A2</text>
+    <text x="16" y="161" font-family="monospace" font-size="10" fill="#E8EAE2" opacity="0.5">A3</text>
 
-    <circle cx="6" cy="54" r="4" fill="#FF5252"/>
-    <circle cx="6" cy="72" r="4" fill="#849394"/>
-    <circle cx="6" cy="90" r="4" fill="#AA77DD"/>
-    <circle cx="6" cy="108" r="4" fill="#AA77DD"/>
-    <circle cx="204" cy="54" r="4" fill="#DD99FF"/>
+    <text x="75" y="172" font-family="sans-serif" font-size="7.5" font-weight="bold" fill="#E5B873" text-anchor="middle">ADDR -&gt; GND = I2C 0x48</text>
+
+    <circle cx="6" cy="40"  r="4" fill="#FF5252"/>
+    <circle cx="6" cy="53"  r="4" fill="#849394"/>
+    <circle cx="6" cy="66"  r="4" fill="#AA77DD"/>
+    <circle cx="6" cy="79"  r="4" fill="#AA77DD"/>
+    <circle cx="6" cy="92"  r="4" fill="#849394"/>
+    <circle cx="6" cy="105" r="3.4" fill="none" stroke="#5c7a84" stroke-width="1"/>
+    <circle cx="6" cy="118" r="4" fill="#DD99FF"/>
+    <circle cx="6" cy="131" r="3.4" fill="none" stroke="#5c7a84" stroke-width="1"/>
+    <circle cx="6" cy="144" r="3.4" fill="none" stroke="#5c7a84" stroke-width="1"/>
+    <circle cx="6" cy="157" r="3.4" fill="none" stroke="#5c7a84" stroke-width="1"/>
   </g>
 
-  <!-- ADS1115 VDD -> joins POT 3V3 rail -->
-  <path d="M 1016,654 L 1016,714 L 296,714"
-        fill="none" stroke="#FF5252" stroke-width="1.5" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" opacity="0.4"/>
-  <circle cx="1016" cy="654" r="3" fill="#FF5252" opacity="0.4"/>
+  <!-- ADS1115 VDD -> joins POT 3V3 rail (dedicated lane x=1000; crosses SCL/SDA without dots) -->
+  <path d="M 1016,640 L 1000,640 L 1000,714 L 296,714"
+        fill="none" stroke="#FF5252" stroke-width="1.5" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" opacity="0.75"/>
+  <circle cx="1016" cy="640" r="4" fill="#FF5252" opacity="0.9"/>
   <circle cx="296"  cy="714" r="3" fill="#FF5252" opacity="0.6"/>
 
-  <circle cx="1016" cy="714" r="3.5" fill="#FF5252"/>
-  <!-- ADS1115 GND -> GND bus -->
-  <line x1="1016" y1="672" x2="1016" y2="790" stroke="#849394" stroke-width="2" stroke-linecap="round"/>
-  <circle cx="1016" cy="790" r="3.5" fill="#849394"/>
+  <circle cx="1000" cy="714" r="3.5" fill="#FF5252"/>
+  <!-- ADS1115 GND -> GND bus (dedicated lane x=990; ADDR tees in below) -->
+  <path d="M 1016,653 L 990,653 L 990,790"
+        fill="none" stroke="#849394" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="990" cy="790" r="3.5" fill="#849394"/>
 
   <!-- ADS1115 SCL -> ESP I2C_SCL (row 13, abs 113,569) -->
-  <path d="M 1016,690 L 90,690 L 90,569 L 113,569"
+  <path d="M 1016,666 L 90,666 L 90,569 L 113,569"
         fill="none" stroke="#AA77DD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 3"/>
   <circle cx="113" cy="569" r="3" fill="#AA77DD"/>
 
   <!-- ADS1115 SDA -> ESP I2C_SDA (row 12, abs 113,539) -->
-  <path d="M 1016,708 L 80,708 L 80,539 L 113,539"
+  <path d="M 1016,679 L 80,679 L 80,539 L 113,539"
         fill="none" stroke="#AA77DD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 3"/>
   <circle cx="113" cy="539" r="3" fill="#AA77DD"/>
+
+  <!-- ADS1115 ADDR -> GND (REQUIRED: sets I2C 0x48); tees into GND lane with a dot -->
+  <path d="M 1016,692 L 990,692"
+        fill="none" stroke="#849394" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="1016" cy="692" r="4" fill="#849394"/>
+  <circle cx="990" cy="692" r="3.5" fill="#849394"/>
 
   <rect x="548" y="623" width="132" height="18" rx="3" class="callout-plate"/>
   <text x="614" y="636" text-anchor="middle" class="callout-text" fill="#E8EAE2">STEP / DIR / ENA</text>
@@ -652,7 +667,7 @@
     <text x="24" y="198" font-family="monospace" font-size="13" fill="#E8EAE2" font-weight="bold">GPIO29</text><text x="115" y="198" font-family="sans-serif" font-size="13" fill="#E8EAE2">DIR switch / LOW = CCW</text>
     <text x="24" y="221" font-family="monospace" font-size="13" fill="#E8EAE2" font-weight="bold">GPIO32</text><text x="115" y="221" font-family="sans-serif" font-size="13" fill="#E8EAE2">Driver ALM / LOW = alarm</text>
     <text x="24" y="244" font-family="monospace" font-size="13" fill="#E8EAE2" font-weight="bold">GPIO7/8</text><text x="115" y="244" font-family="sans-serif" font-size="13" fill="#E8EAE2">SDA / SCL (shared touch I2C)</text>
-    <text x="24" y="267" font-family="monospace" font-size="13" fill="#E8EAE2" font-weight="bold">ADS1115</text><text x="115" y="267" font-family="sans-serif" font-size="13" fill="#E8EAE2">0x48 / pedal pot to AIN0</text>
+    <text x="24" y="267" font-family="monospace" font-size="13" fill="#E8EAE2" font-weight="bold">ADS1115</text><text x="115" y="267" font-family="sans-serif" font-size="13" fill="#E8EAE2">0x48 (ADDR-GND) / pedal pot to A0</text>
     <text x="24" y="290" font-family="monospace" font-size="13" fill="#E8EAE2" font-weight="bold">GND</text><text x="115" y="290" font-family="sans-serif" font-size="13" fill="#E8EAE2">Common signal reference</text>
   </g>
 
@@ -696,11 +711,12 @@
     <text x="22" y="201" font-family="sans-serif" font-size="12" fill="#E8EAE2">   Test pressed, released and broken cable states.</text>
     <text x="22" y="219" font-family="sans-serif" font-size="12" fill="#E8EAE2">   ISR sets ENA HIGH. Physical stop time unmeasured.</text>
     <text x="22" y="237" font-family="sans-serif" font-size="12" fill="#E8EAE2">5. ALM: verify driver output and 3.3 V conditioning.</text>
-    <text x="22" y="255" font-family="sans-serif" font-size="12" fill="#E8EAE2">6. ADS: V = 3.3 V, D = GPIO7, S = GPIO8, pot = AIN0.</text>
-    <text x="22" y="273" font-family="sans-serif" font-size="12" fill="#E8EAE2">   JP1: SDA pin 23 / SCL pin 25. Not C6 pins 24/26.</text>
-    <text x="22" y="291" font-family="sans-serif" font-size="12" fill="#E8EAE2">7. Motor colors are examples. Identify coil pairs.</text>
-    <text x="22" y="309" font-family="sans-serif" font-size="12" fill="#E8EAE2">8. TIG HF: screen + driver + PSU in grounded metal.</text>
-    <text x="22" y="327" font-family="sans-serif" font-size="12" fill="#E8EAE2">   Keep logic wires away from welding/power cables.</text>
+    <text x="22" y="255" font-family="sans-serif" font-size="12" fill="#E8EAE2">6. ADS: VDD = 3.3 V, SDA = GPIO7, SCL = GPIO8, pot = A0.</text>
+    <text x="22" y="273" font-family="sans-serif" font-size="12" fill="#E5B873">   ADDR -&gt; GND = 0x48. REQUIRED: ADDR is not pre-wired</text>
+    <text x="22" y="291" font-family="sans-serif" font-size="12" fill="#E5B873">   on 10-pin modules. JP1: SDA 23 / SCL 25. Not 24/26.</text>
+    <text x="22" y="309" font-family="sans-serif" font-size="12" fill="#E8EAE2">7. Motor colors are examples. Identify coil pairs.</text>
+    <text x="22" y="327" font-family="sans-serif" font-size="12" fill="#E8EAE2">8. TIG HF: screen + driver + PSU in grounded metal.</text>
+    <text x="22" y="345" font-family="sans-serif" font-size="12" fill="#E8EAE2">   Keep logic wires away from welding/power cables.</text>
   </g>
 
   <g transform="translate(460, 1180)">
@@ -711,5 +727,9 @@
     <text x="24" y="107" font-family="sans-serif" font-size="13" fill="#E8EAE2">Check physical E-STOP and driver inhibit before use.</text>
     <text x="24" y="132" font-family="sans-serif" font-size="13" fill="#E8EAE2">Dashed boxes = required / optional interface functions.</text>
   </g>
+
+  <!-- Band title on a plate, painted last so it sits cleanly over the routing -->
+  <rect x="16" y="808" width="292" height="20" rx="4" class="callout-plate"/>
+  <text x="24" y="822" class="zone-text" fill="#E8EAE2">FIELD DEVICES / OPERATOR CONTROLS</text>
 </g>
 </svg>

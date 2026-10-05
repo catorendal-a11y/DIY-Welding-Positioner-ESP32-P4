@@ -517,7 +517,7 @@
   <circle cx="113" cy="389" r="4" fill="#CC44FF"/>
 
   <!-- POT 3V3 + ADS1115 VDD rail -> ESP 3V3 (routed around ESP on left) -->
-  <path d="M 296,860 L 296,730 L 10,730 L 10,209 L 113,209"
+  <path d="M 296,860 L 296,714 L 10,714 L 10,209 L 113,209"
         fill="none" stroke="#FF5252" stroke-width="1.5" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
   <circle cx="296" cy="860" r="3" fill="#FF5252" opacity="0.5"/>
 
@@ -544,7 +544,7 @@
   <circle cx="1200" cy="790" r="3.5" fill="#849394"/>
 
   <!-- FOOT PEDAL 3V3 -> ADS1115 VDD (rises left of the card, straight into the rail junction) -->
-  <path d="M 1120,860 L 1120,818 Q 1120,810 1112,810 L 1008,810 Q 1000,810 1000,802 L 1000,730"
+  <path d="M 1120,860 L 1120,818 Q 1120,810 1112,810 L 1008,810 Q 1000,810 1000,802 L 1000,714"
         fill="none" stroke="#FF5252" stroke-width="1.5" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
   <circle cx="1120" cy="860" r="3" fill="#FF5252" opacity="0.7"/>
 
@@ -585,12 +585,12 @@
   </g>
 
   <!-- ADS1115 VDD -> joins POT 3V3 rail (dedicated lane x=1000; crosses SCL/SDA without dots) -->
-  <path d="M 1046,601 L 1000,601 L 1000,730 L 296,730"
+  <path d="M 1046,601 L 1000,601 L 1000,714 L 296,714"
         fill="none" stroke="#FF5252" stroke-width="1.5" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" opacity="0.75"/>
   <circle cx="1046" cy="601" r="5" fill="#FF5252" opacity="0.9"/>
-  <circle cx="296"  cy="730" r="3" fill="#FF5252" opacity="0.6"/>
+  <circle cx="296"  cy="714" r="3" fill="#FF5252" opacity="0.6"/>
 
-  <circle cx="1000" cy="730" r="3.5" fill="#FF5252"/>
+  <circle cx="1000" cy="714" r="3.5" fill="#FF5252"/>
   <!-- ADS1115 GND -> GND bus (dedicated lane x=990; ADDR tees in below) -->
   <path d="M 1046,616 L 990,616 L 990,790"
         fill="none" stroke="#849394" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -602,7 +602,7 @@
   <circle cx="113" cy="569" r="3" fill="#AA77DD"/>
 
   <!-- ADS1115 SDA -> ESP I2C_SDA (row 12, abs 113,539) -->
-  <path d="M 1046,646 L 1022,646 L 1022,706 L 80,706 L 80,539 L 113,539"
+  <path d="M 1046,646 L 1022,646 L 1022,703 L 80,703 L 80,539 L 113,539"
         fill="none" stroke="#AA77DD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 3"/>
   <circle cx="113" cy="539" r="3" fill="#AA77DD"/>
 

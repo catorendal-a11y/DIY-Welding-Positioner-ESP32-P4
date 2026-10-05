@@ -1,8 +1,8 @@
 # Project Status
 
 **Last Updated:** 2026-10-05
-**Published firmware:** v2.2.0
-**Source:** master @ c4ea129 — runtime pedal source selection + ADS1115 wiring diagram rev 2.7 (unreleased; v2.2.0 assets unchanged)
+**Published firmware:** v2.2.1
+**Source:** master @ c4ea129 — pedal runtime source selection + ADS1115 wiring diagram rev 2.7 (released as v2.2.1)
 **Build:** 453 native/control/speed/storage test cases, packaging regressions, Linux/Windows simulator self-tests/layout audits and release/debug/mirror builds. On 2026-10-05 the pedal-fix build was flashed and hash-verified on the owner's ESP32-P4 (COM3); the boot I2C scan detects the ADS1115 at 0x48, and the owner confirms the foot pedal (GPIO33 start/stop + ADS1115 analog speed) is tested and working. Quantitative measurements have not been reported. Historical releases retain their original assets.
 
 ---

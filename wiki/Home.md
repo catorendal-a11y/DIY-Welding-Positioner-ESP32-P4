@@ -2,9 +2,9 @@
 
 **ESP32-P4 / C6 GUITION JC4880P443C** | Open-source firmware for TIG/MIG welding rotators
 
-## Current Status: v2.2.0 - Idle screen saver and flat UI refinements
+## Current Status: v2.2.1 - Pedal runtime source selection
 
-Release **v2.2.0** is the current firmware identifier (**`FW_VERSION`**). It adds an idle screen saver and flat UI refinements, retaining LVGL 9.6, FastAccelStepper 1.4 and guided setup/calibration. A functional pre-release build was uploaded and flash-verified on the owner's ESP32-P4; the owner confirms assembled functions work. On 2026-10-05 the pedal/ADS1115 commissioning was completed: the boot scan detects the ADS1115 at 0x48 and the owner confirms GPIO33 start/stop and analog pedal speed work on the assembled machine (master build with runtime source selection, unreleased). Quantitative stop-time and HF measurements have not been supplied. Earlier TIG field experience supports installing the controller, driver and motor PSU inside one grounded metal enclosure.
+Release **v2.2.1** is the current firmware identifier (**`FW_VERSION`**). It makes the foot pedal work in every hardware configuration: GPIO33 switch start/stop always, ADS1115 analog pedal speed when present, panel-potentiometer fallback otherwise, and it retires the wiring-diagram limitations around the ADS1115. Retaining LVGL 9.6, FastAccelStepper 1.4, the idle screen saver and guided setup/calibration. The build was flash-verified on the owner's ESP32-P4; the owner confirms assembled functions work, including the pedal: the boot scan detects the ADS1115 at 0x48 and GPIO33 start/stop plus analog pedal speed are owner-confirmed on the assembled machine. Quantitative stop-time and HF measurements have not been supplied. Earlier TIG field experience supports installing the controller, driver and motor PSU inside one grounded metal enclosure.
 
 Earlier releases include v2.0.8 version alignment and v2.0.7 dark/light mode. See the repository changelog for history.
 

@@ -10,7 +10,7 @@ Touchscreen controller for a single-axis TIG/MIG welding rotator.
 
 ![Main screen — actual LVGL simulator capture](docs/images/ui_runtime_v5/01_MAIN.png)
 
-**[Try the Windows simulator](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.2.0/welding-positioner-v2.2.0-simulator-windows-x64.zip)** · **[Firmware downloads](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.2.0)** · **[Builder guide](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/wiki)** · **[Watch the hardware demo](https://youtu.be/GygLl6XY-TM)**
+**[Try the Windows simulator](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.2.1/welding-positioner-v2.2.1-simulator-windows-x64.zip)** · **[Firmware downloads](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.2.1)** · **[Builder guide](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/wiki)** · **[Watch the hardware demo](https://youtu.be/GygLl6XY-TM)**
 
 The image shows the current V5 interface with example data. The hardware demo shows an earlier UI on the existing machine.
 
@@ -42,6 +42,8 @@ Board illustration and pin reference above. The product illustration shows vendo
 - Physical **E-STOP input**, driver-alarm monitoring and guarded reset.
 - Guided **setup and calibration**, touch diagnostics and a USB-C live mirror.
 - Optional **[idle screen saver](docs/SCREEN_SAVER.md)** in the V5 design, with touch-to-wake and a Display preview.
+
+**v2.2.1** makes the foot pedal work in every configuration: GPIO33 switch start/stop always, ADS1115 analog pedal speed when present, panel-potentiometer fallback otherwise. [Release notes](docs/releases/v2.2.1.md) · [Changelog](CHANGELOG.md).
 
 **v2.2.0** adds the idle screen saver, flat UI refinements and further motion/input/storage fixes, retaining LVGL 9.6 and FastAccelStepper 1.4. [Release notes](docs/releases/v2.2.0.md) · [Changelog](CHANGELOG.md).
 
@@ -105,7 +107,7 @@ For a source build, install PlatformIO and use:
 ```sh
 git clone https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4.git
 cd DIY-Welding-Positioner-ESP32-P4
-git checkout v2.2.0
+git checkout v2.2.1
 pio run
 ```
 

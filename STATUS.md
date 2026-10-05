@@ -1,9 +1,9 @@
 # Project Status
 
-**Last Updated:** 2026-10-03
+**Last Updated:** 2026-10-05
 **Published firmware:** v2.2.0
-**Source:** v2.2.0 with idle screen saver, flat UI refinements and motion/input/storage corrections
-**Build:** 459 native/control/speed/storage tests, packaging regressions, Linux/Windows simulator self-tests/layout audits and release/debug/mirror builds. A pre-release functional build was uploaded and flash-verified on the owner's ESP32-P4; the owner confirms assembled functions work, with pedal/ADS1115 unfinished and deferred; quantitative measurements have not been reported. Historical releases retain their original assets.
+**Source:** master @ c4ea129 — runtime pedal source selection + ADS1115 wiring diagram rev 2.7 (unreleased; v2.2.0 assets unchanged)
+**Build:** 453 native/control/speed/storage test cases, packaging regressions, Linux/Windows simulator self-tests/layout audits and release/debug/mirror builds. On 2026-10-05 the pedal-fix build was flashed and hash-verified on the owner's ESP32-P4 (COM3); the boot I2C scan detects the ADS1115 at 0x48, and the owner confirms the foot pedal (GPIO33 start/stop + ADS1115 analog speed) is tested and working. Quantitative measurements have not been reported. Historical releases retain their original assets.
 
 ---
 
@@ -66,7 +66,7 @@ v2.2.0 includes the [idle screen saver](docs/SCREEN_SAVER.md) and [LVGL UI refin
 
 ### Hardware
 - [x] **Foot pedal firmware support** (analog speed via ADS1115 I2C ADC, digital switch GPIO33)
-- [ ] **Pedal/ADS1115 hardware commissioning** - unfinished on the owner's build; intentionally deferred.
+- [x] **Pedal/ADS1115 hardware commissioning** (2026-10-05: ADS1115 detected at 0x48; GPIO33 switch + analog speed owner-confirmed working; runtime switch-only fallback when no ADS1115 is present)
 - [x] **Direction switch** (GPIO29, CW/CCW toggle)
 - [x] **Gear ratio 1:108** total (60 x 72/40, NMRV030 + spur)
 - [x] **TIG HF field validation** (welding works with ESP32-P4 screen, driver, and PSU inside one grounded metal enclosure)

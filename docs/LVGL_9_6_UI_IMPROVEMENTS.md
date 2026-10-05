@@ -42,7 +42,7 @@ Simulator regressions cover unchanged integer notifications, text copied from a 
 
 ## Local validation
 
-Windows simulator self-test and the program-editor preview flow pass. The 800 x 480 layout audit reports zero failures. Release, debug and USB-mirror firmware compile successfully. Calibration, main, Diagnostics, motor configuration and program-editor simulator screenshots were visually checked. A functional pre-release build at commit 673e078 was later uploaded to the owner's ESP32-P4 with flash verification. On 2026-10-03 the owner confirmed that all currently assembled controller functions work. Pedal/ADS1115 wiring and commissioning are unfinished and intentionally deferred. This is owner-reported functional confirmation; no quantitative stop-time, calibration-accuracy, rendering or HF test measurements were supplied.
+Windows simulator self-test and the program-editor preview flow pass. The 800 x 480 layout audit reports zero failures. Release, debug and USB-mirror firmware compile successfully. Calibration, main, Diagnostics, motor configuration and program-editor simulator screenshots were visually checked. A functional pre-release build at commit 673e078 was later uploaded to the owner's ESP32-P4 with flash verification. On 2026-10-03 the owner confirmed that all currently assembled controller functions work. Pedal/ADS1115 wiring and commissioning were completed on 2026-10-05 (ADS1115 detected at 0x48; GPIO33 switch + analog speed owner-confirmed working with the master pedal fix). This is owner-reported functional confirmation; no quantitative stop-time, calibration-accuracy, rendering or HF test measurements were supplied.
 
 ## Performance and scope
 

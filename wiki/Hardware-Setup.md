@@ -127,4 +127,4 @@ GPIO 28, GPIO 14-19, and GPIO 54 may be PCB-routed toward the ESP32-C6 co-proces
 
 ## Owner build status - 2026-10-03
 
-On 2026-10-03 the owner confirmed that all currently assembled controller functions work. Pedal/ADS1115 wiring and commissioning are unfinished and intentionally deferred. This is owner-reported functional confirmation; no quantitative stop-time, calibration-accuracy, rendering or HF test measurements were supplied.
+On 2026-10-03 the owner confirmed that all currently assembled controller functions work. On 2026-10-05 pedal/ADS1115 commissioning was completed: the boot scan detects the ADS1115 at 0x48 and the owner confirms GPIO33 start/stop and analog pedal speed work on the assembled machine (master build with runtime source selection). This is owner-reported functional confirmation; no quantitative stop-time, calibration-accuracy, rendering or HF test measurements were supplied.

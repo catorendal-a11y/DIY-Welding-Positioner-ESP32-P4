@@ -687,7 +687,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 | Native suites | 459 / 459 passed (native/control/speed/storage suites) |
 | LVGL self-test | Passed: navigation, program edits, RPM adjustment, fault reset, full setup/calibration workflows, save failure/retry and stale control |
 | Firmware builds | Release, debug and mirror passed |
-| Device upload | Functional pre-release commit 673e078 uploaded to COM3 and flash data verified on 2026-10-03. Owner confirms assembled functions work; pedal/ADS1115 is unfinished and deferred. No quantitative stop-time measurements were supplied. |
+| Device upload | Functional pre-release commit 673e078 uploaded to COM3 and flash data verified on 2026-10-03. On 2026-10-05 the pedal-fix build (c4ea129) was flashed and hash-verified; the boot scan detects the ADS1115 at 0x48 and the owner confirms the pedal (GPIO33 + analog speed) works. No quantitative stop-time measurements were supplied. |
 | Physical motor/safety testing | Not performed as part of this update |
 
 [Dependency validation logs](../docs/validation/2026-10-02/dependencies) and [program editor validation](../docs/validation/2026-10-03/program-editor/README.md) record local runs. Native tests include direct production-policy tests, but older tests also model behavior separately; simulator hardware is stubbed. CI runs native tests, three firmware variants and SDL navigation checks. The badge links to the current GitHub result.

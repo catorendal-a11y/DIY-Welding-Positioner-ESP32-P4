@@ -162,7 +162,7 @@ Firmware: **LOW** on the ENA GPIO line requests **motor enabled**, **HIGH** requ
 | **Potentiometer** | 10k (LA42DWQ-22) | Tested (ADC range 0-3315) |
 | **E-STOP** | Conditioned HIGH-healthy / LOW-fault input | Polarity and broken-wire response require bench verification |
 | **Direction Switch** | SPDT toggle on GPIO 29 | Tested |
-| **Foot Pedal** | Analog pot + momentary switch | Tested |
+| **Foot Pedal** | Analog pot + momentary switch + ADS1115 ADC (0x48) | Tested (2026-10-05, owner hardware) |
 | **TIG HF welding** | Shared grounded metal enclosure for ESP32-P4 screen, driver, and PSU | Field tested |
 
 ### Known limitations (basic PUL/DIR drivers)

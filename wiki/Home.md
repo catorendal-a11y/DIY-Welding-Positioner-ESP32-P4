@@ -4,7 +4,7 @@
 
 ## Current Status: v2.2.0 - Idle screen saver and flat UI refinements
 
-Release **v2.2.0** is the current firmware identifier (**`FW_VERSION`**). It adds an idle screen saver and flat UI refinements, retaining LVGL 9.6, FastAccelStepper 1.4 and guided setup/calibration. A functional pre-release build was uploaded and flash-verified on the owner's ESP32-P4; the owner confirms assembled functions work, except unfinished/deferred pedal/ADS1115; quantitative stop-time and HF measurements have not been supplied. Earlier TIG field experience supports installing the controller, driver and motor PSU inside one grounded metal enclosure.
+Release **v2.2.0** is the current firmware identifier (**`FW_VERSION`**). It adds an idle screen saver and flat UI refinements, retaining LVGL 9.6, FastAccelStepper 1.4 and guided setup/calibration. A functional pre-release build was uploaded and flash-verified on the owner's ESP32-P4; the owner confirms assembled functions work. On 2026-10-05 the pedal/ADS1115 commissioning was completed: the boot scan detects the ADS1115 at 0x48 and the owner confirms GPIO33 start/stop and analog pedal speed work on the assembled machine (master build with runtime source selection, unreleased). Quantitative stop-time and HF measurements have not been supplied. Earlier TIG field experience supports installing the controller, driver and motor PSU inside one grounded metal enclosure.
 
 Earlier releases include v2.0.8 version alignment and v2.0.7 dark/light mode. See the repository changelog for history.
 

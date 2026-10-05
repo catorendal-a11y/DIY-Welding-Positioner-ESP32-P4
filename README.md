@@ -152,7 +152,7 @@ v2.2.0 includes cancelled-countdown guards, motion bounds/timeouts, pedal takeov
 Validation covers **459 native/control/speed/storage tests**, packaging regressions, upstream RMT encoder checks, Linux/Windows simulator checks, a zero-failure layout audit and three firmware builds. Release binaries come from the exact validated master CI commit. [Release validation](docs/releases/v2.2.0.md#validation-and-hardware-status).
 
 - **Single axis; no encoder feedback.** RPM/progress are calculated, so calibration requires real measurement.
-- The owner confirms the assembled controller functions work. **Pedal/ADS1115 is unfinished and deferred.** This is functional feedback; no measured stop-time or HF qualification is claimed.
+- The owner confirms the assembled controller functions work, including the foot pedal: on 2026-10-05 the ADS1115 answered the boot scan at 0x48 and GPIO33 switch + analog pedal speed were verified working on the assembled machine (master build with runtime pedal source selection, unreleased). This is functional feedback; no measured stop-time or HF qualification is claimed.
 - Earlier TIG field experience supports the grounded-enclosure requirement; it does not qualify the latest firmware or establish a physical stop-time guarantee.
 
 ## Documentation and contributions

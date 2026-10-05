@@ -67,7 +67,7 @@ Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Posit
 
 **Current release: v2.2.0, updated 3 October 2026.** V5 identifies the UI design iteration. [Download firmware and read the release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.2.0). The current firmware and simulator include LVGL 9.6, FastAccelStepper 1.4, guided setup/calibration and the revised program editor.
 
-v2.2.0 adds an idle screen saver, exact motor-settings input and flat LVGL UI refinements, plus motion/input/storage corrections. A functional pre-release build was uploaded and flash-verified; the owner confirms assembled functions work, except unfinished/deferred pedal/ADS1115; quantitative measurements have not been reported. [Release notes](releases/v2.2.0.md) · [Logic review](CODE_LOGIC_REVIEW_2026-10-03.md) · [Screen saver](SCREEN_SAVER.md).
+v2.2.0 adds an idle screen saver, exact motor-settings input and flat LVGL UI refinements, plus motion/input/storage corrections. A functional pre-release build was uploaded and flash-verified; the owner confirms assembled functions work. On 2026-10-05 pedal/ADS1115 commissioning was completed on the owner's hardware (ADS1115 detected at 0x48; GPIO33 switch + analog speed owner-confirmed working, master build with runtime source selection); quantitative measurements have not been reported. [Release notes](releases/v2.2.0.md) · [Logic review](CODE_LOGIC_REVIEW_2026-10-03.md) · [Screen saver](SCREEN_SAVER.md).
 
 ---
 

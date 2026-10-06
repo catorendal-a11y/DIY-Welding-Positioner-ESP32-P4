@@ -32,6 +32,12 @@ uint32_t motor_stop_timeout_ms();
 bool motor_move_timeout_ms(uint32_t pulses, float rpm, uint32_t& budget);
 void motor_disable();  // Disable motor (ENA HIGH) after stopped
 
+// Driver-family ENA settle (DM542T/Leadshine-class t1): before the first PUL
+// after an enable, ENA must be asserted for the settle window. controlTask
+// drives this via STATE_ENABLING; these run on the control core only.
+bool motor_prepare_start();      // Final inhibit re-check, then assert ENA LOW and stamp the clock
+bool motor_ena_settle_pending(); // True until the asserted enable has waited out its settle window
+
 // Status queries
 bool motor_is_running();
 bool motor_direction_is_cw();

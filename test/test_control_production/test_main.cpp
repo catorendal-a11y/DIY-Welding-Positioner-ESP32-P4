@@ -73,6 +73,11 @@ void setUp() {
   motor_halt();
   motor_restore_configured_acceleration();
   motor_apply_settings();
+  // Pre-settle the driver enable so existing mode tests exercise post-enable
+  // behaviour; ENA-settle tests re-arm explicitly via motor_disable().
+  motor_prepare_start();
+  simTestMillis += 250u;
+  (void)motor_ena_settle_pending();
   motor_refresh_hz_cache();
   step_reset_accumulator(); control_run_cycle();
 }
@@ -385,6 +390,43 @@ void test_internal_pulse_stop_has_independent_deadline() {
   TEST_ASSERT_EQUAL(FAULT_MOTOR_TIMEOUT, testFault);
   TEST_ASSERT_EQUAL(HIGH, simTestPins[PIN_ENA]);
 }
+void test_dm542t_start_waits_out_ena_settle_before_pulses() {
+  motor_disable();  // re-arm the ENA settle window
+  TEST_ASSERT_TRUE(control_start_continuous());
+  control_run_cycle();
+  TEST_ASSERT_EQUAL(STATE_ENABLING, control_get_state());
+  TEST_ASSERT_EQUAL(0, testStepper.starts);
+  TEST_ASSERT_EQUAL(LOW, simTestPins[PIN_ENA]);  // enable asserted during the wait
+  simTestMillis += 199; control_run_cycle();
+  TEST_ASSERT_EQUAL(STATE_ENABLING, control_get_state());
+  TEST_ASSERT_EQUAL(0, testStepper.starts);
+  ++simTestMillis; control_run_cycle();  // settle window elapsed
+  TEST_ASSERT_EQUAL(STATE_RUNNING, control_get_state());
+  TEST_ASSERT_TRUE(testStepper.starts >= 1);
+}
+void test_standard_driver_starts_without_settle_window() {
+  g_settings.stepper_driver = STEPPER_DRIVER_STANDARD; motor_apply_settings();
+  TEST_ASSERT_TRUE(control_start_continuous()); control_run_cycle();
+  TEST_ASSERT_EQUAL(STATE_RUNNING, control_get_state());
+  TEST_ASSERT_TRUE(testStepper.starts >= 1);
+}
+void test_stop_during_enabling_aborts_without_pulses() {
+  motor_disable();  // re-arm the ENA settle window
+  TEST_ASSERT_TRUE(control_start_continuous()); control_run_cycle();  // ENABLING
+  control_stop(); control_run_cycle();
+  TEST_ASSERT_EQUAL(0, testStepper.starts);
+  TEST_ASSERT_EQUAL(STATE_IDLE, control_get_state());
+  TEST_ASSERT_EQUAL(HIGH, simTestPins[PIN_ENA]);
+}
+void test_inhibit_during_enabling_fails_closed() {
+  motor_disable();  // re-arm the ENA settle window
+  TEST_ASSERT_TRUE(control_start_continuous()); control_run_cycle();  // ENABLING
+  testFault = FAULT_ESTOP_PRESSED;  // level appears mid-settle
+  simTestMillis += 201; control_run_cycle();  // settle elapses under fault
+  TEST_ASSERT_EQUAL(0, testStepper.starts);
+  TEST_ASSERT_EQUAL(STATE_IDLE, control_get_state());
+  TEST_ASSERT_EQUAL(HIGH, simTestPins[PIN_ENA]);
+}
 
 
 void test_deferred_start_never_survives_fault_reset_or_stop() {
@@ -399,7 +441,9 @@ void test_deferred_start_never_survives_fault_reset_or_stop() {
     TEST_ASSERT_EQUAL(0, testStepper.starts);
   }
   TEST_ASSERT_TRUE(control_start_deferred_continuous(control_motion_generation()));
-  control_run_cycle(); TEST_ASSERT_EQUAL(STATE_RUNNING, control_get_state());
+  control_run_cycle();
+  simTestMillis += 201; control_run_cycle();  // prior halt in this test re-armed the settle
+  TEST_ASSERT_EQUAL(STATE_RUNNING, control_get_state());
 }
 void test_finite_move_deadline_and_completed_move_cancellation() {
   step_execute(90); TEST_ASSERT_EQUAL(STATE_STEP,control_get_state());
@@ -438,6 +482,10 @@ int main() {
   RUN_TEST(test_below_floor_rate_is_rejected_without_silent_speedup);
   RUN_TEST(test_jog_reclamps_after_config_lowered_cap);
   RUN_TEST(test_internal_pulse_stop_has_independent_deadline);
+  RUN_TEST(test_dm542t_start_waits_out_ena_settle_before_pulses);
+  RUN_TEST(test_standard_driver_starts_without_settle_window);
+  RUN_TEST(test_stop_during_enabling_aborts_without_pulses);
+  RUN_TEST(test_inhibit_during_enabling_fails_closed);
   RUN_TEST(test_calibration_blocks_unrelated_motion_and_pedal_mode);
   RUN_TEST(test_calibration_draft_is_not_persisted_before_save);
   RUN_TEST(test_calibration_requires_two_completed_moves);

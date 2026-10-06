@@ -14,7 +14,8 @@ static std::atomic<float> pendingJogSpeed{-1.0f};
 
 void jog_start(Direction dir) {
   SystemState state = control_get_state();
-  if (state != STATE_IDLE && state != STATE_JOG) return;
+  // ENABLING = replay of an already-admitted start after the driver settle.
+  if (state != STATE_IDLE && state != STATE_JOG && state != STATE_ENABLING) return;
 
   LOG_I("Jog mode: %s", (dir == DIR_CW) ? "CW" : "CCW");
 

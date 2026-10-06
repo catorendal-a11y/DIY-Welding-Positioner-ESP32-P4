@@ -22,7 +22,8 @@ static bool start_motor() {
   return speed_get_direction() == DIR_CW ? motor_run_cw() : motor_run_ccw();
 }
 void pulse_start(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
-  if (control_get_state() != STATE_IDLE) return;
+  // ENABLING = replay of an already-admitted start after the driver settle.
+  if (control_get_state() != STATE_IDLE && control_get_state() != STATE_ENABLING) return;
   pulseOnMs = constrain(on_ms, PULSE_MS_MIN, PULSE_MS_MAX);
   pulseOffMs = constrain(off_ms, PULSE_MS_MIN, PULSE_MS_MAX);
   pulseCycleLimit = cycles;

@@ -16,7 +16,8 @@ void continuous_stop();
 // CONTINUOUS MODE ENTRY
 // ───────────────────────────────────────────────────────────────────────────────
 void continuous_start(bool soft_start, uint32_t auto_stop_ms) {
-  if (control_get_state() != STATE_IDLE) return;
+  // ENABLING = replay of an already-admitted start after the driver settle.
+  if (control_get_state() != STATE_IDLE && control_get_state() != STATE_ENABLING) return;
 
   LOG_I("Continuous mode: start soft=%d auto_stop_ms=%lu", soft_start ? 1 : 0,
         (unsigned long)auto_stop_ms);

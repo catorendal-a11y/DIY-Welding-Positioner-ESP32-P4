@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Driver enable settle (Leadshine-class t1): with **Driver = DM542T**, a fully validated start now asserts ENA and waits out a 200 ms settle window in the new **ENABLING** state before the first step pulse (`motor_prepare_start()` / `motor_ena_settle_pending()` in the motor layer, command replay in the control layer). The wait is non-blocking; E-STOP, the redundant E-STOP level poll, driver-alarm polling and STOP all keep their immediate paths during the window, and a STOP or inhibit during the window aborts without pulses (fail-closed to IDLE, ENA HIGH). Standard PUL/DIR drivers keep zero settle. Mode entry guards accept the ENABLING replay.
+- Redundant E-STOP level channel: `safetyTask` polls GPIO34 every millisecond in addition to the FALLING-edge ISR, so a sustained LOW latches through the same 5 ms confirm path even if the edge never reached the ISR.
+
 ### Fixed
 
 - Continuous soft-start no longer leaks the reduced acceleration when the start is rejected for an invalid rate: the step rate is validated before `motor_apply_soft_start_acceleration()` runs, so a `!rate` early return leaves the configured acceleration untouched (`src/control/modes/continuous.cpp`). Previously a rejected start left acceleration at one quarter of the configured value, which also inflated computed stop-timeout budgets until the next restore.

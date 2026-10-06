@@ -118,7 +118,8 @@ bool control_motion_blocked() { return motionGate.blocked(); }
 void control_renew_jog() { jogRenewedMs.store(millis()); }
 
 static bool is_active_motion_state(SystemState state) {
-  return state == STATE_RUNNING || state == STATE_PULSE || state == STATE_STEP || state == STATE_JOG;
+  return state == STATE_RUNNING || state == STATE_PULSE || state == STATE_STEP || state == STATE_JOG ||
+         state == STATE_ENABLING;
 }
 
 static void control_queue_init() {
@@ -182,7 +183,22 @@ bool control_is_valid_transition(SystemState from, SystemState to) {
       case STATE_PULSE:
       case STATE_STEP:
       case STATE_JOG:
+      case STATE_ENABLING:
       case STATE_ESTOP:
+        return true;
+      default:
+        return false;
+    }
+  }
+  if (from == STATE_ENABLING) {
+    // Settle elapsed -> the requested mode; aborted/stopped before pulses.
+    switch (to) {
+      case STATE_RUNNING:
+      case STATE_PULSE:
+      case STATE_STEP:
+      case STATE_JOG:
+      case STATE_STOPPING:
+      case STATE_IDLE:
         return true;
       default:
         return false;
@@ -288,6 +304,8 @@ const char* control_state_name(SystemState s) {
       return "STOPPING";
     case STATE_ESTOP:
       return "ESTOP";
+    case STATE_ENABLING:
+      return "ENABLING";
     default:
       return "UNKNOWN";
   }
@@ -389,10 +407,19 @@ static void stop_active_mode(SystemState cur) {
     pulse_stop();
   } else if (cur == STATE_JOG) {
     jog_stop();
-  } else if (cur == STATE_STEP) {
+  } else if (cur == STATE_STEP || cur == STATE_ENABLING) {
+    // ENABLING has emitted no pulses yet; STOPPING completes at rest and
+    // disables ENA.
     control_transition_to(STATE_STOPPING);
   }
 }
+
+// Runs a fully admitted motion command in the mode it requests. Called from
+// process_pending_requests (settle already satisfied or not required) and from
+// the STATE_ENABLING replay once the driver settle window has elapsed.
+static void dispatch_motion_command(const MotionCommand& cmd);
+// Command parked while STATE_ENABLING waits out the driver ENA settle window.
+static MotionCommand s_enablingCmd{};
 
 static void process_pending_requests() {
   SystemState cur = currentState.load(std::memory_order_acquire);
@@ -439,6 +466,22 @@ static void process_pending_requests() {
     configStatus.store(CONFIG_APPLIED);
     return;
   }
+  if (motor_ena_settle_pending()) {
+    // Validated start, driver enable not yet settled: assert ENA now and hold
+    // all pulses until the datasheet window elapses. STATE_ENABLING replays
+    // the command; E-STOP/ALM keep their immediate paths during the wait.
+    if (!motor_prepare_start()) return;
+    s_enablingCmd = cmd;
+    control_transition_to(STATE_ENABLING);
+    return;
+  }
+  dispatch_motion_command(cmd);
+}
+
+// Runs a fully admitted motion command in the mode it requests. Called from
+// process_pending_requests (settle already satisfied or not required) and from
+// the STATE_ENABLING replay once the driver settle window has elapsed.
+static void dispatch_motion_command(const MotionCommand& cmd) {
   if (cmd.program) {
     if (!control_program_feasible(cmd.preset)) return;
     speed_set_program_direction_override(cmd.preset.direction == DIR_CCW ? DIR_CCW : DIR_CW);
@@ -518,6 +561,20 @@ void control_run_cycle() {
       case STATE_JOG:
         jog_update();
         break;
+      case STATE_ENABLING: {
+        // Non-blocking driver settle. safetyTask/ISR keep their immediate
+        // E-STOP paths during this window; a STOP request transitions to
+        // STOPPING via process_pending_requests.
+        if (motor_ena_settle_pending()) break;
+        dispatch_motion_command(s_enablingCmd);
+        if (currentState.load(std::memory_order_acquire) == STATE_ENABLING) {
+          // The mode rejected the start (inhibit race, invalid rate): the
+          // admission checks passed earlier, so fail closed without pulses.
+          motor_disable();
+          control_transition_to(STATE_IDLE);
+        }
+        break;
+      }
       default:
         break;
     }

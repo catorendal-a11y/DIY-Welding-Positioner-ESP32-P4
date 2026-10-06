@@ -67,6 +67,20 @@ static uint16_t motor_dir_delay_us_from_driver(uint8_t stepper_driver) {
   return (stepper_driver == STEPPER_DRIVER_DM542T) ? 200u : 0u;
 }
 
+// Leadshine-class enable timing (t1): ENA must be asserted >= 200 ms before the
+// first PUL of a start. Applies once per enable (ENA is held LOW across mode
+// restarts and pulse cycles); re-armed by motor_disable()/motor_halt().
+static uint16_t motor_ena_settle_ms_from_driver(uint8_t stepper_driver) {
+  return (stepper_driver == STEPPER_DRIVER_DM542T) ? 200u : 0u;
+}
+static uint16_t s_enaSettleMs = 0;
+static uint32_t s_enaAssertedMs = 0;
+// Boot counts as unsettled: the very first enable must also wait out t1.
+// s_enaAsserted distinguishes "re-armed, never asserted" from "asserted at
+// s_enaAssertedMs" so the elapsed check only runs on a real assertion.
+static bool s_enaAsserted = false;
+static bool s_enaSettled = false;
+
 // Re-applying setDirectionPin while stepping corrupts timing / can stall the motor.
 static uint16_t s_applied_dir_delay_us = 0;
 static bool s_dir_timing_applied = false;
@@ -161,6 +175,7 @@ static void motor_init_on_control_core() {
   if (!motor_lock()) return;
   // Configure stepper (DIR delay depends on stepper_driver snapshot)
   motor_apply_stepper_dir_timing(motor_dir_delay_us_from_driver(driverKind));
+  s_enaSettleMs = motor_ena_settle_ms_from_driver(driverKind);
   // NOTE: Do NOT call setEnablePin() — ENA is controlled manually via digitalWrite()
   // Keep the LOW=enable / HIGH=inhibit GPIO contract independent of the
   // chosen optocoupler/interface topology. Verify it at the actual driver.
@@ -273,6 +288,9 @@ void motor_stop() {
 
 bool motor_halt() {
   digitalWrite(PIN_ENA, HIGH); // Inhibit before waiting on library cleanup.
+  // Inhibiting re-arms the settle window for the next enable.
+  s_enaAsserted = false;
+  s_enaSettled = (s_enaSettleMs == 0u);
   if (!motor_lock()) return false;
   if (stepper) stepper->forceStop();
   // forceStop() stops adding commands, not necessarily the pulses already
@@ -283,7 +301,38 @@ bool motor_halt() {
   return stopped;
 }
 
-void motor_disable() { digitalWrite(PIN_ENA, HIGH); }
+void motor_disable() {
+  digitalWrite(PIN_ENA, HIGH);
+  // A fresh enable must wait out the settle window again.
+  s_enaAsserted = false;
+  s_enaSettled = (s_enaSettleMs == 0u);
+}
+
+bool motor_prepare_start() {
+  if (safety_inhibit_motion() || control_motion_blocked()) return false;
+  // Only a fully validated start reaches this point (controlTask admission);
+  // assert the enable and stamp the clock so the settle window is measured
+  // from this assertion, never from boot or a previous enable.
+  digitalWrite(PIN_ENA, LOW);
+  if (safety_inhibit_motion() || control_motion_blocked()) {
+    digitalWrite(PIN_ENA, HIGH);
+    return false;
+  }
+  s_enaAssertedMs = millis();
+  s_enaAsserted = true;
+  s_enaSettled = (s_enaSettleMs == 0u);
+  return true;
+}
+
+bool motor_ena_settle_pending() {
+  if (s_enaSettleMs == 0u || s_enaSettled) return false;
+  if (!s_enaAsserted) return true;  // Re-armed; the next prepare stamps it.
+  if (millis() - s_enaAssertedMs >= s_enaSettleMs) {
+    s_enaSettled = true;
+    return false;
+  }
+  return true;
+}
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STATUS QUERIES
@@ -359,6 +408,7 @@ void motor_apply_settings() {
   driverKind = g_settings.stepper_driver;
   xSemaphoreGive(g_settings_mutex);
   const uint16_t dirDelayUs = motor_dir_delay_us_from_driver(driverKind);
+  s_enaSettleMs = motor_ena_settle_ms_from_driver(driverKind);
 
   if (!motor_lock()) return;
   if (stepper != nullptr) {

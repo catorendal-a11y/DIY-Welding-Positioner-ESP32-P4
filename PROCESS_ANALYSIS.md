@@ -41,7 +41,7 @@ Calculated RPM comes from step timing and geometry, not an encoder. Source/direc
 
 ## E-STOP and driver alarm
 
-GPIO34 expects HIGH healthy / LOW fault. A FALLING ISR writes ENA HIGH and stores pending/wake flags. ISR avoids motor calls, logging, allocation and ordinary flash functions. ENA HIGH disable is a driver/interface assumption that must be verified.
+GPIO34 expects HIGH healthy / LOW fault. A FALLING ISR writes ENA HIGH and stores pending/wake flags. As a redundant channel, the safety task also polls the pin level every millisecond, so a sustained LOW latches through the same 5 ms confirm path even if the edge never reached the ISR. ISR avoids motor calls, logging, allocation and ordinary flash functions. ENA HIGH disable is a driver/interface assumption that must be verified.
 
 The safety task publishes a latched ESTOP transition; potentially blocking motor cleanup runs in controlTask. Driver-alarm handling disables ENA first. Only the control task performs and retries library cleanup; reset remains blocked until the asynchronous FastAccelStepper queue drains. A brief input glitch also remains faulted until explicit reset.
 

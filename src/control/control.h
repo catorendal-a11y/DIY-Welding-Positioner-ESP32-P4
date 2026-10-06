@@ -16,7 +16,9 @@ typedef enum {
   STATE_STEP,      // Step mode (fixed angle steps)
   STATE_JOG,       // Jog mode (run while button held)
   STATE_STOPPING,  // Decelerating to stop
-  STATE_ESTOP      // Emergency stop activated
+  STATE_ESTOP,     // Emergency stop activated
+  // Appended after ESTOP so existing logged/serialized values stay stable.
+  STATE_ENABLING   // Validated start waiting out the driver ENA settle window
 } SystemState;
 
 // ───────────────────────────────────────────────────────────────────────────────

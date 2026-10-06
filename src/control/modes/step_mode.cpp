@@ -49,7 +49,8 @@ void step_execute_sequence(float angle_deg, uint16_t repeats, float dwell_sec);
 void step_execute(float angle_deg) { step_execute_sequence(angle_deg, 1, 0.0f); }
 
 void step_execute_sequence(float angle_deg, uint16_t repeats, float dwell_sec) {
-  if (control_get_state() != STATE_IDLE) return;
+  // ENABLING = replay of an already-admitted start after the driver settle.
+  if (control_get_state() != STATE_IDLE && control_get_state() != STATE_ENABLING) return;
 
   // Validate angle range
   if (!std::isfinite(angle_deg) || !std::isfinite(dwell_sec) || angle_deg <= 0.0f || angle_deg > 3600.0f) {

@@ -211,6 +211,16 @@ void safetyTask(void* pvParameters) {
       safety_handle_reset();
     }
 
+    // Redundant level channel: a sustained LOW must latch even when the
+    // FALLING edge never reached the ISR (flash-write window, glitch below
+    // detector thresholds). Feeds the same 5 ms confirm path as the ISR.
+    if (!g_estopPending.load(std::memory_order_acquire) &&
+        !estopLocked.load(std::memory_order_acquire) && digitalRead(PIN_ESTOP) == LOW) {
+      g_estopTriggerMs.store(millis(), std::memory_order_release);
+      g_estopPending.store(true, std::memory_order_release);
+      g_wakePending.store(true, std::memory_order_release);
+    }
+
     if (g_estopPending.load(std::memory_order_acquire)) {
       uint32_t trigMs = g_estopTriggerMs.load(std::memory_order_acquire);
       if (trigMs == 0) {

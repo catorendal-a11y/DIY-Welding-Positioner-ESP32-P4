@@ -25,12 +25,17 @@ extern std::atomic<uint32_t> g_estopTriggerMs;  // safetyTask sets debounce star
 extern std::atomic<bool> g_uiResetPending;      // UI (Core 1) set; safetyTask consumes
 
 // Task liveness (dead-man supervision). inputTask stamps g_inputHeartbeatMs
-// every 5 ms cycle; safetyTask latches FAULT_INPUT_STALE when it goes stale.
-// g_restartRequired blocks new motion after storage_format() until reboot.
+// every 5 ms cycle; g_inputHeartbeatValid turns the supervisor on only after
+// the first stamp (a 0 timestamp must not read as a stale boot heartbeat).
+// safetyTask latches FAULT_INPUT_STALE when a valid heartbeat goes stale.
 extern std::atomic<uint32_t> g_inputHeartbeatMs;
+extern std::atomic<bool> g_inputHeartbeatValid;
 extern std::atomic<bool> g_restartRequired;
 
 inline bool input_task_heartbeat_fresh(uint32_t now, uint32_t deadline = 100u) {
+  // Not yet valid counts as fresh: safetyTask arms the supervisor via
+  // g_inputHeartbeatValid, and readyTasks already inhibits motion meanwhile.
+  if (!g_inputHeartbeatValid.load(std::memory_order_acquire)) return true;
   return now - g_inputHeartbeatMs.load(std::memory_order_acquire) <= deadline;
 }
 

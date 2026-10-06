@@ -162,10 +162,14 @@ void lvglTask(void* pvParameters) {
 void inputTask(void* pvParameters) {
   LOG_I("Input task started on Core %d", xPortGetCoreID());
   safety_register_watchdog();
+  // Arm the input dead-man supervisor before declaring this task ready:
+  // heartbeat first, then the ready bit (safetyTask gates on both).
+  g_inputHeartbeatMs.store(millis(), std::memory_order_release);
+  g_inputHeartbeatValid.store(true, std::memory_order_release);
+  safety_task_ready(2u);
   uint8_t adcCycle = 0;
   PedalInterlock pedal;
   bool pedalOwnsMotion = false;
-  safety_task_ready(2u);
   TickType_t t = xTaskGetTickCount();
 
 #if DEBUG_BUILD

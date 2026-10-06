@@ -23,11 +23,15 @@ static std::atomic<bool> estopResetPending{false};
 static std::atomic<uint8_t> s_faultReason{FAULT_NONE};
 // Any latched fault also disarms the USB mirror: a previously authorized PC
 // must not be able to drive the UI (including RESET TO IDLE) after a fault.
+// Fault policy: the FIRST latched reason is retained until RESET — later
+// faults keep ENA inhibited but do not overwrite the diagnostic cause.
 static void safety_latch_fault(FaultReason reason) {
   digitalWrite(PIN_ENA, HIGH);
   usb_mirror_set_armed(false);
   estopLocked.store(true);
-  s_faultReason.store(static_cast<uint8_t>(reason));
+  uint8_t expected = FAULT_NONE;
+  s_faultReason.compare_exchange_strong(expected, static_cast<uint8_t>(reason),
+                                        std::memory_order_acq_rel, std::memory_order_acquire);
   g_wakePending.store(true);
 }
 void safety_report_motor_fault(FaultReason reason) {
@@ -211,23 +215,34 @@ void safetyTask(void* pvParameters) {
   safety_task_ready(1u);
 
   TickType_t t = xTaskGetTickCount();
+  // Heartbeat supervisors are edge-triggered: latch (and log) on the
+  // healthy->stale transition only, never every millisecond while stale.
+  bool controlWasStale = false;
+  bool inputWasStale = false;
   for (;;) {
     // Feed watchdog every cycle
     safety_feed_watchdog();
 
-    // Dead-man supervisor: motionGate.stop() alone cancels pending commands,
-    // but the stop is consumed by the very task that hung. Inhibit ENA here
-    // and latch a supervisor fault so pulses stop physically.
-    if (control_heartbeat_stale(millis())) {
+    // Dead-man supervisor, edge-triggered: latch (and log) only on the
+    // healthy->stale transition, never every millisecond while stale. The
+    // input channel arms only after inputTask stamped its first heartbeat.
+    const bool controlStale = control_heartbeat_stale(millis());
+    if (controlStale && !controlWasStale) {
       safety_latch_fault(FAULT_CONTROL_STALE);
       if (control_get_state() != STATE_ESTOP) control_transition_to(STATE_ESTOP);
       LOG_E("Control heartbeat stale - motion inhibited");
     }
-    if (!input_task_heartbeat_fresh(millis())) {
+    controlWasStale = controlStale;
+
+    const bool inputStarted = (readyTasks.load(std::memory_order_acquire) & 2u) != 0u &&
+                              g_inputHeartbeatValid.load(std::memory_order_acquire);
+    const bool inputStale = inputStarted && !input_task_heartbeat_fresh(millis());
+    if (inputStale && !inputWasStale) {
       safety_latch_fault(FAULT_INPUT_STALE);
       if (control_get_state() != STATE_ESTOP) control_transition_to(STATE_ESTOP);
       LOG_E("Input task heartbeat stale - motion inhibited");
     }
+    inputWasStale = inputStale;
 
     safety_poll_driver_alarm();
     control_check_stop_deadline(millis());
@@ -258,11 +273,9 @@ void safetyTask(void* pvParameters) {
 
       if (elapsedMs >= 5) {
         if (digitalRead(PIN_ESTOP) == LOW) {
-          usb_mirror_set_armed(false);
-          safety_set_fault_reason(FAULT_ESTOP_PRESSED);
+          safety_latch_fault(FAULT_ESTOP_PRESSED);
           if (control_get_state() != STATE_ESTOP) {
             control_transition_to(STATE_ESTOP);
-            estopLocked.store(true, std::memory_order_release);
 
 #if DEBUG_BUILD
             g_estopConfirmed++;
@@ -273,11 +286,10 @@ void safetyTask(void* pvParameters) {
           }
         } else {
           LOG_W("ESTOP edge released during debounce - locking out");
-          safety_set_fault_reason(FAULT_ESTOP_GLITCH);
+          safety_latch_fault(FAULT_ESTOP_GLITCH);
           if (control_get_state() != STATE_ESTOP) {
             control_transition_to(STATE_ESTOP);
           }
-          estopLocked.store(true, std::memory_order_release);
         }
         g_estopPending.store(false, std::memory_order_release);
         g_estopTriggerMs.store(0, std::memory_order_release);

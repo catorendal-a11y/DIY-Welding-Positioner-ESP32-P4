@@ -287,6 +287,7 @@ static bool sim_test_main_controls() {
   if (!sim_expect(speed_get_target_rpm() > rpmBefore, "RPM plus did not increase speed")) return false;
   if (!sim_click_label("-")) return false;
   if (!sim_click_action(UI_ACTION_START)) return false;
+  sim_pump(260);  // DM542T ENA settle window (STATE_ENABLING)
   if (!sim_expect(control_get_state() == STATE_RUNNING, "START did not run")) return false;
   if (!sim_click_action(UI_ACTION_STOP)) return false;
   if (!sim_expect(control_get_state() == STATE_IDLE, "STOP did not stop")) return false;
@@ -310,6 +311,7 @@ static bool sim_test_navigation_flows() {
   if (!sim_expect(screens_get_current() == SCREEN_PULSE, "run mode PULSE did not open pulse screen"))
     return false;
   if (!sim_click_label("> START")) return false;
+  sim_pump(260);  // ENA settle window
   if (!sim_expect(control_get_state() == STATE_PULSE, "pulse START did not enter PULSE")) return false;
   if (!sim_click_label("[] STOP")) return false;
   if (!sim_expect(control_get_state() == STATE_IDLE, "pulse STOP did not return IDLE")) return false;
@@ -320,6 +322,7 @@ static bool sim_test_navigation_flows() {
   if (!sim_expect(screens_get_current() == SCREEN_STEP, "run mode STEP did not open step screen"))
     return false;
   if (!sim_click_label("> STEP")) return false;
+  sim_pump(260);  // ENA settle window
   if (!sim_expect(control_get_state() == STATE_STEP, "step button did not enter STEP")) return false;
   if (!sim_click_label("X STOP")) return false;
   if (!sim_expect(control_get_state() == STATE_IDLE, "step STOP did not return IDLE")) return false;
@@ -329,6 +332,7 @@ static bool sim_test_navigation_flows() {
   if (!sim_click_label("JOG")) return false;
   if (!sim_expect(screens_get_current() == SCREEN_JOG, "run mode JOG did not open jog screen")) return false;
   if (!sim_send_label_event("HOLD CW", LV_EVENT_PRESSED)) return false;
+  sim_pump(260);  // ENA settle window
   if (!sim_expect(control_get_state() == STATE_JOG, "jog screen CW press did not enter JOG")) return false;
   if (!sim_send_label_event("HOLD CW", LV_EVENT_RELEASED)) return false;
   if (!sim_expect(control_get_state() == STATE_IDLE, "jog screen CW release did not stop")) return false;
@@ -681,7 +685,7 @@ static int run_self_test() {
   control_transition_to(STATE_IDLE);
   sim_pump(30);
   simulator_set_scenario("rejected-motion");
-  control_start_continuous(); sim_pump(40);
+  control_start_continuous(); sim_pump(260);  // ENA settle, then the rejected replay
   if (!sim_expect(control_get_state() == STATE_ESTOP,
                   "rejected motion did not latch fault")) return 9;
   simulator_set_scenario("none"); control_transition_to(STATE_IDLE);
@@ -827,6 +831,7 @@ static int run_screen_saver_test(const char* directory) {
   capture("03_awake.bmp", false);
   pointer.down = true; lv_indev_read(device); sim_pump(40);
   pointer.down = false; lv_indev_read(device); sim_pump(80);
+  sim_pump(260);  // ENA settle: START lands in ENABLING, then runs
   check(control_get_state() == STATE_RUNNING, "second deliberate touch did not reach START");
   screen_saver_request_preview(); dim_update();
   check(!screen_saver_visible(), "screen saver hid running controls");
@@ -1155,10 +1160,16 @@ static int run_commissioning_test(const char* directory) {
   if (!sim_click_back_to(SCREEN_SETUP) || !sim_click_label("NEXT")) return 5;
   capture("02_direction.bmp");
   for (const char* label : {"HOLD CW", "HOLD CCW"}) {
-    if (!sim_send_label_event(label, LV_EVENT_PRESSED) || !sim_send_label_event(label, LV_EVENT_PRESSING) ||
-        !sim_send_label_event(label, LV_EVENT_RELEASED)) return 6;
+    // Hold like an operator: keep the button down through the ENA settle so
+    // the state reaches JOG and the direction is actually exercised.
+    if (!sim_send_label_event(label, LV_EVENT_PRESSED)) return 6;
+    sim_pump(260);
+    if (!sim_send_label_event(label, LV_EVENT_PRESSING)) return 6;
+    if (!sim_send_label_event(label, LV_EVENT_RELEASED)) return 6;
+    sim_pump(80);
   }
   if (!sim_click_label("DIRECTION CORRECT") || !sim_click_label("NEXT")) return 7;
+  sim_pump(40);  // let SETUP rebuild at the calibration stage
   capture("03_calibration.bmp");
   if (!sim_click_label("OPEN CALIBRATION") || !sim_click_label("MOVE 360")) return 8;
   sim_pump(900);
@@ -1176,7 +1187,9 @@ static int run_commissioning_test(const char* directory) {
   if (!sim_expect(reset && !lv_obj_is_disabled(reset), "wizard reset unavailable")) return 13;
   lv_obj_send_event(reset, LV_EVENT_CLICKED, nullptr); sim_pump(80); estop_overlay_hide();
   if (!sim_expect(control_get_state() == STATE_IDLE, "reset restarted motion")) return 14;
-  if (!sim_click_label("TEST START") || !sim_click_label("STOP ROTATION")) return 15;
+  if (!sim_click_label("TEST START")) return 15;
+  sim_pump(260);  // ENA settle: the wizard must observe STATE_RUNNING
+  if (!sim_click_label("STOP ROTATION")) return 15;
   simulator_set_scenario("nvs-failure");
   if (!sim_click_label("NEXT")) return 16;
   sim_pump(600);

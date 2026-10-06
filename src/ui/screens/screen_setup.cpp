@@ -78,7 +78,9 @@ static void start_cb(lv_event_t*) {
 static void stop_cb(lv_event_t*) { progress.stop_requested = true; control_stop(); }
 static void next_cb(lv_event_t*) {
   if (progress.stage == SetupStage::Complete) { screens_request_show(SCREEN_MAIN); return; }
-  if (!ui_control_fresh() || ui_control_state() != STATE_IDLE || safety_inhibit_motion()) return;
+  if (!ui_control_fresh() || ui_control_state() != STATE_IDLE || safety_inhibit_motion()) {
+    return;
+  }
   if (!progress.advance()) return;
   control_stop();
   if (progress.stage == SetupStage::Saving) {

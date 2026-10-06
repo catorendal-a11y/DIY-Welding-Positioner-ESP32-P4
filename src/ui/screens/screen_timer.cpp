@@ -63,10 +63,15 @@ static void refresh_start_after_label() {
 }
 
 static void save_countdown_setting() {
+  bool changed = false;
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  g_settings.countdown_seconds = (uint8_t)countdownSec;
+  changed = g_settings.countdown_seconds != (uint8_t)countdownSec;
+  if (changed) {
+    g_settings.countdown_seconds = (uint8_t)countdownSec;
+  }
   xSemaphoreGive(g_settings_mutex);
-  storage_save_settings();
+  // START and screen-exit both land here on every use; flash only real edits.
+  if (changed) storage_save_settings();
 }
 
 static lv_color_t countdown_color(int remaining, int total) {

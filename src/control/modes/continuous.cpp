@@ -21,12 +21,12 @@ void continuous_start(bool soft_start, uint32_t auto_stop_ms) {
   LOG_I("Continuous mode: start soft=%d auto_stop_ms=%lu", soft_start ? 1 : 0,
         (unsigned long)auto_stop_ms);
 
+  const uint32_t rate = motor_milli_hz_for_rpm_calibrated(speed_get_target_rpm());
+  if (!rate) return;
+
   if (soft_start) {
     motor_apply_soft_start_acceleration();
   }
-
-  const uint32_t rate = motor_milli_hz_for_rpm_calibrated(speed_get_target_rpm());
-  if (!rate) return;
   motor_set_target_milli_hz(rate);
 
   // Set direction and enable motor

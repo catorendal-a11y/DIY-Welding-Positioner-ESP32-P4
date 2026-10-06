@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Continuous soft-start no longer leaks the reduced acceleration when the start is rejected for an invalid rate: the step rate is validated before `motor_apply_soft_start_acceleration()` runs, so a `!rate` early return leaves the configured acceleration untouched (`src/control/modes/continuous.cpp`). Previously a rejected start left acceleration at one quarter of the configured value, which also inflated computed stop-timeout budgets until the next restore.
+- `fatal_halt()` now unsubscribes the calling task from the task watchdog (`esp_task_wdt_delete`, tolerating `ESP_ERR_NOT_FOUND` for unregistered tasks) and idles in `vTaskDelay`. A watchdog-subscribed caller previously starved the TWDT in the halt loop and panic-rebooted after the 5 s timeout, defeating the documented no-reboot-loop intent. An external ENA pull-up is still required to cover reset/panic/boot, where software cannot hold the pin.
+- Timer-screen countdown saves settings only when the value actually changed. START and screen-exit both call `save_countdown_setting()`; an unchanged countdown no longer writes NVS (`src/ui/screens/screen_timer.cpp`).
+
 ## [2.2.1] - 2026-10-05
 
 ### Fixed

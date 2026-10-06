@@ -4,6 +4,8 @@
 #include "app_state.h"
 #include "config.h"
 #include <Arduino.h>
+#include "esp_err.h"
+#include "esp_task_wdt.h"
 
 std::atomic<bool> g_estopPending{false};
 std::atomic<uint32_t> g_estopTriggerMs{0};
@@ -20,9 +22,15 @@ std::atomic<bool> g_screenRedraw{false};
   digitalWrite(PIN_ENA, HIGH);
   LOG_E("FATAL: %s — motion disabled", reason ? reason : "(unknown)");
   Serial.flush();
-  delay(100);
+  // A watchdog-subscribed caller stops feeding the TWDT in this loop and would
+  // panic-reboot, defeating the no-reboot-loop intent; unsubscribe when the
+  // calling task is registered. Unregistered tasks report ESP_ERR_NOT_FOUND.
+  esp_err_t wdt = esp_task_wdt_delete(nullptr);
+  if (wdt != ESP_OK && wdt != ESP_ERR_NOT_FOUND) {
+    LOG_E("fatal_halt: TWDT unsubscribe failed: %s", esp_err_to_name(wdt));
+  }
   // Stay disabled: a corrupt configuration must not cause a reboot/start loop.
   for (;;) {
-    delay(1000);
+    vTaskDelay(pdMS_TO_TICKS(1000));
   }
 }

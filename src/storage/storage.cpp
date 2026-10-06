@@ -3,6 +3,7 @@
 #include "settings_policy.h"
 #include "save_request.h"
 #include "name_policy.h"
+#include "../app_state.h"
 #include "../control/setup_policy.h"
 #include "../motor/speed.h"
 #include "../event_log.h"
@@ -24,8 +25,13 @@ std::vector<Preset> g_presets;
 SemaphoreHandle_t g_presets_mutex;
 SemaphoreHandle_t g_settings_mutex;
 SemaphoreHandle_t g_nvs_mutex;
-SystemSettings g_settings = {7500,  16, MAX_RPM, 1.0f, 150, 60, true, false, 0, 0, 3, STEPPER_DRIVER_DM542T,
-                             false, 1};
+// Single source of truth for factory defaults; decode fallbacks, format and
+// RAM initialization must all read this instead of copying literals around.
+SystemSettings default_settings() {
+  return SystemSettings{7500, 16, MAX_RPM, 1.0f, 150, 60, true, false, 0, 0, 3,
+                        STEPPER_DRIVER_DM542T, false, 1};
+}
+SystemSettings g_settings = default_settings();
 // Cross-core atomics (g_dir_switch_cache, g_flashWriting, g_screenRedraw) live in app_state.cpp.
 
 static SaveRequest settingsSave{1000}, presetsSave{500};
@@ -318,7 +324,8 @@ static bool storage_decode_settings_doc(JsonObjectConst doc, SystemSettings& dec
   if (!std::isfinite(doc["max_rpm"] | MAX_RPM) || !std::isfinite(doc["calibration_factor"] | 1.0f))
     return false;
   if (!doc["setup_completed"].isNull() && !doc["setup_completed"].is<bool>()) return false;
-  decoded.acceleration = constrain(doc["acceleration"] | 5000, (int)1000, (int)30000);
+  decoded.acceleration =
+      constrain(doc["acceleration"] | default_settings().acceleration, (int)1000, (int)30000);
   decoded.microstep = storage_sanitize_microstep(doc["microstep"] | 16);
   {
     float mx = doc["max_rpm"] | MAX_RPM;
@@ -466,13 +473,15 @@ bool storage_format() {
   xSemaphoreGive(g_presets_mutex);
 
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  g_settings =
-      SystemSettings{7500, 16, MAX_RPM, 1.0f, 150, 60, true, false, 0, 0, 3, STEPPER_DRIVER_DM542T, false, 1};
+  g_settings = default_settings();
   const bool dirSw = g_settings.dir_switch_enabled;
   xSemaphoreGive(g_settings_mutex);
 
-
   g_dir_switch_cache.store(dirSw, std::memory_order_release);
-  LOG_I("Storage formatted - NVS cleared");
+  // Runtime caches (motor acceleration, RPM caps, calibration, pedal state)
+  // are NOT re-applied here by design: formatting requires a restart before
+  // new motion. safety_inhibit_motion() holds until then.
+  g_restartRequired.store(true, std::memory_order_release);
+  LOG_I("Storage formatted - NVS cleared, restart required");
   return true;
 }

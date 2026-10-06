@@ -3,6 +3,8 @@
 #include <new>
 #include "../../src/storage/storage.cpp"
 SimSerial Serial; SimEsp ESP;
+std::atomic<uint32_t> g_inputHeartbeatMs{0};
+std::atomic<bool> g_restartRequired{false};
 std::atomic<bool> g_wakePending{false},g_dir_switch_cache{false},g_flashWriting{false},g_screenRedraw{false};
 [[noreturn]] void fatal_halt(const char* reason) { throw std::runtime_error(reason); }
 void event_log_addf(const char*,...) {}

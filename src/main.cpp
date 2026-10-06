@@ -178,6 +178,9 @@ void inputTask(void* pvParameters) {
 
   for (;;) {
     safety_feed_watchdog();
+    // Dead-man heartbeat: safetyTask latches FAULT_INPUT_STALE without it
+    // (a hung inputTask must not strand a pressed pedal / lost release).
+    g_inputHeartbeatMs.store(millis(), std::memory_order_release);
 
 #if DEBUG_BUILD
     int32_t loopStart = (int32_t)esp_timer_get_time();

@@ -91,6 +91,11 @@ void control_expect_motion_completion(SystemState state, uint32_t timeout_ms) {
   motionDeadlineState.store(state, std::memory_order_release);
 }
 uint32_t control_motion_generation() { return motionGate.ticket(); }
+// safetyTask dead-man channel: true when the control loop has not published a
+// fresh cycle within the freshness window. safetyTask latches FAULT_CONTROL_STALE.
+bool control_heartbeat_stale(uint32_t now) {
+  return cyclePublished.load() && !control_timestamp_fresh(now, lastCycleAt.load(), true);
+}
 bool control_deferred_start_valid(uint32_t generation) {
   return motionGate.valid(generation) && control_get_state() == STATE_IDLE && !safety_inhibit_motion() &&
          control_timestamp_fresh(millis(), lastCycleAt.load(), cyclePublished.load());
@@ -450,7 +455,12 @@ static void process_pending_requests() {
     return;
   }
   if (cmd.type == MOTION_CMD_CONFIG) {
+    // Transactional apply: stage the proposal, apply to hardware, and roll
+    // both g_settings and the hardware back if the apply latches a fault —
+    // the UI must never show CANCELLED while RAM/hardware keep new values.
+    SystemSettings previous{};
     xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+    previous = g_settings;
     g_settings.microstep = cmd.settings.microstep;
     g_settings.acceleration = cmd.settings.acceleration;
     g_settings.max_rpm = cmd.settings.max_rpm;
@@ -458,10 +468,17 @@ static void process_pending_requests() {
     g_settings.invert_direction = cmd.settings.invert_direction;
     g_settings.stepper_driver = cmd.settings.stepper_driver;
     xSemaphoreGive(g_settings_mutex);
+    motor_apply_settings();
+    if (safety_inhibit_motion()) {
+      xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+      g_settings = previous;
+      xSemaphoreGive(g_settings_mutex);
+      motor_apply_settings();  // Roll the hardware back to the previous state.
+      configStatus.store(CONFIG_CANCELLED);
+      return;
+    }
     g_dir_switch_cache.store(cmd.settings.dir_switch_enabled);
     speed_sync_rpm_limits_from_settings();
-    motor_apply_settings();
-    if (safety_inhibit_motion()) { configStatus.store(CONFIG_CANCELLED); return; }
     configSaveTicket.store(storage_request_settings_save());
     configStatus.store(CONFIG_APPLIED);
     return;

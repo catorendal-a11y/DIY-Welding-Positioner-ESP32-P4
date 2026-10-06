@@ -24,6 +24,16 @@ extern std::atomic<bool> g_estopPending;        // ISR/boot set; safetyTask clea
 extern std::atomic<uint32_t> g_estopTriggerMs;  // safetyTask sets debounce start; 0 = unset
 extern std::atomic<bool> g_uiResetPending;      // UI (Core 1) set; safetyTask consumes
 
+// Task liveness (dead-man supervision). inputTask stamps g_inputHeartbeatMs
+// every 5 ms cycle; safetyTask latches FAULT_INPUT_STALE when it goes stale.
+// g_restartRequired blocks new motion after storage_format() until reboot.
+extern std::atomic<uint32_t> g_inputHeartbeatMs;
+extern std::atomic<bool> g_restartRequired;
+
+inline bool input_task_heartbeat_fresh(uint32_t now, uint32_t deadline = 100u) {
+  return now - g_inputHeartbeatMs.load(std::memory_order_acquire) <= deadline;
+}
+
 // ───────────────────────────────────────────────────────────────────────────────
 // Display / input wake (Core 0 sets on activity; Core 1 clears in dim_update (UI task))
 // ───────────────────────────────────────────────────────────────────────────────

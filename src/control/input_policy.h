@@ -21,15 +21,21 @@ class MotionGate {
 };
 
 enum class PedalEdge { None, Start, Stop };
+// Asymmetric pedal debounce: START requires ~25 ms of stable LOW (5 samples
+// at the 5 ms input rate) so a TIG/HF glitch on GPIO33 cannot command a start;
+// STOP reacts on the first released sample — release latency stays minimal.
+constexpr uint32_t kPedalStartDebounceMs = 25;
 class PedalInterlock {
  public:
   PedalEdge update(bool enabled, bool safe, bool pressed, uint32_t now) {
     if (!enabled || !safe) {
       const bool stop = down;
       armed = down = released = false;
+      pressSinceMs = 0;
       return stop ? PedalEdge::Stop : PedalEdge::None;
     }
     if (!pressed) {
+      pressSinceMs = 0;
       if (!released) {
         released = true;
         releasedAt = now;
@@ -41,9 +47,12 @@ class PedalInterlock {
       }
     } else {
       released = false;
-      if (armed && !down) {
+      if (down) return PedalEdge::None;
+      if (pressSinceMs == 0u) pressSinceMs = now;  // First pressed sample.
+      if (armed && now - pressSinceMs >= kPedalStartDebounceMs) {
         armed = false;
         down = true;
+        pressSinceMs = 0;
         return PedalEdge::Start;
       }
     }
@@ -52,7 +61,7 @@ class PedalInterlock {
 
  private:
   bool armed = false, down = false, released = false;
-  uint32_t releasedAt = 0;
+  uint32_t releasedAt = 0, pressSinceMs = 0;
 };
 
 inline bool input_sample_fresh(bool valid, uint32_t sample, uint32_t now, uint32_t deadline = 150u) {

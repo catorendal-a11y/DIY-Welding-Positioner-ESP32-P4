@@ -31,6 +31,9 @@
 
 static i2c_master_bus_handle_t touch_i2c_bus = nullptr;
 static esp_lcd_panel_io_handle_t touch_io = nullptr;
+// HMI liveness for the motion-admission policy (HMI_REQUIRED_FOR_MOTION):
+// true only after GT911 initialization succeeded.
+static std::atomic<bool> s_touchOperational{false};
 
 // ───────────────────────────────────────────────────────────────────────────────
 // ST7701 VENDOR INITIALIZATION COMMANDS (from JC4880P433C BSP)
@@ -377,6 +380,7 @@ void display_init() {
       if (touch_ret != ESP_OK) {
         LOG_W("       GT911 init failed: %s", esp_err_to_name(touch_ret));
       } else {
+        s_touchOperational.store(true, std::memory_order_release);
         LOG_I("       GT911 touch OK!");
       }
     }
@@ -398,6 +402,10 @@ void display_init() {
 
 i2c_master_bus_handle_t display_touch_i2c_bus_handle() {
   return touch_i2c_bus;
+}
+
+bool display_touch_operational() {
+  return s_touchOperational.load(std::memory_order_acquire);
 }
 
 // ───────────────────────────────────────────────────────────────────────────────

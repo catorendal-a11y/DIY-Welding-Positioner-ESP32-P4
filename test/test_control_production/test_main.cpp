@@ -15,6 +15,8 @@
 
 SimSerial Serial;
 SimEsp ESP;
+std::atomic<uint32_t> g_inputHeartbeatMs{0};
+std::atomic<bool> g_restartRequired{false};
 std::atomic<bool> g_wakePending{false}, g_dir_switch_cache{false};
 SystemSettings g_settings{};
 SemaphoreHandle_t g_settings_mutex = nullptr;
@@ -116,6 +118,21 @@ void test_config_apply_publishes_receipt_and_driver_kind() {
   TEST_ASSERT_EQUAL(1, control_config_save_ticket());
   TEST_ASSERT_EQUAL(STEPPER_DRIVER_DM542T, g_settings.stepper_driver);
   TEST_ASSERT_EQUAL(8, g_settings.microstep);
+}
+void test_config_apply_failure_rolls_settings_back() {
+  const int beforeAccel = g_settings.acceleration;
+  auto settings = g_settings;
+  settings.acceleration = 12000; settings.microstep = 32;
+  TEST_ASSERT_TRUE(control_apply_motor_settings(settings));
+  // Force the hardware apply to fail: the stepper mutex turns unavailable,
+  // motor_lock() latches FAULT_MOTOR_TIMEOUT during motor_apply_settings().
+  g_stepperMutex->unavailable = true;
+  control_run_cycle();
+  TEST_ASSERT_EQUAL(CONFIG_CANCELLED, control_config_status());
+  // RAM keeps the previous values (hardware re-apply retries in ESTOP cleanup).
+  TEST_ASSERT_EQUAL(beforeAccel, g_settings.acceleration);
+  TEST_ASSERT_EQUAL(16, g_settings.microstep);
+  TEST_ASSERT_NOT_EQUAL(STATE_IDLE, control_get_state());
 }
 void test_jog_inversion_and_lease_expiry() {
   g_settings.invert_direction = true;
@@ -501,6 +518,7 @@ int main() {
   RUN_TEST(test_snapshot_and_dispatch_use_one_control_cycle);
   RUN_TEST(test_stale_control_blocks_start_but_stop_is_unconditional);
   RUN_TEST(test_config_apply_publishes_receipt_and_driver_kind);
+  RUN_TEST(test_config_apply_failure_rolls_settings_back);
   RUN_TEST(test_jog_inversion_and_lease_expiry);
   RUN_TEST(test_snapshot_staleness_handles_wrap_and_boundary);
   RUN_TEST(test_snapshot_mailbox_never_tears_concurrent_reads);

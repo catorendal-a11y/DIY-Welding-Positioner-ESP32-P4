@@ -7,6 +7,8 @@
 #include "../motor/motor.h"
 #include "../motor/speed.h"
 #include "../control/control.h"
+#include "../mirror/usb_mirror.h"
+#include "../ui/display.h"
 #include <esp_task_wdt.h>
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -19,17 +21,21 @@ void safety_task_ready(uint32_t bit) { readyTasks.fetch_or(bit); }
 
 static std::atomic<bool> estopResetPending{false};
 static std::atomic<uint8_t> s_faultReason{FAULT_NONE};
-void safety_report_motor_fault(FaultReason reason) {
+// Any latched fault also disarms the USB mirror: a previously authorized PC
+// must not be able to drive the UI (including RESET TO IDLE) after a fault.
+static void safety_latch_fault(FaultReason reason) {
   digitalWrite(PIN_ENA, HIGH);
+  usb_mirror_set_armed(false);
   estopLocked.store(true);
   s_faultReason.store(static_cast<uint8_t>(reason));
   g_wakePending.store(true);
+}
+void safety_report_motor_fault(FaultReason reason) {
+  safety_latch_fault(reason);
   control_transition_to(STATE_ESTOP);
 }
 void safety_report_input_fault() {
-  digitalWrite(PIN_ENA, HIGH);
-  estopLocked.store(true);
-  s_faultReason.store(FAULT_PEDAL_INPUT);
+  safety_latch_fault(FAULT_PEDAL_INPUT);
   control_transition_to(STATE_ESTOP);
 }
 
@@ -113,19 +119,24 @@ bool safety_is_driver_alarm_latched() { return s_driverAlarmLatched.load(std::me
 bool safety_inhibit_motion() {
   return readyTasks.load() != 15u || estopLocked.load() || g_estopPending.load() ||
          !speed_pedal_input_healthy() || safety_is_estop_active() ||
-         s_driverAlarmLatched.load(std::memory_order_acquire);
+         s_driverAlarmLatched.load(std::memory_order_acquire) || g_restartRequired.load() ||
+#if HMI_REQUIRED_FOR_MOTION
+         !display_touch_operational() ||
+#endif
+         !input_task_heartbeat_fresh(millis());
 }
 
 bool safety_can_reset_from_overlay() {
   return !motor_cleanup_pending() && readyTasks.load() == 15u && speed_pedal_input_healthy() && (digitalRead(PIN_ESTOP) == HIGH) &&
-         !s_driverAlarmLatched.load(std::memory_order_acquire);
+         !s_driverAlarmLatched.load(std::memory_order_acquire) &&
+         !control_heartbeat_stale(millis()) && input_task_heartbeat_fresh(millis());
 }
 
 bool safety_is_estop_locked() { return estopLocked.load(std::memory_order_acquire); }
 
 FaultReason safety_get_fault_reason() {
   uint8_t reason = s_faultReason.load(std::memory_order_acquire);
-  if (reason > FAULT_MOTOR_TIMEOUT) {
+  if (reason > FAULT_INPUT_STALE) {
     return FAULT_NONE;
   }
   return (FaultReason)reason;
@@ -164,19 +175,19 @@ bool safety_check_ui_reset() {
 static void safety_poll_driver_alarm(void) {
   const bool low = (digitalRead(PIN_DRIVER_ALM) == LOW);
   if (low) {
+    // Safety action first, classification after: inhibit the driver on the
+    // first LOW sample; the 5 ms filter below only decides the latched fault.
+    digitalWrite(PIN_ENA, HIGH);
     s_almHighMs = 0;
     if (s_almLowMs < 5000) {
       s_almLowMs++;
     }
     if (s_almLowMs >= 5 && !s_driverAlarmLatched.load(std::memory_order_acquire)) {
       s_driverAlarmLatched.store(true, std::memory_order_release);
-      safety_set_fault_reason(FAULT_DRIVER_ALARM);
-      digitalWrite(PIN_ENA, HIGH);
-      g_wakePending.store(true, std::memory_order_release);
+      safety_latch_fault(FAULT_DRIVER_ALARM);
       // controlTask owns forceStop cleanup.
       if (control_get_state() != STATE_ESTOP) {
         control_transition_to(STATE_ESTOP);
-        estopLocked.store(true, std::memory_order_release);
       }
       LOG_E("Driver ALM fault (GPIO %u)", (unsigned)PIN_DRIVER_ALM);
     }
@@ -203,6 +214,20 @@ void safetyTask(void* pvParameters) {
   for (;;) {
     // Feed watchdog every cycle
     safety_feed_watchdog();
+
+    // Dead-man supervisor: motionGate.stop() alone cancels pending commands,
+    // but the stop is consumed by the very task that hung. Inhibit ENA here
+    // and latch a supervisor fault so pulses stop physically.
+    if (control_heartbeat_stale(millis())) {
+      safety_latch_fault(FAULT_CONTROL_STALE);
+      if (control_get_state() != STATE_ESTOP) control_transition_to(STATE_ESTOP);
+      LOG_E("Control heartbeat stale - motion inhibited");
+    }
+    if (!input_task_heartbeat_fresh(millis())) {
+      safety_latch_fault(FAULT_INPUT_STALE);
+      if (control_get_state() != STATE_ESTOP) control_transition_to(STATE_ESTOP);
+      LOG_E("Input task heartbeat stale - motion inhibited");
+    }
 
     safety_poll_driver_alarm();
     control_check_stop_deadline(millis());
@@ -233,6 +258,7 @@ void safetyTask(void* pvParameters) {
 
       if (elapsedMs >= 5) {
         if (digitalRead(PIN_ESTOP) == LOW) {
+          usb_mirror_set_armed(false);
           safety_set_fault_reason(FAULT_ESTOP_PRESSED);
           if (control_get_state() != STATE_ESTOP) {
             control_transition_to(STATE_ESTOP);

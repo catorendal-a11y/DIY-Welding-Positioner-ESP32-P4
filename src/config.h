@@ -23,6 +23,11 @@
 #ifndef ENABLE_ADS1115_PEDAL
 #define ENABLE_ADS1115_PEDAL 0  // 1 = probe touch I2C bus for ADS1115 pedal ADC (SDA7/SCL8)
 #endif
+// HMI policy: a dead GT911 touchscreen blocks NEW motion starts (E-STOP keeps
+// its independent hardware path). Set 0 to allow pedal motion without touch.
+#ifndef HMI_REQUIRED_FOR_MOTION
+#define HMI_REQUIRED_FOR_MOTION 1
+#endif
 
 // ───────────────────────────────────────────────────────────────────────────────
 // DISPLAY & TOUCH — MIPI-DSI (handled by ESP-IDF native drivers)

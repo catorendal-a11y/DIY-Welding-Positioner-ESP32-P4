@@ -11,6 +11,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Driver enable settle (Leadshine-class t1): with **Driver = DM542T**, a fully validated start now asserts ENA and waits out a 200 ms settle window in the new **ENABLING** state before the first step pulse (`motor_prepare_start()` / `motor_ena_settle_pending()` in the motor layer, command replay in the control layer). The wait is non-blocking; E-STOP, the redundant E-STOP level poll, driver-alarm polling and STOP all keep their immediate paths during the window, and a STOP or inhibit during the window aborts without pulses (fail-closed to IDLE, ENA HIGH). Standard PUL/DIR drivers keep zero settle. Mode entry guards accept the ENABLING replay.
 - Redundant E-STOP level channel: `safetyTask` polls GPIO34 every millisecond in addition to the FALLING-edge ISR, so a sustained LOW latches through the same 5 ms confirm path even if the edge never reached the ISR.
+- Task dead-man supervision: `safetyTask` latches **FAULT_CONTROL_STALE** when the control loop stops publishing fresh cycles and **FAULT_INPUT_STALE** when `inputTask` stops stamping its heartbeat (100 ms). Both inhibit ENA immediately — `motionGate.stop()` alone waited on the very task that hung, leaving pulses running until the 5 s TWDT. RESET additionally requires both channels fresh.
+- Asymmetric pedal debounce: START requires ~25 ms of stable LOW on GPIO33 (a TIG/HF glitch can no longer command a start); STOP still reacts on the first released sample.
+- Direction-switch debounce: the motion planner consumes a 30 ms-stable GPIO29 level instead of the raw sample; wake detection keeps the raw edge.
+- HMI policy (`HMI_REQUIRED_FOR_MOTION`, default 1): a failed GT911 touchscreen initialization blocks new motion starts via `safety_inhibit_motion()`; E-STOP keeps its independent hardware path.
+- Every latched fault (E-STOP confirm, ALM, supervisor, motor/input faults) now disarms the USB mirror, so a previously authorized PC cannot drive the UI or RESET TO IDLE after a fault; re-arming stays local to the touchscreen.
+
+### Changed
+
+- Driver-alarm handling inhibits ENA on the **first** LOW sample; the 5 ms filter only classifies the latched DRIVER ALARM fault (safety action before classification, matching the E-STOP ISR philosophy).
+- Motor Config apply is transactional: the proposal is staged, applied to hardware, and both `g_settings` and the hardware roll back when the apply latches a fault — CONFIG_CANCELLED no longer leaves new values in RAM/hardware.
+- `storage_format()` sets `g_restartRequired`: runtime caches are intentionally not re-applied, and new motion stays inhibited until a restart.
+- Factory defaults live in one `default_settings()` (RAM init, settings-blob decode fallback, format); the legacy decode fallback for `acceleration` changes 5000 → 7500 to match every other default.
 
 ### Fixed
 

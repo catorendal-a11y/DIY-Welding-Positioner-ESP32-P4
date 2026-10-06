@@ -149,6 +149,10 @@ static bool ads_poll_and_start(int16_t* out) {
 
 #define IIR_ALPHA 0.1f
 #define SLIDER_TIMEOUT_MS 1000
+// Direction switch (GPIO29) stability filter: the planner consumes the stable
+// level only after it has persisted this long, so bounce/EMI at START cannot
+// pick a transient direction. Wake detection stays on the raw edge.
+#define DIR_SWITCH_STABLE_MS 30
 
 static std::atomic<float> adcFiltered{2047.5f};
 static std::atomic<float> sliderRPM{MIN_RPM};
@@ -166,6 +170,9 @@ static std::atomic<float> pedalFiltered{2047.5f};
 static std::atomic<float> cachedTargetRpm{MIN_RPM};
 static std::atomic<bool> sliderPriorityOverride{false};
 static uint8_t lastDirSwitchState = 1;
+static std::atomic<bool> stableDirSwitch{true};
+static uint8_t dirSwitchCandidate = 1;
+static uint32_t dirSwitchCandidateMs = 0;
 #define POT_WAKE_THRESHOLD 30
 
 static bool ads1115Connected = false;
@@ -298,6 +305,9 @@ void speed_init() {
     pedalFiltered = adcFiltered.load(std::memory_order_acquire);
   }
   lastDirSwitchState = digitalRead(PIN_DIR_SWITCH);
+  stableDirSwitch.store(lastDirSwitchState != 0, std::memory_order_relaxed);
+  dirSwitchCandidate = lastDirSwitchState;
+  dirSwitchCandidateMs = 0;
   speed_sync_rpm_limits_from_settings();
 
   bool pedalPersist = false;
@@ -376,6 +386,17 @@ void speed_update_adc() {
     if (state != lastDirSwitchState) {
       lastDirSwitchState = state;
       g_wakePending.store(true, std::memory_order_release);
+    }
+    if (state == stableDirSwitch.load(std::memory_order_relaxed)) {
+      dirSwitchCandidate = state;
+      dirSwitchCandidateMs = 0;
+    } else if (state != dirSwitchCandidate) {
+      dirSwitchCandidate = state;
+      dirSwitchCandidateMs = millis();
+    } else if (dirSwitchCandidateMs != 0u && millis() - dirSwitchCandidateMs >= DIR_SWITCH_STABLE_MS) {
+      stableDirSwitch.store(dirSwitchCandidate != 0, std::memory_order_relaxed);
+      dirSwitchCandidate = state;
+      dirSwitchCandidateMs = 0;
     }
   }
 }
@@ -478,7 +499,8 @@ Direction speed_get_requested_direction() {
   if (programDirectionOverrideActive.load(std::memory_order_acquire)) {
     dir = (Direction)programDirectionOverride.load(std::memory_order_acquire);
   } else if (g_dir_switch_cache.load(std::memory_order_acquire)) {
-    dir = digitalRead(PIN_DIR_SWITCH) ? DIR_CW : DIR_CCW;
+    // Debounced level: a START must not sample a bouncing/EMI direction.
+    dir = stableDirSwitch.load(std::memory_order_relaxed) ? DIR_CW : DIR_CCW;
   } else {
     dir = (Direction)currentDir.load(std::memory_order_acquire);
   }

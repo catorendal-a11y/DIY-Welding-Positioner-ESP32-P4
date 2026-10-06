@@ -43,6 +43,8 @@ Calculated RPM comes from step timing and geometry, not an encoder. Source/direc
 
 GPIO34 expects HIGH healthy / LOW fault. A FALLING ISR writes ENA HIGH and stores pending/wake flags. As a redundant channel, the safety task also polls the pin level every millisecond, so a sustained LOW latches through the same 5 ms confirm path even if the edge never reached the ISR. ISR avoids motor calls, logging, allocation and ordinary flash functions. ENA HIGH disable is a driver/interface assumption that must be verified.
 
+The safety task also supervises task liveness: a stale control cycle (FAULT_CONTROL_STALE) or a stale input-task heartbeat (FAULT_INPUT_STALE, 100 ms) inhibits ENA directly, because the motion-gate stop is consumed by the task that may have hung. Driver ALM inhibits ENA on the first LOW sample; its 5 ms filter only classifies the latched fault. Every latched fault disarms the USB mirror; re-arming is local to the touchscreen. A dead GT911 (HMI_REQUIRED_FOR_MOTION) or a pending restart after formatting blocks new motion through the same admission gate.
+
 The safety task publishes a latched ESTOP transition; potentially blocking motor cleanup runs in controlTask. Driver-alarm handling disables ENA first. Only the control task performs and retries library cleanup; reset remains blocked until the asynchronous FastAccelStepper queue drains. A brief input glitch also remains faulted until explicit reset.
 
 The overlay displays fault/input state, wakes the backlight and blocks underlying controls. RESET TO IDLE is available only when physical input/alarm/pedal conditions permit it; callback and control processing both guard reset. Reset never starts motion.

@@ -85,6 +85,7 @@ Pick the row that equals **200 × (Motor Config microstep value)**. Wrong table 
 
 - **Common GND:** Driver signal **GND** / **`COM`** / logic reference must tie to **ESP32 GND**.
 - **ESP32 GPIO is 3.3 V logic, not 5 V tolerant.** A series resistor alone is not a substitute for a compatible interface. Direct GPIO wiring is only appropriate if the actual driver interface satisfies the ESP32 voltage/current limits and the driver's input requirements. Keep the firmware's **HIGH = inhibit** contract when choosing or configuring the interface.
+- **HMI policy:** if the GT911 touchscreen fails to initialize, new motion starts stay blocked (`HMI_REQUIRED_FOR_MOTION` in `src/config.h`; set 0 to allow pedal motion without touch). The physical E-STOP path is independent and always available. Formatting storage likewise requires a restart before new motion.
 
 **Pulse timing (datasheet vs firmware):**
 

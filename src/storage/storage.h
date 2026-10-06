@@ -96,6 +96,8 @@ extern SemaphoreHandle_t g_presets_mutex;
 
 // Global settings
 extern SystemSettings g_settings;
+// Factory defaults: single source for RAM init, decode fallbacks and format.
+SystemSettings default_settings();
 extern SemaphoreHandle_t g_settings_mutex;
 extern SemaphoreHandle_t g_nvs_mutex;
 

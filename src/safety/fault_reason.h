@@ -12,13 +12,19 @@ typedef enum {
   FAULT_PEDAL_INPUT,
   FAULT_WATCHDOG_RESET,
   FAULT_MOTOR_COMMAND,
-  FAULT_MOTOR_TIMEOUT
+  FAULT_MOTOR_TIMEOUT,
+  // Supervisor faults (safetyTask dead-man detection). Keep last: the
+  // safety_get_fault_reason() range check bounds to the final member.
+  FAULT_CONTROL_STALE,
+  FAULT_INPUT_STALE
 } FaultReason;
 
 inline const char* safety_fault_reason_name(FaultReason reason) {
   switch (reason) {
     case FAULT_MOTOR_COMMAND: return "MOTOR COMMAND";
     case FAULT_MOTOR_TIMEOUT: return "MOTOR TIMEOUT";
+    case FAULT_CONTROL_STALE: return "CONTROL STALE";
+    case FAULT_INPUT_STALE: return "INPUT STALE";
     case FAULT_PEDAL_INPUT:
       return "PEDAL INPUT";
     case FAULT_NONE:
@@ -48,6 +54,8 @@ inline const char* safety_fault_reason_message(FaultReason reason) {
   switch (reason) {
     case FAULT_MOTOR_COMMAND: return "Motor rejected command; inspect drive and reset";
     case FAULT_MOTOR_TIMEOUT: return "Motor response timed out; inspect drive and reset";
+    case FAULT_CONTROL_STALE: return "Control updates stopped; motion inhibited - restart the controller";
+    case FAULT_INPUT_STALE: return "Input task stopped responding; motion inhibited - restart the controller";
     case FAULT_PEDAL_INPUT:
       return "Pedal measurement unavailable; release pedal and restore input";
     case FAULT_NONE:

@@ -465,19 +465,34 @@ void test_pedal_requires_release_and_cancels_short_press() {
   TEST_ASSERT_TRUE(p.update(true, true, true, 0) == PedalEdge::None);
   p.update(true, true, false, 10);
   p.update(true, true, false, 60);
-  TEST_ASSERT_TRUE(p.update(true, true, true, 61) == PedalEdge::Start);
-  TEST_ASSERT_TRUE(p.update(true, true, false, 62) == PedalEdge::Stop);
-  TEST_ASSERT_TRUE(p.update(true, true, true, 63) == PedalEdge::None);
+  // START needs a stable LOW window (asymmetric debounce); a single
+  // pressed sample must not command a start.
+  TEST_ASSERT_TRUE(p.update(true, true, true, 61) == PedalEdge::None);
+  TEST_ASSERT_TRUE(p.update(true, true, true, 86) == PedalEdge::Start);
+  TEST_ASSERT_TRUE(p.update(true, true, false, 87) == PedalEdge::Stop);
+  TEST_ASSERT_TRUE(p.update(true, true, true, 88) == PedalEdge::None);
 }
 void test_pedal_rearm_after_fault_and_disable() {
   PedalInterlock p;
   p.update(true, true, false, 0);
   p.update(true, true, false, 50);
-  TEST_ASSERT_TRUE(p.update(true, true, true, 51) == PedalEdge::Start);
-  TEST_ASSERT_TRUE(p.update(true, false, true, 52) == PedalEdge::Stop);
-  TEST_ASSERT_TRUE(p.update(true, true, true, 100) == PedalEdge::None);
+  TEST_ASSERT_TRUE(p.update(true, true, true, 51) == PedalEdge::None);
+  TEST_ASSERT_TRUE(p.update(true, true, true, 76) == PedalEdge::Start);
+  TEST_ASSERT_TRUE(p.update(true, false, true, 77) == PedalEdge::Stop);
+  TEST_ASSERT_TRUE(p.update(true, true, true, 130) == PedalEdge::None);
   p.update(false, true, false, 150);
   TEST_ASSERT_TRUE(p.update(true, true, true, 200) == PedalEdge::None);
+}
+void test_pedal_glitch_below_start_debounce_never_starts() {
+  PedalInterlock p;
+  p.update(true, true, false, 0);
+  p.update(true, true, false, 100);  // armed
+  TEST_ASSERT_TRUE(p.update(true, true, true, 101) == PedalEdge::None);
+  TEST_ASSERT_TRUE(p.update(true, true, false, 110) == PedalEdge::None);  // 9 ms glitch ends
+  TEST_ASSERT_TRUE(p.update(true, true, true, 160) == PedalEdge::None);   // needs the full window
+  TEST_ASSERT_TRUE(p.update(true, true, false, 170) == PedalEdge::None);
+  TEST_ASSERT_TRUE(p.update(true, true, true, 230) == PedalEdge::None);
+  TEST_ASSERT_TRUE(p.update(true, true, true, 256) == PedalEdge::Start);  // >= 25 ms stable
 }
 void test_input_deadline_and_wraparound() {
   TEST_ASSERT_FALSE(input_sample_fresh(false, 10, 20));
@@ -652,6 +667,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_motion_multiple_stops_preserve_latch);
   RUN_TEST(test_pedal_requires_release_and_cancels_short_press);
   RUN_TEST(test_pedal_rearm_after_fault_and_disable);
+  RUN_TEST(test_pedal_glitch_below_start_debounce_never_starts);
   RUN_TEST(test_input_deadline_and_wraparound);
   RUN_TEST(test_dim_timeout_storage_width_and_migration);
   RUN_TEST(test_save_failure_retries_and_clears_error);

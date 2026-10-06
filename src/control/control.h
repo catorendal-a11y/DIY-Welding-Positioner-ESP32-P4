@@ -42,6 +42,7 @@ bool control_start_deferred_continuous(uint32_t generation);
 void control_expect_motion_completion(SystemState state, uint32_t timeout_ms);
 void control_clear_motion_deadline();
 void control_check_stop_deadline(uint32_t now); // Safety task, no blocking locks
+bool control_heartbeat_stale(uint32_t now);      // Safety task dead-man channel (supervisor latch)
 bool control_motion_blocked();
 void control_renew_jog();
 enum ConfigApplyStatus { CONFIG_NONE, CONFIG_PENDING, CONFIG_APPLIED, CONFIG_CANCELLED };

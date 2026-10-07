@@ -22,6 +22,7 @@ std::atomic<bool> g_screenRedraw{false};
 
 [[noreturn]] void fatal_halt(const char* reason) {
   // Fail closed; operator must repair the cause before restarting.
+  g_restartRequired.store(true, std::memory_order_release);
   digitalWrite(PIN_ENA, HIGH);
   LOG_E("FATAL: %s — motion disabled", reason ? reason : "(unknown)");
   Serial.flush();

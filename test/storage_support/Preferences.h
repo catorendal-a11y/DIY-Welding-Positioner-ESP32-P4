@@ -5,6 +5,7 @@
 #include <cstring>
 inline std::map<std::string,std::vector<uint8_t>> testNvs;
 inline bool testNvsShortWrite=false, testNvsShortRead=false, testNvsEraseFailure=false;
+inline void (*testNvsBeforeClear)() = nullptr;
 class Preferences {
  public:
   bool begin(const char*,bool) { return true; }
@@ -19,5 +20,5 @@ class Preferences {
     const auto bytes=static_cast<const uint8_t*>(data); testNvs[key]={bytes,bytes+length}; return length;
   }
   bool remove(const char* key) { return testNvs.erase(key)>0; }
-  bool clear() { if(testNvsEraseFailure) return false; testNvs.clear(); return true; }
+  bool clear() { if (testNvsBeforeClear) testNvsBeforeClear(); if(testNvsEraseFailure) return false; testNvs.clear(); return true; }
 };

@@ -18,9 +18,7 @@ void jog_start(Direction dir) {
   if (state != STATE_IDLE && state != STATE_JOG && state != STATE_ENABLING) return;
 
   LOG_I("Jog mode: %s", (dir == DIR_CW) ? "CW" : "CCW");
-  // The 150 ms jog lease starts when the jog actually starts — an
-  // ENABLING replay can otherwise inherit an already-expired lease.
-  control_renew_jog();
+  // Only the held UI input renews the lease, including during ENA settle.
 
   const float effective = speed_clamp_rpm(jogRPM.load(std::memory_order_relaxed));
   jogRPM.store(effective);

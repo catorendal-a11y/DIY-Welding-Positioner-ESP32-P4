@@ -17,12 +17,18 @@ class FastAccelStepper {
   int32_t position = 0, milliHz = 0;
   MoveResultCode commandResult = MoveResultCode::OK;
   int8_t speedResult = 0, accelerationResult = 0;
+  int32_t acceleration = 0;
+  void (*beforeAcceleration)() = nullptr;
   bool drainForceStop = false;
   unsigned directionWrites = 0;
   unsigned starts = 0, moves = 0;
   bool isRunning() { return running; }
   void setDirectionPin(uint8_t, bool, uint16_t delay) { directionDelay = delay; ++directionWrites; }
-  int8_t setAcceleration(int32_t) { return accelerationResult; }
+  int8_t setAcceleration(int32_t value) {
+    if (beforeAcceleration) beforeAcceleration();
+    if (!accelerationResult) acceleration = value;
+    return accelerationResult;
+  }
   void setLinearAcceleration(uint32_t) {}
   int8_t setSpeedInHz(uint32_t hz) { return setSpeedInMilliHz(hz * 1000u); }
   int8_t setSpeedInMilliHz(uint32_t hz) { if (!speedResult) milliHz = static_cast<int32_t>(hz); return speedResult; }

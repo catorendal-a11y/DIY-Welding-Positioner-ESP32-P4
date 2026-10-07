@@ -463,11 +463,17 @@ bool storage_get_nvs_stats(size_t* used_entries, size_t* total_entries) {
 
 bool storage_format() {
   if (control_get_state() != STATE_IDLE || storage_status() != STORAGE_SAVED) return false;
+  // STOP can be acknowledged while flash erase is still in progress. Keep
+  // a separate inhibit asserted before entering I/O or changing live settings.
+  const bool previouslyInhibited = g_restartRequired.exchange(true, std::memory_order_acq_rel);
   control_stop(); digitalWrite(PIN_ENA, HIGH);
   xSemaphoreTake(g_nvs_mutex, portMAX_DELAY);
   const bool cleared = g_prefs_open && g_prefs.clear();
   xSemaphoreGive(g_nvs_mutex);
-  if (!cleared) return false;
+  if (!cleared) {
+    g_restartRequired.store(previouslyInhibited, std::memory_order_release);
+    return false;
+  }
   xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
   g_presets.clear();
   xSemaphoreGive(g_presets_mutex);

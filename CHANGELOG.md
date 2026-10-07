@@ -20,13 +20,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Driver-alarm handling inhibits ENA on the **first** LOW sample; the 5 ms filter only classifies the latched DRIVER ALARM fault (safety action before classification, matching the E-STOP ISR philosophy).
+- Driver-alarm handling inhibits ENA and latches DRIVER ALARM on the **first** LOW sample. Even a short alarm cancels the planner; it cannot leave the UI running while the disabled driver loses steps. Raw ALM also blocks start/reset before the scheduled poll.
 - Motor Config apply is transactional: the proposal is staged, applied to hardware, and both `g_settings` and the hardware roll back when the apply latches a fault — CONFIG_CANCELLED no longer leaves new values in RAM/hardware.
 - `storage_format()` sets `g_restartRequired`: runtime caches are intentionally not re-applied, and new motion stays inhibited until a restart.
 - Factory defaults live in one `default_settings()` (RAM init, settings-blob decode fallback, format); the legacy decode fallback for `acceleration` changes 5000 → 7500 to match every other default.
 
 ### Fixed
 
+- Enforce DM542T enable settling at every motor entry point, re-arm it when driver timing changes, and wait again after Step dwell disables ENA.
+- Jog requires continued hold events during enable settling. Setup and calibration keep their jog buttons enabled during this wait; the simulator now supplies realistic repeated hold events.
+- Fault reset rejects a pending E-STOP edge, raw driver alarm, required restart or failed touchscreen. Reset never clears a newly arriving ISR pending flag. The redundant E-STOP level channel inhibits ENA before its debounce window.
+- Cancelled motor configuration rolls back only its own fields, preserving concurrent display/settings edits. Failed hardware rollback and soft-start acceleration restoration are retried before fault cleanup can complete.
+- Fatal halt sets the persistent motion inhibit before disabling ENA; another live task cannot re-enable the driver. Storage formatting asserts the inhibit before flash erase and restores the prior inhibit if erase fails.
+- Add production safety-supervisor host tests to CI, covering actual fault/reset/alarm policy and scheduled heartbeat/E-STOP paths.
+- Control initialization preserves a motor fault already latched during boot, so the fault remains visible to cleanup and the reset overlay.
 - Continuous soft-start no longer leaks the reduced acceleration when the start is rejected for an invalid rate: the step rate is validated before `motor_apply_soft_start_acceleration()` runs, so a `!rate` early return leaves the configured acceleration untouched (`src/control/modes/continuous.cpp`). Previously a rejected start left acceleration at one quarter of the configured value, which also inflated computed stop-timeout budgets until the next restore.
 - `fatal_halt()` now unsubscribes the calling task from the task watchdog (`esp_task_wdt_delete`, tolerating `ESP_ERR_NOT_FOUND` for unregistered tasks) and idles in `vTaskDelay`. A watchdog-subscribed caller previously starved the TWDT in the halt loop and panic-rebooted after the 5 s timeout, defeating the documented no-reboot-loop intent. An external ENA pull-up is still required to cover reset/panic/boot, where software cannot hold the pin.
 - Timer-screen countdown saves settings only when the value actually changed. START and screen-exit both call `save_countdown_setting()`; an unchanged countdown no longer writes NVS (`src/ui/screens/screen_timer.cpp`).

@@ -218,6 +218,7 @@ void motor_init() {
 // MOTOR CONTROL FUNCTIONS
 // ───────────────────────────────────────────────────────────────────────────────
 bool motor_run_cw() {
+  if (motor_ena_settle_pending()) return false;
   if (safety_inhibit_motion() || control_motion_blocked()) return false;
   if (!motor_lock()) return false;
   if (stepper == nullptr) {
@@ -248,6 +249,7 @@ bool motor_run_cw() {
 }
 
 bool motor_run_ccw() {
+  if (motor_ena_settle_pending()) return false;
   if (safety_inhibit_motion() || control_motion_blocked()) return false;
   if (!motor_lock()) return false;
   if (stepper == nullptr) {
@@ -310,6 +312,7 @@ void motor_disable() {
 
 bool motor_prepare_start() {
   if (safety_inhibit_motion() || control_motion_blocked()) return false;
+  if (s_enaAsserted) return true; // Do not restart an in-progress settle window.
   // Only a fully validated start reaches this point (controlTask admission);
   // assert the enable and stamp the clock so the settle window is measured
   // from this assertion, never from boot or a previous enable.
@@ -400,7 +403,7 @@ void motor_set_target_milli_hz(uint32_t mhz) {
   xSemaphoreGive(g_stepperMutex);
 }
 
-void motor_apply_settings() {
+bool motor_apply_settings() {
   int accelSteps = 7500;
   uint8_t driverKind = STEPPER_DRIVER_STANDARD;
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
@@ -408,18 +411,27 @@ void motor_apply_settings() {
   driverKind = g_settings.stepper_driver;
   xSemaphoreGive(g_settings_mutex);
   const uint16_t dirDelayUs = motor_dir_delay_us_from_driver(driverKind);
-  s_enaSettleMs = motor_ena_settle_ms_from_driver(driverKind);
+  const uint16_t settleMs = motor_ena_settle_ms_from_driver(driverKind);
+  if (s_enaSettleMs != settleMs) {
+    s_enaSettleMs = settleMs;
+    motor_disable(); // Driver timing changes require a fresh enable assertion.
+  }
 
-  if (!motor_lock()) return;
+  if (!motor_lock()) return false;
+  bool applied = false;
   if (stepper != nullptr) {
-    if (!motor_apply_stepper_dir_timing(dirDelayUs)) { xSemaphoreGive(g_stepperMutex); return; }
+    if (!motor_apply_stepper_dir_timing(dirDelayUs)) { xSemaphoreGive(g_stepperMutex); return false; }
     if (stepper->setAcceleration(accelSteps) != 0) motor_command_failed();
-    configuredAcceleration.store(static_cast<uint32_t>(accelSteps));
-    stepper->setLinearAcceleration(200);
+    else {
+      configuredAcceleration.store(static_cast<uint32_t>(accelSteps));
+      stepper->setLinearAcceleration(200);
+      applied = true;
+    }
   }
   xSemaphoreGive(g_stepperMutex);
   LOG_I("Motor: accel=%d driver=%s (DIR delay %u us)", accelSteps,
         driverKind == STEPPER_DRIVER_DM542T ? "DM542T" : "Standard", (unsigned)dirDelayUs);
+  return applied;
 }
 
 void motor_apply_soft_start_acceleration() {
@@ -437,15 +449,17 @@ void motor_apply_soft_start_acceleration() {
   if (!motor_lock()) return;
   if (stepper != nullptr) {
     if (stepper->setAcceleration(softAccel) != 0) motor_command_failed();
-    configuredAcceleration.store(softAccel);
-    s_temp_accel_applied = true;
+    else {
+      configuredAcceleration.store(softAccel);
+      s_temp_accel_applied = true;
+    }
   }
   xSemaphoreGive(g_stepperMutex);
   LOG_I("Motor: soft start accel=%u (configured=%u)", (unsigned)softAccel, (unsigned)configured);
 }
 
-void motor_restore_configured_acceleration() {
-  if (!s_temp_accel_applied) return;
+bool motor_restore_configured_acceleration() {
+  if (!s_temp_accel_applied) return true;
 
   uint32_t configured = 7500u;
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
@@ -453,17 +467,21 @@ void motor_restore_configured_acceleration() {
   xSemaphoreGive(g_settings_mutex);
 
   if (g_stepperMutex == nullptr) {
-    s_temp_accel_applied = false;
-    return;
+    return false;
   }
-  if (!motor_lock()) return;
+  if (!motor_lock()) return false;
+  bool restored = false;
   if (stepper != nullptr) {
     if (stepper->setAcceleration(configured) != 0) motor_command_failed();
-    configuredAcceleration.store(configured);
+    else {
+      configuredAcceleration.store(configured);
+      restored = true;
+    }
   }
-  s_temp_accel_applied = false;
+  if (restored) s_temp_accel_applied = false;
   xSemaphoreGive(g_stepperMutex);
   LOG_I("Motor: restored accel=%u", (unsigned)configured);
+  return restored;
 }
 
 bool motor_read_position(int32_t* position) {
@@ -473,6 +491,7 @@ bool motor_read_position(int32_t* position) {
   xSemaphoreGive(g_stepperMutex); return ok;
 }
 bool motor_move_steps(long steps, float rpm, int32_t* start_position) {
+  if (motor_ena_settle_pending()) return false;
   if (!start_position || steps == 0 || steps < -INT32_MAX || steps > INT32_MAX ||
       !motor_milli_hz_for_rpm_calibrated(rpm) || !motor_lock()) return false;
   bool ok = stepper && !safety_inhibit_motion() && !control_motion_blocked();

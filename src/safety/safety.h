@@ -37,3 +37,4 @@ void safety_feed_watchdog();  // Feed watchdog (call from tasks periodically)
 
 // FreeRTOS task
 void safetyTask(void* pvParameters);  // ESTOP monitoring task (Core 0, priority 5)
+void safety_run_cycle(); // One scheduled supervisor cycle; also used by host tests.

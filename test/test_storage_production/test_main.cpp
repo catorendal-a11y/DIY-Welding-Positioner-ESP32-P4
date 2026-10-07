@@ -15,6 +15,7 @@ void setUp() {
   if(!g_settings_mutex) g_settings_mutex=xSemaphoreCreateMutex();
   if(!g_presets_mutex) g_presets_mutex=xSemaphoreCreateMutex();
   testNvs.clear(); testLegacy.clear(); testNvsShortWrite=testNvsShortRead=testNvsEraseFailure=false;
+  testNvsBeforeClear = nullptr; g_restartRequired.store(false);
   g_prefs_open=true; g_presets.clear(); g_settings.max_rpm=MAX_RPM;
   settingsSave.~SaveRequest(); new (&settingsSave) SaveRequest{1000};
   presetsSave.~SaveRequest(); new (&presetsSave) SaveRequest{500}; simTestMillis=100;
@@ -66,6 +67,11 @@ void test_storage_preset_receipt_is_not_success_before_exact_commit() {
 void test_storage_erase_failure_preserves_ram() {
   Preset p{}; strcpy(p.name,"Retained"); g_presets.push_back(p); testNvsEraseFailure=true;
   TEST_ASSERT_FALSE(storage_format()); TEST_ASSERT_EQUAL(1,g_presets.size());
+  TEST_ASSERT_FALSE(g_restartRequired.load());
+}
+void test_format_inhibits_motion_before_entering_flash_erase() {
+  testNvsBeforeClear = [] { TEST_ASSERT_TRUE(g_restartRequired.load()); TEST_ASSERT_EQUAL(HIGH, simTestPins[PIN_ENA]); };
+  TEST_ASSERT_TRUE(storage_format()); TEST_ASSERT_TRUE(g_restartRequired.load());
 }
 void test_name_policy_rejects_split_overlong_utf8_and_controls() {
   TEST_ASSERT_TRUE(program_name_valid("N\xc3\xb8r",32));
@@ -98,6 +104,7 @@ int main() {
  RUN_TEST(test_storage_migration_validates_both_before_either_write);
  RUN_TEST(test_storage_preset_receipt_is_not_success_before_exact_commit);
  RUN_TEST(test_storage_erase_failure_preserves_ram);
+ RUN_TEST(test_format_inhibits_motion_before_entering_flash_erase);
  RUN_TEST(test_name_policy_rejects_split_overlong_utf8_and_controls);
  return UNITY_END();
 }

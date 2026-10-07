@@ -103,9 +103,12 @@ void step_execute_sequence(float angle_deg, uint16_t repeats, float dwell_sec) {
 void step_update() {
   if (control_get_state() != STATE_STEP) return;
   if (step_waiting_dwell) {
-    if ((int32_t)(millis() - step_dwell_until_ms) >= 0 && !start_step_move()) {
-      if (!safety_inhibit_motion()) control_transition_to(STATE_STOPPING);
-    }
+    if ((int32_t)(millis() - step_dwell_until_ms) < 0) return;
+    // Dwell disables ENA. Assert it once, then wait for the driver again
+    // without blocking the control or safety task.
+    if (!motor_prepare_start()) { control_transition_to(STATE_STOPPING); return; }
+    if (motor_ena_settle_pending()) return;
+    if (!start_step_move() && !safety_inhibit_motion()) control_transition_to(STATE_STOPPING);
     return;
   }
   int32_t position;

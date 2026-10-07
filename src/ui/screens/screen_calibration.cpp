@@ -256,6 +256,6 @@ void screen_calibration_update() {
   enabled(restartBtn, safe_idle() && session.stage != CalibrationSession::Saving);
   enabled(backBtn, session.stage != CalibrationSession::Saving);
   const bool canJog = session.stage == CalibrationSession::Prepare && !entry.active() && ui_control_fresh() &&
-                      (view.state == STATE_IDLE || view.state == STATE_JOG) && !safety_inhibit_motion();
+                      (view.state == STATE_IDLE || view.state == STATE_JOG || view.state == STATE_ENABLING) && !safety_inhibit_motion();
   enabled(jogMinus, canJog); enabled(jogPlus, canJog);
 }

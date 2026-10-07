@@ -5,6 +5,7 @@ The TIG Rotator Controller implements a multi-layer safety architecture to prote
 ## 1. Safety State Machine
 The system transitions through a rigorous state machine (defined in `control.h`) using compare-and-swap (CAS) for race-free transitions:
 - **STATE_IDLE:** Default state. Motor ENA is HIGH (Disabled).
+- **STATE_ENABLING:** An admitted start asserts ENA and waits 200 ms in DM542T mode before the first pulse. STOP cancels the start. Jog must keep receiving hold events throughout the wait; Step repeats also settle after dwell disables ENA.
 - **STATE_RUNNING:** Continuous rotation. Acceleration ramps active.
 - **STATE_PULSE:** Pulse mode (ON/OFF cycles).
 - **STATE_STEP:** Step mode (exact angle rotation).
@@ -39,10 +40,10 @@ The system transitions through a rigorous state machine (defined in `control.h`)
 - **LVGL safety:** `lv_obj_delete_async()` for all keyboard/numpad deletion from event callbacks. `screen_*_invalidate_widgets()` nullifies static pointers on `screens_reinit()`.
 
 ## 4a. Fatal-error handling
-- Unrecoverable init failures call `fatal_halt("<context>")` (declared in `src/app_state.h`) instead of calling `ESP.restart()` directly. `fatal_halt` logs the reason via `LOG_E` (always compiled in, even in release builds) and drains the serial buffer before rebooting — so power-on loops are diagnosable in the field. Example contexts currently in use: `"storage: NVS mutex alloc"`, `"storage: NVS namespace open"`, `"motor: stepper mutex alloc"`, `"motor: FastAccelStepper init"`.
+- Unrecoverable failures call `fatal_halt("<context>")` (declared in `src/app_state.h`). It sets `g_restartRequired`, disables ENA, logs the reason, unsubscribes its caller from the task watchdog and remains halted. The inhibit prevents other live tasks from re-enabling motion. Repair and restart are required; this function does not reboot.
 
 ## 5. Hardware Watchdog (TWDT)
-- **Motor Task:** Subscribed to WDT. Ensures pulses are generated.
+- **Input Task:** Subscribed to WDT. Refreshes ADC and pedal inputs; step generation belongs to the driver library.
 - **Control Task:** Subscribed to WDT. Ensures state machine is responsive.
 - **Safety Task:** Subscribed to WDT. Ensures E-STOP logic is alive.
 - **Storage Task:** NOT subscribed (does blocking I/O — flash writes and related work — that can exceed WDT timeout).
@@ -58,3 +59,5 @@ For detailed EMI mitigation (Shielding, Ferrites, TVS Diodes), see the [EMI Miti
 The [Setup Wizard](SETUP_WIZARD.md) requires observations of the physical E-STOP input, release/reset and a separate start/stop sequence plus user confirmation. This records an operator check, not a physical stop-time measurement. Pedal starts are inhibited during setup.
 
 Coherent control snapshots feed 40 ms UI updates. Status older than 100 ms blocks new movement requests and shows a warning. Normal STOP remains unconditional; safetyTask checks its acknowledgement/completion deadlines independently of controlTask. Physical E-STOP ENA inhibition remains independent. See [implementation boundaries and device checks](CONTROL_SETUP_IMPLEMENTATION.md).
+
+The scheduled E-STOP level poll inhibits ENA on the first observed LOW, then uses the 5 ms classification path even if no interrupt arrived. A driver alarm also inhibits ENA and latches a fault on its first LOW sample, including short glitches. A healthy driver input clears the alarm input latch after 50 healthy polling samples, but the system fault still requires explicit reset. Reset requires healthy raw E-STOP/ALM, no pending E-STOP edge, completed motor cleanup, fresh task heartbeats, operational touch when required, and no required restart. Failed configuration rollback or acceleration restoration keeps control cleanup incomplete and is retried.

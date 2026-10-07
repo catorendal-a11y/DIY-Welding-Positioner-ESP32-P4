@@ -150,8 +150,9 @@ void screen_setup_update() {
   const bool configSaved = control_config_status() != CONFIG_APPLIED ||
       storage_settings_save_status(control_config_save_ticket()) == STORAGE_SAVED;
   const bool ready = fresh && idle && !locked && !configPending && configSaved;
-  enabled(cwBtn, fresh && !locked && !configPending && configSaved && (idle || ui_control_state() == STATE_JOG));
-  enabled(ccwBtn, fresh && !locked && !configPending && configSaved && (idle || ui_control_state() == STATE_JOG));
+  const bool holdingJog = idle || ui_control_state() == STATE_JOG || ui_control_state() == STATE_ENABLING;
+  enabled(cwBtn, fresh && !locked && !configPending && configSaved && holdingJog);
+  enabled(ccwBtn, fresh && !locked && !configPending && configSaved && holdingJog);
   enabled(startBtn, ready && progress.reset_seen);
   enabled(flipBtn, ready);
   enabled(confirmBtn, ready && cwTested && ccwTested);

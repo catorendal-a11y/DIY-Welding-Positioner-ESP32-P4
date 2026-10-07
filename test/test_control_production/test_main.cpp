@@ -97,6 +97,13 @@ void test_snapshot_and_dispatch_use_one_control_cycle() {
   control_stop(); control_run_cycle(); testStepper.running = false; control_run_cycle();
   TEST_ASSERT_TRUE(control_read_snapshot(view)); TEST_ASSERT_EQUAL(STATE_IDLE, view.state);
 }
+void test_boot_control_init_preserves_latched_motor_fault() {
+  safety_report_motor_fault(FAULT_MOTOR_COMMAND);
+  control_init();
+  TEST_ASSERT_EQUAL(STATE_ESTOP, control_get_state());
+  TEST_ASSERT_EQUAL(HIGH, simTestPins[PIN_ENA]);
+  TEST_ASSERT_FALSE(control_start_continuous());
+}
 void test_stale_control_blocks_start_but_stop_is_unconditional() {
   simTestMillis += 101;
   TEST_ASSERT_FALSE(control_start_continuous());
@@ -133,6 +140,34 @@ void test_config_apply_failure_rolls_settings_back() {
   TEST_ASSERT_EQUAL(beforeAccel, g_settings.acceleration);
   TEST_ASSERT_EQUAL(16, g_settings.microstep);
   TEST_ASSERT_NOT_EQUAL(STATE_IDLE, control_get_state());
+}
+void test_cancelled_config_recovers_hardware_and_preserves_other_settings() {
+  const int originalAcceleration = g_settings.acceleration;
+  auto proposal = g_settings; proposal.acceleration = 12000;
+  TEST_ASSERT_TRUE(control_apply_motor_settings(proposal));
+  testStepper.beforeAcceleration = [] {
+    testStepper.beforeAcceleration = nullptr;
+    g_settings.brightness = 231; // Concurrent display setting, outside this transaction.
+    safety_report_motor_fault(FAULT_MOTOR_COMMAND);
+    g_stepperMutex->unavailable = true; // Immediate rollback cannot take the driver lock.
+  };
+  control_run_cycle();
+  TEST_ASSERT_EQUAL(CONFIG_CANCELLED, control_config_status());
+  TEST_ASSERT_EQUAL(231, g_settings.brightness);
+  g_stepperMutex->unavailable = false; control_run_cycle();
+  TEST_ASSERT_EQUAL(originalAcceleration, testStepper.acceleration);
+  TEST_ASSERT_EQUAL(STATE_ESTOP, control_get_state());
+}
+void test_soft_start_restore_failure_retries_before_fault_cleanup_completes() {
+  TEST_ASSERT_TRUE(control_start_continuous(true)); control_run_cycle();
+  const int originalAcceleration = g_settings.acceleration;
+  TEST_ASSERT_TRUE(testStepper.acceleration < originalAcceleration);
+  safety_report_motor_fault(FAULT_MOTOR_TIMEOUT);
+  testStepper.accelerationResult = -1; control_run_cycle();
+  TEST_ASSERT_FALSE(faultCleaned);
+  testStepper.accelerationResult = 0; control_run_cycle();
+  TEST_ASSERT_TRUE(faultCleaned);
+  TEST_ASSERT_EQUAL(originalAcceleration, testStepper.acceleration);
 }
 void test_jog_inversion_and_lease_expiry() {
   g_settings.invert_direction = true;
@@ -421,6 +456,46 @@ void test_dm542t_start_waits_out_ena_settle_before_pulses() {
   TEST_ASSERT_EQUAL(STATE_RUNNING, control_get_state());
   TEST_ASSERT_TRUE(testStepper.starts >= 1);
 }
+void test_driver_change_rearms_enable_settle() {
+  g_settings.stepper_driver = STEPPER_DRIVER_STANDARD; motor_apply_settings();
+  motor_disable(); motor_prepare_start();
+  TEST_ASSERT_FALSE(motor_ena_settle_pending());
+  auto proposal = g_settings; proposal.stepper_driver = STEPPER_DRIVER_DM542T;
+  TEST_ASSERT_TRUE(control_apply_motor_settings(proposal)); control_run_cycle();
+  TEST_ASSERT_TRUE(control_start_continuous()); control_run_cycle();
+  TEST_ASSERT_EQUAL(STATE_ENABLING, control_get_state());
+  TEST_ASSERT_EQUAL(0, testStepper.starts);
+}
+void test_motor_entry_points_cannot_bypass_enable_settle() {
+  motor_disable();
+  TEST_ASSERT_FALSE(motor_run_cw()); TEST_ASSERT_FALSE(motor_run_ccw());
+  int32_t position = 0;
+  TEST_ASSERT_FALSE(motor_move_steps(100, 0.5f, &position));
+  TEST_ASSERT_EQUAL(0, testStepper.starts); TEST_ASSERT_EQUAL(0, testStepper.moves);
+  TEST_ASSERT_EQUAL(HIGH, simTestPins[PIN_ENA]);
+}
+void test_jog_lease_expires_while_driver_is_enabling() {
+  motor_disable();
+  TEST_ASSERT_TRUE(control_start_jog_cw()); control_run_cycle();
+  for (int i = 0; i < 41; ++i) { simTestMillis += 5; control_run_cycle(); }
+  TEST_ASSERT_EQUAL(0, testStepper.starts);
+  TEST_ASSERT_EQUAL(STATE_IDLE, control_get_state());
+  TEST_ASSERT_EQUAL(HIGH, simTestPins[PIN_ENA]);
+}
+void test_step_repeat_waits_for_enable_after_dwell() {
+  TEST_ASSERT_TRUE(control_start_step_sequence(90, 2, 0.1f)); control_run_cycle();
+  TEST_ASSERT_EQUAL(1, testStepper.moves);
+  testStepper.position = 9000; testStepper.running = false;
+  simTestMillis += 50; control_run_cycle();
+  TEST_ASSERT_EQUAL(HIGH, simTestPins[PIN_ENA]);
+  for (int i = 0; i < 20; ++i) { simTestMillis += 5; control_run_cycle(); }
+  TEST_ASSERT_EQUAL(1, testStepper.moves);
+  TEST_ASSERT_EQUAL(LOW, simTestPins[PIN_ENA]);
+  for (int i = 0; i < 39; ++i) { simTestMillis += 5; control_run_cycle(); }
+  TEST_ASSERT_EQUAL(1, testStepper.moves);
+  simTestMillis += 5; control_run_cycle();
+  TEST_ASSERT_EQUAL(2, testStepper.moves);
+}
 void test_standard_driver_starts_without_settle_window() {
   g_settings.stepper_driver = STEPPER_DRIVER_STANDARD; motor_apply_settings();
   TEST_ASSERT_TRUE(control_start_continuous()); control_run_cycle();
@@ -500,6 +575,10 @@ int main() {
   RUN_TEST(test_jog_reclamps_after_config_lowered_cap);
   RUN_TEST(test_internal_pulse_stop_has_independent_deadline);
   RUN_TEST(test_dm542t_start_waits_out_ena_settle_before_pulses);
+  RUN_TEST(test_driver_change_rearms_enable_settle);
+  RUN_TEST(test_motor_entry_points_cannot_bypass_enable_settle);
+  RUN_TEST(test_jog_lease_expires_while_driver_is_enabling);
+  RUN_TEST(test_step_repeat_waits_for_enable_after_dwell);
   RUN_TEST(test_standard_driver_starts_without_settle_window);
   RUN_TEST(test_stop_during_enabling_aborts_without_pulses);
   RUN_TEST(test_inhibit_during_enabling_fails_closed);
@@ -516,9 +595,12 @@ int main() {
   RUN_TEST(test_direction_timing_never_changes_during_queued_motion);
   RUN_TEST(test_rmt_driver_is_selected_explicitly);
   RUN_TEST(test_snapshot_and_dispatch_use_one_control_cycle);
+  RUN_TEST(test_boot_control_init_preserves_latched_motor_fault);
   RUN_TEST(test_stale_control_blocks_start_but_stop_is_unconditional);
   RUN_TEST(test_config_apply_publishes_receipt_and_driver_kind);
   RUN_TEST(test_config_apply_failure_rolls_settings_back);
+  RUN_TEST(test_cancelled_config_recovers_hardware_and_preserves_other_settings);
+  RUN_TEST(test_soft_start_restore_failure_retries_before_fault_cleanup_completes);
   RUN_TEST(test_jog_inversion_and_lease_expiry);
   RUN_TEST(test_snapshot_staleness_handles_wrap_and_boundary);
   RUN_TEST(test_snapshot_mailbox_never_tears_concurrent_reads);

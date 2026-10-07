@@ -62,6 +62,7 @@ static uint32_t snapshotSequence = 0;
 static std::atomic<uint32_t> lastCycleAt{0};
 static std::atomic<bool> cyclePublished{false};
 static bool faultCleaned = false;
+static bool configRollbackPending = false;
 void control_set_setup_active(bool active) { setupActive.store(active); }
 bool control_setup_active() { return setupActive.load() || calibrationActive.load(); }
 void control_set_calibration_active(bool active) { if (active) control_stop(); calibrationActive.store(active); }
@@ -126,6 +127,9 @@ static bool is_active_motion_state(SystemState state) {
   return state == STATE_RUNNING || state == STATE_PULSE || state == STATE_STEP || state == STATE_JOG ||
          state == STATE_ENABLING;
 }
+
+// Command parked while STATE_ENABLING waits out the driver ENA settle window.
+static MotionCommand s_enablingCmd{};
 
 static void control_queue_init() {
   if (controlQueue == nullptr) {
@@ -229,10 +233,14 @@ void control_init() {
   control_queue_init();
   clear_pending_motion_requests();
   faultCleaned = false; cyclePublished.store(false);
-  currentState.store(STATE_IDLE, std::memory_order_release);
-  previousState.store(STATE_IDLE, std::memory_order_release);
+  // Motor/display/storage initialization precedes this call. Keep any fault
+  // already latched during boot visible to cleanup and the reset overlay.
+  const SystemState initialState = safety_get_fault_reason() == FAULT_NONE ? STATE_IDLE : STATE_ESTOP;
+  currentState.store(initialState, std::memory_order_release);
+  previousState.store(initialState, std::memory_order_release);
+  if (initialState == STATE_ESTOP) { digitalWrite(PIN_ENA, HIGH); motionGate.stop(); }
   event_log_add("CONTROL INIT");
-  LOG_I("Control init: state=IDLE");
+  LOG_I("Control init: state=%s", control_state_name(initialState));
 }
 
 bool control_transition_to(SystemState newState) {
@@ -423,8 +431,15 @@ static void stop_active_mode(SystemState cur) {
 // process_pending_requests (settle already satisfied or not required) and from
 // the STATE_ENABLING replay once the driver settle window has elapsed.
 static void dispatch_motion_command(const MotionCommand& cmd);
-// Command parked while STATE_ENABLING waits out the driver ENA settle window.
-static MotionCommand s_enablingCmd{};
+
+static void copy_motor_settings(SystemSettings& destination, const SystemSettings& source) {
+  destination.microstep = source.microstep;
+  destination.acceleration = source.acceleration;
+  destination.max_rpm = source.max_rpm;
+  destination.dir_switch_enabled = source.dir_switch_enabled;
+  destination.invert_direction = source.invert_direction;
+  destination.stepper_driver = source.stepper_driver;
+}
 
 static void process_pending_requests() {
   SystemState cur = currentState.load(std::memory_order_acquire);
@@ -443,7 +458,8 @@ static void process_pending_requests() {
     stopRequestedAt.store(0);
     return;
   }
-  if (cur == STATE_JOG && millis() - jogRenewedMs.load() > 150u) {
+  if ((cur == STATE_JOG || (cur == STATE_ENABLING && s_enablingCmd.type == MOTION_CMD_START_JOG)) &&
+      millis() - jogRenewedMs.load() > 150u) {
     control_stop();
     stop_active_mode(cur);
     return;
@@ -461,19 +477,14 @@ static void process_pending_requests() {
     SystemSettings previous{};
     xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
     previous = g_settings;
-    g_settings.microstep = cmd.settings.microstep;
-    g_settings.acceleration = cmd.settings.acceleration;
-    g_settings.max_rpm = cmd.settings.max_rpm;
-    g_settings.dir_switch_enabled = cmd.settings.dir_switch_enabled;
-    g_settings.invert_direction = cmd.settings.invert_direction;
-    g_settings.stepper_driver = cmd.settings.stepper_driver;
+    copy_motor_settings(g_settings, cmd.settings);
     xSemaphoreGive(g_settings_mutex);
-    motor_apply_settings();
-    if (safety_inhibit_motion()) {
+    const bool applied = motor_apply_settings();
+    if (!applied || safety_inhibit_motion()) {
       xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-      g_settings = previous;
+      copy_motor_settings(g_settings, previous);
       xSemaphoreGive(g_settings_mutex);
-      motor_apply_settings();  // Roll the hardware back to the previous state.
+      configRollbackPending = !motor_apply_settings();
       configStatus.store(CONFIG_CANCELLED);
       return;
     }
@@ -546,7 +557,11 @@ void control_run_cycle() {
       // Potentially blocking library cleanup never runs in safetyTask.
       if (!faultCleaned) {
         if (!motor_halt()) { publish_snapshot(); return; }
-        motor_restore_configured_acceleration();
+        if (configRollbackPending) {
+          if (!motor_apply_settings()) { publish_snapshot(); return; }
+          configRollbackPending = false;
+        }
+        if (!motor_restore_configured_acceleration()) { publish_snapshot(); return; }
         speed_clear_program_direction_override();
         event_log_addf("FAULT %s", safety_fault_reason_name(safety_get_fault_reason()));
         faultCleaned = true;
@@ -583,6 +598,9 @@ void control_run_cycle() {
         // E-STOP paths during this window; a STOP request transitions to
         // STOPPING via process_pending_requests.
         if (motor_ena_settle_pending()) break;
+        if (!motionGate.valid(s_enablingCmd.ticket)) {
+          control_stop(); break;
+        }
         dispatch_motion_command(s_enablingCmd);
         if (currentState.load(std::memory_order_acquire) == STATE_ENABLING) {
           // The mode rejected the start (inhibit race, invalid rate): the

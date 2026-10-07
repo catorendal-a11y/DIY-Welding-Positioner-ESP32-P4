@@ -206,6 +206,17 @@ static bool sim_click_label(const char* text, bool contains = false) {
   return sim_send_label_event(text, LV_EVENT_CLICKED, contains);
 }
 
+static bool sim_hold_label(const char* text, uint32_t ms) {
+  if (!sim_send_label_event(text, LV_EVENT_PRESSED)) return false;
+  const uint32_t started = lv_tick_get();
+  do {
+    auto target = sim_find_active_label_target(text);
+    if (!sim_expect(target && !lv_obj_is_disabled(target), "held jog button disabled during enable settle")) return false;
+    if (!sim_send_label_event(text, LV_EVENT_PRESSING)) return false;
+  } while (lv_tick_get() - started < ms);
+  return true;
+}
+
 static bool sim_show_and_check(ScreenId id) {
   if (id == SCREEN_PROGRAM_EDIT) {
     screens_set_edit_slot(0);
@@ -331,8 +342,7 @@ static bool sim_test_navigation_flows() {
   if (!sim_show_and_check(SCREEN_RUN_MODES)) return false;
   if (!sim_click_label("JOG")) return false;
   if (!sim_expect(screens_get_current() == SCREEN_JOG, "run mode JOG did not open jog screen")) return false;
-  if (!sim_send_label_event("HOLD CW", LV_EVENT_PRESSED)) return false;
-  sim_pump(260);  // ENA settle window
+  if (!sim_hold_label("HOLD CW", 260)) return false;
   if (!sim_expect(control_get_state() == STATE_JOG, "jog screen CW press did not enter JOG")) return false;
   if (!sim_send_label_event("HOLD CW", LV_EVENT_RELEASED)) return false;
   if (!sim_expect(control_get_state() == STATE_IDLE, "jog screen CW release did not stop")) return false;
@@ -1098,6 +1108,10 @@ static int run_calibration_test(const char* directory) {
   simulator_set_scenario("none"); safety_reset_estop(); control_stop(); sim_pump(100);
   screens_show(SCREEN_MAIN); sim_pump(50); g_settings.calibration_factor = 1;
   simulator_fast_motion(true); screens_show(SCREEN_CALIBRATION); sim_pump(50);
+  if (!sim_hold_label("JOG +", 260)) return 18;
+  if (!sim_expect(control_get_state() == STATE_JOG, "calibration jog failed across enable settle")) return 18;
+  if (!sim_send_label_event("JOG +", LV_EVENT_RELEASED)) return 18;
+  if (!sim_expect(control_get_state() == STATE_IDLE, "calibration jog release failed to stop")) return 18;
   capture("01_align.bmp");
   if (!sim_click_label("MOVE 360")) return 1;
   capture("02_moving.bmp");
@@ -1162,9 +1176,7 @@ static int run_commissioning_test(const char* directory) {
   for (const char* label : {"HOLD CW", "HOLD CCW"}) {
     // Hold like an operator: keep the button down through the ENA settle so
     // the state reaches JOG and the direction is actually exercised.
-    if (!sim_send_label_event(label, LV_EVENT_PRESSED)) return 6;
-    sim_pump(260);
-    if (!sim_send_label_event(label, LV_EVENT_PRESSING)) return 6;
+    if (!sim_hold_label(label, 260)) return 6;
     if (!sim_send_label_event(label, LV_EVENT_RELEASED)) return 6;
     sim_pump(80);
   }

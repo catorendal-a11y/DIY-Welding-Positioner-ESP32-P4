@@ -12,10 +12,12 @@ Uses upstream **Unity 2.7.0**, pinned by commit in `test_custom_runner.py`. The 
 
 To run tests:
 ```bash
-pio test -e native -e native-control
+pio test -e native -e native-control -e native-speed -e native-storage -e native-safety
 ```
 
 ## Production control and tooling tests
+
+The 2026-10-07 audit passes **487 host cases** across these environments. `native-safety` compiles the actual safety supervisor with deterministic GPIO/clock and isolated hardware boundaries; its 12 cases cover raw alarm admission, short alarms, pending E-STOP reset rejection, HMI/restart gating, first-fault retention, cleanup/heartbeat reset guards, missed interrupts and stale-task supervision. Control regressions additionally cover driver changes, Step dwell settling, loss of held Jog during enable settling, motor entry guards and retrying failed configuration/acceleration rollback. Storage tests check the motion inhibit before flash erase. CI runs every environment above.
 
 `test_control_production/` compiles the actual firmware dispatcher, motor wrapper, event log and all four motion modes with a fake clock, driver and FreeRTOS adapters. Its 31 cases cover command rejection, held locks, STOP cancellation/deadlines, pulse phases, counter wrap, mode timing, log contention, coherent concurrent snapshot reads, stale admission, direction inversion and setup sequence/migration rules, calibration draft isolation, interrupted moves, context changes, correction bounds and strict measurement parsing. Together with native tests, 438 cases pass. These are host integration tests, not device timing measurements.
 

@@ -124,7 +124,7 @@ bool safety_inhibit_motion() {
   return readyTasks.load() != 15u || estopLocked.load() || g_estopPending.load() ||
          !speed_pedal_input_healthy() || safety_is_estop_active() ||
          digitalRead(PIN_DRIVER_ALM) == LOW ||
-         s_driverAlarmLatched.load(std::memory_order_acquire) || g_restartRequired.load() ||
+         s_driverAlarmLatched.load(std::memory_order_acquire) || g_restartRequired.load() || g_storageFormatting.load() ||
 #if HMI_REQUIRED_FOR_MOTION
          !display_touch_operational() ||
 #endif
@@ -133,7 +133,7 @@ bool safety_inhibit_motion() {
 
 bool safety_can_reset_from_overlay() {
   return !motor_cleanup_pending() && readyTasks.load() == 15u && speed_pedal_input_healthy() &&
-         !g_estopPending.load(std::memory_order_acquire) && !g_restartRequired.load() &&
+         !g_estopPending.load(std::memory_order_acquire) && !g_restartRequired.load() && !g_storageFormatting.load() &&
          digitalRead(PIN_ESTOP) == HIGH && digitalRead(PIN_DRIVER_ALM) == HIGH &&
 #if HMI_REQUIRED_FOR_MOTION
          display_touch_operational() &&

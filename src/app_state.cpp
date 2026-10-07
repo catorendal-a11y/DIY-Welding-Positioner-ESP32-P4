@@ -13,6 +13,7 @@ std::atomic<bool> g_uiResetPending{false};
 std::atomic<uint32_t> g_inputHeartbeatMs{0};
 std::atomic<bool> g_inputHeartbeatValid{false};
 std::atomic<bool> g_restartRequired{false};
+std::atomic<bool> g_storageFormatting{false};
 
 std::atomic<bool> g_wakePending{false};
 

@@ -31,6 +31,7 @@ extern std::atomic<bool> g_uiResetPending;      // UI (Core 1) set; safetyTask c
 extern std::atomic<uint32_t> g_inputHeartbeatMs;
 extern std::atomic<bool> g_inputHeartbeatValid;
 extern std::atomic<bool> g_restartRequired;
+extern std::atomic<bool> g_storageFormatting; // Temporary inhibit owned only by storage_format().
 
 inline bool input_task_heartbeat_fresh(uint32_t now, uint32_t deadline = 100u) {
   // Not yet valid counts as fresh: safetyTask arms the supervisor via

@@ -37,3 +37,13 @@ Commands: `pio test -e native -e native-control -e native-speed -e native-storag
 Local command logs are under `.pio/audit-*.log`. Host/simulator evidence verifies software behavior, not physical GPIO pulse shape, mechanical stopping time or HF immunity. No assembled-controller test was run during this review.
 
 The clean firmware builds emitted one existing warning per variant from the bundled Arduino core (`esp32-hal-spi.c`, discarded volatile qualifier). This is outside project source; no application-source build errors or warnings were reported.
+
+## Follow-up: five-commit review
+
+Reviewing the five latest commits at `e86fb53` found three remaining defects. All are corrected in the follow-up changes:
+
+- Apply motor proposals from a private `SystemSettings` copy; publish the six motor fields only after hardware acceptance. Actual control/storage regressions now prove a pending save cannot persist cancelled microsteps, that the accepted proposal waits for its own durable receipt, and that an older flash snapshot cannot overwrite the committed direction cache.
+- Use `g_storageFormatting` for the temporary format inhibit. Erase failure clears only this flag; a concurrently asserted `g_restartRequired` survives. Safety admission/reset checks include both flags.
+- Track direction debounce validity separately from its timestamp. Tests cover zero at wrap, a candidate spanning wrap, and restarting the stability interval after bounce.
+
+Six targeted regressions failed before these changes. The full suite then passed **495/495**, including the new `native-control-storage` environment added to CI. All three firmware variants rebuilt successfully; simulator self-test passed, layout audit reported zero failures, 10 packaging tests passed and the two RMT encoder geometries passed. Follow-up logs are `.pio/fix-review-*.log`. This validation remains software-only; no device was flashed.

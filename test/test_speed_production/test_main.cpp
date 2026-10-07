@@ -97,6 +97,32 @@ void test_pedal_with_detected_ads_still_blocks_on_stale_samples() {
   adsSampleMs = simTestMillis;
   TEST_ASSERT_TRUE(speed_pedal_input_healthy());
 }
+static void direction_filter_initial_cw() {
+  g_dir_switch_cache.store(true); stableDirSwitch.store(true);
+  dirSwitchCandidate = HIGH; dirSwitchCandidateMs = 0;
+  simTestPins[PIN_DIR_SWITCH] = HIGH;
+  speed_update_adc();
+}
+void test_direction_change_at_zero_timestamp_is_accepted() {
+  simTestMillis = UINT32_MAX - 20u; direction_filter_initial_cw();
+  simTestMillis = 0; simTestPins[PIN_DIR_SWITCH] = LOW; speed_update_adc();
+  simTestMillis = 20; speed_update_adc(); TEST_ASSERT_EQUAL(DIR_CW, speed_get_requested_direction());
+  simTestMillis = 40; speed_update_adc(); TEST_ASSERT_EQUAL(DIR_CCW, speed_get_requested_direction());
+}
+void test_direction_change_waits_across_clock_wrap() {
+  direction_filter_initial_cw();
+  simTestMillis = UINT32_MAX - 10u; simTestPins[PIN_DIR_SWITCH] = LOW; speed_update_adc();
+  simTestMillis = 10; speed_update_adc(); TEST_ASSERT_EQUAL(DIR_CW, speed_get_requested_direction());
+  simTestMillis = 20; speed_update_adc(); TEST_ASSERT_EQUAL(DIR_CCW, speed_get_requested_direction());
+}
+void test_direction_bounce_restarts_stability_window() {
+  direction_filter_initial_cw();
+  simTestPins[PIN_DIR_SWITCH] = LOW; speed_update_adc();
+  simTestMillis += 10; simTestPins[PIN_DIR_SWITCH] = HIGH; speed_update_adc();
+  simTestMillis += 10; simTestPins[PIN_DIR_SWITCH] = LOW; speed_update_adc();
+  simTestMillis += 20; speed_update_adc(); TEST_ASSERT_EQUAL(DIR_CW, speed_get_requested_direction());
+  simTestMillis += 20; speed_update_adc(); TEST_ASSERT_EQUAL(DIR_CCW, speed_get_requested_direction());
+}
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_real_geometry_rejects_overflow_and_nonfinite);
@@ -107,5 +133,8 @@ int main() {
   RUN_TEST(test_requested_and_effective_directions_are_distinct);
   RUN_TEST(test_pedal_enabled_without_ads_stays_healthy_and_uses_panel_pot);
   RUN_TEST(test_pedal_with_detected_ads_still_blocks_on_stale_samples);
+  RUN_TEST(test_direction_change_at_zero_timestamp_is_accepted);
+  RUN_TEST(test_direction_change_waits_across_clock_wrap);
+  RUN_TEST(test_direction_bounce_restarts_stability_window);
   return UNITY_END();
 }

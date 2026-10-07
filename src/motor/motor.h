@@ -56,7 +56,9 @@ bool motor_apply_speed_for_rpm_locked(float rpm_workpiece_command);
 void motor_set_target_milli_hz(uint32_t mhz);
 bool motor_move_steps(long steps, float rpm, int32_t* start_position);
 bool motor_read_position(int32_t* position);
-bool motor_apply_settings();            // Apply driver timing/acceleration; false on hardware failure
+struct SystemSettings;
+bool motor_apply_settings();            // Apply committed settings; false on hardware failure
+bool motor_apply_settings(const SystemSettings& settings); // Apply a private proposal before publishing it.
 void motor_apply_soft_start_acceleration();
 bool motor_restore_configured_acceleration(); // Retry cleanup until restoration succeeds.
 

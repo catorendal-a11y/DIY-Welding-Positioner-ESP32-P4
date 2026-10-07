@@ -471,23 +471,21 @@ static void process_pending_requests() {
     return;
   }
   if (cmd.type == MOTION_CMD_CONFIG) {
-    // Transactional apply: stage the proposal, apply to hardware, and roll
-    // both g_settings and the hardware back if the apply latches a fault —
-    // the UI must never show CANCELLED while RAM/hardware keep new values.
+    // Keep the proposal private until hardware accepts it. A concurrent
+    // settings save must only ever snapshot committed motor fields.
     SystemSettings previous{};
     xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
     previous = g_settings;
-    copy_motor_settings(g_settings, cmd.settings);
     xSemaphoreGive(g_settings_mutex);
-    const bool applied = motor_apply_settings();
+    const bool applied = motor_apply_settings(cmd.settings);
     if (!applied || safety_inhibit_motion()) {
-      xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-      copy_motor_settings(g_settings, previous);
-      xSemaphoreGive(g_settings_mutex);
-      configRollbackPending = !motor_apply_settings();
+      configRollbackPending = !motor_apply_settings(previous);
       configStatus.store(CONFIG_CANCELLED);
       return;
     }
+    xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+    copy_motor_settings(g_settings, cmd.settings);
+    xSemaphoreGive(g_settings_mutex);
     g_dir_switch_cache.store(cmd.settings.dir_switch_enabled);
     speed_sync_rpm_limits_from_settings();
     configSaveTicket.store(storage_request_settings_save());

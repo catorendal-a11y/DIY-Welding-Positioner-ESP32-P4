@@ -173,6 +173,7 @@ static uint8_t lastDirSwitchState = 1;
 static std::atomic<bool> stableDirSwitch{true};
 static uint8_t dirSwitchCandidate = 1;
 static uint32_t dirSwitchCandidateMs = 0;
+static bool dirSwitchCandidateValid = false;
 #define POT_WAKE_THRESHOLD 30
 
 static bool ads1115Connected = false;
@@ -308,6 +309,7 @@ void speed_init() {
   stableDirSwitch.store(lastDirSwitchState != 0, std::memory_order_relaxed);
   dirSwitchCandidate = lastDirSwitchState;
   dirSwitchCandidateMs = 0;
+  dirSwitchCandidateValid = false;
   speed_sync_rpm_limits_from_settings();
 
   bool pedalPersist = false;
@@ -390,13 +392,16 @@ void speed_update_adc() {
     if (state == stableDirSwitch.load(std::memory_order_relaxed)) {
       dirSwitchCandidate = state;
       dirSwitchCandidateMs = 0;
-    } else if (state != dirSwitchCandidate) {
+      dirSwitchCandidateValid = false;
+    } else if (!dirSwitchCandidateValid || state != dirSwitchCandidate) {
       dirSwitchCandidate = state;
       dirSwitchCandidateMs = millis();
-    } else if (dirSwitchCandidateMs != 0u && millis() - dirSwitchCandidateMs >= DIR_SWITCH_STABLE_MS) {
+      dirSwitchCandidateValid = true;
+    } else if (millis() - dirSwitchCandidateMs >= DIR_SWITCH_STABLE_MS) {
       stableDirSwitch.store(dirSwitchCandidate != 0, std::memory_order_relaxed);
       dirSwitchCandidate = state;
       dirSwitchCandidateMs = 0;
+      dirSwitchCandidateValid = false;
     }
   }
 }

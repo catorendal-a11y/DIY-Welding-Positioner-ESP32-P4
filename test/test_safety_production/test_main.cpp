@@ -12,6 +12,7 @@ inline void vTaskDelayUntil(TickType_t* tick, TickType_t period) { *tick += peri
 SimSerial Serial;
 std::atomic<bool> g_estopPending{false}, g_uiResetPending{false}, g_wakePending{false};
 std::atomic<bool> g_inputHeartbeatValid{false}, g_restartRequired{false};
+std::atomic<bool> g_storageFormatting{false};
 std::atomic<uint32_t> g_inputHeartbeatMs{0}, g_estopTriggerMs{0};
 static SystemState testState = STATE_IDLE;
 static bool testControlStale = false, testCleanup = false, testPedalHealthy = true, testTouchHealthy = true;
@@ -36,7 +37,8 @@ void setUp() {
   readyTasks.store(15u); estopLocked.store(false); s_faultReason.store(FAULT_NONE);
   s_driverAlarmLatched.store(false); s_almHighMs = 0;
   g_estopPending.store(false); g_estopTriggerMs.store(0); g_uiResetPending.store(false);
-  g_restartRequired.store(false); g_inputHeartbeatValid.store(true); g_inputHeartbeatMs.store(simTestMillis);
+  g_restartRequired.store(false); g_storageFormatting.store(false);
+  g_inputHeartbeatValid.store(true); g_inputHeartbeatMs.store(simTestMillis);
   safety_run_cycle(); // Re-arm edge supervisors on fresh task heartbeats.
 }
 void tearDown() {}
@@ -69,6 +71,12 @@ void test_restart_and_hmi_failure_block_reset() {
   g_restartRequired.store(true); TEST_ASSERT_FALSE(safety_can_reset_from_overlay());
   g_restartRequired.store(false); testTouchHealthy = false;
   TEST_ASSERT_FALSE(safety_can_reset_from_overlay());
+}
+void test_formatting_blocks_motion_and_reset_without_clearing_fatal_inhibit() {
+  g_storageFormatting.store(true);
+  TEST_ASSERT_TRUE(safety_inhibit_motion()); TEST_ASSERT_FALSE(safety_can_reset_from_overlay());
+  g_restartRequired.store(true); g_storageFormatting.store(false);
+  TEST_ASSERT_TRUE(safety_inhibit_motion()); TEST_ASSERT_FALSE(safety_can_reset_from_overlay());
 }
 void test_first_fault_is_retained_and_mirror_is_disarmed() {
   safety_report_motor_fault(FAULT_MOTOR_TIMEOUT);
@@ -132,6 +140,7 @@ int main() {
   RUN_TEST(test_alarm_reset_requires_healthy_raw_input);
   RUN_TEST(test_new_estop_edge_cannot_be_cleared_by_ui_reset);
   RUN_TEST(test_restart_and_hmi_failure_block_reset);
+  RUN_TEST(test_formatting_blocks_motion_and_reset_without_clearing_fatal_inhibit);
   RUN_TEST(test_first_fault_is_retained_and_mirror_is_disarmed);
   RUN_TEST(test_fault_reset_waits_for_cleanup_and_healthy_heartbeats);
   RUN_TEST(test_reset_only_clears_fault_and_never_enables_driver);

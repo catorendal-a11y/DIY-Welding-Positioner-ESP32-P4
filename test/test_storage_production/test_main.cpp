@@ -5,6 +5,7 @@
 SimSerial Serial; SimEsp ESP;
 std::atomic<uint32_t> g_inputHeartbeatMs{0};
 std::atomic<bool> g_restartRequired{false};
+std::atomic<bool> g_storageFormatting{false};
 std::atomic<bool> g_wakePending{false},g_dir_switch_cache{false},g_flashWriting{false},g_screenRedraw{false};
 [[noreturn]] void fatal_halt(const char* reason) { throw std::runtime_error(reason); }
 void event_log_addf(const char*,...) {}
@@ -15,7 +16,8 @@ void setUp() {
   if(!g_settings_mutex) g_settings_mutex=xSemaphoreCreateMutex();
   if(!g_presets_mutex) g_presets_mutex=xSemaphoreCreateMutex();
   testNvs.clear(); testLegacy.clear(); testNvsShortWrite=testNvsShortRead=testNvsEraseFailure=false;
-  testNvsBeforeClear = nullptr; g_restartRequired.store(false);
+  testNvsBeforeClear = testNvsBeforePut = nullptr;
+  g_restartRequired.store(false); g_storageFormatting.store(false);
   g_prefs_open=true; g_presets.clear(); g_settings.max_rpm=MAX_RPM;
   settingsSave.~SaveRequest(); new (&settingsSave) SaveRequest{1000};
   presetsSave.~SaveRequest(); new (&presetsSave) SaveRequest{500}; simTestMillis=100;
@@ -70,8 +72,16 @@ void test_storage_erase_failure_preserves_ram() {
   TEST_ASSERT_FALSE(g_restartRequired.load());
 }
 void test_format_inhibits_motion_before_entering_flash_erase() {
-  testNvsBeforeClear = [] { TEST_ASSERT_TRUE(g_restartRequired.load()); TEST_ASSERT_EQUAL(HIGH, simTestPins[PIN_ENA]); };
+  testNvsBeforeClear = [] { TEST_ASSERT_TRUE(g_storageFormatting.load()); TEST_ASSERT_EQUAL(HIGH, simTestPins[PIN_ENA]); };
   TEST_ASSERT_TRUE(storage_format()); TEST_ASSERT_TRUE(g_restartRequired.load());
+  TEST_ASSERT_FALSE(g_storageFormatting.load());
+}
+void test_failed_format_preserves_concurrent_fatal_inhibit() {
+  testNvsEraseFailure = true;
+  testNvsBeforeClear = [] { g_restartRequired.store(true); };
+  TEST_ASSERT_FALSE(storage_format());
+  TEST_ASSERT_TRUE(g_restartRequired.load());
+  TEST_ASSERT_FALSE(g_storageFormatting.load());
 }
 void test_name_policy_rejects_split_overlong_utf8_and_controls() {
   TEST_ASSERT_TRUE(program_name_valid("N\xc3\xb8r",32));
@@ -105,6 +115,7 @@ int main() {
  RUN_TEST(test_storage_preset_receipt_is_not_success_before_exact_commit);
  RUN_TEST(test_storage_erase_failure_preserves_ram);
  RUN_TEST(test_format_inhibits_motion_before_entering_flash_erase);
+ RUN_TEST(test_failed_format_preserves_concurrent_fatal_inhibit);
  RUN_TEST(test_name_policy_rejects_split_overlong_utf8_and_controls);
  return UNITY_END();
 }

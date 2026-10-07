@@ -404,12 +404,16 @@ void motor_set_target_milli_hz(uint32_t mhz) {
 }
 
 bool motor_apply_settings() {
-  int accelSteps = 7500;
-  uint8_t driverKind = STEPPER_DRIVER_STANDARD;
+  SystemSettings committed{};
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  accelSteps = g_settings.acceleration;
-  driverKind = g_settings.stepper_driver;
+  committed = g_settings;
   xSemaphoreGive(g_settings_mutex);
+  return motor_apply_settings(committed);
+}
+
+bool motor_apply_settings(const SystemSettings& settings) {
+  const int accelSteps = settings.acceleration;
+  const uint8_t driverKind = settings.stepper_driver;
   const uint16_t dirDelayUs = motor_dir_delay_us_from_driver(driverKind);
   const uint16_t settleMs = motor_ena_settle_ms_from_driver(driverKind);
   if (s_enaSettleMs != settleMs) {

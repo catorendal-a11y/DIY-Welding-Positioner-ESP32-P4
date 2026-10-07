@@ -42,7 +42,7 @@ jobs:
             pio-${{ runner.os }}-
 
       - name: Run native tests
-        run: pio test -e native -e native-control -e native-speed -e native-storage -e native-safety
+        run: pio test -e native -e native-control -e native-speed -e native-storage -e native-safety -e native-control-storage
 
       - name: Check setup and packaging scripts
         run: |

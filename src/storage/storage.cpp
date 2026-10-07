@@ -383,7 +383,7 @@ static bool storage_save_settings_internal() {
 
   if (!storage_write_doc(NVS_KEY_SETTINGS, doc, SETTINGS_BLOB_MAX)) return false;
   LOG_I("Saved settings to NVS.");
-  g_dir_switch_cache.store(snap.dir_switch_enabled, std::memory_order_release);
+  // Saving an older snapshot must not change the currently committed runtime cache.
   return true;
 }
 
@@ -463,15 +463,16 @@ bool storage_get_nvs_stats(size_t* used_entries, size_t* total_entries) {
 
 bool storage_format() {
   if (control_get_state() != STATE_IDLE || storage_status() != STORAGE_SAVED) return false;
-  // STOP can be acknowledged while flash erase is still in progress. Keep
-  // a separate inhibit asserted before entering I/O or changing live settings.
-  const bool previouslyInhibited = g_restartRequired.exchange(true, std::memory_order_acq_rel);
+  // This operation owns only its temporary inhibit. Fatal/restart latches
+  // set by other tasks must never be cleared by a failed erase.
+  bool inactive = false;
+  if (!g_storageFormatting.compare_exchange_strong(inactive, true, std::memory_order_acq_rel)) return false;
   control_stop(); digitalWrite(PIN_ENA, HIGH);
   xSemaphoreTake(g_nvs_mutex, portMAX_DELAY);
   const bool cleared = g_prefs_open && g_prefs.clear();
   xSemaphoreGive(g_nvs_mutex);
   if (!cleared) {
-    g_restartRequired.store(previouslyInhibited, std::memory_order_release);
+    g_storageFormatting.store(false, std::memory_order_release);
     return false;
   }
   xSemaphoreTake(g_presets_mutex, portMAX_DELAY);
@@ -488,6 +489,7 @@ bool storage_format() {
   // are NOT re-applied here by design: formatting requires a restart before
   // new motion. safety_inhibit_motion() holds until then.
   g_restartRequired.store(true, std::memory_order_release);
+  g_storageFormatting.store(false, std::memory_order_release);
   LOG_I("Storage formatted - NVS cleared, restart required");
   return true;
 }

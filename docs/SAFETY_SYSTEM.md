@@ -42,6 +42,8 @@ The system transitions through a rigorous state machine (defined in `control.h`)
 ## 4a. Fatal-error handling
 - Unrecoverable failures call `fatal_halt("<context>")` (declared in `src/app_state.h`). It sets `g_restartRequired`, disables ENA, logs the reason, unsubscribes its caller from the task watchdog and remains halted. The inhibit prevents other live tasks from re-enabling motion. Repair and restart are required; this function does not reboot.
 
+Storage formatting uses a separate temporary motion/reset inhibit. It releases only that inhibit on failure; fatal and restart latches remain set. A successful format asserts the permanent restart latch before releasing its temporary inhibit.
+
 ## 5. Hardware Watchdog (TWDT)
 - **Input Task:** Subscribed to WDT. Refreshes ADC and pedal inputs; step generation belongs to the driver library.
 - **Control Task:** Subscribed to WDT. Ensures state machine is responsive.

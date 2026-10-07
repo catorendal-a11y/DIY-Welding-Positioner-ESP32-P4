@@ -6,6 +6,7 @@
 inline std::map<std::string,std::vector<uint8_t>> testNvs;
 inline bool testNvsShortWrite=false, testNvsShortRead=false, testNvsEraseFailure=false;
 inline void (*testNvsBeforeClear)() = nullptr;
+inline void (*testNvsBeforePut)() = nullptr;
 class Preferences {
  public:
   bool begin(const char*,bool) { return true; }
@@ -16,6 +17,7 @@ class Preferences {
     return testNvsShortRead && size ? size-1 : size;
   }
   size_t putBytes(const char* key,const void* data,size_t length) {
+    if (testNvsBeforePut) testNvsBeforePut();
     if (testNvsShortWrite) return length ? length-1 : 0;
     const auto bytes=static_cast<const uint8_t*>(data); testNvs[key]={bytes,bytes+length}; return length;
   }

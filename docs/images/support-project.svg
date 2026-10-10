@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="54" viewBox="0 0 750 54" role="img" aria-labelledby="title desc">
+  <title id="title">Support this project to keep it open source</title>
+  <desc id="desc">Pink support banner with two white hearts. Support the DIY Welding Positioner project.</desc>
+  <rect width="750" height="54" fill="#ea4aaa"/>
+  <path d="M30 37C25 33 18 28 18 22C18 15 27 13 30 20C33 13 42 15 42 22C42 28 35 33 30 37Z" fill="none" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M67 34C64 31 59 27 59 23C59 18 65 17 67 21C69 17 75 18 75 23C75 27 70 31 67 34Z" fill="#fff"/>
+  <text x="91" y="33" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" letter-spacing="1.15">SUPPORT THIS PROJECT TO KEEP IT OPEN SOURCE</text>
+</svg>

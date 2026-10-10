@@ -4,9 +4,48 @@ Touchscreen controller for a single-axis TIG/MIG welding rotator.
 
 **Built for the GUITION JC4880P443C 4.3" touch display board — ESP32-P4, 800×480 landscape, ST7701S MIPI-DSI and GT911 capacitive touch.**
 
-[![Build](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml/badge.svg)](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml)
-[![Release](https://img.shields.io/github/v/release/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4)](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/latest)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+<p align="center">
+  <a href="https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml"><img src="https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml/badge.svg" alt="Build and tests"></a>
+  <a href="https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/latest"><img src="https://img.shields.io/github/v/release/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4" alt="Latest release"></a>
+  <a href="https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/commits/master"><img src="https://img.shields.io/github/last-commit/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4" alt="Last commit"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e" alt="License: MIT"></a>
+  <a href="https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/stargazers"><img src="https://img.shields.io/github/stars/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4?style=flat" alt="GitHub stars"></a>
+</p>
+
+<p align="center">
+  <a href="docs/HARDWARE_SETUP.md"><img src="https://img.shields.io/badge/MCU-ESP32--P4-ef4444" alt="MCU: ESP32-P4"></a>
+  <a href="docs/HARDWARE_SETUP.md"><img src="https://img.shields.io/badge/board-GUITION%20JC4880P443C-f97316" alt="Board: GUITION JC4880P443C"></a>
+  <a href="docs/HARDWARE_SETUP.md"><img src="https://img.shields.io/badge/display-4.3%E2%80%B3%20%C2%B7%20800%C3%97480-0ea5e9" alt="Display: 4.3-inch, 800 x 480"></a>
+  <a href="docs/HARDWARE_SETUP.md"><img src="https://img.shields.io/badge/touch-GT911-8b5cf6" alt="Capacitive touch: GT911"></a>
+  <a href="docs/HARDWARE_SETUP.md"><img src="https://img.shields.io/badge/panel-ST7701S%20%C2%B7%20MIPI--DSI-06b6d4" alt="Panel: ST7701S, MIPI-DSI"></a>
+</p>
+
+<p align="center">
+  <a href="src"><img src="https://img.shields.io/badge/language-C%2B%2B-3b82f6" alt="Language: C++"></a>
+  <a href="platformio.ini"><img src="https://img.shields.io/badge/framework-Arduino%20%2F%20ESP--IDF-14b8a6" alt="Framework: Arduino / ESP-IDF"></a>
+  <a href="platformio.ini"><img src="https://img.shields.io/badge/LVGL-9.6.0-8b5cf6" alt="LVGL: 9.6.0"></a>
+  <a href="platformio.ini"><img src="https://img.shields.io/badge/FastAccelStepper-1.4.0-f59e0b" alt="FastAccelStepper: 1.4.0"></a>
+  <a href="platformio.ini"><img src="https://img.shields.io/badge/build-PlatformIO-f97316" alt="Build system: PlatformIO"></a>
+</p>
+
+<p align="center">
+  <a href="#what-it-does"><img src="https://img.shields.io/badge/rotation-4%20modes-22c55e" alt="Rotation: Continuous, Jog, Pulse, Step"></a>
+  <a href="#what-it-does"><img src="https://img.shields.io/badge/programs-16%20saved-10b981" alt="Programs: 16 saved"></a>
+  <a href="#what-it-does"><img src="https://img.shields.io/badge/speed-0.001%E2%80%933.0%20RPM-0ea5e9" alt="Configured speed range: 0.001 to 3.0 RPM, subject to geometry and limits"></a>
+  <a href="docs/HARDWARE_SETUP.md"><img src="https://img.shields.io/badge/foot%20pedal-optional-8b5cf6" alt="Optional foot pedal"></a>
+  <a href="docs/estop_timing.md"><img src="https://img.shields.io/badge/E--STOP-monitored%20input-ef4444" alt="Monitored E-STOP input; see wiring and measurement requirements"></a>
+</p>
+
+<p align="center">
+  <a href="docs/releases/SIMULATOR.md"><img src="https://img.shields.io/badge/simulator-Windows%20%2F%20Linux-3b82f6" alt="Simulator: Windows and Linux"></a>
+  <a href="simulator/README.md#usb-c-live-mirror"><img src="https://img.shields.io/badge/live%20mirror-USB--C-06b6d4" alt="Optional USB-C live mirror"></a>
+  <a href="src/storage/storage.cpp"><img src="https://img.shields.io/badge/settings-NVS-14b8a6" alt="Settings and programs: NVS storage"></a>
+  <a href="https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml"><img src="https://img.shields.io/badge/verification-native%20%2B%20simulator-22c55e" alt="Verification paths: native tests and LVGL simulator"></a>
+</p>
+
+<p align="center">
+  <a href="#documentation-and-contributions"><img src="docs/images/support-project.svg" width="750" alt="Support this project to keep it open source"></a>
+</p>
 
 ![Main screen — actual LVGL simulator capture](docs/images/ui_runtime_v5/01_MAIN.png)
 

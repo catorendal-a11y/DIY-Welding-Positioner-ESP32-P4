@@ -4,6 +4,8 @@ Touchscreen controller for a single-axis TIG/MIG welding rotator.
 
 **Built for the GUITION JC4880P443C 4.3" touch display board — ESP32-P4, 800×480 landscape, ST7701S MIPI-DSI and GT911 capacitive touch.**
 
+![Main screen — actual LVGL simulator capture](docs/images/ui_runtime_v5/01_MAIN.png)
+
 <p align="center">
   <a href="https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml"><img src="https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml/badge.svg" alt="Build and tests"></a>
   <a href="https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/latest"><img src="https://img.shields.io/github/v/release/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4" alt="Latest release"></a>
@@ -46,8 +48,6 @@ Touchscreen controller for a single-axis TIG/MIG welding rotator.
 <p align="center">
   <a href="#documentation-and-contributions"><img src="docs/images/support-project.svg" width="750" alt="Support this project to keep it open source"></a>
 </p>
-
-![Main screen — actual LVGL simulator capture](docs/images/ui_runtime_v5/01_MAIN.png)
 
 **[Try the Windows simulator](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.2.1/welding-positioner-v2.2.1-simulator-windows-x64.zip)** · **[Firmware downloads](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.2.1)** · **[Builder guide](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/wiki)** · **[Watch the hardware demo](https://youtu.be/GygLl6XY-TM)**
 

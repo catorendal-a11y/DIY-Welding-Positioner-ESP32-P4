@@ -5,6 +5,8 @@
 #include <Arduino.h>
 #include "../screens.h"
 #include "../theme.h"
+#include "../tabular_font.h"
+#include "../value_binding.h"
 #include "../value_format.h"
 #include "../../control/control.h"
 #include "../../motor/speed.h"
@@ -22,6 +24,7 @@ static float targetRpm = 2.0f;  // synced in screen_step_create from speed_get_t
 static lv_obj_t* angleLabel = nullptr;
 static lv_obj_t* arcWidget = nullptr;
 static lv_obj_t* angleArcLabel = nullptr;
+static UiTextBinding<32> angleArcText, angleText;
 static lv_obj_t* rpmLabel = nullptr;
 static lv_obj_t* stepsLabel = nullptr;
 static lv_obj_t* presetBtns[4] = {nullptr};
@@ -107,7 +110,7 @@ static void update_info_panel() {
   if (angleArcLabel) {
     char buf[20];
     snprintf(buf, sizeof(buf), "%.0f\nDEG", currentAngle);
-    lv_label_set_text(angleArcLabel, buf);
+    angleArcText.set(buf);
   }
 
   // Update arc indicator
@@ -421,10 +424,12 @@ void screen_step_create() {
     snprintf(angleBuf, sizeof(angleBuf), "%.0f\nDEG", currentAngle);
     lv_label_set_text(angleArcLabel, angleBuf);
   }
-  lv_obj_set_style_text_font(angleArcLabel, FONT_XXL, 0);
+  lv_obj_set_style_text_font(angleArcLabel, ui_readout_font(), 0);
+  lv_obj_set_size(angleArcLabel, kProSz - 56, 2 * ui_readout_font()->line_height + 4);
   lv_obj_set_style_text_color(angleArcLabel, COL_ACCENT, 0);
   lv_obj_set_style_text_align(angleArcLabel, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_center(angleArcLabel);
+  angleArcText.bind(angleArcLabel);
 
   lv_obj_t* targetCard = ui_create_post_card(screen, kTargetX, kTargetY, kTargetW, kTargetH);
   lv_obj_set_scrollable(targetCard, false);
@@ -443,9 +448,11 @@ void screen_step_create() {
     snprintf(targetBuf, sizeof(targetBuf), "%.0f deg", currentAngle);
     lv_label_set_text(angleLabel, targetBuf);
   }
-  lv_obj_set_style_text_font(angleLabel, FONT_XXL, 0);
+  lv_obj_set_style_text_font(angleLabel, ui_readout_font(), 0);
+  lv_obj_set_size(angleLabel, kTargetW - 160, ui_readout_font()->line_height);
   lv_obj_set_style_text_color(angleLabel, COL_ACCENT, 0);
   lv_obj_set_pos(angleLabel, 144, 18);
+  angleText.bind(angleLabel);
 
   lv_obj_t* rpmCard = ui_create_post_card(screen, kTargetX, kRpmY, kTargetW, kTargetH);
   lv_obj_set_clickable(rpmCard, false);
@@ -458,7 +465,8 @@ void screen_step_create() {
 
   rpmLabel = lv_label_create(rpmCard);
   ui_set_rpm(rpmLabel, targetRpm);
-  lv_obj_set_style_text_font(rpmLabel, FONT_XXL, 0);
+  lv_obj_set_style_text_font(rpmLabel, ui_readout_font(), 0);
+  lv_obj_set_size(rpmLabel, 148, ui_readout_font()->line_height);
   lv_obj_set_style_text_color(rpmLabel, COL_TEXT, 0);
   lv_obj_set_pos(rpmLabel, 144, 18);
 
@@ -562,6 +570,8 @@ void screen_step_create() {
 }
 
 void screen_step_invalidate_widgets() {
+  angleArcText.reset();
+  angleText.reset();
   stepActionBtn = nullptr;
   angleLabel = nullptr;
   arcWidget = nullptr;
@@ -636,8 +646,9 @@ void screen_step_update() {
     float accum = ui_control_view().progress_degrees;
     char buf[32];
     snprintf(buf, sizeof(buf), "%.0f / %.0f deg", accum, currentAngle);
-    if (angleArcLabel) lv_label_set_text(angleArcLabel, buf);
-    if (angleLabel) lv_label_set_text(angleLabel, buf);
+    angleText.set(buf);
+    snprintf(buf, sizeof(buf), "%.0f / %.0f\nDEG", accum, currentAngle);
+    angleArcText.set(buf);
     // Update arc to show progress (round; ensure a visible sliver once motion has started)
     if (arcWidget) {
       int32_t progress = 0;
@@ -657,7 +668,7 @@ void screen_step_update() {
     if (angleLabel) {
       char buf[16];
       snprintf(buf, sizeof(buf), "%.0f deg", currentAngle);
-      lv_label_set_text(angleLabel, buf);
+      angleText.set(buf);
     }
   }
   step_refresh_dir_lbl();

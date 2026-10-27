@@ -4,6 +4,7 @@
 #include "../storage/storage.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include <cstring>
 
 lv_color_t g_accent;
 lv_color_t g_accent_dim;
@@ -243,5 +244,5 @@ void ui_set_rpm(lv_obj_t* label, float rpm) {
   if (!label) return;
   char text[16];
   ui_format_rpm(text, sizeof(text), rpm);
-  lv_label_set_text(label, text);
+  if (std::strcmp(lv_label_get_text(label), text) != 0) lv_label_set_text(label, text);
 }

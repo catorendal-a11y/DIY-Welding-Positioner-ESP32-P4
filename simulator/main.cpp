@@ -16,6 +16,7 @@
 #include "../src/ui/theme.h"
 #include "../src/ui/value_format.h"
 #include "../src/ui/value_binding.h"
+#include "../src/ui/tabular_font.h"
 #include "../src/ui/text_metrics.h"
 #include "../src/ui/input_panel.h"
 #include "../src/ui/screen_saver.h"
@@ -556,6 +557,40 @@ static bool sim_test_status_bindings() {
   lv_label_set_text(numeric, "0.075"); ui_trim_text_leading(numeric);
   if (!sim_expect(lv_obj_get_style_text_leading_trim(numeric, LV_PART_MAIN) == LV_TEXT_LEADING_TRIM_NONE,
                   "legacy numeric font without cap height was trimmed")) return false;
+  for (const auto* source : {&rotator_digits_104, &lv_font_montserrat_28}) {
+    UiTabularFont tabular(source);
+    uint16_t advance = 0;
+    for (uint32_t digit = '0'; digit <= '9'; ++digit) {
+      for (uint32_t next : {0u, (uint32_t)'1', (uint32_t)'8', (uint32_t)'.'}) {
+        lv_font_glyph_dsc_t glyph{};
+        if (!sim_expect(lv_font_get_glyph_dsc(tabular.get(), &glyph, digit, next),
+                        "tabular font lost a digit")) return false;
+        if (!advance) advance = glyph.adv_w;
+        if (!sim_expect(glyph.adv_w == advance, "digit width depends on value or kerning")) return false;
+        if (!sim_expect(glyph.ofs_x >= 0 && glyph.ofs_x + glyph.box_w <= advance,
+                        "tabular digit extends outside its cell")) return false;
+      }
+    }
+    lv_obj_set_style_text_font(numeric, tabular.get(), 0);
+    lv_obj_set_size(numeric, 340, tabular.get()->line_height);
+    for (const auto* value : {"0.001", "1.111", "2.888", "3.000", "9.9", "10.0"}) {
+      lv_label_set_text(numeric, value); lv_obj_update_layout(scratch);
+      if (!sim_expect(lv_obj_get_width(numeric) == 340 &&
+                      lv_obj_get_height(numeric) == tabular.get()->line_height,
+                      "numeric readout changed its fixed bounds")) return false;
+      if (!sim_expect(audit_labels(numeric, "tabular readout") == 0,
+                      "tabular readout clips a supported RPM")) return false;
+    }
+    // Do not leave a widget pointing at this scoped font.
+    lv_obj_set_style_text_font(numeric, &rotator_digits_104, 0);
+  }
+  lv_obj_set_style_text_font(numeric, ui_readout_font(), 0);
+  lv_obj_set_size(numeric, 220, 2 * ui_readout_font()->line_height + 4);
+  for (const auto* value : {"0\nDEG", "360 / 360\nDEG", "3600 / 3600\nDEG"}) {
+    lv_label_set_text(numeric, value); lv_obj_update_layout(scratch);
+    if (!sim_expect(audit_labels(numeric, "fixed angle readout") == 0,
+                    "fixed angle readout clips step progress")) return false;
+  }
   lv_obj_delete(scratch);
   integer.set(99); text.set("deleted"); disabled.set(true);
   integer.reset(); text.reset(); disabled.reset();

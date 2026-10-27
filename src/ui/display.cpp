@@ -422,6 +422,6 @@ void display_register_lvgl_vsync(void *user_ctx) {
 
 // ───────────────────────────────────────────────────────────────────────────────
 // ASYNC CALLBACK NOT NEEDED
-// We use direct framebuffer writes (see lvgl_hal.cpp), which bypass the
-// async DMA2D pipeline that causes "previous draw operation" errors.
+// PPA rotates SRAM strips in blocking mode. draw_bitmap then copies them
+// synchronously (use_dma2d = false), so flush_ready permits immediate reuse.
 // ───────────────────────────────────────────────────────────────────────────────

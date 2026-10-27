@@ -3,6 +3,7 @@
 #include "../theme.h"
 #include "../value_format.h"
 #include "../value_binding.h"
+#include "../tabular_font.h"
 #include "../../config.h"
 #include "../../motor/speed.h"
 #include "../../motor/motor.h"
@@ -67,7 +68,9 @@ void screen_main_create() {
   lv_obj_set_style_bg_color(hero, lv_color_hex(0xFF6B38), 0);
   lv_obj_set_style_border_width(hero, 0, 0);
   speedCaption = ui_create_text(hero, 22, 18, 410, "01 / TARGET SPEED", FONT_NORMAL, ink());
-  rpmLabel = ui_create_text(hero, 18, 62, 340, "0.50", &rotator_digits_104, ink());
+  static UiTabularFont rpmFont(&rotator_digits_104);
+  rpmLabel = ui_create_text(hero, 18, 62, 340, "0.50", rpmFont.get(), ink());
+  lv_obj_set_height(rpmLabel, rpmFont.get()->line_height);
   lv_obj_set_style_transform_pivot_x(rpmLabel, 0, 0);
   lv_obj_set_style_transform_pivot_y(rpmLabel, 0, 0);
 

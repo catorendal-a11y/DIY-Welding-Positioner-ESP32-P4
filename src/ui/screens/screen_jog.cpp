@@ -4,6 +4,7 @@
 #include "../screens.h"
 #include "../theme.h"
 #include "../value_format.h"
+#include "../tabular_font.h"
 #include "../../control/control.h"
 #include "../../motor/speed.h"
 #include "../../config.h"
@@ -125,7 +126,8 @@ void screen_jog_create() {
   ui_create_header(screen, "Jog", "IDLE", &jogHdrRight);
   lv_obj_t* card = ui_create_post_card(screen, 24, 94, 304, 82);
   ui_create_text(card, 16, 10, 272, "JOG SPEED", FONT_NORMAL, COL_TEXT_DIM);
-  rpmLabel = ui_create_text(card, 16, 36, 180, "", FONT_XXL, COL_TEXT);
+  rpmLabel = ui_create_text(card, 16, 36, 180, "", ui_readout_font(), COL_TEXT);
+  lv_obj_set_height(rpmLabel, ui_readout_font()->line_height);
   ui_create_text(card, 218, 44, 70, "RPM", FONT_SUBTITLE, COL_TEXT_DIM);
   rpmBar = nullptr;
   ui_create_btn(screen, 344, 94, 88, 82, "-", FONT_XL, UI_BTN_NORMAL, rpm_adj_cb, (void*)(intptr_t)-1);

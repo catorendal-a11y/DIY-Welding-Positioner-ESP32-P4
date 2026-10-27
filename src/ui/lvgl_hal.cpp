@@ -1,9 +1,10 @@
 // TIG Rotator Controller - LVGL Hardware Abstraction Layer Implementation
-// LVGL 9.x with PSRAM buffers, MIPI-DSI DPI panel flush
+// LVGL 9.x with internal SRAM strips, PPA rotation, MIPI-DSI DPI panel flush
 // Color format: RGB565 (matching ST7701S and JC4880P433C BSP)
-// Manual 90° CW rotation in flush callback (LVGL rotation crashes on ESP32-P4)
+// 90° CCW rotation in flush callback (LVGL rotation crashes on ESP32-P4)
 
 #include "lvgl_hal.h"
+#include "rgb565_rotation.h"
 #include <Arduino.h>
 #include <atomic>
 #include "../config.h"
@@ -19,6 +20,7 @@
 #include <esp_heap_caps.h>
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_touch.h"
+#include "driver/ppa.h"
 
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -29,42 +31,39 @@ static esp_timer_handle_t lvgl_tick_timer;
 static void IRAM_ATTR lvgl_tick_cb(void* arg) { lv_tick_inc(1); }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// LVGL BUFFERS - PSRAM (full frame, double buffered)
-// LVGL renders at 800x480 landscape, flush callback rotates to 480x800 portrait
+// LVGL BUFFERS - internal SRAM, 1/10 frame draw and rotation strips
+// The blocking flush does not benefit from a second LVGL draw buffer.
 // ───────────────────────────────────────────────────────────────────────────────
 static uint8_t* buf1 = nullptr;
-static uint8_t* buf2 = nullptr;
 static size_t buf_bytes = 0;
 
-// Pre-allocated rotation scratch buffer (PSRAM)
-// Full frame: 800 × 480 = 384000 pixels × 2 bytes = 768000 bytes
+// The panel driver retains its PSRAM scanout framebuffers.
 static uint16_t* rot_buf = nullptr;
 static size_t rot_buf_pixels = 0;
+static ppa_client_handle_t rotation_client = nullptr;
 
 void lvgl_alloc_buffers() {
-  buf_bytes = DISPLAY_H_RES * DISPLAY_V_RES * 2;   // 800 × 480 × 2 = 768000
-  rot_buf_pixels = DISPLAY_H_RES * DISPLAY_V_RES;  // 384000 pixels
+  buf_bytes = DISPLAY_H_RES * LVGL_BUF_LINES * sizeof(uint16_t);
+  rot_buf_pixels = DISPLAY_H_RES * LVGL_BUF_LINES;
 
-  buf1 = (uint8_t*)heap_caps_aligned_calloc(64, 1, buf_bytes, MALLOC_CAP_SPIRAM);
-  buf2 = (uint8_t*)heap_caps_aligned_calloc(64, 1, buf_bytes, MALLOC_CAP_SPIRAM);
-  rot_buf = (uint16_t*)heap_caps_aligned_calloc(64, 1, rot_buf_pixels * 2, MALLOC_CAP_SPIRAM);
+  const uint32_t caps = MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA | MALLOC_CAP_8BIT;
+  buf1 = (uint8_t*)heap_caps_aligned_calloc(64, 1, buf_bytes, caps);
+  rot_buf = (uint16_t*)heap_caps_aligned_calloc(64, 1, buf_bytes, caps);
 
-  if (!buf1 || !buf2 || !rot_buf) {
+  if (!buf1 || !rot_buf) {
     LOG_E("FATAL: LVGL buffer alloc failed!");
     if (buf1) heap_caps_free(buf1);
-    if (buf2) heap_caps_free(buf2);
     if (rot_buf) heap_caps_free(rot_buf);
     buf1 = nullptr;
-    buf2 = nullptr;
     rot_buf = nullptr;
     return;
   }
-  LOG_I("LVGL buffers OK: 2x%u bytes draw + %u bytes rotation (PSRAM)", (unsigned)buf_bytes,
-        (unsigned)(rot_buf_pixels * 2));
+  LOG_I("LVGL buffers OK: %u bytes draw + %u bytes rotation (internal SRAM)",
+        (unsigned)buf_bytes, (unsigned)buf_bytes);
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// DISPLAY FLUSH CALLBACK — Manual 90° CW rotation from 800x480 to 480x800
+// DISPLAY FLUSH CALLBACK — 90° CCW rotation from 800x480 to 480x800
 //
 // LVGL renders at 800x480 (landscape). The physical panel is 480x800 (portrait).
 // Rotation mapping: landscape (x, y) → portrait (y, 799-x)
@@ -88,14 +87,15 @@ void lvgl_flush_cb(lv_display_t* disp, const lv_area_t* area, uint8_t* px_map) {
   int x1 = area->x1, y1 = area->y1;
   int x2 = area->x2, y2 = area->y2;
 
-  // Clamp to logical resolution
-  if (x1 < 0) x1 = 0;
-  if (y1 < 0) y1 = 0;
-  if (x2 >= DISPLAY_H_RES) x2 = DISPLAY_H_RES - 1;
-  if (y2 >= DISPLAY_V_RES) y2 = DISPLAY_V_RES - 1;
+  // Clamping would change the source stride and corrupt the rotated strip.
+  if (x1 < 0 || y1 < 0 || x2 >= DISPLAY_H_RES || y2 >= DISPLAY_V_RES) {
+    LOG_E("LVGL flush outside logical resolution");
+    lv_display_flush_ready(disp);
+    return;
+  }
 
   int W = x2 - x1 + 1;  // LVGL strip width (up to 800)
-  int H = y2 - y1 + 1;  // LVGL strip height (up to 80)
+  int H = y2 - y1 + 1;
 
   if (W <= 0 || H <= 0) {
     lv_display_flush_ready(disp);
@@ -115,26 +115,41 @@ void lvgl_flush_cb(lv_display_t* disp, const lv_area_t* area, uint8_t* px_map) {
   usb_mirror_enqueue_rect(area, px_map);
 #endif
 
-  // 90° CW rotation: landscape (x, y) → portrait (y, 799-x)
-  for (int r = 0; r < H; r++) {
-    for (int c = 0; c < W; c++) {
-      int lx = x1 + c;  // landscape x
-      // Destination in portrait buffer:
-      //   portrait_x = ly, portrait_y = 799 - lx
-      //   In rotated strip buffer (row-major, portrait area):
-      //     row = portrait_y - (799-x2) = x2 - lx
-      //     col = portrait_x - y1 = ly - y1 = r
-      rot_buf[(x2 - lx) * H + r] = src[r * W + c];
+  bool rotated = false;
+  if (rotation_client) {
+    ppa_srm_oper_config_t operation{};
+    operation.in.buffer = src;
+    operation.in.pic_w = operation.in.block_w = W;
+    operation.in.pic_h = operation.in.block_h = H;
+    operation.in.srm_cm = PPA_SRM_COLOR_MODE_RGB565;
+    operation.out.buffer = rot_buf;
+    operation.out.buffer_size = buf_bytes;
+    operation.out.pic_w = H;
+    operation.out.pic_h = W;
+    operation.out.srm_cm = PPA_SRM_COLOR_MODE_RGB565;
+    operation.rotation_angle = PPA_SRM_ROTATION_ANGLE_90;
+    operation.scale_x = operation.scale_y = 1.0f;
+    // Wait before the CPU panel copy reads the PPA destination.
+    operation.mode = PPA_TRANS_MODE_BLOCKING;
+    const esp_err_t result = ppa_do_scale_rotate_mirror(rotation_client, &operation);
+    rotated = result == ESP_OK;
+    if (!rotated) {
+      LOG_W("PPA rotation failed (%s); using CPU rotation", esp_err_to_name(result));
+      ppa_unregister_client(rotation_client);
+      rotation_client = nullptr;
     }
   }
+  if (!rotated) rotate_rgb565_to_portrait(src, rot_buf, W, H);
 
   // Portrait rectangle coordinates
   int px1 = y1;        // portrait x start
-  int py1 = 799 - x2;  // portrait y start
+  int py1 = DISPLAY_H_RES - 1 - x2;  // portrait y start
   int px2 = y2;        // portrait x end
-  int py2 = 799 - x1;  // portrait y end
+  int py2 = DISPLAY_H_RES - 1 - x1;  // portrait y end
 
-  esp_lcd_panel_draw_bitmap(display_panel, px1, py1, px2 + 1, py2 + 1, rot_buf);
+  // use_dma2d stays disabled: draw_bitmap copies synchronously before reuse.
+  const esp_err_t result = esp_lcd_panel_draw_bitmap(display_panel, px1, py1, px2 + 1, py2 + 1, rot_buf);
+  if (result != ESP_OK) LOG_E("Panel flush failed: %s", esp_err_to_name(result));
   lv_display_flush_ready(disp);
 }
 
@@ -200,13 +215,20 @@ void lvgl_hal_init() {
   lv_init();
 
   // ─────────────────────────────────────────────────────────────────────────
-  // ALLOCATE PSRAM BUFFERS
+  // ALLOCATE INTERNAL SRAM STRIPS
   // ─────────────────────────────────────────────────────────────────────────
   lvgl_alloc_buffers();
 
-  if (buf1 == nullptr || buf2 == nullptr || rot_buf == nullptr) {
+  if (buf1 == nullptr || rot_buf == nullptr) {
     LOG_E("LVGL buffer allocation failed - cannot continue");
     fatal_halt("lvgl buffer allocation failed");
+  }
+
+  ppa_client_config_t rotation_config{};
+  rotation_config.oper_type = PPA_OPERATION_SRM;
+  const esp_err_t rotation_result = ppa_register_client(&rotation_config, &rotation_client);
+  if (rotation_result != ESP_OK) {
+    LOG_W("PPA unavailable (%s); using CPU rotation", esp_err_to_name(rotation_result));
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -216,20 +238,14 @@ void lvgl_hal_init() {
   // ─────────────────────────────────────────────────────────────────────────
   lv_display_t* disp = lv_display_create(DISPLAY_H_RES, DISPLAY_V_RES);
   lv_display_set_color_format(disp, LV_COLOR_FORMAT_RGB565);
-  lv_display_set_buffers(disp, buf1, buf2, buf_bytes, LV_DISPLAY_RENDER_MODE_PARTIAL);
+  lv_display_set_buffers(disp, buf1, nullptr, buf_bytes, LV_DISPLAY_RENDER_MODE_PARTIAL);
   lv_display_set_flush_cb(disp, lvgl_flush_cb);
-  // NO lv_display_set_rotation() — causes Load access fault on ESP32-P4.
-  // lv_display_set_rotation() triggers LVGL's internal buffer rearrangement
-  // which conflicts with the ESP32-P4 MIPI-DSI DMA pipeline. The DPI panel
-  // expects pixels in physical portrait order (480×800), but LVGL's software
-  // rotation reorders the draw buffers in a way that causes the DMA controller
-  // to read from unmapped memory. Manual pixel rotation in lvgl_flush_cb is
-  // the only safe approach — it keeps LVGL rendering in native landscape
-  // (800×480) and rotates only during the memcpy to the physical framebuffer.
+  // Keep LVGL in landscape; rotate each strip before the portrait panel copy.
+  // lv_display_set_rotation() previously caused access faults on this board.
 
   display_register_lvgl_vsync(disp);
 
-  LOG_I("LVGL display driver registered: %dx%d landscape, manual rotation to %dx%d physical, RGB565",
+  LOG_I("LVGL display driver registered: %dx%d landscape, strip rotation to %dx%d physical, RGB565",
         DISPLAY_H_RES, DISPLAY_V_RES, DISPLAY_H_RES_NATIVE, DISPLAY_V_RES_NATIVE);
 
   // ─────────────────────────────────────────────────────────────────────────

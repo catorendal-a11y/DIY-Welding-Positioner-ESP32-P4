@@ -5,6 +5,7 @@
 #include "../screens.h"
 #include "../theme.h"
 #include "../value_format.h"
+#include "../tabular_font.h"
 #include <cstring>
 #include "../../control/control.h"
 #include "../../motor/speed.h"
@@ -230,10 +231,10 @@ void screen_timer_create() {
   lv_obj_t* rpmCard = timer_make_info_card(screen, 194, "TARGET RPM", false);
   rpmValLbl = lv_label_create(rpmCard);
   update_rpm_label_if_changed();
-  lv_obj_set_style_text_font(rpmValLbl, FONT_XXL, 0);
+  lv_obj_set_style_text_font(rpmValLbl, ui_readout_font(), 0);
   lv_obj_set_style_text_color(rpmValLbl, COL_TEXT, 0);
   lv_obj_set_style_text_align(rpmValLbl, LV_TEXT_ALIGN_RIGHT, 0);
-  lv_obj_set_width(rpmValLbl, 180);
+  lv_obj_set_size(rpmValLbl, 180, ui_readout_font()->line_height);
   lv_obj_align(rpmValLbl, LV_ALIGN_RIGHT_MID, -16, 4);
 
   lv_obj_t* warnCard = timer_make_info_card(screen, 294, "SAFETY HOLD", true);

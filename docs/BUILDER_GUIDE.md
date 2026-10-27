@@ -458,7 +458,7 @@ Remote control is fail-closed: it starts disabled after boot, requires **Setting
 | **Control Resolution** | Sub-milli-RPM (speed is computed in milli-Hz and applied via `setSpeedInMilliHz()` + `applySpeedAcceleration()`) |
 | **Display** | 800 x 480, landscape, LVGL 9.6.0, RGB565, 2-lane MIPI-DSI |
 | **Flash partition** | 16 MB total; two 0x640000-byte app slots, 0x360000-byte SPIFFS area, NVS/OTA metadata and coredump. See [flashing guide](../docs/releases/FLASHING.md). |
-| **RAM Usage** | ~10% &ensp; (about 32 KB / 320 KB internal SRAM in release build) — LVGL buffers live in PSRAM (`CONFIG_SPIRAM_FETCH_INSTRUCTIONS`) |
+| **RAM Usage** | About 36 KB static RAM in the release build, plus 150 KiB of runtime SRAM for LVGL draw/rotation strips. Task stacks and other heap allocations are additional; MIPI-DSI scanout framebuffers remain in PSRAM. See [rendering details](LVGL_9_6_UI_IMPROVEMENTS.md#partial-sram-rendering-october-2026). |
 
 ---
 

@@ -7,9 +7,12 @@
 
 #include <unity.h>
 #include "../../src/ui/value_format.h"
+#include "../../src/ui/rgb565_rotation.h"
 #include "../../src/control/motion_policy.h"
 #include <cstring>
 #include <cstdint>
+#include <vector>
+#include <utility>
 
 #include "../../src/storage/test_storage_logic.h"
 #include "../../src/ui/test_hal_logic.h"
@@ -17,6 +20,24 @@
 
 void setUp(void) {}
 void tearDown(void) {}
+
+void test_production_rotation_sram_strips() {
+  for (const auto size : {std::pair<int, int>{1, 1}, {1, 48}, {800, 1},
+                          {3, 5}, {17, 19}, {800, 48}, {48, 800}}) {
+    const int width = size.first, height = size.second;
+    std::vector<uint16_t> source(width * height), destination(width * height + 2, 0xDEAD);
+    for (int i = 0; i < width * height; ++i) source[i] = (uint16_t)(i * 13 + 7);
+    rotate_rgb565_to_portrait(source.data(), destination.data() + 1, width, height);
+    TEST_ASSERT_EQUAL_HEX16(0xDEAD, destination.front());
+    TEST_ASSERT_EQUAL_HEX16(0xDEAD, destination.back());
+    for (int y = 0; y < width; ++y) {
+      for (int x = 0; x < height; ++x) {
+        TEST_ASSERT_EQUAL_HEX16(source[x * width + (width - 1 - y)],
+                                destination[1 + y * height + x]);
+      }
+    }
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 1: SANITIZE ASCII
@@ -645,6 +666,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_touch_roundtrip);
 
   // Section 6: Flush rotation (5 tests)
+  RUN_TEST(test_production_rotation_sram_strips);
   RUN_TEST(test_flush_rotate_index_origin);
   RUN_TEST(test_flush_rotate_index_corner);
   RUN_TEST(test_flush_rotate_portrait_rect_full);

@@ -46,8 +46,20 @@ Windows simulator self-test and the program-editor preview flow pass. The 800 x 
 
 ## Performance and scope
 
-The software-renderer improvements already follow from LVGL 9.6. This work does not claim an FPS increase on the GUITION JC4880P443C board. Firmware still uses the existing manually rotated RGB565 flush path; hardware timing and rendering performance require measurement on the board.
+The original software-renderer improvements follow from LVGL 9.6 and do not establish an FPS increase on the GUITION board. The later partial-SRAM changes below also require hardware timing measurements before claiming a performance result.
 
 Image-downscale helpers are reserved for a future illustrated setup flow; no new wiring illustration is added here. No display-sync or motor-control architecture change is introduced.
+
+## Partial SRAM rendering (October 2026)
+
+The flush path now uses one 800 x 48 RGB565 draw buffer and an equally sized rotation buffer in internal DMA-capable SRAM, both aligned to 64 bytes. Each buffer is 76,800 bytes (150 KiB combined). These replace two 768,000-byte draw buffers and a 768,000-byte rotation buffer in PSRAM. The MIPI-DSI driver's two PSRAM scanout framebuffers remain unchanged.
+
+PPA SRM rotates each dirty rectangle by 90 degrees counterclockwise, preserving the existing landscape-to-portrait mapping `(x, y) -> (y, 799 - x)`. Earlier comments incorrectly called this clockwise. PPA runs in blocking mode; the panel's existing `use_dma2d = false` path then copies synchronously before `lv_display_flush_ready()` allows buffer reuse. A second LVGL draw buffer would not overlap work in this pipeline. If PPA registration or a transaction fails, rotation uses the CPU implementation instead. Out-of-screen flush rectangles are rejected rather than clamped with an incorrect source stride. USB mirroring continues to receive landscape dirty rectangles before rotation.
+
+Main, Jog, Step and Timer RPM fields use fixed dimensions and tabular digit advances. The fonts reuse the existing Montserrat bitmaps, including the main screen's 104 px subset. Step angle fields also have fixed dimensions; the arc shows progress and `DEG` on two lines. Their existing-style text bindings suppress unchanged updates, and the shared RPM setter skips identical strings. Motion commands, update cadence, E-STOP and fault overlays are unchanged.
+
+Validation covers production CPU rotation for one-pixel, odd-sized, full-width and maximum-capacity strips, font metrics/kerning and RPM digit-count changes in actual LVGL, plus the simulator's screen/layout checks. Hardware PPA orientation, free internal heap under load, rendering latency, tearing and behavior during HF TIG welding still require measurements on the board. No sub-3-ms flush or 30–50 Hz performance result is claimed. No 3D orientation indicator or sprite asset was added; the setup wizard currently has no such feature.
+
+API reference: [Espressif PPA guide](https://docs.espressif.com/projects/esp-idf/en/stable/esp32p4/api-reference/peripherals/ppa.html).
 
 Reference: [official LVGL 9.6 changelog](https://lvgl.io/docs/open/changelog/CHANGELOG).

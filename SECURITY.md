@@ -4,8 +4,8 @@
 
 | Version | Supported |
 | ------- | --------- |
-| 2.3.x   | Current. Not yet tested on the assembled machine; run the checks in the release notes |
-| 2.2.x   | Upgrade recommended for supervision and audit fixes. 2.2.1 is the last hardware-verified build |
+| 2.3.x   | Current. Owner-tested on the assembled machine; run the release-note checks on your own build |
+| 2.2.x   | Upgrade recommended for supervision and audit fixes |
 | 2.1.x   | Upgrade recommended |
 | 2.0.x   | Upgrade recommended for STOP, pedal, JOG and persistence fixes |
 | 1.x.x   | No |

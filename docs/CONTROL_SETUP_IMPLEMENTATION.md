@@ -1,6 +1,6 @@
 # Control ownership and guided setup
 
-Introduced in v2.1.1 and current through v2.3.0, which has not been tested on the assembled machine. The design keeps the V5 UI and the physical E-STOP input.
+Introduced in v2.1.1 and current through v2.3.0, which the owner reported tested on the assembled machine on 2026-11-04. The design keeps the V5 UI and the physical E-STOP input.
 
 ## Control and safety boundaries
 

@@ -3,7 +3,7 @@
 **Last Updated:** 2026-11-04
 **Published firmware:** v2.3.0
 **Source:** master - safety supervision and audit fixes (released as v2.3.0)
-**Build:** 511 native/control/speed/storage/safety test cases, packaging regressions, Linux/Windows simulator self-tests/layout audits and release/debug/mirror builds. **v2.3.0 has not been tested on the assembled machine.** The last hardware-verified build is v2.2.1 (2026-10-05, owner's ESP32-P4), where the foot pedal was tested and working. Quantitative measurements have not been reported.
+**Build:** 511 native/control/speed/storage/safety test cases, packaging regressions, Linux/Windows simulator self-tests/layout audits and release/debug/mirror builds. **The owner reported v2.3.0 tested on the assembled machine on 2026-11-04.** Quantitative measurements have not been reported.
 
 ---
 
@@ -109,7 +109,6 @@ v2.2.0 includes the [idle screen saver](docs/SCREEN_SAVER.md) and [LVGL UI refin
 
 ## In Progress
 
-- [ ] **Test v2.3.0 on the assembled machine** ([checks](docs/releases/v2.3.0.md#validation-and-hardware-status))
 - [ ] **Higher-RPM DM542T tuning** (DM542T driver mode and ALM input exist; wider tested RPM range is still field work)
 
 ## Planned

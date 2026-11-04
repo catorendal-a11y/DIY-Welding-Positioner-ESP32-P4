@@ -34,7 +34,7 @@ Read this before powering the motor.
 - **E-STOP polarity:** GPIO34 expects **HIGH when healthy, LOW on fault**. A bare NC contact to ground gives the opposite polarity. **ENA HIGH disables** the driver.
 - **ESP32 GPIO is 3.3 V logic.** Never connect 5 V or motor-supply voltage to it.
 - **HF-start TIG:** put the controller, driver and motor PSU in the same grounded metal enclosure. See [TIG HF](#tig-hf).
-- **v2.3.0 has not been tested on the assembled machine.** The last hardware-verified build is v2.2.1. [Checks to run after flashing](docs/releases/v2.3.0.md#validation-and-hardware-status)
+- **Tested by the owner, not measured.** The owner reported v2.3.0 tested on the assembled machine on 2026-11-04. [Checks to run on your own build](docs/releases/v2.3.0.md#validation-and-hardware-status)
 
 ## What it does
 
@@ -87,7 +87,7 @@ Dashed blocks specify interface requirements, not verified installed circuitry. 
 - Use shielded external cables, and add ferrites if interference remains.
 - Repeat the HF-start checks after changing firmware, wiring or the enclosure.
 
-Earlier TIG testing worked with the shared grounded enclosure. That does not qualify v2.3.0 or measure its stop response. [EMI guide](docs/EMI_MITIGATION.md)
+TIG testing has worked with the shared grounded enclosure. No HF performance or stop response has been measured. [EMI guide](docs/EMI_MITIGATION.md)
 
 ## Install firmware
 
@@ -115,7 +115,7 @@ The wizard does not measure stop time or certify wiring. [Every wizard screen](d
 
 ## Validation
 
-Every commit runs **511 native tests**, packaging tests, Linux and Windows simulator self-tests, a layout audit and three firmware builds. Release binaries come from the validated master commit. The owner verified the assembled controller and foot pedal on v2.2.1. No stop time or HF performance has been measured. [v2.3.0 status](docs/releases/v2.3.0.md#validation-and-hardware-status) · [Changelog](CHANGELOG.md)
+Every commit runs **511 native tests**, packaging tests, Linux and Windows simulator self-tests, a layout audit and three firmware builds. Release binaries come from the validated master commit. The owner reported v2.3.0 tested on the assembled machine on 2026-11-04. No stop time or HF performance has been measured. [v2.3.0 status](docs/releases/v2.3.0.md#validation-and-hardware-status) · [Changelog](CHANGELOG.md)
 
 ## Documentation and contributions
 

@@ -50,7 +50,7 @@ static void update_slider_from_settings() {
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   br = g_settings.brightness;
   xSemaphoreGive(g_settings_mutex);
-  int brightPct = (int)((uint32_t)br * 100 / 255);
+  int brightPct = (int)(((uint32_t)br * 100 + 127) / 255);
   if (brightPct < 20) brightPct = 20;
   lv_slider_set_value(brightnessSlider, brightPct, LV_ANIM_OFF);
   char buf[16];
@@ -64,7 +64,10 @@ static void display_changed() {
   if (displaySaveButton) lv_label_set_text(lv_obj_get_child(displaySaveButton,0),"SAVE");
 }
 
-static void back_cb(lv_event_t* e) { screens_show(SCREEN_SETTINGS); }
+static void back_cb(lv_event_t* e) {
+  dimDraftLoaded = false;
+  screens_show(SCREEN_SETTINGS);
+}
 
 static void brightness_slider_cb(lv_event_t* e) {
   if (ignoreSliderCb) return;

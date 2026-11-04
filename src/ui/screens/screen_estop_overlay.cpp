@@ -85,8 +85,8 @@ void estop_overlay_update() {
   const bool physical = safety_is_estop_active(), driver = safety_is_driver_alarm_latched();
   lv_label_set_text(inputLabel, physical ? "ACTIVE" : "RELEASED");
   lv_label_set_text(driverLabel, driver ? "ACTIVE" : "CLEAR");
-  lv_obj_set_style_text_color(inputLabel, physical ? lv_color_hex(0xFFACAF) : COL_GREEN, 0);
-  lv_obj_set_style_text_color(driverLabel, driver ? lv_color_hex(0xFFACAF) : COL_GREEN, 0);
+  lv_obj_set_style_text_color(inputLabel, physical ? lv_color_hex(0xFFACAF) : lv_color_hex(0xB9F278), 0);
+  lv_obj_set_style_text_color(driverLabel, driver ? lv_color_hex(0xFFACAF) : lv_color_hex(0xB9F278), 0);
   const bool ready = safety_can_reset_from_overlay();
   lv_label_set_text(instruction, ready ? "Check the machine. Reset returns to idle; a new START is required."
                                  : reason == FAULT_PEDAL_INPUT

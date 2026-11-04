@@ -72,6 +72,8 @@ extern lv_color_t g_col_hdr_muted;
 #define COL_BORDER_WARN g_col_border_warn
 #define COL_WARN g_col_warn
 #define COL_YELLOW g_col_yellow
+extern lv_color_t g_col_green;
+extern lv_color_t g_col_red;
 #define COL_TEXT g_col_text
 #define COL_TEXT_BRIGHT g_col_text_bright
 #define COL_TEXT_WHITE g_col_text_white
@@ -105,8 +107,8 @@ extern lv_color_t g_accent_border;
 #define COL_BG_ACTIVE g_accent_dim
 #define COL_BORDER_ACT g_accent_border
 #define COL_AMBER g_accent
-#define COL_GREEN lv_color_hex(0xB9F278)
-#define COL_RED lv_color_hex(0xFF7272)
+#define COL_GREEN g_col_green
+#define COL_RED g_col_red
 
 void theme_init();
 void theme_set_color(uint8_t idx);

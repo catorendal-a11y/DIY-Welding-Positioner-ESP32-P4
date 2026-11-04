@@ -29,7 +29,7 @@ static lv_obj_t *accelButton = nullptr, *maxRpmButton = nullptr;
 static lv_obj_t *invertToggle = nullptr, *dirToggle = nullptr, *saveButton = nullptr;
 static UiInputPanel entry;
 static UiTextBinding<24> accelValue, maxRpmValue, invertValue, dirValue, rollerValue, gearValue;
-static UiTextBinding<48> accelTitle;
+static UiTextBinding<48> stopAngleValue;
 static UiTextBinding<48> motorStatus;
 static UiTextBinding<96> saveFeedback;
 
@@ -42,9 +42,8 @@ static void sync_stop_angle() {
   const float rpm = motorMaxRpmMilliUi / 1000.0f;
   const float hzAt16 = rpmToStepHz(rpm) * 16.0f / (microstep_get_steps_per_rev() / 200.0f);
   char text[48];
-  snprintf(text, sizeof(text), "ACCEL AT 1/16 / STOP %.0f DEG AT MAX",
-           (double)motion_stop_angle_deg(rpm, hzAt16, motorAccelUi));
-  accelTitle.set(text);
+  snprintf(text, sizeof(text), "STOP %.0f DEG AT MAX", (double)motion_stop_angle_deg(rpm, hzAt16, motorAccelUi));
+  stopAngleValue.set(text);
 }
 static void sync_mechanics() {
   char text[24];
@@ -167,7 +166,7 @@ static void save_cb(lv_event_t*) {
 static void reset_bindings() {
   accelValue.reset(); maxRpmValue.reset(); invertValue.reset(); dirValue.reset();
   motorStatus.reset(); saveFeedback.reset();
-  rollerValue.reset(); gearValue.reset(); accelTitle.reset();
+  rollerValue.reset(); gearValue.reset(); stopAngleValue.reset();
 }
 void screen_motor_config_leave() { entry.close(); entryClosePending = false; }
 void screen_motor_config_invalidate_widgets() {
@@ -209,7 +208,10 @@ void screen_motor_config_create() {
   lv_obj_set_pos(maxRpmSlider, 20, 101); lv_obj_set_size(maxRpmSlider, 328, 12);
   ui_style_slider(maxRpmSlider); lv_obj_add_event_cb(maxRpmSlider, slider_cb, LV_EVENT_VALUE_CHANGED, nullptr);
   auto acceleration = ui_create_post_card(root, 404, 170, 376, 130);
-  accelTitle.bind(ui_create_text(acceleration, 14, 12, 348, "", FONT_SMALL, COL_TEXT_DIM));
+  ui_create_text(acceleration, 14, 12, 150, "ACCEL AT 1/16", FONT_SMALL, COL_TEXT_DIM);
+  auto stopAngle = ui_create_text(acceleration, 170, 12, 192, "", FONT_SMALL, COL_TEXT_DIM);
+  lv_obj_set_style_text_align(stopAngle, LV_TEXT_ALIGN_RIGHT, 0);
+  stopAngleValue.bind(stopAngle);
   accelButton = ui_create_btn(acceleration, 14, 34, 178, 48, "", FONT_XL, UI_BTN_NORMAL, open_input_cb, (void*)ENTRY_ACCEL);
   accelValue.bind(lv_obj_get_child(accelButton, 0));
   lv_obj_set_size(ui_create_pm_btn(acceleration, 204, 34, "-", FONT_XL, UI_BTN_NORMAL, adjust_cb, (void*)-500), 66, 48);

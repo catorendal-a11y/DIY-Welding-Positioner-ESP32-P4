@@ -109,7 +109,7 @@ static void update_info_panel() {
   // Update angle arc label (POST mockup: number + DEG on second line when idle)
   if (angleArcLabel) {
     char buf[20];
-    snprintf(buf, sizeof(buf), "%.0f\nDEG", currentAngle);
+    snprintf(buf, sizeof(buf), "%.5g\nDEG", currentAngle);
     angleArcText.set(buf);
   }
 
@@ -163,12 +163,8 @@ static void step_reset_btn_cb(lv_event_t* e) {
 
 static void preset_cb(lv_event_t* e) {
   int index = (int)(intptr_t)lv_event_get_user_data(e);
-  if (index < 4) {
-    const bool feasible = angleToSteps(currentAngle) > 0 && motor_milli_hz_for_rpm_calibrated(targetRpm) != 0;
-    lv_label_set_text(lv_obj_get_child(stepActionBtn,0), feasible ? "> STEP" : "OUT OF RANGE");
-    if (ui_control_state() == STATE_IDLE && feasible) {
-      control_reset_step_accumulator();
-    }
+  if (index < 4 && ui_control_state() == STATE_IDLE) {
+    control_reset_step_accumulator();
     currentAngle = STEP_PRESET_DEG[index];
     activePreset = index;
     update_preset_styles();
@@ -182,12 +178,8 @@ static void custom_keyboard_cb(lv_event_t* e) {
     if (customTa) {
       const char* txt = lv_textarea_get_text(customTa);
       float val = step_parse_first_float(txt);
-      if (val > 0.0f && step_angle_valid(val)) {
-        const bool feasible = angleToSteps(currentAngle) > 0 && motor_milli_hz_for_rpm_calibrated(targetRpm) != 0;
-    lv_label_set_text(lv_obj_get_child(stepActionBtn,0), feasible ? "> STEP" : "OUT OF RANGE");
-    if (ui_control_state() == STATE_IDLE && feasible) {
-          control_reset_step_accumulator();
-        }
+      if (val > 0.0f && step_angle_valid(val) && ui_control_state() == STATE_IDLE) {
+        control_reset_step_accumulator();
         currentAngle = val;
         if (currentAngle > 3600.0f) currentAngle = 3600.0f;
         activePreset = 4;
@@ -427,7 +419,7 @@ void screen_step_create() {
   angleArcLabel = lv_label_create(protractor);
   {
     char angleBuf[24];
-    snprintf(angleBuf, sizeof(angleBuf), "%.0f\nDEG", currentAngle);
+    snprintf(angleBuf, sizeof(angleBuf), "%.5g\nDEG", currentAngle);
     lv_label_set_text(angleArcLabel, angleBuf);
   }
   lv_obj_set_style_text_font(angleArcLabel, ui_readout_font(), 0);
@@ -451,7 +443,7 @@ void screen_step_create() {
   angleLabel = lv_label_create(targetCard);
   {
     char targetBuf[20];
-    snprintf(targetBuf, sizeof(targetBuf), "%.0f deg", currentAngle);
+    snprintf(targetBuf, sizeof(targetBuf), "%.5g deg", currentAngle);
     lv_label_set_text(angleLabel, targetBuf);
   }
   lv_obj_set_style_text_font(angleLabel, ui_readout_font(), 0);
@@ -651,9 +643,9 @@ void screen_step_update() {
   if (state == STATE_STEP) {
     float accum = ui_control_view().progress_degrees;
     char buf[32];
-    snprintf(buf, sizeof(buf), "%.0f / %.0f deg", accum, currentAngle);
+    snprintf(buf, sizeof(buf), "%.0f / %.5g deg", accum, currentAngle);
     angleText.set(buf);
-    snprintf(buf, sizeof(buf), "%.0f / %.0f\nDEG", accum, currentAngle);
+    snprintf(buf, sizeof(buf), "%.0f / %.5g\nDEG", accum, currentAngle);
     angleArcText.set(buf);
     // Update arc to show progress (round; ensure a visible sliver once motion has started)
     if (arcWidget) {
@@ -673,7 +665,7 @@ void screen_step_update() {
     update_info_panel();
     if (angleLabel) {
       char buf[16];
-      snprintf(buf, sizeof(buf), "%.0f deg", currentAngle);
+      snprintf(buf, sizeof(buf), "%.5g deg", currentAngle);
       angleText.set(buf);
     }
   }

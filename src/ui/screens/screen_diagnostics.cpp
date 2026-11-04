@@ -98,7 +98,7 @@ void screen_diagnostics_create() {
   gy += 32;
   pedalSwVal = add_gpio_row(gpioPanel, gy, "PEDAL SW");
 
-  lv_obj_t* rtPanel = ui_create_post_card(screen, 424, 94, 368, 224);
+  lv_obj_t* rtPanel = ui_create_post_card(screen, 408, 94, 368, 224);
   lv_obj_set_scrollable(rtPanel, false);
 
   lv_obj_t* rtTitle = lv_label_create(rtPanel);

@@ -1001,7 +1001,7 @@ static int run_motor_config_test(const char* directory) {
   if (!sim_expect(sim_label_object(speedCard, "0.078"), "hold-repeat lost precision or double-stepped on release")) return 23;
   for (unsigned i=0; i<3; ++i) lv_obj_send_event(minus, LV_EVENT_SHORT_CLICKED, nullptr);
   sim_pump(40);
-  if (!openValue("ACCELERATION / STEPS/S2") || !enter("15000.5")) return 7;
+  if (!openValue("ACCEL AT 1/16") || !enter("15000.5")) return 7;
   if (!sim_expect(sim_find_type(lv_layer_top(), &lv_textarea_class), "fractional acceleration was silently rounded")) return 8;
   capture("04_invalid_acceleration.bmp", true);
   if (!enter("15001")) return 9;

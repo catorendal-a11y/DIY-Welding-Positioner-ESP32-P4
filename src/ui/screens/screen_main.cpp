@@ -65,7 +65,7 @@ void screen_main_create() {
   lv_obj_t* h = ui_create_header(s, "Continuous rotation", "SYSTEM READY", &stateLabel);
   modeTitle = lv_obj_get_child(h, 1);
   lv_obj_t* hero = ui_create_post_card(s, 24, 96, 460, 278);
-  lv_obj_set_style_bg_color(hero, lv_color_hex(0xFF6B38), 0);
+  lv_obj_set_style_bg_color(hero, COL_ACCENT, 0);
   lv_obj_set_style_border_width(hero, 0, 0);
   speedCaption = ui_create_text(hero, 22, 18, 410, "01 / TARGET SPEED", FONT_NORMAL, ink());
   static UiTabularFont rpmFont(&rotator_digits_104);
@@ -79,14 +79,14 @@ void screen_main_create() {
   lv_obj_set_pos(speedBar, 22, 193);
   lv_obj_set_size(speedBar, 416, 6);
   lv_bar_set_range(speedBar, 0, 1000);
-  lv_obj_set_style_bg_color(speedBar, lv_color_hex(0xC64E2B), LV_PART_MAIN);
+  lv_obj_set_style_bg_color(speedBar, lv_color_darken(COL_ACCENT, LV_OPA_20), LV_PART_MAIN);
   lv_obj_set_style_bg_color(speedBar, ink(), LV_PART_INDICATOR);
   for (int i = 0; i < 43; i++) {
     lv_obj_t* tick = lv_obj_create(hero);
     lv_obj_remove_style_all(tick);
     lv_obj_set_pos(tick, 22 + i * 9, 205);
     lv_obj_set_size(tick, 2, i % 5 == 0 ? 15 : 9);
-    lv_obj_set_style_bg_color(tick, lv_color_hex(0x66301E), 0);
+    lv_obj_set_style_bg_color(tick, lv_color_darken(COL_ACCENT, LV_OPA_60), 0);
     lv_obj_set_style_bg_opa(tick, LV_OPA_COVER, 0);
   }
   minimumLabel = ui_create_text(hero, 22, 244, 140, "", FONT_NORMAL, ink());
@@ -111,6 +111,7 @@ void screen_main_create() {
   startBtn = ui_create_btn(s, 328, 408, 448, 56, "START ROTATION  " LV_SYMBOL_PLAY, FONT_LARGE, UI_BTN_NORMAL,
                            start_cb, nullptr);
   lv_obj_set_style_bg_color(startBtn, ink(), 0);
+  lv_obj_set_style_text_color(lv_obj_get_child(startBtn, 0), lv_color_hex(0xF5F5F0), 0);
   lv_obj_set_style_border_color(startBtn, COL_ACCENT, 0);
   stopBtn = ui_create_btn(s, 328, 408, 448, 56, LV_SYMBOL_STOP "  STOP ROTATION", FONT_LARGE, UI_BTN_DANGER,
                           stop_cb, nullptr);
@@ -162,7 +163,7 @@ void screen_main_update() {
     lv_obj_set_style_border_width(b, chosen ? 2 : 0, 0);
     enabled(b, !moving && !blocked && !g_dir_switch_cache.load());
     lv_obj_set_style_bg_color(b, chosen ? ink() : COL_BTN_BG, LV_STATE_DISABLED);
-    lv_obj_set_style_text_color(lv_obj_get_child(b, 0), chosen ? COL_TEXT : COL_TEXT_DIM, 0);
+    lv_obj_set_style_text_color(lv_obj_get_child(b, 0), chosen ? lv_color_hex(0xF5F5F0) : COL_TEXT_DIM, 0);
     lv_obj_set_user_data(b, chosen ? nullptr : (void*)(uintptr_t)UI_ACTION_DIRECTION);
   }
   bindings.title.set(st == STATE_PULSE      ? "Pulse rotation"

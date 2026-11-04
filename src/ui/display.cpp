@@ -32,7 +32,7 @@
 static i2c_master_bus_handle_t touch_i2c_bus = nullptr;
 static esp_lcd_panel_io_handle_t touch_io = nullptr;
 // HMI liveness for the motion-admission policy (HMI_REQUIRED_FOR_MOTION):
-// true only after GT911 initialization succeeded.
+// true after GT911 initialization until reads keep failing (display_touch_report_read).
 static std::atomic<bool> s_touchOperational{false};
 
 // ───────────────────────────────────────────────────────────────────────────────

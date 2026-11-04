@@ -30,6 +30,8 @@ lv_color_t g_col_bg_warn_panel;
 lv_color_t g_col_border_warn;
 lv_color_t g_col_warn;
 lv_color_t g_col_yellow;
+lv_color_t g_col_green;
+lv_color_t g_col_red;
 lv_color_t g_col_text;
 lv_color_t g_col_text_bright;
 lv_color_t g_col_text_white;
@@ -56,6 +58,7 @@ typedef struct {
   uint32_t accent;
   uint32_t dim_dark;
   uint32_t dim_light;
+  uint32_t accent_light;
   const char* name;
 } ThemeEntry;
 
@@ -116,16 +119,16 @@ static const NeutralPack NEUT_DARK = {
 static const NeutralPack NEUT_LIGHT = {
     0xF9F7F2, 0x1A1A1A, 0xF7F5F0, 0xF4F1EA, 0xEEEAE4, 0xEEEAE4, 0xD9D5CD, 0xF5F3EE, 0xFFEBEE,
     0xEFEBE4, 0xD8D4CC, 0xFBFAF8, 0xE8E4DD, 0xBDB9B3, 0xE8F5E9, 0x00C853, 0xFFF8E1, 0xFF9800,
-    0xE65100, 0xF57F17, 0x37474F, 0x263238, 0x212121, 0x607D8B, 0x90A4AE, 0x455A64, 0xC4C0B8,
+    0xE65100, 0xB45309, 0x37474F, 0x263238, 0x212121, 0x607D8B, 0x607D8B, 0x455A64, 0xC4C0B8,
     0xB0ACA5, 0xD8D4CC, 0xFF1744, 0x78909E, 0xB0BEC5, 0xE3DFDB, 0xCFD8DC, 0xB0BEC5, 0x90A4AE,
     0x78909C, 0x455A64, 0xE8E4DD, 0xF3F1EC, 0xCFD8DC,
 };
 
 static const ThemeEntry theme_palette[] = {
-    {0xFF6B38, 0x3B2821, 0xFFF0E0, "ORANGE"}, {0x00BCD4, 0x001A1E, 0xE0F7FA, "CYAN"},
-    {0x00E676, 0x001A0E, 0xE8F5E9, "GREEN"},  {0x448AFF, 0x0A1230, 0xE3F2FD, "BLUE"},
-    {0xFF5252, 0x1A0A0A, 0xFFEBEE, "RED"},    {0xBB86FC, 0x140E1A, 0xF3E5F5, "PURPLE"},
-    {0xFFD600, 0x1A1A00, 0xFFFDE7, "YELLOW"}, {0xE0E0E0, 0x141414, 0xF5F5F5, "WHITE"},
+    {0xFF6B38, 0x3B2821, 0xFFF0E0, 0xD9480F, "ORANGE"}, {0x00BCD4, 0x001A1E, 0xE0F7FA, 0x00838F, "CYAN"},
+    {0x00E676, 0x001A0E, 0xE8F5E9, 0x2E7D32, "GREEN"},  {0x448AFF, 0x0A1230, 0xE3F2FD, 0x1976D2, "BLUE"},
+    {0xFF5252, 0x1A0A0A, 0xFFEBEE, 0xD32F2F, "RED"},    {0xBB86FC, 0x140E1A, 0xF3E5F5, 0x8E44D6, "PURPLE"},
+    {0xFFD600, 0x1A1A00, 0xFFFDE7, 0xA67C00, "YELLOW"}, {0xE0E0E0, 0x141414, 0xF5F5F5, 0x757575, "WHITE"},
 };
 
 #define THEME_COUNT (sizeof(theme_palette) / sizeof(theme_palette[0]))
@@ -187,10 +190,12 @@ static void theme_sync_colors(void) {
   }
 
   apply_neutral_pack(light ? &NEUT_LIGHT : &NEUT_DARK);
+  g_col_green = lv_color_hex(light ? 0x2E7D32 : 0xB9F278);
+  g_col_red = lv_color_hex(light ? 0xC62828 : 0xFF7272);
 
-  g_accent = lv_color_hex(theme_palette[idx].accent);
+  g_accent = lv_color_hex(light ? theme_palette[idx].accent_light : theme_palette[idx].accent);
   g_accent_dim = lv_color_hex(light ? theme_palette[idx].dim_light : theme_palette[idx].dim_dark);
-  g_accent_border = lv_color_hex(theme_palette[idx].accent);
+  g_accent_border = g_accent;
 
   lv_display_t* disp = lv_display_get_default();
   if (!disp) {

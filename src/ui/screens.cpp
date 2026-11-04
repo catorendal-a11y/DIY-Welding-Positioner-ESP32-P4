@@ -51,7 +51,7 @@ lv_obj_t* ui_create_adjust_card(lv_obj_t* parent, int x, int y, int width, const
 
 void ui_highlight_value_card(lv_obj_t* value) {
   lv_obj_t* card = lv_obj_get_parent(value);
-  lv_obj_set_style_bg_color(card, lv_color_hex(0xFF6B38), 0);
+  lv_obj_set_style_bg_color(card, COL_ACCENT, 0);
   lv_obj_set_style_border_width(card, 0, 0);
   for (uint32_t i = 0; i < lv_obj_get_child_count(card); i++) {
     lv_obj_t* child = lv_obj_get_child(card, i);

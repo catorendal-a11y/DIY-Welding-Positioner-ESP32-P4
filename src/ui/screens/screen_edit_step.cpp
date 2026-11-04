@@ -124,6 +124,8 @@ static void diameter_adj_cb(lv_event_t* e) {
   }
   if (editDiameterMm < 1.0f) editDiameterMm = 0.0f;
   if (editDiameterMm > 20000.0f) editDiameterMm = 20000.0f;
+  editRpm = constrain(editRpm, MIN_RPM, speed_get_rpm_max_for_diameter(editDiameterMm));
+  if (rpmLabel) ui_set_rpm(rpmLabel, editRpm);
   update_diameter_label();
   update_computed();
 }

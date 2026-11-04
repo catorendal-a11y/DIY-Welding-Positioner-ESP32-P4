@@ -27,6 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Light scheme: accent, warning and dim text now keep at least 3:1 contrast; white, yellow and green accents were close to invisible on the cream background.
+- The accent color now also applies to the main speed card and highlighted value cards, which stayed orange. Status green and red follow the light scheme.
+- Step shows fractional angles (90.5 was displayed as 90), and angle buttons act only when idle so running progress stays correct.
+- The program Step editor lowers RPM visibly when a larger diameter reduces the ceiling.
+- Display: leaving without saving discards the screen-saver draft, and the brightness slider no longer reads 1% low after a rebuild.
 - Leaving Calibration restores the panel pot and pedal; previously they stayed ignored until restart after MOVE 360 from the Settings menu. A saved calibration also stores its diameter.
 - Jog releases no longer look active, and the header shows STOPPING during deceleration.
 - Pulse shows the RPM it will actually run and reports START BLOCKED. Step speed buttons act only when idle.

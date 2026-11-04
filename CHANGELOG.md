@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `pio run -t upload` no longer hangs mid-flash on Windows when its output is piped. esptool's progress bar crashed PlatformIO, which left the board with a black screen until the next flash.
+
 ## [2.3.1] - 2026-11-04
 
 ### Changed

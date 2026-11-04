@@ -14,6 +14,11 @@ pid = os.getpid()
 ms = int(time.time() * 1000) & 0xFFFFFF
 env.Replace(PROGNAME="fw_%x_%x" % (pid, ms))
 
+# esptool draws its progress bar with block characters. When pio output is piped on Windows,
+# pio cannot print them and dies mid-flash, which leaves esptool blocked and the board black.
+if os.name == "nt":
+    env["ENV"]["PYTHONIOENCODING"] = "ascii:replace"
+
 
 def git_output(*args):
     return subprocess.check_output(["git", "-C", env["PROJECT_DIR"], *args], text=True).strip()

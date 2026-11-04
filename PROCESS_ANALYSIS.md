@@ -1,4 +1,4 @@
-# Process flow analysis — v2.3.0
+# Process flow analysis — v2.3.1
 
 Updated 4 November 2026. This document describes current production flow; the [earlier analysis is archived](docs/archive/PROCESS_ANALYSIS_v2.0.5.md). Physical response times require measurement.
 
@@ -75,6 +75,6 @@ Mirror firmware sends dirty RGB565 rectangles through bounded writes. Failed tra
 
 ## Verification and remaining work
 
-CI and local validation pass 484 native/production-control cases, ten packaging regressions, actual upstream RMT encoder profiles, actual LVGL self-test, a zero-failure layout audit and release/debug/mirror compilation. Publication requires all six CI jobs on the exact tagged master commit. Tests directly cover several production policies; older suites model other behavior and simulator motor/storage are stubbed. The owner reported v2.3.0 tested on the assembled machine on 2026-11-04, including TIG HF. Stop time has not been measured. Device fault injection, physical stop response, power loss, cable-break behavior, and USB backpressure remain separate checks. See [FastAccelStepper re-audit](docs/FASTACCELSTEPPER_1_4_REAUDIT.md), [control/calibration implementation](docs/CONTROL_SETUP_IMPLEMENTATION.md), [current status](STATUS.md), [hardware guide](docs/HARDWARE_SETUP.md) and [flashing guide](docs/releases/FLASHING.md).
+CI and local validation pass 484 native/production-control cases, ten packaging regressions, actual upstream RMT encoder profiles, actual LVGL self-test, a zero-failure layout audit and release/debug/mirror compilation. Publication requires every CI job to pass on the exact tagged master commit. Tests directly cover several production policies; older suites model other behavior and simulator motor/storage are stubbed. The owner reported v2.3.0 tested on the assembled machine on 2026-11-04, including TIG HF. The v2.3.1 changes have run in the simulator, not on the machine. Stop time has not been measured. Device fault injection, physical stop response, power loss, cable-break behavior, and USB backpressure remain separate checks. See [FastAccelStepper re-audit](docs/FASTACCELSTEPPER_1_4_REAUDIT.md), [control/calibration implementation](docs/CONTROL_SETUP_IMPLEMENTATION.md), [current status](STATUS.md), [hardware guide](docs/HARDWARE_SETUP.md) and [flashing guide](docs/releases/FLASHING.md).
 
 Motor configuration is applied from a private proposal before committing its fields to shared settings. Storage snapshots committed settings only and never changes the live direction cache when an older write completes. Formatting owns a separate temporary inhibit; erase failure cannot clear a concurrent fatal/restart latch.

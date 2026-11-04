@@ -20,8 +20,8 @@ Touchscreen controller for a single-axis TIG/MIG welding rotator, built for the 
 
 | You want to | Go to |
 |---|---|
-| **See the UI without hardware** | [Windows simulator](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.3.0/welding-positioner-v2.3.0-simulator-windows-x64.zip): extract all files, open **Start Simulator.cmd**. [Instructions](docs/releases/SIMULATOR.md) |
-| **Flash a controller** | [Firmware downloads](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.3.0) and [install firmware](#install-firmware) |
+| **See the UI without hardware** | [Windows simulator](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.3.1/welding-positioner-v2.3.1-simulator-windows-x64.zip): extract all files, open **Start Simulator.cmd**. [Instructions](docs/releases/SIMULATOR.md) |
+| **Flash a controller** | [Firmware downloads](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.3.1) and [install firmware](#install-firmware) |
 | **Build one** | [Parts](#parts), [wiring](#wiring) and the [builder guide](docs/BUILDER_GUIDE.md) |
 | **See it run** | [Hardware demo](https://youtu.be/GygLl6XY-TM), which shows an earlier UI |
 | **Fix a problem** | [Troubleshooting](wiki/Troubleshooting.md) |
@@ -34,7 +34,7 @@ Read this before powering the motor.
 - **E-STOP polarity:** GPIO34 expects **HIGH when healthy, LOW on fault**. A bare NC contact to ground gives the opposite polarity. **ENA HIGH disables** the driver.
 - **ESP32 GPIO is 3.3 V logic.** Never connect 5 V or motor-supply voltage to it.
 - **HF-start TIG:** put the controller, driver and motor PSU in the same grounded metal enclosure. See [TIG HF](#tig-hf).
-- **Tested by the owner.** The owner reported on 2026-11-04 that everything works on the assembled v2.3.0 machine, including TIG HF. Stop time is unmeasured. [Checks to run on your own build](docs/releases/v2.3.0.md#validation-and-hardware-status)
+- **Tested by the owner.** The owner reported on 2026-11-04 that everything works on the assembled v2.3.0 machine, including TIG HF. The v2.3.1 changes have run in the simulator, not on the machine. Stop time is unmeasured. [Checks to run on your own build](docs/releases/v2.3.1.md#validation-and-hardware-status)
 
 ## What it does
 
@@ -98,7 +98,7 @@ To build from source with PlatformIO:
 ```sh
 git clone https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4.git
 cd DIY-Welding-Positioner-ESP32-P4
-git checkout v2.3.0
+git checkout v2.3.1
 pio run
 ```
 
@@ -115,7 +115,7 @@ The wizard does not measure stop time or certify wiring. [Every wizard screen](d
 
 ## Validation
 
-Every commit runs **484 native tests**, packaging tests, Linux and Windows simulator self-tests, a layout audit and three firmware builds. Release binaries come from the validated master commit. The owner reported v2.3.0 tested on the assembled machine on 2026-11-04. TIG HF works on the owner's machine. Stop time has not been measured. [v2.3.0 status](docs/releases/v2.3.0.md#validation-and-hardware-status) · [Changelog](CHANGELOG.md)
+Every commit runs **484 native tests**, packaging tests, Linux and Windows simulator self-tests, a layout audit and three firmware builds. Release binaries come from the validated master commit. The owner reported v2.3.0 tested on the assembled machine on 2026-11-04. TIG HF works on the owner's machine. The v2.3.1 changes have run in the simulator, not on the machine. Stop time has not been measured. [v2.3.1 status](docs/releases/v2.3.1.md#validation-and-hardware-status) · [Changelog](CHANGELOG.md)
 
 ## Documentation and contributions
 

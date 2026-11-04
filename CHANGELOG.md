@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.1] - 2026-11-04
+
 ### Changed
 
 - A confirmed program start that gets blocked now shows **PROGRAM BLOCKED** with the reason. It was only logged.

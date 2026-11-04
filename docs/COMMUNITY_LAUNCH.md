@@ -16,7 +16,7 @@ Demo video: https://youtu.be/GygLl6XY-TM
 
 Project, wiring and source: https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4
 
-Windows simulator: https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.3.0/welding-positioner-v2.3.0-simulator-windows-x64.zip
+Windows simulator: https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.3.1/welding-positioner-v2.3.1-simulator-windows-x64.zip
 
 I would like to find three people interested in trying the UI or building a controller. If you already use a welding positioner, what controls do you use most, and what would make this useful in your workshop?
 
@@ -54,7 +54,7 @@ Build video: https://youtu.be/GygLl6XY-TM
 The source and documentation are available here, including the wiring guide and hardware photographs:
 https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4
 
-For anyone who wants to explore the controls before building, there is a portable Windows UI simulator in the [v2.3.0 release](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.3.0). It is an offline demonstration and does not operate hardware.
+For anyone who wants to explore the controls before building, there is a portable Windows UI simulator in the [v2.3.1 release](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.3.1). It is an offline demonstration and does not operate hardware.
 
 For TIG HF operation I use a grounded metal enclosure for the screen, driver and motor PSU; the project documentation covers this requirement. The electrical stop circuit and driver polarity must be checked for each build.
 

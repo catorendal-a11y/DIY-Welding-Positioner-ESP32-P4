@@ -1,9 +1,9 @@
 # Project Status
 
 **Last Updated:** 2026-11-04
-**Published firmware:** v2.3.0
-**Source:** master - safety supervision and audit fixes (released as v2.3.0)
-**Build:** 484 native/control/speed/storage/safety test cases, packaging regressions, Linux/Windows simulator self-tests/layout audits and release/debug/mirror builds. **The owner reported v2.3.0 tested on the assembled machine on 2026-11-04.** TIG HF works on the owner's machine. Stop time and calibration accuracy have not been measured.
+**Published firmware:** v2.3.1
+**Source:** master - operator feedback and test fixes (released as v2.3.1)
+**Build:** 484 native/control/speed/storage/safety test cases, packaging regressions, Linux/Windows simulator self-tests/layout audits and release/debug/mirror builds. **The owner reported v2.3.0 tested on the assembled machine on 2026-11-04.** TIG HF works on the owner's machine. The v2.3.1 changes have run in the simulator, not on the machine. Stop time and calibration accuracy have not been measured.
 
 ---
 
@@ -76,7 +76,7 @@ v2.2.0 includes the [idle screen saver](docs/SCREEN_SAVER.md) and [LVGL UI refin
 - [x] **TIG HF field validation** (welding works with ESP32-P4 screen, driver, and PSU inside one grounded metal enclosure)
 
 ### Documentation
-- [x] **README** (source and release v2.3.0, feature list, wiring diagram, BOM, TIG HF enclosure requirement; synced with `config.h`)
+- [x] **README** (source and release v2.3.1, feature list, wiring diagram, BOM, TIG HF enclosure requirement; synced with `config.h`)
 - [x] **Wiki** (Home, Getting Started, Hardware Setup, Troubleshooting, Roadmap, Architecture)
 - [x] **docs/** (Hardware Setup, Safety System, EMI Mitigation, Implementation, Instructables)
 - [x] **Wiring diagram v2** (SVG, GPIO29 on correct side, clean cable routing)

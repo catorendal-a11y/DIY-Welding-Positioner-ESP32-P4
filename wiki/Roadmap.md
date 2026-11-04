@@ -1,6 +1,12 @@
 # Roadmap
 
-## v2.3.0 - Current Release
+## v2.3.1 - Current Release
+
+### v2.3.1 (2026-11-04)
+
+Operator feedback and test fixes. See the [release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/v2.3.1/docs/releases/v2.3.1.md).
+
+## v2.3.0
 
 ### v2.3.0 (2026-11-04)
 
@@ -42,7 +48,7 @@ Safety supervision and audit fixes. See the [release notes](https://github.com/c
 
 ## v2.0.8 - version alignment
 
-Historical release; v2.3.0 above is current.
+Historical release; v2.3.1 above is current.
 
 ### v2.0.8 (2026-04-29)
 - [x] **`FW_VERSION` v2.0.8** — README, STATUS, wiki, implementation docs, UI SVGs, issue templates synced to canonical release tag

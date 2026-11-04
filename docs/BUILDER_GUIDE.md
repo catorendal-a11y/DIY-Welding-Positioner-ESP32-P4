@@ -131,7 +131,7 @@ Fast path for builders who already have PlatformIO installed.
    .\simulator\run.ps1 -UsbMirror COM5 -Baud 4000000
    ```
 
-   On the device, open **Settings > Display > USB MIRROR** and arm it after the PC viewer shows a link. E-STOP and driver faults still override all UI input.
+   On the device, open **Settings > Display > USB remote control** and arm it after the PC viewer shows a link. E-STOP and driver faults still override all UI input.
 
 6. **Connect hardware** per the [wiring diagram](#wiring-diagram). Keep motor PSU off until logic power, E-STOP, ENA, STEP, DIR, and driver settings are verified.
 
@@ -173,12 +173,12 @@ Watch the system in action — UI interaction, motor rotation, screen navigation
 
 | Area | What matters |
 |:---|:---|
-| **Welding workflow** | Continuous, Jog, Pulse, Step, and Countdown modes with panel-pot/main RPM +/− control and Jog +/− setup control |
+| **Welding workflow** | Continuous, Jog, Pulse and Step modes with a start countdown, with panel-pot/main RPM +/− control and Jog +/− setup control |
 | **Presets** | 16 NVS-backed jobs with RPM, direction, workpiece diameter, pulse cycles, step repeats/dwell, soft-start, and auto-stop fields |
 | **Industrial inputs** | E-STOP, DM542T ALM, direction switch, foot pedal switch, optional ADS1115 pedal speed input |
 | **Touch HMI** | LVGL 9, 800x480 landscape, V5 dark graphite/orange styling, dark/light mode, 8 accent colors, diagnostics, system info, motor config, calibration, display settings |
 | **Motor control** | FastAccelStepper RMT pulses, milli-Hz RPM commands, acceleration tuning, microstepping, calibration, direction invert |
-| **Safety model** | ISR disables ENA, state machine latches faults, start paths re-check E-STOP/ALM after ENA LOW, dimmed display wakes on fault |
+| **Safety model** | ISR disables ENA, state machine latches faults, start paths re-check E-STOP/ALM after ENA LOW, task/UI/touch/pot supervision, visible crash and storage faults, dimmed display wakes on fault |
 | **Robustness** | Dual-core FreeRTOS split, mutex-protected stepper API, `std::atomic` cross-core flags, debounced NVS writes |
 
 ---
@@ -233,7 +233,7 @@ The 30 design views cover all 22 screen types, additional states and keyboards. 
 | Screen | `ScreenId` | Description |
 |:---|:---|:---|
 | **Boot** | `SCREEN_BOOT` | Startup splash / transition to main |
-| **Main** | `SCREEN_MAIN` | Large orange RPM panel, idle RPM +/−, CW/CCW and wide START/STOP |
+| **Main** | `SCREEN_MAIN` | Large accent-colored RPM panel, idle RPM +/−, CW/CCW and wide START/STOP |
 | **Menu** | `SCREEN_MENU` | Advanced mode selection and settings |
 | **Run Modes** | `SCREEN_RUN_MODES` | Pulse / Step / Jog / Timer selection |
 | **Setup Wizard** | `SCREEN_SETUP` | Motor, direction, verified calibration and physical E-STOP function check (v2.1.1) |
@@ -341,7 +341,8 @@ Default environment: `esp32p4-release`. Build output goes to `.pio/build-fw` to 
 | USB-C mirror build | `pio run -e esp32p4-mirror` |
 | Flash release firmware | `pio run --target upload` |
 | Serial monitor | `pio device monitor` |
-| Native tests | `pio test -e native -e native-control` |
+| Native tests | `pio test -e native -e native-control -e native-speed -e native-storage -e native-safety -e native-control-storage` |
+| Packaging tests | `python -m unittest discover -s test/tooling` |
 | On-device tests | `pio test -e esp32p4-test` |
 
 Serial ports are detected automatically. Use `pio device list` and override the port with `--upload-port COM3` (example) if needed. Native tests do not need hardware.
@@ -420,7 +421,7 @@ Run the Windows viewer:
 
 Use `-Baud 2000000` or `-Baud 921600` if the Windows USB serial driver is unstable at 4M. Native USB CDC baud is mostly a host/driver setting; the main speed win is partial dirty-rectangle traffic. `COM5` must not be open in PlatformIO Monitor while the viewer is connected.
 
-Remote control is fail-closed: it starts disabled after boot, requires **Settings > Display > USB MIRROR** to be armed on the physical screen, and releases on USB disconnect/keepalive timeout. The PC only injects LVGL touch input; it has no direct motor command API.
+Remote control is fail-closed: it starts disabled after boot, requires **Settings > Display > USB remote control** to be armed on the physical screen, and releases on USB disconnect/keepalive timeout. The PC only injects LVGL touch input; it has no direct motor command API.
 
 ---
 
@@ -453,8 +454,9 @@ Remote control is fail-closed: it starts disabled after boot, requires **Setting
 | Parameter | Value |
 |:---|:---|
 | **Output RPM Range** | **0.001 – 3.0 RPM** configured envelope, further limited by geometry/calibration and the retained 20 Hz step-rate floor; the UI displays the effective minimum. Motor Config can lower the maximum ceiling in NVS |
-| **Gear Ratio** | **1 : 108** total &ensp; (NMRV030 60:1 x spur 72/40) |
-| **Roller / workpiece (defaults)** | `D_RULLE` 80 mm roller, `D_EMNE` 300 mm reference workpiece OD — used in `rpmToStepHz()` / `angleToSteps()` (see `config.h`, `speed.cpp`) |
+| **Gear Ratio** | **1 : 108** default &ensp; (NMRV030 60:1 x spur 72/40), set in Motor Config |
+| **Roller / workpiece (defaults)** | `D_RULLE` 80 mm roller (set in Motor Config), `D_EMNE` 300 mm reference workpiece OD — used in `rpmToStepHz()` / `angleToSteps()` (see `config.h`, `speed.cpp`) |
+| **Per-diameter cap** | Workpiece RPM is limited by `MAX_STEP_HZ` (200 kHz) and `MOTOR_RPM_LIMIT` (1500 RPM). Programs above the cap are blocked at start |
 | **Microstepping** | 1/4, 1/8, 1/16 (default), 1/32 — selectable in Motor Config, persisted to NVS |
 | **Motor Torque** | 3.0 Nm (NEMA 23) |
 | **Control Resolution** | Sub-milli-RPM (speed is computed in milli-Hz and applied via `setSpeedInMilliHz()` + `applySpeedAcceleration()`) |
@@ -506,9 +508,9 @@ Do not judge TIG reliability from an open-bench test. Bench wiring is acceptable
 |:---|:---|
 | **Continuous** | Runs at set RPM. Start with ON, stop with STOP. |
 | **Jog** | Touch-and-hold rotation for manual positioning. |
-| **Pulse** | Rotate ON ms, pause OFF ms, repeat. For tack welding. |
-| **Step** | Rotate exact angle (e.g., 90 deg), then stop. |
-| **Countdown** | Visual 3-2-1 countdown before rotation starts (configurable 1-10 s). |
+| **Pulse** | Rotate ON ms, pause OFF ms, repeat. For tack welding. Direction is latched at start. |
+| **Step** | Rotate exact angle (e.g., 90 deg), then stop. Holding torque stays on during the dwell. |
+| **Countdown** | Not a separate mode: visual 3-2-1 countdown before rotation starts (configurable 1-10 s). |
 
 ---
 
@@ -519,10 +521,12 @@ Open `src/config.h` to adjust hardware parameters:
 ```cpp
 #define MIN_RPM         0.001f  // Minimum workpiece RPM (pot / clamp floor)
 #define MAX_RPM         3.0f    // Absolute ceiling for Max RPM setting and firmware clamp
-#define GEAR_RATIO      (60.0f * 72.0f / 40.0f)  // 108 = total 1:108
+#define GEAR_RATIO      (60.0f * 72.0f / 40.0f)  // Default 108; set in Motor Config
 #define D_EMNE          0.300f  // Reference workpiece diameter (m) — kinematics
-#define D_RULLE         0.080f  // Roller diameter (m) — kinematics
-// Acceleration and microstep are stored in NVS (Motor Config); defaults 7500 steps/s^2, 1/16
+#define D_RULLE         0.080f  // Default roller diameter (m); set in Motor Config
+#define MAX_STEP_HZ     200000.0f  // Pulse ceiling behind the per-diameter RPM cap
+#define MOTOR_RPM_LIMIT 1500.0f    // Chosen motor limit, not a measured value
+// Acceleration and microstep are stored in NVS (Motor Config); defaults 7500 steps/s^2 at 1/16, 1/16
 #define START_SPEED     20      // Hz operational minimum; lower RPM requests are rejected
 ```
 
@@ -548,14 +552,14 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - **`storage_init()`** opens the namespace, then runs a **one-time migration**: if `cfg` / `prs` are empty but legacy LittleFS files exist (`/settings.json`, `/presets.json`), their contents are copied into NVS. After that, normal operation uses NVS only.
 - **Load order:** settings load before presets, so preset RPM values are clamped against the saved **Max RPM** setting. Invalid persisted microstep values are sanitized to the safe default `1/16`.
 - **Display / UI:** the settings blob includes e.g. **`color_scheme`** (`0` = dark neutral palette, `1` = light), **`accent_color`** (0–7), brightness and dim-timeout fields — see `SystemSettings` / `storage.cpp` for the authoritative list.
-- **Saves** run on **Core 1** in `storageTask`: debounced **~500 ms** after preset changes and **~1 s** after settings changes (`storage_flush()`). UI code sets a pending flag; it does not write flash directly.
+- **Saves** run on **Core 1** in `storageTask`: debounced **~500 ms** after preset changes and **~1 s** after settings changes (`storage_flush()`). UI code sets a pending flag; it does not write flash directly. Writes run only in IDLE or ESTOP, and a start waits for a save in progress.
 - **Write failures:** failed saves remain pending and retry with backoff; the UI shows pending/error state. Changes arriving during a write remain queued for another save. The inactivity timeout uses a 16-bit field so 300 seconds persists correctly.
-- **Flash cache:** NVS commits can disable the flash cache briefly. The firmware sets `g_flashWriting` so the UI can avoid glitches during writes; PSRAM code/rodata mitigations still apply (`CONFIG_SPIRAM_FETCH_INSTRUCTIONS`, `CONFIG_SPIRAM_RODATA` in sdkconfig).
+- **Flash cache:** NVS commits disable the flash cache briefly, and the prebuilt framework has no IRAM-safe RMT/GPIO ISRs, which is why writes wait for rest. The firmware sets `g_flashWriting` so the UI can avoid glitches during writes.
 
 **Troubleshooting**
 
 - You do **not** need to upload a LittleFS filesystem for settings/presets on current firmware.
-- If the NVS partition is corrupt or full, erase flash or use the product’s storage format path (if exposed) and reconfigure.
+- Invalid saved data boots to a visible **STORAGE** fault with motion disabled and the data untouched. Reflash a matching build, or erase flash and reconfigure.
 
 ---
 
@@ -567,7 +571,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - [ ] E-STOP disables the driver; measure physical stop response and verify cable-break behavior
 - [ ] Direction switch toggles CW/CCW
 - [ ] Potentiometer controls speed
-- [ ] All 5 welding modes tested
+- [ ] All 4 rotation modes and the countdown tested
 - [ ] Program preset save/load verified
 - [ ] Foot pedal starts/stops motor (if connected)
 - [ ] TIG HF start tested with controller electronics inside the grounded metal enclosure
@@ -628,7 +632,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 <details>
 <summary><b>Wrong rotation direction</b></summary>
 
-- Swap DIR polarity in firmware, or reverse A+/A- coil wiring
+- Use **Invert direction** in Motor Config, or reverse A+/A- coil wiring
 
 </details>
 
@@ -651,10 +655,11 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 </details>
 
 <details>
-<summary><b>Boot loop after flashing</b></summary>
+<summary><b>Halted or fault at boot after flashing</b></summary>
 
-- Open the serial monitor — v2.0.5+ logs fatal init errors via `LOG_E` (always compiled in) before rebooting, e.g. `FATAL: storage: NVS namespace open — rebooting`. The reason string tells you which subsystem failed.
-- Common causes: corrupt NVS (erase flash and retry), missing partition (`default_16MB.csv`), or hardware not powered (driver unpowered when motor init runs)
+- Open the serial monitor — fatal init errors are logged via `LOG_E` (always compiled in), e.g. `FATAL: motor: FastAccelStepper init — motion disabled`. The controller then stays halted with ENA disabled instead of rebooting. The reason string tells you which subsystem failed.
+- Invalid saved data shows a **STORAGE** fault instead. Other common causes: missing partition (`default_16MB.csv`), or hardware not powered (driver unpowered when motor init runs)
+- [All fault names](../wiki/Troubleshooting.md#fault-names)
 
 </details>
 
@@ -663,6 +668,8 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 ## Known Limitations
 
 - Single-axis control only
+- An open E-STOP wire reads as healthy, and E-STOP acts through the MCU and driver ENA input; it does not disconnect motor power
+- A floating pot wiper is not detected, and the analog pedal is not jump-checked
 - No closed-loop tachometer feedback; RPM is commanded from kinematics, calibration, and step timing
 - Basic PUL/DIR drivers have no anti-resonance DSP; DM542T is recommended for smoother low-speed and higher-RPM work
 - GPIO 14-19, 28, and 54 may be tied to the on-board ESP32-C6 per PCB; confirm the board pinout before using them for custom circuits
@@ -671,10 +678,11 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 
 ## Roadmap
 
-**Completed:** 5 welding modes, NVS presets, foot pedal support, direction switch, diagnostics, workpiece diameter presets, motor config UI, dark/light display mode, FreeRTOS/atomic hardening, E-STOP display wake, non-blocking ADS1115 pedal ADC, and TIG HF validation in a grounded enclosure.
+**Completed:** 4 rotation modes and countdown, NVS presets, foot pedal support, direction switch, diagnostics, workpiece diameter presets, motor config UI, dark/light display mode, FreeRTOS/atomic hardening, E-STOP display wake, non-blocking ADS1115 pedal ADC, and TIG HF validation in a grounded enclosure.
 
 **Next useful work:**
 
+- [ ] Test v2.3.0 on the assembled machine
 - [ ] Enclosure CAD / printable panel files
 - [ ] Assembly guide with real build photos
 - [ ] Wider DM542T speed/current tuning data
@@ -686,13 +694,14 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 
 | Local check | Result |
 | --- | --- |
-| Native suites | 459 / 459 passed (native/control/speed/storage suites) |
+| Native suites | 511 / 511 passed (native/control/speed/storage/safety suites) |
+| Packaging tests | 10 / 10 passed |
 | LVGL self-test | Passed: navigation, program edits, RPM adjustment, fault reset, full setup/calibration workflows, save failure/retry and stale control |
 | Firmware builds | Release, debug and mirror passed |
 | Device upload | Functional pre-release commit 673e078 uploaded to COM3 and flash data verified on 2026-10-03. On 2026-10-05 the pedal-fix build (c4ea129) was flashed and hash-verified; the boot scan detects the ADS1115 at 0x48 and the owner confirms the pedal (GPIO33 + analog speed) works. No quantitative stop-time measurements were supplied. |
-| Physical motor/safety testing | Not performed as part of this update |
+| Physical motor/safety testing | **Not performed for v2.3.0.** The upload records above are v2.2.x builds |
 
-[Dependency validation logs](../docs/validation/2026-10-02/dependencies) and [program editor validation](../docs/validation/2026-10-03/program-editor/README.md) record local runs. Native tests include direct production-policy tests, but older tests also model behavior separately; simulator hardware is stubbed. CI runs native tests, three firmware variants and SDL navigation checks. The badge links to the current GitHub result.
+[Dependency validation logs](../docs/validation/2026-10-02/dependencies) and [program editor validation](../docs/validation/2026-10-03/program-editor/README.md) record local runs. Native tests include direct production-policy tests, but older tests also model behavior separately; simulator hardware is stubbed. CI runs native and packaging tests, three firmware variants and SDL self-test and layout checks. The badge links to the current GitHub result.
 
 ---
 
@@ -740,7 +749,7 @@ src/
   control/                  State machine + welding modes
     control.cpp               Core state machine with CAS transitions
     program_executor.cpp      Applies saved presets through the control command queue
-    modes/                    continuous, jog, pulse, step_mode, timer
+    modes/                    continuous, jog, pulse, step_mode
   motor/                    Stepper driver
     motor.cpp                 FastAccelStepper init, run, stop, motor_set_target_milli_hz()
     speed.cpp                 ADC pot, pedal (non-blocking ADS1115 state machine), direction, RPM
@@ -748,7 +757,7 @@ src/
     microstep.cpp             Microstepping config
     calibration.cpp           Calibration factor
   safety/                   E-STOP + watchdog
-    safety.cpp                ISR (GPIO + atomic flags only), boot de-floating, UI reset, state guard
+    safety.cpp                ISR (GPIO + atomic flags only), boot de-floating, UI reset, state guard, supervision
   storage/                  NVS persistence (Preferences + JSON blobs)
     storage.cpp               Settings/presets serialize, NVS mutex, LittleFS migration
   ui/                       LVGL display
@@ -782,4 +791,4 @@ MIT License — see [LICENSE](../LICENSE) for details. Dependencies retain their
 
 ## Idle screen saver (v2.2.0)
 
-Open Settings > Display > Screen saver after, choose OFF/30s/1m/2m/5m and SAVE. PREVIEW shows the design immediately. The first touch wakes only; motion, faults and editing stay visible. Published v2.1.1 binaries predate this feature. See [behavior and captures](SCREEN_SAVER.md).
+Open Settings > Display > Screen saver after, choose OFF/30s/1m/2m/5m and SAVE. PREVIEW shows the design immediately. The first touch wakes only; motion, faults and editing stay visible. See [behavior and captures](SCREEN_SAVER.md).

@@ -53,7 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Enforce DM542T enable settling at every motor entry point, re-arm it when driver timing changes, and wait again after Step dwell disables ENA.
+- Enforce DM542T enable settling at every motor entry point, and re-arm it when driver timing changes.
 - Jog requires continued hold events during enable settling. Setup and calibration keep their jog buttons enabled during this wait; the simulator now supplies realistic repeated hold events.
 - Fault reset rejects a pending E-STOP edge, raw driver alarm, required restart or failed touchscreen. Reset never clears a newly arriving ISR pending flag. The redundant E-STOP level channel inhibits ENA before its debounce window.
 - Cancelled motor configuration preserves committed settings and concurrent display edits. Failed hardware rollback and soft-start acceleration restoration are retried before fault cleanup can complete. Completing an older settings save no longer overwrites the committed direction-switch cache.

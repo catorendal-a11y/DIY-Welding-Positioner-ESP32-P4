@@ -1,4 +1,4 @@
-# File maintenance review — updated 2026-10-03
+# File maintenance review — updated 2026-11-04
 
 GitHub displays the last commit that changed each file. A six-month-old date does not indicate that the file is missing from the current build or release.
 
@@ -27,4 +27,4 @@ The subsequent v2.1.1 migration updates dependency pins, driver metadata, contro
 | `CODEOWNERS` and issue configuration | Ownership and issue routing remain valid. |
 | Earlier UI concepts and validation logs | Historical records; current UI images are in `docs/images/ui_runtime_v5/`. |
 
-Files are not rewritten solely to reset their GitHub timestamp. Current release documentation is in [v2.1.1.md](releases/v2.1.1.md), with installation instructions in [FLASHING.md](releases/FLASHING.md).
+Files are not rewritten solely to reset their GitHub timestamp. Current release documentation is in [v2.3.0.md](releases/v2.3.0.md), with installation instructions in [FLASHING.md](releases/FLASHING.md).

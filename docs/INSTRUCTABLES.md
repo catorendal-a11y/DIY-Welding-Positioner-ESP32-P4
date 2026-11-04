@@ -15,14 +15,14 @@
 
 ## INTRODUCTION
 
-Build your own welding positioner controller with a 4.3" touchscreen, ESP32-P4 microcontroller, and off-the-shelf stepper motor hardware. This open-source project provides precise rotation control for TIG, MIG, and pipe welding — with 5 welding modes, real-time RPM adjustment, and E-STOP safety.
+Build your own welding positioner controller with a 4.3" touchscreen, ESP32-P4 microcontroller, and off-the-shelf stepper motor hardware. This open-source project provides precise rotation control for TIG, MIG, and pipe welding — with 4 rotation modes and a start countdown, real-time RPM adjustment, and E-STOP safety.
 
 ### Why Build This?
 
 Commercial welding rotators cost $500-5000. This controller gives you professional features for under $100 in electronics, using a NEMA 23 stepper motor and worm gear you may already have.
 
 ### Features
-- 5 welding modes: Continuous, Pulse, Step, Jog, Timer
+- 4 rotation modes (Continuous, Pulse, Step, Jog) and a start countdown
 - **0.001–3.0 RPM** workpiece limits (`MIN_RPM`/`MAX_RPM` in `config.h`) with live main-screen pot control and Jog-screen button adjustment
 - 4.3" capacitive touchscreen (800x480, LVGL 9.x UI)
 - 8 selectable accent color themes
@@ -158,7 +158,7 @@ IMAGE: Photo of wired breadboard/connections
 
 IMAGE: docs/images/motor.worm.svg
 
-Total motor-to-output reduction is **1:108** (`GEAR_RATIO` = 60 x 72/40). Firmware also applies roller geometry (300 mm workpiece / 80 mm roller in `config.h`), so motor RPM = workpiece RPM x 108 x (300/80) = workpiece RPM x 405.
+Total motor-to-output reduction is **1:108** (`GEAR_RATIO` = 60 x 72/40). Firmware also applies roller geometry. Roller diameter and gear ratio are settings in Motor Config. With the defaults (300 mm reference workpiece, 80 mm roller), motor RPM = workpiece RPM x 108 x (300/80) = workpiece RPM x 405.
 
 With **1/16 microstepping** (3200 steps/rev, default in Motor Config / `config.h` comment), step frequency = motor RPM x 3200 / 60:
 
@@ -292,7 +292,7 @@ Attach these files to the Instructable:
 
 - **ESP32-P4** by Espressif
 - **LVGL 9.x** open-source graphics library
-- **FastAccelStepper** by hinxx
+- **FastAccelStepper** by gin66
 - **PlatformIO** build system
 - **ArduinoJson** by Benoit Blanchon
 License: MIT — https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4

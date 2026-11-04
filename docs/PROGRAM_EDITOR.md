@@ -18,7 +18,7 @@ Tap the name, edit it, and use the keyboard's confirm key or the visible **CANCE
 
 ![Longest wide ASCII name](images/program_v2/07_long_name.png)
 
-Tap the RPM value to enter exact speed. Dot and comma decimal separators are accepted. The whole entry must be numeric and within `MIN_RPM` and the configured maximum; invalid input leaves the editor open and preserves the draft. Summary and mode-settings +/− use **0.001 RPM below 0.1**, and **0.01 RPM otherwise**. Display precision follows the same rule.
+Tap the RPM value to enter exact speed. Dot and comma decimal separators are accepted. The whole entry must be numeric and within `MIN_RPM` and the maximum for this program's diameter; invalid input leaves the editor open and preserves the draft. Summary and mode-settings +/− use **0.001 RPM below 0.1**, and **0.01 RPM otherwise**. Display precision follows the same rule. The maximum is the lower of the Max RPM setting and the per-diameter cap from `MAX_STEP_HZ` and `MOTOR_RPM_LIMIT`. A larger diameter in the Step editor lowers RPM visibly. A saved program above the cap is blocked at start.
 
 ![Invalid RPM](images/program_v2/04_rpm_validation.png)
 

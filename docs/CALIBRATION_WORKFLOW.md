@@ -10,7 +10,7 @@ Open **Settings → Calibration**. Set the outside diameter directly on this pag
 
 ![Movement progress](images/calibration_v2/02_moving.png)
 
-Navigation does not initiate motion. Pedal starts and unrelated program/mode requests are inhibited while calibration is open. Normal software **STOP** remains visible; use the physical E-STOP switch when required.
+Navigation does not initiate motion. Pedal starts and unrelated program/mode requests are inhibited while calibration is open. Normal software **STOP** remains visible; use the physical E-STOP switch when required. Leaving Calibration restores the panel pot and pedal.
 
 ## Measure
 
@@ -34,7 +34,7 @@ The controller must report exactly one additional completed Step move and idle s
 
 ## Save
 
-Select **SAVE CALIBRATION** after a passing verification. Until then, the correction is a runtime draft, excluded from saved settings and other autosaves. Leaving or restarting discards it once the controller is idle. Existing presets and stored settings retain their format.
+Select **SAVE CALIBRATION** after a passing verification. Until then, the correction is a runtime draft, excluded from saved settings and other autosaves. Leaving or restarting discards it once the controller is idle. Existing presets and stored settings retain their format. A saved calibration also stores its diameter.
 
 ![Storage retry](images/calibration_v2/07_save_retry.png)
 
@@ -46,4 +46,4 @@ The page has no scrolling: four progress indicators, one instruction/input stage
 
 ## Regression evidence
 
-459 native/control/speed/storage cases include the actual calibration module, session policy and production dispatcher. Cases cover interrupted/rejected moves, timeout and clock wrap, context changes, strict parsing, correction bounds and draft isolation. The actual LVGL self-test additionally checks interrupted motion, failed verification, successful verification, failed storage/retry and STOP during saving. The layout audit reports zero failures. Firmware builds pass for release, debug and mirror; the functional pre-release build was flash-verified. On 2026-10-05 the owner confirmed the assembled functions work, including the pedal/ADS1115 (detected at 0x48; owner-verified on hardware with the master pedal fix). Quantitative calibration and stop-time results were not supplied.
+511 native/control/speed/storage/safety cases include the actual calibration module, session policy and production dispatcher. Cases cover interrupted/rejected moves, timeout and clock wrap, context changes, strict parsing, correction bounds and draft isolation. The actual LVGL self-test additionally checks interrupted motion, failed verification, successful verification, failed storage/retry and STOP during saving. The layout audit reports zero failures. Firmware builds pass for release, debug and mirror; the functional pre-release build was flash-verified. On 2026-10-05 the owner confirmed the assembled functions work, including the pedal/ADS1115 (detected at 0x48; owner-verified on hardware with the master pedal fix). Quantitative calibration and stop-time results were not supplied. v2.3.0 has not been tested on the assembled machine: run a calibration, then check the pot and pedal.

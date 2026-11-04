@@ -5,7 +5,7 @@ The TIG Rotator Controller implements a multi-layer safety architecture to prote
 ## 1. Safety State Machine
 The system transitions through a rigorous state machine (defined in `control.h`) using compare-and-swap (CAS) for race-free transitions:
 - **STATE_IDLE:** Default state. Motor ENA is HIGH (Disabled).
-- **STATE_ENABLING:** An admitted start asserts ENA and waits 200 ms in DM542T mode before the first pulse. STOP cancels the start. Jog must keep receiving hold events throughout the wait; Step repeats also settle after dwell disables ENA.
+- **STATE_ENABLING:** An admitted start asserts ENA and waits 200 ms in DM542T mode before the first pulse. STOP cancels the start. Jog must keep receiving hold events throughout the wait. Step mode keeps ENA asserted during the dwell, so repeats do not wait again.
 - **STATE_RUNNING:** Continuous rotation. Acceleration ramps active.
 - **STATE_PULSE:** Pulse mode (ON/OFF cycles).
 - **STATE_STEP:** Step mode (exact angle rotation).
@@ -37,6 +37,7 @@ The system transitions through a rigorous state machine (defined in `control.h`)
 - **Atomic variables:** Cross-core shared state uses `std::atomic` with explicit memory ordering. All such flags are declared in `src/app_state.h` and defined in `src/app_state.cpp` — no scattered declarations.
 - **Pending-flag pattern:** UI callbacks `.store()` atomic flags with `memory_order_release`; Core 0 tasks `.load()` with `memory_order_acquire` and execute within their cycle. No direct motor calls from UI thread.
 - **Storage mutex:** `g_presets_mutex` semaphore protects preset vector access.
+- **Flash writes only at rest:** the prebuilt framework has no IRAM-safe RMT/GPIO ISRs, so settings and programs are saved only in IDLE or ESTOP. A start waits for a save in progress.
 - **LVGL safety:** `lv_obj_delete_async()` for all keyboard/numpad deletion from event callbacks. `screen_*_invalidate_widgets()` nullifies static pointers on `screens_reinit()`.
 
 ## 4a. Fatal-error handling
@@ -51,6 +52,8 @@ Storage formatting uses a separate temporary motion/reset inhibit. It releases o
 - **Storage Task:** NOT subscribed (does blocking I/O — flash writes and related work — that can exceed WDT timeout).
 - **LVGL Task:** NOT subscribed (graphics rendering must not be interrupted).
 
+The LVGL and touch paths are supervised by `safetyTask` instead; see section 7.
+
 If a subscribed task stops feeding the watchdog, the configured watchdog action resets the controller. Driver-disable behavior during reset depends on the physical ENA bias and wiring and requires bench verification. Watchdog initialization, registration and feed failures are checked; motion remains blocked until all critical tasks report ready.
 
 ## 6. EMI Protection
@@ -63,3 +66,17 @@ The [Setup Wizard](SETUP_WIZARD.md) requires observations of the physical E-STOP
 Coherent control snapshots feed 40 ms UI updates. Status older than 100 ms blocks new movement requests and shows a warning. Normal STOP remains unconditional; safetyTask checks its acknowledgement/completion deadlines independently of controlTask. Physical E-STOP ENA inhibition remains independent. See [implementation boundaries and device checks](CONTROL_SETUP_IMPLEMENTATION.md).
 
 The scheduled E-STOP level poll inhibits ENA on the first observed LOW, then uses the 5 ms classification path even if no interrupt arrived. A driver alarm also inhibits ENA and latches a fault on its first LOW sample, including short glitches. A healthy driver input clears the alarm input latch after 50 healthy polling samples, but the system fault still requires explicit reset. Reset requires healthy raw E-STOP/ALM, no pending E-STOP edge, completed motor cleanup, fresh task heartbeats, operational touch when required, and no required restart. Failed configuration rollback or acceleration restoration keeps control cleanup incomplete and is retried.
+
+## 7. Runtime supervision
+
+`safetyTask` writes ENA HIGH directly for stale tasks, because a stop request would wait on the task that hung. The first latched reason is kept until reset. Every latched fault disarms the USB mirror.
+
+| Condition | Response |
+| --- | --- |
+| Control cycle or input heartbeat stale for 100 ms | Latches **CONTROL STALE** or **INPUT STALE** |
+| LVGL loop stalled for 2 s, or 100 failed touch reads in a row | Stops active motion and latches **HMI STALE**. At rest, new starts are blocked instead |
+| Speed pot jumps to the rail within one 20 ms sample | Holds the speed, then latches **SPEED POT** after three samples. Reset stays blocked until the pot reads plausibly. Turning the knob to zero by hand is unaffected |
+| Restart after a panic, watchdog or brownout | Latches **UNEXPECTED RESET** at boot. The event log survives these resets, but not power loss |
+| Invalid saved data at boot | Latches **STORAGE** with motion disabled and the data untouched |
+
+A floating pot wiper is not detected and the analog pedal is not jump-checked. An open E-STOP wire reads as healthy. E-STOP acts through the MCU and the driver ENA input; it does not disconnect motor power. [All fault names](../wiki/Troubleshooting.md#fault-names).

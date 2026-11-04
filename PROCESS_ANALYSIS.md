@@ -1,12 +1,12 @@
-# Process flow analysis — v2.2.0
+# Process flow analysis — v2.3.0
 
-Updated 3 October 2026. This document describes current production flow; the [earlier analysis is archived](docs/archive/PROCESS_ANALYSIS_v2.0.5.md). Physical response times require measurement.
+Updated 4 November 2026. This document describes current production flow; the [earlier analysis is archived](docs/archive/PROCESS_ANALYSIS_v2.0.5.md). Physical response times require measurement.
 
 ## Task architecture
 
 | Task | Core | Priority | Stack | Responsibility |
 | --- | --- | --- | --- | --- |
-| safetyTask | 0 | 5 | 4 KB | Fault polling, E-STOP debounce, driver alarm, watchdog |
+| safetyTask | 0 | 5 | 4 KB | Fault polling, E-STOP debounce, driver alarm, watchdog, task/UI/touch supervision |
 | inputTask | 0 | 4 | 5 KB | GPIO/ADC sampling, pedal interlock and coherent input publication |
 | controlTask | 0 | 3 | 4 KB | Motion commands, STOP latch, mode state, settings application, fault cleanup/reset |
 | lvglTask | 1 | 2 | 64 KB | Actual LVGL screens, touch, dimming, blocking fault overlay |
@@ -43,7 +43,7 @@ Calculated RPM comes from step timing and geometry, not an encoder. Source/direc
 
 GPIO34 expects HIGH healthy / LOW fault. A FALLING ISR writes ENA HIGH and stores pending/wake flags. As a redundant channel, the safety task also polls the pin level every millisecond, so a sustained LOW latches through the same 5 ms confirm path even if the edge never reached the ISR. ISR avoids motor calls, logging, allocation and ordinary flash functions. ENA HIGH disable is a driver/interface assumption that must be verified.
 
-The safety task also supervises task liveness, edge-triggered so each healthy→stale transition latches once: a stale control cycle (FAULT_CONTROL_STALE) or a stale input-task heartbeat (FAULT_INPUT_STALE, armed only after inputTask stamps its first heartbeat) inhibits ENA directly, because the motion-gate stop is consumed by the task that may have hung. The first latched fault reason is retained until RESET; later faults keep ENA inhibited without overwriting the cause. Driver ALM inhibits ENA and latches the fault on the first LOW sample, including a short glitch. Every latched fault disarms the USB mirror; re-arming is local to the touchscreen. A failed GT911 boot initialization (HMI_REQUIRED_FOR_MOTION) or a pending restart after formatting blocks new motion through the same admission gate; runtime touch health is not yet monitored.
+The safety task also supervises task liveness, edge-triggered so each healthy→stale transition latches once: a stale control cycle (FAULT_CONTROL_STALE) or a stale input-task heartbeat (FAULT_INPUT_STALE, armed only after inputTask stamps its first heartbeat) inhibits ENA directly, because the motion-gate stop is consumed by the task that may have hung. The first latched fault reason is retained until RESET; later faults keep ENA inhibited without overwriting the cause. Driver ALM inhibits ENA and latches the fault on the first LOW sample, including a short glitch. Every latched fault disarms the USB mirror; re-arming is local to the touchscreen. A failed GT911 boot initialization (HMI_REQUIRED_FOR_MOTION) or a pending restart after formatting blocks new motion through the same admission gate. At runtime, an LVGL loop stalled for 2 s or 100 failed touch reads in a row stops active motion and latches HMI STALE; at rest, new starts are blocked instead. A pot jump to the rail latches SPEED POT after three samples. A crash, watchdog or brownout restart latches UNEXPECTED RESET at boot, and invalid saved data latches STORAGE with motion disabled.
 
 The safety task publishes a latched ESTOP transition; potentially blocking motor cleanup runs in controlTask. Driver-alarm handling disables ENA first. Only the control task performs and retries library cleanup; reset remains blocked until the asynchronous FastAccelStepper queue drains. A brief input glitch also remains faulted until explicit reset.
 
@@ -55,19 +55,19 @@ No ISR-cycle count or physical stop-time guarantee is asserted. Repeated softwar
 
 1. UI updates a guarded draft/settings snapshot and requests a deferred save.
 2. `SaveRequest` records a generation; settings debounce for 1000 ms and presets for 500 ms.
-3. storageTask serializes snapshots and writes NVS `wrot/cfg` or `wrot/prs`.
+3. storageTask waits for IDLE or ESTOP, serializes snapshots and writes NVS `wrot/cfg` or `wrot/prs`. A start waits for a save in progress.
 4. Success clears only the completed generation; a concurrent new request remains pending.
 5. Failure retains pending data, reports error and retries with backoff up to 30 seconds.
 
-UI distinguishes pending/saved/error. Invalid existing JSON roots and out-of-range/nonfinite values are validated; corrupt stored data does not silently become a successful boot. Dimming uses 16 bits and documented 44→300 migration.
+UI distinguishes pending/saved/error. Invalid existing JSON roots and out-of-range/nonfinite values are validated; invalid stored data boots to a visible STORAGE fault with motion disabled and the data untouched. Dimming uses 16 bits and documented 44→300 migration.
 
-Flash commits may interfere with rendering/cache access. `g_flashWriting` signals active writes; the UI loop checks it, although this flag is not a hardware cache-safety proof. Framework configuration, ISR placement and worst-case flash/load behavior still require bench checks.
+Flash commits disable the cache, and the prebuilt framework has no IRAM-safe RMT/GPIO ISRs, so writes run only at rest. `g_flashWriting` signals active writes to the UI loop and the supervisors, so a flash stall does not count as a dead task. Worst-case flash/load behavior still requires bench checks.
 
 ## Screen, theme and input lifecycle
 
 Navigation requests and theme recreation are deferred through the UI loop, outside callback deletion of triggering widgets. Static widget pointers are invalidated before screen reconstruction. Program draft lifetime is separate from screen widgets, preserving edits across child screens.
 
-V5 shares a graphite/orange theme, 14 px body floor and generated 104 px numeric font across firmware/simulator. Twenty-three ScreenIds and a separate fault overlay are registered. Calibration uses fixed Align → Measure → Verify → Save stages; measured and verification moves must complete, and only a verified draft with its save receipt becomes persistent. Setup adds a four-stage wizard. New/Edit Program uses fixed positions, separate run/available modes and full-screen validated name/RPM input. GT911 read failure reports RELEASED, and JOG renewal protects against stalled UI input.
+V5 shares a graphite theme with a selectable accent color, 14 px body floor and generated 104 px numeric font across firmware/simulator. Twenty-three ScreenIds and a separate fault overlay are registered. Calibration uses fixed Align → Measure → Verify → Save stages; measured and verification moves must complete, and only a verified draft with its save receipt becomes persistent. Setup adds a four-stage wizard. New/Edit Program uses fixed positions, separate run/available modes and full-screen validated name/RPM input. GT911 read failure reports RELEASED, and JOG renewal protects against stalled UI input.
 
 ## USB mirror
 
@@ -75,6 +75,6 @@ Mirror firmware sends dirty RGB565 rectangles through bounded writes. Failed tra
 
 ## Verification and remaining work
 
-Local validation passed 438 native/production-control cases, six packaging regressions, actual upstream RMT encoder profiles, actual LVGL self-test, a zero-failure layout audit and release/debug/mirror compilation. Publication requires all six CI jobs on the exact tagged master commit. Tests directly cover several production policies; older suites model other behavior and simulator motor/storage are stubbed. Device fault injection, physical stop response, power loss, cable-break behavior, USB backpressure and TIG HF conditions remain separate checks. See [FastAccelStepper re-audit](docs/FASTACCELSTEPPER_1_4_REAUDIT.md), [control/calibration implementation](docs/CONTROL_SETUP_IMPLEMENTATION.md), [current status](STATUS.md), [hardware guide](docs/HARDWARE_SETUP.md) and [flashing guide](docs/releases/FLASHING.md).
+CI and local validation pass 511 native/production-control cases, ten packaging regressions, actual upstream RMT encoder profiles, actual LVGL self-test, a zero-failure layout audit and release/debug/mirror compilation. Publication requires all six CI jobs on the exact tagged master commit. Tests directly cover several production policies; older suites model other behavior and simulator motor/storage are stubbed. v2.3.0 has not been tested on the assembled machine. Device fault injection, physical stop response, power loss, cable-break behavior, USB backpressure and TIG HF conditions remain separate checks. See [FastAccelStepper re-audit](docs/FASTACCELSTEPPER_1_4_REAUDIT.md), [control/calibration implementation](docs/CONTROL_SETUP_IMPLEMENTATION.md), [current status](STATUS.md), [hardware guide](docs/HARDWARE_SETUP.md) and [flashing guide](docs/releases/FLASHING.md).
 
 Motor configuration is applied from a private proposal before committing its fields to shared settings. Storage snapshots committed settings only and never changes the live direction cache when an older write completes. Formatting owns a separate temporary inhibit; erase failure cannot clear a concurrent fatal/restart latch.

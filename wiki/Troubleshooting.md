@@ -64,7 +64,7 @@
 - Build and flash the mirror firmware: `pio run -e esp32p4-mirror --target upload`
 - Close PlatformIO Monitor; the mirror viewer needs exclusive access to the COM port
 - Start with `.\simulator\run.ps1 -UsbMirror COM5 -Baud 4000000`; fall back to `2000000` or `921600` only if the Windows driver is unstable
-- After flashing, arm **Settings > Display > USB MIRROR** again on the physical screen. It is intentionally not saved across reboot.
+- After flashing, arm **Settings > Display > USB remote control** again on the physical screen. It is intentionally not saved across reboot.
 - Higher baud alone is not the main fix; current mirror firmware uses LVGL partial flushes so only dirty rectangles are streamed.
 
 ### Touch not responding
@@ -81,9 +81,13 @@
 
 ## Storage
 
+### STORAGE fault at boot
+- Saved data is invalid. Motion stays disabled and the data is left untouched.
+- Reflash a matching build, or erase flash and set up again.
+
 ### Settings or presets not persisting
 - Current firmware stores data in **NVS** (namespace `wrot`, keys `cfg` and `prs`), not LittleFS files
-- Wait for debounced flush (1-2 seconds) after saving
+- Saves run only at rest. Stop the motor, then wait for the debounced flush (1-2 seconds)
 - After a full flash erase, re-enter settings and presets; ensure the partition table includes an **NVS** data partition
 
 ## Build Issues
@@ -95,7 +99,7 @@
 
 ### `-mfix-esp32-psram-cache-issue` compile error
 - This is an Xtensa compiler flag — ESP32-P4 uses RISC-V
-- Remove this flag; use `CONFIG_RMT_ISR_IRAM_SAFE=1` instead
+- Remove this flag
 
 ### System Python 3.14 incompatible with PlatformIO
 - Run builds from the PlatformIO/VS Code terminal so `pio` uses PlatformIO's own compatible Python runtime.
@@ -112,8 +116,12 @@
 
 ### Calibration will not save
 - This is intentional unless verification has passed.
-- Use **Settings > Step** to set the workpiece OD, then **Settings > Calibration**: MOVE 360, measure real rotation, enter measured degrees, APPLY, run verify, and SAVE only after PASS.
+- Open **Settings > Calibration**, set the workpiece OD on that page, then MOVE 360, measure real rotation, enter measured degrees, APPLY, run verify, and SAVE only after PASS.
 - Test calibration unloaded first. The firmware can verify UI/math flow, but the final factor depends on the real drivetrain measurement.
+
+### Program does not start, or RPM drops with a large diameter
+- Workpiece RPM is capped per diameter by `MAX_STEP_HZ` (200 kHz) and `MOTOR_RPM_LIMIT` (1500 RPM). A saved program above the cap is blocked at start.
+- Lower the program RPM or check its diameter, roller diameter and gear ratio in Motor Config.
 
 ### Potentiometer dead zone at bottom
 - ADC reference is 3315 (measured range of 10k pot with 11dB attenuation)
@@ -128,6 +136,23 @@
 - If the gauge looks “stuck”, confirm Motor Config **max RPM** and preset RPM are within range
 
 ## Safety
+
+### Fault names
+
+The red overlay names the first latched fault. Clear the cause, then press **RESET TO IDLE**, unless the table says to restart. Reset never starts motion.
+
+| Fault | Meaning | What to do |
+|---|---|---|
+| **E-STOP** | Physical E-STOP input is active | Release it and check the machine |
+| **E-STOP GLITCH** | Input changed during debounce | Check wiring and HF shielding |
+| **DRIVER ALM** | Driver alarm input is active | Check the driver and motor. Even a short alarm latches |
+| **PEDAL INPUT** | Pedal measurement unavailable | Release the pedal and restore the input |
+| **SPEED POT** | Pot jumped to the rail | Check the wiring, then turn the knob up. Reset stays blocked until it reads plausibly |
+| **MOTOR COMMAND** / **MOTOR TIMEOUT** | Motor rejected a command or timed out | Inspect the drive |
+| **CONTROL STALE** / **INPUT STALE** | A task stopped responding | Restart the controller |
+| **HMI STALE** | UI stalled or touch stopped responding | Restart the controller. If this happens during TIG HF, see the enclosure section above |
+| **UNEXPECTED RESET** | Restart after a crash, watchdog or brownout | Check the power supply and the Diagnostics event log |
+| **STORAGE** | Saved data is invalid; motion disabled, data kept | Reflash or erase |
 
 ### E-STOP not working
 - Verify wiring matches firmware: **safe = GPIO 34 HIGH**, **fault = GPIO 34 LOW**; ISR is **FALLING** (see `safety.cpp`, `docs/HARDWARE_SETUP.md`)

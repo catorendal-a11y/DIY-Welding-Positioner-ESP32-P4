@@ -1,6 +1,6 @@
 # Control ownership and guided setup
 
-Source/release v2.1.1. This change preserves the existing V5 design and physical E-STOP input. It has not been flashed or physically tested as part of release publication.
+Introduced in v2.1.1 and current through v2.3.0, which has not been tested on the assembled machine. The design keeps the V5 UI and the physical E-STOP input.
 
 ## Control and safety boundaries
 
@@ -9,6 +9,9 @@ Source/release v2.1.1. This change preserves the existing V5 design and physical
 - The internal bounded stepper mutex remains as a defensive adapter boundary and test-injection point. It is not exposed through a raw stepper-pointer API.
 - The physical E-STOP ISR still drives ENA HIGH directly. Safety-task inhibition and STOP deadline supervision do not wait for controlTask. Library `forceStop` cleanup runs in the owner task and must finish before reset is accepted.
 - Existing operational STOP deadlines remain 50 ms acknowledgement and the applied-acceleration completion budget. These values are software supervision, not measured physical response times.
+- With **Driver = DM542T**, a validated start waits 200 ms in `STATE_ENABLING` after asserting ENA, before the first pulse. STOP, E-STOP and driver alarm keep their immediate paths during the wait.
+- Settings and programs are saved only in IDLE or ESTOP, and a start waits for a save in progress.
+- Step mode keeps ENA asserted during the dwell. Pulse mode latches direction at start. Workpiece RPM is capped per diameter by `MAX_STEP_HZ` and `MOTOR_RPM_LIMIT`.
 
 ## Snapshots and UI
 
@@ -16,7 +19,7 @@ Source/release v2.1.1. This change preserves the existing V5 design and physical
 
 UI refresh is 40 ms. A missing/control snapshot older than 100 ms shows STATUS UNAVAILABLE and disables movement controls. Command admission independently rejects requests if the executor heartbeat is stale. Normal STOP remains unconditional and visible; the physical E-STOP remains independent. Fault status is read directly from safety, not inferred from an old snapshot. Existing command and authoritative state APIs remain compatible; operating screens use the snapshot for display.
 
-Fault headings distinguish physical E-STOP, driver alarm, pedal input, rejected motor commands and timeouts. Reset returns to idle and never starts motion. Jog requests now resolve configured inversion consistently with other modes.
+Fault headings name the cause: see [fault names](../wiki/Troubleshooting.md#fault-names). Reset returns to idle and never starts motion. Jog requests now resolve configured inversion consistently with other modes.
 
 ## Setup and storage compatibility
 
@@ -28,8 +31,8 @@ Settings add the optional boolean `setup_completed`. Fresh defaults are false. M
 
 The simulator compiles production control, motor wrapper, continuous/pulse/step/jog modes and program executor. Its FreeRTOS, drive, input, safety and persistence adapters remain host simulations; real motion response and scheduler behavior are not asserted. The commissioning regression accelerates only simulated physical travel, leaving control timers unchanged.
 
-- 438 native cases, including 31 cases compiling actual production control/motor/modes. Concurrent mailbox copies, stale admission, STOP, direction inversion, setup sequence and migration are covered.
-- Six simulator packaging regression cases.
+- 511 native cases, including 51 cases compiling actual production control/motor/modes. Concurrent mailbox copies, stale admission, STOP, direction inversion, setup sequence and migration are covered.
+- Ten packaging regression cases for the firmware and simulator bundles.
 - Firmware release/debug/USB-mirror builds.
 - LVGL self-test includes the actual motor-config and calibration editors, all wizard stages, physical-input simulation, reset without restart, failed completion persistence/retry, new/existing entry and cancellation.
 - Geometry/font audit covers registered screens, fault overlays and each captured wizard stage. Intentional ellipsis/scrolling is retained; screenshots are inspected separately.
@@ -44,4 +47,4 @@ The simulator compiles production control, motor wrapper, continuous/pulse/step/
 5. Check reset never restarts and requires a new START; repeat interruption/reboot tests during setup.
 6. Monitor control/input stack watermarks and scheduling under USB mirror, display activity and extended operation. Host tests do not establish these device limits.
 
-No encoder, electrical safety-chain modification or safety certification is included. This work is delivered through a pull request and UI preview; merging, release publication and device flashing require a separate instruction.
+No encoder, electrical safety-chain modification or safety certification is included.

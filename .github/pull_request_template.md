@@ -4,7 +4,7 @@
 
 ## Verification
 
-- [ ] `pio test -e native`
+- [ ] `pio test -e native -e native-control -e native-speed -e native-storage -e native-safety -e native-control-storage`
 - [ ] `pio run -e esp32p4-release`
 - [ ] Debug/mirror or actual LVGL self-test checked when affected
 - [ ] Hardware tested, or hardware impact clearly stated

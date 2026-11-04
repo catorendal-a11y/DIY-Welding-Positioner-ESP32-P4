@@ -19,8 +19,9 @@ Actual LVGL simulator capture with example data. Main RPM +/− controls operate
 Implemented features (latest update verified in native tests and simulator; physical safety checks remain bench work):
 
 - Motor rotation with live RPM adjustment (potentiometer + foot pedal; V5 main screen has idle RPM +/− controls)
-- All 5 welding modes (Continuous, Jog, Pulse, Step, Timer)
+- 4 rotation modes (Continuous, Jog, Pulse, Step) and a start countdown
 - E-STOP input disables ENA and latches a fault; explicit guarded UI reset
+- Task, UI, touch and pot supervision, with visible crash and storage faults
 - 16 program preset save/load (NVS JSON blobs; legacy LittleFS migration on first boot if needed)
 - 23 registered LVGL root screens (`ScreenId`) plus E-STOP overlay; settings, diagnostics, pedal settings, system info, guided calibration and Setup Wizard
 - Portable Windows simulator: extract all files and open Start Simulator.cmd; no hardware or development tools needed
@@ -41,7 +42,7 @@ Implemented features (latest update verified in native tests and simulator; phys
 
 ## Project Overview
 
-Open-source welding positioner controller for rotary welding tables, pipe welding rotators, and automated fabrication systems. Controls a NEMA 23 stepper motor through a **1:108** drivetrain (NMRV030 + spur) with precise RPM control (**0.001-3.0 RPM** workpiece absolute limits in `config.h`; Motor Config stores a lower **max RPM** ceiling in NVS if desired).
+Open-source welding positioner controller for rotary welding tables, pipe welding rotators, and automated fabrication systems. Controls a NEMA 23 stepper motor through a **1:108** default drivetrain (NMRV030 + spur) with precise RPM control (**0.001-3.0 RPM** workpiece absolute limits in `config.h`; Motor Config stores a lower **max RPM** ceiling in NVS if desired).
 
 ### Key Specs
 
@@ -52,9 +53,9 @@ Open-source welding positioner controller for rotary welding tables, pipe weldin
 | Touch | GT911 capacitive |
 | UI Framework | LVGL 9.6.0 |
 | Motor Driver | FastAccelStepper 1.4.0 (upstream `f24a659`) (RMT hardware pulses) |
-| Gear Ratio | **1:108** total (60 x 72/40, NMRV030 + spur) |
+| Gear Ratio | **1:108** default (60 x 72/40, NMRV030 + spur), set in Motor Config |
 | Microstepping | 1/4, 1/8, 1/16, 1/32 (selectable) |
-| RPM Range | 0.001-3.0 RPM (`MIN_RPM`/`MAX_RPM`); UI max <= cap via Motor Config (NVS). Roadmap: higher limits with DM542T |
+| RPM Range | 0.001-3.0 RPM (`MIN_RPM`/`MAX_RPM`); UI max <= cap via Motor Config (NVS), further capped per diameter |
 | Storage | NVS (`Preferences`) + ArduinoJson blobs `cfg` / `prs` (16 presets, settings); one-time LittleFS import |
 | Cross-core | `std::atomic` with explicit memory ordering; single source of truth in `src/app_state.h` |
 
@@ -65,7 +66,7 @@ src/
   main.cpp              - FreeRTOS task setup
   config.h              - All hardware pins and motor parameters
   motor/                - FastAccelStepper wrapper, speed control, microstepping
-  control/              - State machine, 5 welding modes
+  control/              - State machine, 4 rotation modes
   safety/               - E-STOP ISR + watchdog
   storage/              - NVS persistence (+ legacy LittleFS migration)
   ui/                   - LVGL screens, display init, touch, theme

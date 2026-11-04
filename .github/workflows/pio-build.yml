@@ -25,6 +25,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
+      - name: Prove cppcheck reads the firmware source
+        run: |
+          echo 'int cppcheck_probe() { int a[2]; return a[2]; }' > src/cppcheck_probe.cpp
+          if pio check -e static-analysis --severity=high --severity=medium --fail-on-defect=high --fail-on-defect=medium; then
+            echo "cppcheck missed a known defect, so a pass would mean nothing"
+            exit 1
+          fi
+          mv src/cppcheck_probe.cpp "$RUNNER_TEMP/"
       - name: Run cppcheck on the firmware source
         run: pio check -e static-analysis --severity=high --severity=medium --fail-on-defect=high --fail-on-defect=medium
 

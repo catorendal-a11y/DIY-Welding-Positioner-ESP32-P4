@@ -51,8 +51,14 @@ jobs:
         run: |
           set -euo pipefail
           COMMIT="$(git rev-parse HEAD)"
-          CI_RUN_ID="$(gh run list --workflow pio-build.yml --branch master --commit "$COMMIT" \
-            --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+          # A tag pushed right after its commit arrives before CI has finished.
+          CI_RUN_ID=""
+          for _ in $(seq 1 60); do
+            CI_RUN_ID="$(gh run list --workflow pio-build.yml --branch master --commit "$COMMIT" \
+              --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+            [[ -n "$CI_RUN_ID" ]] && break
+            sleep 30
+          done
           test -n "$CI_RUN_ID"
           test "$(gh run view "$CI_RUN_ID" --json jobs --jq 'all(.jobs[]; .conclusion == "success")')" = true
           echo "CI_RUN_ID=$CI_RUN_ID" >> "$GITHUB_ENV"

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-11-04
+
 ### Added
 
 - UI and touch supervision: `safetyTask` stops active motion and latches **HMI STALE** if the LVGL loop stalls for 2 s or the touch controller fails 100 reads in a row; at rest new starts are blocked instead.

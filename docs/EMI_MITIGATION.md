@@ -1,6 +1,6 @@
 # TIG High Frequency (HF) EMI Mitigation Guide
 
-Reviewed for v2.3.0 on 2026-11-04. The field experience below predates this release; it is not a recorded EMI qualification of v2.3.0. Repeat the checks in [emi_test.md](emi_test.md) and record firmware version, wiring and results.
+Reviewed for v2.3.0 on 2026-11-04. The owner reports that v2.3.0 works during TIG HF in the grounded enclosure. Repeat the checks in [emi_test.md](emi_test.md) on your own build, and after any wiring or enclosure change.
 
 High Frequency (HF) start on TIG welders emits massive amounts of Electromagnetic Interference (EMI).
 This EMI can easily reset microcontrollers, freeze I2C touch screens, or cause random stepper motor jitter.

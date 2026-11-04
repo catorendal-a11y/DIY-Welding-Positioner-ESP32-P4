@@ -67,7 +67,7 @@ Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Posit
 
 **Current release: v2.3.0, updated 4 November 2026.** V5 identifies the UI design iteration. [Download firmware and read the release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.3.0). The current firmware and simulator include LVGL 9.6, FastAccelStepper 1.4, guided setup/calibration and the revised program editor.
 
-v2.3.0 adds UI, touch and pot supervision, visible crash and storage faults, per-diameter RPM limits and settings for roller diameter and gear ratio. The owner reported it tested on the assembled machine on 2026-11-04, without measurements; the v2.2.0 notes below describe the earlier build.
+v2.3.0 adds UI, touch and pot supervision, visible crash and storage faults, per-diameter RPM limits and settings for roller diameter and gear ratio. The owner reported it tested on the assembled machine on 2026-11-04, including TIG HF; the v2.2.0 notes below describe the earlier build.
 
 v2.2.0 adds an idle screen saver, exact motor-settings input and flat LVGL UI refinements, plus motion/input/storage corrections. A functional pre-release build was uploaded and flash-verified; the owner confirms assembled functions work. On 2026-10-05 pedal/ADS1115 commissioning was completed on the owner's hardware (ADS1115 detected at 0x48; GPIO33 switch + analog speed owner-confirmed working, master build with runtime source selection); quantitative measurements have not been reported. [Release notes](releases/v2.2.0.md) · [Logic review](archive/CODE_LOGIC_REVIEW_2026-10-03.md) · [Screen saver](SCREEN_SAVER.md).
 
@@ -698,7 +698,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 | LVGL self-test | Passed: navigation, program edits, RPM adjustment, fault reset, full setup/calibration workflows, save failure/retry and stale control |
 | Firmware builds | Release, debug and mirror passed |
 | Device upload | Functional pre-release commit 673e078 uploaded to COM3 and flash data verified on 2026-10-03. On 2026-10-05 the pedal-fix build (c4ea129) was flashed and hash-verified; the boot scan detects the ADS1115 at 0x48 and the owner confirms the pedal (GPIO33 + analog speed) works. No quantitative stop-time measurements were supplied. |
-| Physical motor/safety testing | The owner reported v2.3.0 tested on the assembled machine on 2026-11-04. No measurements were supplied. The upload records above are v2.2.x builds |
+| Physical motor/safety testing | The owner reported v2.3.0 tested on the assembled machine on 2026-11-04, including TIG HF. Stop time has not been measured. The upload records above are v2.2.x builds |
 
 [Dependency validation logs](../docs/validation/2026-10-02/dependencies) and [program editor validation](../docs/validation/2026-10-03/program-editor/README.md) record local runs. Native tests include direct production-policy tests, but older tests also model behavior separately; simulator hardware is stubbed. CI runs native and packaging tests, three firmware variants and SDL self-test and layout checks. The badge links to the current GitHub result.
 

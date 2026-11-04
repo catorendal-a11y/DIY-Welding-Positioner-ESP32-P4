@@ -86,11 +86,7 @@ static uint16_t s_applied_dir_delay_us = 0;
 static bool s_dir_timing_applied = false;
 static bool s_temp_accel_applied = false;
 
-static uint32_t motor_clamp_acceleration(uint32_t accel) {
-  if (accel < 1000u) return 1000u;
-  if (accel > 30000u) return 30000u;
-  return accel;
-}
+static uint32_t motor_clamp_acceleration(uint32_t accel) { return motion_acceleration_clamp(accel); }
 
 static bool motor_apply_stepper_dir_timing(uint16_t want) {
   if (stepper == nullptr) return false;
@@ -379,9 +375,7 @@ uint32_t motor_get_current_hz() {
 
 uint32_t motor_milli_hz_for_rpm_calibrated(float rpm_workpiece_command) {
   if (!std::isfinite(rpm_workpiece_command) || rpm_workpiece_command < MIN_RPM || rpm_workpiece_command > speed_get_rpm_max()) return 0;
-  const double milli_hz = double(rpmToStepHzCalibrated(rpm_workpiece_command)) * 1000.0;
-  if (!std::isfinite(milli_hz) || milli_hz < START_SPEED * 1000.0 || milli_hz > UINT32_MAX) return 0;
-  return static_cast<uint32_t>(milli_hz);
+  return motion_milli_hz(double(rpmToStepHzCalibrated(rpm_workpiece_command)), START_SPEED);
 }
 
 bool motor_apply_speed_for_rpm_locked(float rpm_workpiece_command) {

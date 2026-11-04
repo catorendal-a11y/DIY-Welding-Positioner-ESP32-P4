@@ -24,7 +24,17 @@ static void back_event_cb(lv_event_t* e) { screens_show(SCREEN_MENU); }
 static Preset reviewedPreset;
 static void start_reviewed_preset() {
   ProgramExecutorResult result = program_executor_start_preset(&reviewedPreset);
-  if (result != PROGRAM_EXEC_OK) LOG_W("Program start blocked: %s", program_executor_result_name(result));
+  if (result == PROGRAM_EXEC_OK) return;
+  LOG_W("Program start blocked: %s", program_executor_result_name(result));
+  const char* why = "The start request was rejected.\nTry again, or check Diagnostics.";
+  if (result == PROGRAM_EXEC_INVALID_PRESET || result == PROGRAM_EXEC_INVALID_MODE) {
+    why = "This program has invalid settings.\nCheck it in the editor.";
+  } else if (result == PROGRAM_EXEC_BLOCKED_SAFETY) {
+    why = "A fault or interlock blocks motion.\nCheck Diagnostics.";
+  } else if (result == PROGRAM_EXEC_BLOCKED_STATE) {
+    why = "The machine is busy.\nWait until it is idle, then start again.";
+  }
+  screen_confirm_create("PROGRAM BLOCKED", why, nullptr, nullptr, SCREEN_PROGRAMS);
 }
 static void load_preset_cb(lv_event_t* e) {
   int id = (int)(size_t)lv_event_get_user_data(e);

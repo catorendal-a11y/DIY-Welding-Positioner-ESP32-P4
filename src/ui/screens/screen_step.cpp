@@ -172,13 +172,23 @@ static void preset_cb(lv_event_t* e) {
   }
 }
 
+static void show_entry_error(lv_obj_t* hint, const char* message) {
+  if (!hint) return;
+  lv_label_set_text(hint, message);
+  lv_obj_set_style_text_color(hint, g_col_red, 0);
+}
+
 static void custom_keyboard_cb(lv_event_t* e) {
   lv_event_code_t code = lv_event_get_code(e);
   if (code == LV_EVENT_READY) {
     if (customTa) {
       const char* txt = lv_textarea_get_text(customTa);
       float val = step_parse_first_float(txt);
-      if (val > 0.0f && step_angle_valid(val) && ui_control_state() == STATE_IDLE) {
+      if (ui_control_state() == STATE_IDLE && !(val > 0.0f && step_angle_valid(val))) {
+        show_entry_error(customHint, "Enter an angle above 0, up to 3600 degrees");
+        return;
+      }
+      if (ui_control_state() == STATE_IDLE) {
         control_reset_step_accumulator();
         currentAngle = val;
         if (currentAngle > 3600.0f) currentAngle = 3600.0f;
@@ -200,7 +210,11 @@ static void diameter_keyboard_cb(lv_event_t* e) {
     if (diaTa) {
       const char* txt = lv_textarea_get_text(diaTa);
       float mm = step_parse_first_float(txt);
-      if (ui_control_state() == STATE_IDLE && mm >= 1.0f && mm <= 20000.0f) {
+      if (ui_control_state() == STATE_IDLE && !(mm >= 1.0f && mm <= 20000.0f)) {
+        show_entry_error(diaHint, "Enter a diameter from 1 to 20000 mm");
+        return;
+      }
+      if (ui_control_state() == STATE_IDLE) {
         speed_set_workpiece_diameter_mm(mm);
         xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
         g_settings.workpiece_diameter_mm = mm;

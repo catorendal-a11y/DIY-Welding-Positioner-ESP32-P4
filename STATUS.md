@@ -3,7 +3,7 @@
 **Last Updated:** 2026-11-04
 **Published firmware:** v2.3.0
 **Source:** master - safety supervision and audit fixes (released as v2.3.0)
-**Build:** 511 native/control/speed/storage/safety test cases, packaging regressions, Linux/Windows simulator self-tests/layout audits and release/debug/mirror builds. **The owner reported v2.3.0 tested on the assembled machine on 2026-11-04.** TIG HF works on the owner's machine. Stop time and calibration accuracy have not been measured.
+**Build:** 484 native/control/speed/storage/safety test cases, packaging regressions, Linux/Windows simulator self-tests/layout audits and release/debug/mirror builds. **The owner reported v2.3.0 tested on the assembled machine on 2026-11-04.** TIG HF works on the owner's machine. Stop time and calibration accuracy have not been measured.
 
 ---
 
@@ -118,13 +118,8 @@ v2.2.0 includes the [idle screen saver](docs/SCREEN_SAVER.md) and [LVGL UI refin
 
 ## Known open items
 
-Found in the v2.3.0 audit and not changed:
+These cannot be solved in firmware alone:
 
-- A blocked program start shows no message.
-- REBOOT does nothing visible while a save is pending.
-- An invalid Step angle closes the keyboard without an error.
-- Jog changes the manual direction.
-- The screen saver colors do not follow the theme.
 - A floating pot wiper and an open E-STOP wire are not detected, and the analog pedal is not jump-checked.
 
 ---

@@ -184,47 +184,6 @@ static void clear_pending_motion_requests() {
 // ───────────────────────────────────────────────────────────────────────────────
 // STATE TRANSITION VALIDATION
 // ───────────────────────────────────────────────────────────────────────────────
-bool control_is_valid_transition(SystemState from, SystemState to) {
-  if (to == STATE_ESTOP) return true;
-  if (from == STATE_ESTOP) return (to == STATE_IDLE);
-  if (from == STATE_IDLE) {
-    switch (to) {
-      case STATE_RUNNING:
-      case STATE_PULSE:
-      case STATE_STEP:
-      case STATE_JOG:
-      case STATE_ENABLING:
-      case STATE_ESTOP:
-        return true;
-      default:
-        return false;
-    }
-  }
-  if (from == STATE_ENABLING) {
-    // Settle elapsed -> the requested mode; aborted/stopped before pulses.
-    switch (to) {
-      case STATE_RUNNING:
-      case STATE_PULSE:
-      case STATE_STEP:
-      case STATE_JOG:
-      case STATE_STOPPING:
-      case STATE_IDLE:
-        return true;
-      default:
-        return false;
-    }
-  }
-  if (from == STATE_RUNNING) {
-    return (to == STATE_STOPPING || to == STATE_ESTOP);
-  }
-  if (from == STATE_PULSE || from == STATE_STEP || from == STATE_JOG) {
-    return (to == STATE_STOPPING || to == STATE_ESTOP);
-  }
-  if (from == STATE_STOPPING) {
-    return (to == STATE_IDLE || to == STATE_ESTOP);
-  }
-  return false;
-}
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STATE MACHINE CORE
@@ -296,28 +255,6 @@ const char* control_get_state_string() {
   return control_state_name(currentState.load(std::memory_order_acquire));
 }
 
-const char* control_state_name(SystemState s) {
-  switch (s) {
-    case STATE_IDLE:
-      return "IDLE";
-    case STATE_RUNNING:
-      return "RUNNING";
-    case STATE_PULSE:
-      return "PULSE";
-    case STATE_STEP:
-      return "STEP";
-    case STATE_JOG:
-      return "JOG";
-    case STATE_STOPPING:
-      return "STOPPING";
-    case STATE_ESTOP:
-      return "ESTOP";
-    case STATE_ENABLING:
-      return "ENABLING";
-    default:
-      return "UNKNOWN";
-  }
-}
 
 // ───────────────────────────────────────────────────────────────────────────────
 // MODE CONTROL FUNCTIONS (non-blocking — set flags for controlTask)
@@ -360,7 +297,7 @@ bool control_start_step_sequence(float angle_deg, uint16_t repeats, float dwell_
   if (safety_inhibit_motion()) return false;
   MotionCommand cmd{};
   cmd.type = MOTION_CMD_START_STEP;
-  if (!std::isfinite(angle_deg) || angle_deg <= 0 || angle_deg > 3600 ||
+  if (!motion_step_angle_valid(angle_deg) ||
       !std::isfinite(dwell_sec) || dwell_sec < 0 || dwell_sec > 30 || repeats < 1 || repeats > 99) return false;
   if (angleToSteps(angle_deg) <= 0) return false;
   cmd.step_angle = angle_deg;

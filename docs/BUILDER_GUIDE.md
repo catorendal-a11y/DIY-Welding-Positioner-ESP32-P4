@@ -343,6 +343,7 @@ Default environment: `esp32p4-release`. Build output goes to `.pio/build-fw` to 
 | Serial monitor | `pio device monitor` |
 | Native tests | `pio test -e native -e native-control -e native-speed -e native-storage -e native-safety -e native-control-storage` |
 | Packaging tests | `python -m unittest discover -s test/tooling` |
+| Static analysis | `pio check -e static-analysis --severity=high --severity=medium` |
 | On-device tests | `pio test -e esp32p4-test` |
 
 Serial ports are detected automatically. Use `pio device list` and override the port with `--upload-port COM3` (example) if needed. Native tests do not need hardware.
@@ -693,7 +694,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 
 | Local check | Result |
 | --- | --- |
-| Native suites | 511 / 511 passed (native/control/speed/storage/safety suites) |
+| Native suites | 484 / 484 passed (native/control/speed/storage/safety suites) |
 | Packaging tests | 10 / 10 passed |
 | LVGL self-test | Passed: navigation, program edits, RPM adjustment, fault reset, full setup/calibration workflows, save failure/retry and stale control |
 | Firmware builds | Release, debug and mirror passed |
@@ -766,7 +767,7 @@ src/
     screens.cpp/h             Screen management, lazy creation, g_lvgl_mutex
     screens/                  screen_*.cpp (23 registered ScreenId roots + ESTOP overlay module)
 test/
-  test_logic/               Native Unity tests (no hardware required)
+  test_logic/               Native Unity tests of production logic headers (no hardware required)
   test_device_*/            On-device integration tests (require ESP32-P4)
 docs/images/                Wiring diagrams, UI mockups
 simulator/                  Windows SDL2 LVGL simulator and automated UI smoke test

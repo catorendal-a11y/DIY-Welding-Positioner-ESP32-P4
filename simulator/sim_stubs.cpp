@@ -53,7 +53,7 @@ static bool s_sliderPriority = false;
 static bool s_pedalEnabled = true;
 static uint32_t s_eventVersion = 0;
 static std::vector<EventLogEntry> s_events;
-static bool simFault = false, simAlarm = false;
+static bool simFault = false, simAlarm = false, simResetBlocked = false;
 static bool simControlStalled = false;
 static bool simStaleInput = false, simRejectMotion = false, simNvsFailure = false;
 static FaultReason simReason = FAULT_NONE;
@@ -236,8 +236,8 @@ void safety_attach_estop() {}
 void simulator_set_estop_input(bool active) { digitalWrite(PIN_ESTOP, active ? LOW : HIGH); simFault = active; if (active) safety_report_motor_fault(FAULT_ESTOP_PRESSED); }
 bool safety_is_estop_active() { return simFault; }
 bool safety_is_driver_alarm_latched() { return simAlarm; }
-bool safety_inhibit_motion() { return simFault || simAlarm || simStaleInput || control_get_state() == STATE_ESTOP; }
-bool safety_can_reset_from_overlay() { return !simFault && !simAlarm && !simStaleInput; }
+bool safety_inhibit_motion() { return simFault || simAlarm || simStaleInput || simResetBlocked || control_get_state() == STATE_ESTOP; }
+bool safety_can_reset_from_overlay() { return !simFault && !simAlarm && !simStaleInput && !simResetBlocked; }
 bool safety_is_estop_locked() { return control_get_state() == STATE_ESTOP; }
 FaultReason safety_get_fault_reason() { return simReason; }
 void safety_reset_estop() {
@@ -379,7 +379,7 @@ void safety_task_ready(uint32_t) {}
 
 bool simulator_set_scenario(const char* scenario) {
   simControlStalled = false;
-  simFault = simAlarm = simStaleInput = simRejectMotion = simNvsFailure = false;
+  simFault = simAlarm = simStaleInput = simRejectMotion = simNvsFailure = simResetBlocked = false;
   if (std::strcmp(scenario, "none") == 0) return true;
   if (std::strcmp(scenario, "stalled-control") == 0) { simControlStalled = true; return true; }
   if (std::strcmp(scenario, "estop") == 0) { simFault = true; simReason = FAULT_ESTOP_PRESSED; }
@@ -387,6 +387,10 @@ bool simulator_set_scenario(const char* scenario) {
   else if (std::strcmp(scenario, "stale-adc") == 0 || std::strcmp(scenario, "i2c-failure") == 0) {
     simStaleInput = true; simReason = FAULT_PEDAL_INPUT;
   }
+  else if (std::strcmp(scenario, "hmi-stale") == 0) { simResetBlocked = true; simReason = FAULT_HMI_STALE; }
+  else if (std::strcmp(scenario, "speed-pot") == 0) { simResetBlocked = true; simReason = FAULT_POT_INPUT; }
+  else if (std::strcmp(scenario, "storage") == 0) { simResetBlocked = true; simReason = FAULT_STORAGE_CORRUPT; }
+  else if (std::strcmp(scenario, "unexpected-reset") == 0) { simReason = FAULT_WATCHDOG_RESET; }
   else if (std::strcmp(scenario, "rejected-motion") == 0) { simRejectMotion = true; return true; }
   else if (std::strcmp(scenario, "nvs-failure") == 0) { simNvsFailure = true; storage_save_settings(); return true; }
   else return false;

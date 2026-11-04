@@ -18,7 +18,7 @@ Runtime FastAccelStepper calls have one owner: controlTask. inputTask publishes 
 
 **WDT:** inputTask, controlTask, safetyTask are subscribed to TWDT. lvglTask and storageTask are NOT subscribed (they do blocking I/O that can exceed WDT timeout). safetyTask supervises the control, input and UI loops and touch reads, and latches a fault when one stalls.
 
-**Flash safety:** the flash cache is disabled during **NVS** writes, and the prebuilt Arduino framework has no IRAM-safe RMT/GPIO ISRs. Settings and presets are therefore saved only in IDLE or ESTOP. `sdkconfig.defaults` does not change the prebuilt framework. Settings/presets use NVS `putBytes`, not LittleFS `.tmp` + rename.
+**Flash safety:** the flash cache is disabled during **NVS** writes, and the prebuilt Arduino framework has no IRAM-safe RMT/GPIO ISRs. Settings and presets are therefore saved only in IDLE or ESTOP. Settings/presets use NVS `putBytes`, not LittleFS `.tmp` + rename.
 
 ## State Machine
 

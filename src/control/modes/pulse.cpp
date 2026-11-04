@@ -25,8 +25,8 @@ static bool start_motor() {
 void pulse_start(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
   // ENABLING = replay of an already-admitted start after the driver settle.
   if (control_get_state() != STATE_IDLE && control_get_state() != STATE_ENABLING) return;
-  pulseOnMs = constrain(on_ms, PULSE_MS_MIN, PULSE_MS_MAX);
-  pulseOffMs = constrain(off_ms, PULSE_MS_MIN, PULSE_MS_MAX);
+  pulseOnMs = motion_pulse_clamp_ms(on_ms);
+  pulseOffMs = motion_pulse_clamp_ms(off_ms);
   pulseCycleLimit = cycles;
   pulseDirection = speed_get_direction();
   timeline.start(millis(), pulseOnMs.load(), pulseOffMs.load(), cycles);

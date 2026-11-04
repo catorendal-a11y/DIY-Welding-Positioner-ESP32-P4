@@ -34,6 +34,69 @@ inline float motion_stop_angle_deg(float rpm, float hz_at_16, uint32_t accelerat
   return rpm * 6.0f * (hz_at_16 / float(acceleration)) / 2.0f;
 }
 
+// Limits and conversions shared by the firmware and the native tests.
+constexpr uint32_t MOTION_ACCEL_MIN = 1000u, MOTION_ACCEL_MAX = 30000u, MOTION_ACCEL_DEFAULT = 7500u;
+constexpr uint32_t PULSE_MS_MIN = 100u, PULSE_MS_MAX = 10000u;
+
+inline uint32_t motion_acceleration_clamp(uint32_t accel) {
+  return accel < MOTION_ACCEL_MIN ? MOTION_ACCEL_MIN : accel > MOTION_ACCEL_MAX ? MOTION_ACCEL_MAX : accel;
+}
+inline uint32_t motion_acceleration_or_default(uint32_t stored) {
+  return stored < MOTION_ACCEL_MIN || stored > MOTION_ACCEL_MAX ? MOTION_ACCEL_DEFAULT : stored;
+}
+inline uint32_t motion_pulse_clamp_ms(uint32_t ms) {
+  return ms < PULSE_MS_MIN ? PULSE_MS_MIN : ms > PULSE_MS_MAX ? PULSE_MS_MAX : ms;
+}
+inline bool motion_calibration_factor_valid(float factor) {
+  return std::isfinite(factor) && factor >= 0.5f && factor <= 1.5f;
+}
+inline bool motion_microstep_valid(uint32_t microstep) {
+  return microstep == 4u || microstep == 8u || microstep == 16u || microstep == 32u;
+}
+inline uint32_t motion_microstep_or_default(uint32_t stored) {
+  return motion_microstep_valid(stored) ? stored : 16u;
+}
+inline const char* motion_microstep_name(uint32_t microstep) {
+  switch (microstep) {
+    case 4u: return "1/4";
+    case 8u: return "1/8";
+    case 32u: return "1/32";
+    default: return "1/16";
+  }
+}
+inline bool motion_step_angle_valid(float degrees) {
+  return std::isfinite(degrees) && degrees > 0.0f && degrees <= 3600.0f;
+}
+inline bool motion_requested_cw(bool program_override, bool program_cw, bool switch_enabled, bool switch_high,
+                                bool stored_cw) {
+  return program_override ? program_cw : switch_enabled ? switch_high : stored_cw;
+}
+
+// No slip at the roller contact: workpiece revolutions scale by roller / workpiece diameter.
+inline float motion_steps_per_workpiece_rev(float steps_per_output_rev, float workpiece_m, float roller_m) {
+  return steps_per_output_rev * (workpiece_m / roller_m);
+}
+inline float motion_step_hz_to_rpm(float hz, uint32_t steps_per_rev, float gear, float workpiece_m, float roller_m, float cal) {
+  if (hz < 1e-9f || steps_per_rev == 0u) return 0.0f;
+  return hz * 60.0f / float(steps_per_rev) / gear * (roller_m / workpiece_m) / cal;
+}
+// Pot wiper to 0..1, where ADC 0 is full speed. At or below snap_adc the result is full speed.
+inline float motion_pot_normalized(float adc, float adc_ref, float snap_adc) {
+  const float clamped = adc < 0.0f ? 0.0f : adc > 4095.0f ? 4095.0f : adc;
+  if (snap_adc > 0.0f && clamped <= snap_adc) return 1.0f;
+  const float normalized = (adc_ref - clamped) / adc_ref;
+  return normalized < 0.0f ? 0.0f : normalized > 1.0f ? 1.0f : normalized;
+}
+inline bool motion_pot_takeover(float adc, float last_adc, float threshold) {
+  return std::fabs(adc - last_adc) > threshold;
+}
+// Zero means rejected: a rate below the operational floor is never rounded up.
+inline uint32_t motion_milli_hz(double hz, uint32_t floor_hz) {
+  const double milli_hz = hz * 1000.0;
+  if (!std::isfinite(milli_hz) || milli_hz < floor_hz * 1000.0 || milli_hz > UINT32_MAX) return 0u;
+  return static_cast<uint32_t>(milli_hz);
+}
+
 enum class PulsePhase : uint8_t { On, Decelerating, Off, Complete };
 enum class PulseAction : uint8_t { None, Stop, Start, Complete };
 

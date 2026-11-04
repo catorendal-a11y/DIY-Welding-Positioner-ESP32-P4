@@ -10,6 +10,7 @@ static void (*onConfirmCallback)() = nullptr;
 static void (*onCancelCallback)() = nullptr;
 static ScreenId returnScreen = SCREEN_PROGRAMS;
 static ScreenId confirmSuccessScreen = SCREEN_NONE;
+static uint32_t dialogSerial = 0;
 static std::atomic<bool> confirmPending{false};
 static std::atomic<bool> cancelPending{false};
 
@@ -33,9 +34,12 @@ void screen_confirm_update() {
       dest = confirmSuccessScreen;
     }
     confirmSuccessScreen = SCREEN_NONE;
+    const uint32_t serial = dialogSerial;
     if (cb) {
       cb();
     }
+    // The callback opened a follow-up dialog (for example, the start was blocked).
+    if (serial != dialogSerial) return;
     screens_request_show(dest);
     return;
   }
@@ -89,7 +93,8 @@ void screen_confirm_create(const char* title, const char* message, void (*on_con
   lv_obj_set_user_flag(lv_obj_get_parent(dangerBtnLabel), 0, motion_action);
   onConfirmCallback = on_confirm;
   onCancelCallback = on_cancel;
-  returnScreen = screens_get_current();
+  if (screens_get_current() != SCREEN_CONFIRM) returnScreen = screens_get_current();
+  ++dialogSerial;
   confirmSuccessScreen = confirm_success_screen;
 
   lv_label_set_text(bodyTitleLabel, title);

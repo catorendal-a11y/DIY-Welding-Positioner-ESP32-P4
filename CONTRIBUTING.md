@@ -32,11 +32,14 @@ pio test -e native -e native-control -e native-speed -e native-storage -e native
 
 # Run packaging tests
 python -m unittest discover -s test/tooling
+
+# Run static analysis
+pio check -e static-analysis --severity=high --severity=medium
 ```
 
 Windows PowerShell: set `$env:PYTHONUTF8='1'` before upload if the terminal uses a legacy encoding. Detect the port with `pio device list`, then pass `--upload-port COM3` (example).
 
-Run the actual LVGL simulator with `.\simulator\run.ps1 -SelfTest`. CI runs the six native environments, packaging tests, all three firmware variants and the simulator self-test and layout audit on Linux and Windows. Device tests require an isolated bench with motor power controlled; see [test/README.md](test/README.md).
+Run the actual LVGL simulator with `.\simulator\run.ps1 -SelfTest`. CI runs cppcheck, the six native environments, packaging tests, all three firmware variants and the simulator self-test and layout audit on Linux and Windows. Device tests require an isolated bench with motor power controlled; see [test/README.md](test/README.md).
 
 ## Development Workflow
 

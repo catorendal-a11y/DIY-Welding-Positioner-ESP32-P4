@@ -2,6 +2,7 @@
 // Extracted from screen_*.cpp files for native unit testing (no LVGL dependencies)
 
 #pragma once
+#include "../control/motion_policy.h"
 #include <cmath>
 #include <cctype>
 #include <climits>
@@ -90,7 +91,7 @@ inline int countdown_clamp_seconds(int sec) {
 // ───────────────────────────────────────────────────────────────────────────────
 
 inline bool step_angle_valid(float degrees) {
-  return degrees > 0.0f && degrees <= 3600.0f;
+  return motion_step_angle_valid(degrees);
 }
 
 // CUSTOM input: "300mm", "dia 300 mm", "OD300" -> diameter (mm); plain "90" / "90,5" -> degrees

@@ -229,6 +229,14 @@ void theme_set_scheme(uint8_t scheme) {
   theme_sync_colors();
 }
 
+lv_color_t theme_accent_on_dark() {
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  uint8_t idx = g_settings.accent_color;
+  xSemaphoreGive(g_settings_mutex);
+  if (idx >= THEME_COUNT) idx = 0;
+  return lv_color_hex(theme_palette[idx].accent);
+}
+
 const char* theme_get_name(uint8_t idx) {
   if (idx >= THEME_COUNT) {
     idx = 0;

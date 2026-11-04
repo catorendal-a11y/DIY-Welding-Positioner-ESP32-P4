@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- A confirmed program start that gets blocked now shows **PROGRAM BLOCKED** with the reason. It was only logged.
+- REBOOT explains why it is refused while the machine runs or a save is pending. It did nothing visible.
+- An invalid Step angle or diameter keeps the keypad open and shows the allowed range. It closed without a message.
+- Jog no longer changes the manual direction.
+- The screen saver uses the selected accent color.
+- The fault overlay heading names every fault. HMI STALE, SPEED POT, STORAGE and others showed MOTION LOCKED.
+
+### Internal
+
+- State transitions and motion limits have one definition, shared by the firmware and the native tests. The copies in `test_logic.h` and `test_speed_logic.h` had drifted: no ENABLING state, and rate and negative-angle behavior the firmware no longer has.
+- Removed 31 native tests that only checked the old copies. Added tests for ENABLING and rate rejection. The native total is 484.
+- Simulator scenarios and self-tests for HMI STALE, SPEED POT, STORAGE and UNEXPECTED RESET, and for the changes above. `simulator/main.cpp` is split by theme.
+- CI runs cppcheck, actions are pinned to commits, and Dependabot proposes updates.
+- Removed the unused `lib/esp_lcd_ek79007` and `sdkconfig.defaults`, which the prebuilt framework ignores.
+
 ## [2.3.0] - 2026-11-04
 
 ### Added

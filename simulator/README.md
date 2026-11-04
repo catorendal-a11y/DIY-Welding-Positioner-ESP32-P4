@@ -127,11 +127,13 @@ simulator/build/rotator_simulator.exe --build-info
 simulator/build/rotator_simulator.exe --scenario nvs-failure
 ```
 
-Scenarios: `estop`, `driver-alarm`, `stale-adc`, `i2c-failure`, `rejected-motion`, `nvs-failure`, `stalled-control`. Rejected motion faults when START is pressed. Input faults block reset until cleared; restart the simulator to select another scenario. These scenarios never connect to hardware.
+Scenarios: `estop`, `driver-alarm`, `stale-adc`, `i2c-failure`, `hmi-stale`, `speed-pot`, `storage`, `unexpected-reset`, `rejected-motion`, `nvs-failure`, `stalled-control`. Rejected motion faults when START is pressed. `unexpected-reset` can be reset at once. Input faults and the HMI, pot and storage faults block reset until cleared; restart the simulator to select another scenario. These scenarios never connect to hardware.
 
 The layout audit measures actual LVGL fonts on registered screens and fault overlays at 800×480. It checks clipped text, insufficient label height and labels outside non-scrolling parents; explicit ellipsis/scrolling and compact event summaries are intentional. Operator-generated text still needs practical visual review.
 
 CMake accepts `LVGL_DIR`, `ARDUINOJSON_DIR` and `SIMULATOR_DEPENDENCY_ROOT` overrides. Windows CI builds, tests and packages the portable EXE from the same source commit. Packaging rejects mismatched/dirty binaries and missing license files; `--allow-dirty` is only for labeled local development archives.
+
+The test code is `sim_self_test.cpp` (`--self-test`), `sim_previews.cpp` (regressions with captures), `sim_audit.cpp` (`--screenshots`, `--audit-layout`) and `sim_test_support.cpp` (shared helpers).
 
 ## Setup wizard regression and preview
 

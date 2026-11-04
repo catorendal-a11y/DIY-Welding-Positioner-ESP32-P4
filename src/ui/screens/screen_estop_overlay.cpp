@@ -80,7 +80,8 @@ void estop_overlay_update() {
                            reason == FAULT_PEDAL_INPUT ? "PEDAL INPUT FAULT" :
                            reason == FAULT_DRIVER_ALARM ? "DRIVER ALARM" :
                            reason == FAULT_MOTOR_COMMAND ? "MOTOR COMMAND FAULT" :
-                           reason == FAULT_MOTOR_TIMEOUT ? "MOTOR TIMEOUT" : "MOTION LOCKED");
+                           reason == FAULT_MOTOR_TIMEOUT ? "MOTOR TIMEOUT" :
+                           reason == FAULT_NONE ? "MOTION LOCKED" : safety_fault_reason_name(reason));
   lv_label_set_text(reasonLabel, safety_fault_reason_message(reason));
   const bool physical = safety_is_estop_active(), driver = safety_is_driver_alarm_latched();
   lv_label_set_text(inputLabel, physical ? "ACTIVE" : "RELEASED");

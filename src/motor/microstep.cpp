@@ -4,13 +4,12 @@
 #include "../storage/storage.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include "../control/motion_policy.h"
 
 void microstep_init() {
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   uint8_t val = g_settings.microstep;
-  if (val != MICROSTEP_4 && val != MICROSTEP_8 && val != MICROSTEP_16 && val != MICROSTEP_32) {
-    g_settings.microstep = 16;
-  }
+  g_settings.microstep = motion_microstep_or_default(val);
   xSemaphoreGive(g_settings_mutex);
   LOG_I("Microstep: %s", microstep_get_string());
 }
@@ -35,13 +34,7 @@ const char* microstep_get_string() {
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   uint8_t ms = g_settings.microstep;
   xSemaphoreGive(g_settings_mutex);
-  switch (ms) {
-    case MICROSTEP_4:  return "1/4";
-    case MICROSTEP_8:  return "1/8";
-    case MICROSTEP_16: return "1/16";
-    case MICROSTEP_32: return "1/32";
-    default: return "1/16";
-  }
+  return motion_microstep_name(ms);
 }
 
 uint32_t microstep_get_steps_per_rev() {

@@ -120,7 +120,7 @@
 - Test calibration unloaded first. The firmware can verify UI/math flow, but the final factor depends on the real drivetrain measurement.
 
 ### Program does not start, or RPM drops with a large diameter
-- Workpiece RPM is capped per diameter by `MAX_STEP_HZ` (200 kHz) and `MOTOR_RPM_LIMIT` (1500 RPM). A saved program above the cap is blocked at start.
+- Workpiece RPM is capped per diameter by `MAX_STEP_HZ` (200 kHz) and `MOTOR_RPM_LIMIT` (1500 RPM). A saved program above the cap is blocked at start and shows **PROGRAM BLOCKED** with the reason.
 - Lower the program RPM or check its diameter, roller diameter and gear ratio in Motor Config.
 
 ### Potentiometer dead zone at bottom

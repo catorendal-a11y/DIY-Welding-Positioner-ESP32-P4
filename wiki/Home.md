@@ -2,15 +2,15 @@
 
 **ESP32-P4 / C6 GUITION JC4880P443C** | Open-source firmware for TIG/MIG welding rotators
 
-## Current Status: v2.2.1 - Pedal runtime source selection
+## Current Status: v2.3.0 - Safety supervision and audit fixes
 
-Release **v2.2.1** is the current firmware identifier (**`FW_VERSION`**). It makes the foot pedal work in every hardware configuration: GPIO33 switch start/stop always, ADS1115 analog pedal speed when present, panel-potentiometer fallback otherwise, and it retires the wiring-diagram limitations around the ADS1115. Retaining LVGL 9.6, FastAccelStepper 1.4, the idle screen saver and guided setup/calibration. The build was flash-verified on the owner's ESP32-P4; the owner confirms assembled functions work, including the pedal: the boot scan detects the ADS1115 at 0x48 and GPIO33 start/stop plus analog pedal speed are owner-confirmed on the assembled machine. Quantitative stop-time and HF measurements have not been supplied. Earlier TIG field experience supports installing the controller, driver and motor PSU inside one grounded metal enclosure.
+Release **v2.3.0** is the current firmware identifier (**`FW_VERSION`**). It adds UI, touch and pot supervision, visible crash and storage faults, per-diameter RPM limits and settings for roller diameter and gear ratio. It has not been tested on the assembled machine yet; the last hardware-verified build is v2.2.1.
 
 Earlier releases include v2.0.8 version alignment and v2.0.7 dark/light mode. See the repository changelog for history.
 
 ## Current release and UI
 
-[Download v2.2.0](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.2.0) · [Flashing instructions](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/releases/FLASHING.md) · [Validation and improvements](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/FASTACCELSTEPPER_1_4_REAUDIT.md)
+[Download v2.3.0](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.3.0) · [Flashing instructions](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/releases/FLASHING.md) · [Validation and improvements](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/FASTACCELSTEPPER_1_4_REAUDIT.md)
 
 ![V5 main screen](https://raw.githubusercontent.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/master/docs/images/ui_runtime_v5/01_MAIN.png)
 

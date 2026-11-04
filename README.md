@@ -49,7 +49,7 @@ Touchscreen controller for a single-axis TIG/MIG welding rotator.
   <a href="#documentation-and-contributions"><img src="docs/images/support-project.svg" width="750" alt="Support this project to keep it open source"></a>
 </p>
 
-**[Try the Windows simulator](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.2.1/welding-positioner-v2.2.1-simulator-windows-x64.zip)** · **[Firmware downloads](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.2.1)** · **[Builder guide](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/wiki)** · **[Watch the hardware demo](https://youtu.be/GygLl6XY-TM)**
+**[Try the Windows simulator](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.3.0/welding-positioner-v2.3.0-simulator-windows-x64.zip)** · **[Firmware downloads](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.3.0)** · **[Builder guide](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/wiki)** · **[Watch the hardware demo](https://youtu.be/GygLl6XY-TM)**
 
 The image shows the current V5 interface with example data. The hardware demo shows an earlier UI on the existing machine.
 
@@ -81,6 +81,8 @@ Board illustration and pin reference above. The product illustration shows vendo
 - Physical **E-STOP input**, driver-alarm monitoring and guarded reset.
 - Guided **setup and calibration**, touch diagnostics and a USB-C live mirror.
 - Optional **[idle screen saver](docs/SCREEN_SAVER.md)** in the V5 design, with touch-to-wake and a Display preview.
+
+**v2.3.0** adds UI, touch and pot supervision, visible crash and storage faults, per-diameter RPM limits and settings for roller diameter and gear ratio. It has not been tested on the assembled machine yet. [Release notes](docs/releases/v2.3.0.md) · [Changelog](CHANGELOG.md).
 
 **v2.2.1** makes the foot pedal work in every configuration: GPIO33 switch start/stop always, ADS1115 analog pedal speed when present, panel-potentiometer fallback otherwise. [Release notes](docs/releases/v2.2.1.md) · [Changelog](CHANGELOG.md).
 
@@ -134,7 +136,7 @@ For **HF-start TIG welding**, put the **ESP32-P4 display/controller, stepper dri
 - Use shielded external cables and enclosure-side shield termination where appropriate; add ferrites if interference remains.
 - Repeat HF-start checks after changing firmware, wiring, cable routing or the enclosure.
 
-Earlier hardware testing worked during TIG welding after the shared grounded enclosure was installed. This is historical field experience; it does not qualify v2.2.0 or measure its physical stop response. [EMI installation and test details](docs/EMI_MITIGATION.md).
+Earlier hardware testing worked during TIG welding after the shared grounded enclosure was installed. This is historical field experience; it does not qualify v2.3.0 or measure its physical stop response. [EMI installation and test details](docs/EMI_MITIGATION.md).
 
 
 ## Install firmware
@@ -146,7 +148,7 @@ For a source build, install PlatformIO and use:
 ```sh
 git clone https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4.git
 cd DIY-Welding-Positioner-ESP32-P4
-git checkout v2.2.1
+git checkout v2.3.0
 pio run
 ```
 
@@ -190,7 +192,7 @@ Calibration guides you through **Align → Measure → Verify → Save**. The co
 
 v2.2.0 includes cancelled-countdown guards, motion bounds/timeouts, pedal takeover, program direction and verified saves. [Logic review](docs/archive/CODE_LOGIC_REVIEW_2026-10-03.md). [LVGL 9.6 UI refinements](docs/LVGL_9_6_UI_IMPROVEMENTS.md) improve text placement, status updates and exact motor-settings entry while preserving the flat design.
 
-Validation covers **459 native/control/speed/storage tests**, packaging regressions, upstream RMT encoder checks, Linux/Windows simulator checks, a zero-failure layout audit and three firmware builds. Release binaries come from the exact validated master CI commit. [Release validation](docs/releases/v2.2.0.md#validation-and-hardware-status).
+Validation covers **511 native/control/speed/storage/safety tests**, packaging regressions, upstream RMT encoder checks, Linux/Windows simulator checks, a zero-failure layout audit and three firmware builds. Release binaries come from the exact validated master CI commit. [Release validation](docs/releases/v2.2.0.md#validation-and-hardware-status).
 
 - **Single axis; no encoder feedback.** RPM/progress are calculated, so calibration requires real measurement.
 - The owner confirms the assembled controller functions work, including the foot pedal: on 2026-10-05 the ADS1115 answered the boot scan at 0x48 and GPIO33 switch + analog pedal speed were verified working on the assembled machine (master build with runtime pedal source selection, unreleased). This is functional feedback; no measured stop-time or HF qualification is claimed.

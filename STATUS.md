@@ -1,9 +1,9 @@
 # Project Status
 
 **Last Updated:** 2026-11-04
-**Published firmware:** v2.2.1
-**Source:** master @ c4ea129 — pedal runtime source selection + ADS1115 wiring diagram rev 2.7 (released as v2.2.1)
-**Build:** 511 native/control/speed/storage/safety test cases, packaging regressions, Linux/Windows simulator self-tests/layout audits and release/debug/mirror builds. On 2026-10-05 the pedal-fix build was flashed and hash-verified on the owner's ESP32-P4 (COM3); the boot I2C scan detects the ADS1115 at 0x48, and the owner confirms the foot pedal (GPIO33 start/stop + ADS1115 analog speed) is tested and working. Quantitative measurements have not been reported. Historical releases retain their original assets.
+**Published firmware:** v2.3.0
+**Source:** master - safety supervision and audit fixes (released as v2.3.0)
+**Build:** 511 native/control/speed/storage/safety test cases, packaging regressions, Linux/Windows simulator self-tests/layout audits and release/debug/mirror builds. **v2.3.0 has not been tested on the assembled machine.** The last hardware-verified build is v2.2.1 (2026-10-05, owner's ESP32-P4), where the foot pedal was tested and working. Quantitative measurements have not been reported.
 
 ---
 
@@ -72,7 +72,7 @@ v2.2.0 includes the [idle screen saver](docs/SCREEN_SAVER.md) and [LVGL UI refin
 - [x] **TIG HF field validation** (welding works with ESP32-P4 screen, driver, and PSU inside one grounded metal enclosure)
 
 ### Documentation
-- [x] **README** (source and release v2.2.0, feature list, wiring diagram, BOM, TIG HF enclosure requirement; synced with `config.h`)
+- [x] **README** (source and release v2.3.0, feature list, wiring diagram, BOM, TIG HF enclosure requirement; synced with `config.h`)
 - [x] **Wiki** (Home, Getting Started, Hardware Setup, Troubleshooting, Roadmap, Architecture)
 - [x] **docs/** (Hardware Setup, Safety System, EMI Mitigation, Implementation, Instructables)
 - [x] **Wiring diagram v2** (SVG, GPIO29 on correct side, clean cable routing)

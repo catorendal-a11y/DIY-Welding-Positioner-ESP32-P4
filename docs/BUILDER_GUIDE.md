@@ -8,7 +8,7 @@ Detailed material retained from the former README. Start with the [short project
 
 ### Precision Multi-Mode Welding Rotator for TIG, MIG, and Pipe Welding
 
-**ESP32-P4 &nbsp;&middot;&nbsp; Source firmware v2.2.0**
+**ESP32-P4 &nbsp;&middot;&nbsp; Source firmware v2.3.0**
 
 [![PlatformIO CI](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml/badge.svg)](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml)
 [![Latest Release](https://img.shields.io/github/v/release/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4)](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/latest)
@@ -65,7 +65,9 @@ Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Posit
 
 [Implementation details](../docs/IMPROVEMENTS_2026-10-01.md) · [V5 integration and upload record](../docs/UI_V5_DEPLOYMENT.md) · [Changelog](../CHANGELOG.md)
 
-**Current release: v2.2.0, updated 3 October 2026.** V5 identifies the UI design iteration. [Download firmware and read the release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.2.0). The current firmware and simulator include LVGL 9.6, FastAccelStepper 1.4, guided setup/calibration and the revised program editor.
+**Current release: v2.3.0, updated 4 November 2026.** V5 identifies the UI design iteration. [Download firmware and read the release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.3.0). The current firmware and simulator include LVGL 9.6, FastAccelStepper 1.4, guided setup/calibration and the revised program editor.
+
+v2.3.0 adds UI, touch and pot supervision, visible crash and storage faults, per-diameter RPM limits and settings for roller diameter and gear ratio. It has not been tested on the assembled machine yet; the v2.2.0 notes below describe the earlier build.
 
 v2.2.0 adds an idle screen saver, exact motor-settings input and flat LVGL UI refinements, plus motion/input/storage corrections. A functional pre-release build was uploaded and flash-verified; the owner confirms assembled functions work. On 2026-10-05 pedal/ADS1115 commissioning was completed on the owner's hardware (ADS1115 detected at 0x48; GPIO33 switch + analog speed owner-confirmed working, master build with runtime source selection); quantitative measurements have not been reported. [Release notes](releases/v2.2.0.md) · [Logic review](archive/CODE_LOGIC_REVIEW_2026-10-03.md) · [Screen saver](SCREEN_SAVER.md).
 
@@ -248,7 +250,7 @@ The 30 design views cover all 22 screen types, additional states and keyboards. 
 | **Display** | `SCREEN_DISPLAY` | Brightness, screen-saver timeout/preview, **Appearance** (DARK/LIGHT), accent theme selection |
 | **System Info** | `SCREEN_SYSINFO` | Core load, heap, PSRAM, uptime |
 | **Calibration** | `SCREEN_CALIBRATION` | Guided Align → Measure → Verify → Save, with isolated draft correction |
-| **Motor Config** | `SCREEN_MOTOR_CONFIG` | Microstepping, acceleration, direction switch, pedal enable |
+| **Motor Config** | `SCREEN_MOTOR_CONFIG` | Microstepping, acceleration, roller diameter, gear ratio, direction switch |
 | **Pedal Settings** | `SCREEN_PEDAL_SETTINGS` | Pedal arm/disarm plus live GPIO33 and ADS1115 status |
 | **Diagnostics** | `SCREEN_DIAGNOSTICS` | Live GPIO/fault page for ESTOP, ALM, DIR switch, pedal switch, ENA, direction, RPM state and recent event log |
 | **About** | `SCREEN_ABOUT` | Firmware version, hardware info |
@@ -370,7 +372,7 @@ The source includes a four-step **Setup Wizard** using the existing V5 dark/oran
 
 ## PC UI Simulator
 
-**Try it without installing development tools:** [Download the Windows x64 simulator ZIP](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.2.0/welding-positioner-v2.2.0-simulator-windows-x64.zip), extract all files, and double-click **Start Simulator.cmd**. No hardware is needed. [Portable simulator guide](../docs/releases/SIMULATOR.md).
+**Try it without installing development tools:** [Download the Windows x64 simulator ZIP](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.3.0/welding-positioner-v2.3.0-simulator-windows-x64.zip), extract all files, and double-click **Start Simulator.cmd**. No hardware is needed. [Portable simulator guide](../docs/releases/SIMULATOR.md).
 
 The Windows simulator runs the real LVGL screen code on the PC using SDL2. It is useful for UI review, navigation testing, and quick logic checks without flashing the ESP32-P4.
 

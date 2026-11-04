@@ -44,7 +44,7 @@ The mechanical 108:1 reduction and 80 mm roller model are retained. A direct-chu
 
 ### F01 · P1 · Countdown can start rotation after an E-STOP reset
 
-**Sources:** [screen_timer.cpp:275–305](../src/ui/screens/screen_timer.cpp), [screen_estop_overlay.cpp](../src/ui/screens/screen_estop_overlay.cpp).
+**Sources:** [screen_timer.cpp:275–305](../../src/ui/screens/screen_timer.cpp), [screen_estop_overlay.cpp](../../src/ui/screens/screen_estop_overlay.cpp).
 
 Start a three-second countdown, trigger E-STOP, release the switch and reset before zero. The countdown survives the fault. At zero, the UI creates a new continuous-start command because the current state is idle again. The dispatcher cannot reject it as an old command: its ticket is created after reset.
 
@@ -56,7 +56,7 @@ The actual countdown screen and production dispatcher reproduced `IDLE` after re
 
 ### F02 · P1 · Jog can exceed a newly lowered maximum RPM
 
-**Sources:** [jog.cpp:14–20, 39–50](../src/control/modes/jog.cpp), [control.cpp:392–403](../src/control/control.cpp).
+**Sources:** [jog.cpp:14–20, 39–50](../../src/control/modes/jog.cpp), [control.cpp:392–403](../../src/control/control.cpp).
 
 Set jog to 1.000 RPM, return to idle, apply a 0.100 RPM maximum, then hold JOG. `jog_set_speed()` clamps when the value is edited, but configuration changes do not clamp the stored jog value. `jog_start()` reuses that value directly.
 
@@ -68,7 +68,7 @@ The real configuration dispatcher and jog mode reproduced a 0.100 RPM cap with a
 
 ### F03 · P1 · Valid geometry can overflow a signed 32-bit move
 
-**Sources:** [speed.cpp:218–223](../src/motor/speed.cpp), [calibration.cpp:45–46](../src/motor/calibration.cpp), [step_mode.cpp:46–66](../src/control/modes/step_mode.cpp).
+**Sources:** [speed.cpp:218–223](../../src/motor/speed.cpp), [calibration.cpp:45–46](../../src/motor/calibration.cpp), [step_mode.cpp:46–66](../../src/control/modes/step_mode.cpp).
 
 The custom Step screen allows 3600 degrees; diameter allows 20000 mm; microstepping allows 32; calibration allows 1.5. Together they require **2,592,000,000 pulses**, exceeding `INT32_MAX` (2,147,483,647). The calculation casts a float into `long` without checking. On ESP32 and Windows, `long` is 32 bits; FastAccelStepper's relative move parameter is `int32_t`.
 
@@ -82,7 +82,7 @@ The pinned [FastAccelStepper 1.4.0 header](https://github.com/gin66/FastAccelSte
 
 ### F04 · P2 · Pulse's internal deceleration has no completion deadline
 
-**Sources:** [pulse.cpp:34–46](../src/control/modes/pulse.cpp), [motion_policy.h:36–48](../src/control/motion_policy.h), [control.cpp:83–93](../src/control/control.cpp).
+**Sources:** [pulse.cpp:34–46](../../src/control/modes/pulse.cpp), [motion_policy.h:36–48](../../src/control/motion_policy.h), [control.cpp:83–93](../../src/control/control.cpp).
 
 At the end of ON, Pulse calls `motor_stop()` and stays in `STATE_PULSE`. The timeline waits for `isRunning()` to become false. The independent stopping deadline only covers an explicit STOP request or `STATE_STOPPING`.
 
@@ -92,7 +92,7 @@ With an injected driver that does not finish deceleration, the actual mode remai
 
 ### F05 · P2 · Minimum-speed flooring changes the requested workpiece RPM
 
-**Sources:** [motor.cpp:328–341](../src/motor/motor.cpp), [config.h:82–84](../src/config.h).
+**Sources:** [motor.cpp:328–341](../../src/motor/motor.cpp), [config.h:82–84](../../src/config.h).
 
 Commands below 20 step Hz are silently raised to 20 Hz. With a 300 mm part, microstep 4 and calibration 1.0, 0.001 RPM needs 5.4 Hz, but the command becomes 20 Hz: approximately **0.003704 RPM**, 3.70 times the requested value. Other supported geometries create larger differences.
 
@@ -102,7 +102,7 @@ The actual production geometry and motor conversion functions reproduced this. T
 
 ### F06 · P2 · New Program applies direction inversion twice
 
-**Sources:** [screen_program_edit.cpp:177](../src/ui/screens/screen_program_edit.cpp), [speed.cpp:456–473](../src/motor/speed.cpp), [control.cpp:406–409](../src/control/control.cpp).
+**Sources:** [screen_program_edit.cpp:177](../../src/ui/screens/screen_program_edit.cpp), [speed.cpp:456–473](../../src/motor/speed.cpp), [control.cpp:406–409](../../src/control/control.cpp).
 
 `speed_get_direction()` already returns the effective direction after inversion. New Program stores that result as a preset's requested direction. Execution applies inversion again.
 
@@ -112,7 +112,7 @@ With inversion enabled and a raw CW request, current effective direction was CCW
 
 ### F07 · P2 · UI speed override uses the wrong ADC baseline with an analog pedal
 
-**Sources:** [speed.cpp:366–373, 427–437](../src/motor/speed.cpp).
+**Sources:** [speed.cpp:366–373, 427–437](../../src/motor/speed.cpp).
 
 `speed_slider_set()` records the panel potentiometer ADC as the takeover baseline. `speed_apply()` compares that baseline with the active pedal ADC when analog pedal mode is enabled. Different stationary positions can therefore immediately cancel a UI override.
 
@@ -122,7 +122,7 @@ Using the actual ADS-enabled speed code with fresh injected ADC state, panel ADC
 
 ### F08 · P2 · Accepted UTF-8 program names change on reload
 
-**Sources:** [screen_program_edit.cpp:48–55](../src/ui/screens/screen_program_edit.cpp), [storage.cpp:165–167](../src/storage/storage.cpp), [config.h:134](../src/config.h).
+**Sources:** [screen_program_edit.cpp:48–55](../../src/ui/screens/screen_program_edit.cpp), [storage.cpp:165–167](../../src/storage/storage.cpp), [config.h:134](../../src/config.h).
 
 The editor accepts names up to 31 UTF-8 bytes. Loading replaces every non-ASCII byte with `?`. For example, `Nør` becomes `N??r`. The actual sanitizer reproduced this; the NVS round trip was traced in source, not exercised on a device.
 
@@ -130,7 +130,7 @@ The editor accepts names up to 31 UTF-8 bytes. Loading replaces every non-ASCII 
 
 ### F09 · P2 · Step and Jog adjustment cannot reach fine low speeds
 
-**Sources:** [screen_step.cpp:303–312](../src/ui/screens/screen_step.cpp), [screen_jog.cpp:41–51](../src/ui/screens/screen_jog.cpp).
+**Sources:** [screen_step.cpp:303–312](../../src/ui/screens/screen_step.cpp), [screen_jog.cpp:41–51](../../src/ui/screens/screen_jog.cpp).
 
 The Step minus button does nothing at 0.100 RPM or lower; its plus button increments by 0.100 RPM. Jog uses the same coarse behavior. This conflicts with the 0.001 RPM range and the program editor's finer increments. The actual Step screen reproduced 0.020 RPM remaining at 0.020 after pressing minus.
 
@@ -138,7 +138,7 @@ The Step minus button does nothing at 0.100 RPM or lower; its plus button increm
 
 ### F10 · P3 · Debug health logging reads an unsupported LVGL memory result
 
-**Sources:** [main.cpp:247–258](../src/main.cpp), [lib/lv_conf.h:25](../lib/lv_conf.h), local pinned LVGL `src/stdlib/clib/lv_mem_core_clib.c:78`.
+**Sources:** [main.cpp:247–258](../../src/main.cpp), [lib/lv_conf.h:25](../../lib/lv_conf.h), local pinned LVGL `src/stdlib/clib/lv_mem_core_clib.c:78`.
 
 The debug storage task declares an uninitialized `lv_mem_monitor_t`, calls `lv_mem_monitor_core()`, and reads `used_pct`. With the configured CLIB allocator, that function returns without filling the structure. Consequently the percentage and high-usage warning are meaningless and read uninitialized memory. This was verified against the actual configured LVGL 9.6 source, not a guessed threading problem.
 

@@ -6,7 +6,7 @@ Scope covers control, pedal/touch, safety tasks, motor settings, storage, USB mi
 
 ## Original findings and implementation
 
-Numbers correspond to the [historical review](CODE_REVIEW_2026-10-01.md).
+Numbers correspond to the [historical review](archive/CODE_REVIEW_2026-10-01.md).
 
 | Finding | Implementation | Verification and limits |
 | --- | --- | --- |

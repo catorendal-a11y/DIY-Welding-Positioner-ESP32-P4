@@ -34,7 +34,8 @@ void speed_sync_rpm_limits_from_settings();
 float speed_get_rpm_min_for_diameter(float mm);
 float speed_get_rpm_min(); // Geometry-dependent 20 Hz operational floor.
 float speed_clamp_rpm(float rpm); // Returns zero if no feasible range exists.
-float speed_get_rpm_max();         // Current UI/pot ceiling (atomic, MIN_RPM..MAX_RPM)
+float speed_get_rpm_max();         // Current ceiling: Max RPM setting, step-rate and motor limits for this diameter
+float speed_get_rpm_max_for_diameter(float mm);
 void speed_slider_set(float rpm);  // Set speed from GUI slider
 // When true (Step screen), cached target RPM follows UI slider only (no pot takeover).
 void speed_set_slider_priority(bool on);

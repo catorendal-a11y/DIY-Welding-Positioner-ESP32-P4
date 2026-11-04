@@ -188,7 +188,7 @@ Calibration guides you through **Align → Measure → Verify → Save**. The co
 
 ## Validation and limitations
 
-v2.2.0 includes cancelled-countdown guards, motion bounds/timeouts, pedal takeover, program direction and verified saves. [Logic review](docs/CODE_LOGIC_REVIEW_2026-10-03.md). [LVGL 9.6 UI refinements](docs/LVGL_9_6_UI_IMPROVEMENTS.md) improve text placement, status updates and exact motor-settings entry while preserving the flat design.
+v2.2.0 includes cancelled-countdown guards, motion bounds/timeouts, pedal takeover, program direction and verified saves. [Logic review](docs/archive/CODE_LOGIC_REVIEW_2026-10-03.md). [LVGL 9.6 UI refinements](docs/LVGL_9_6_UI_IMPROVEMENTS.md) improve text placement, status updates and exact motor-settings entry while preserving the flat design.
 
 Validation covers **459 native/control/speed/storage tests**, packaging regressions, upstream RMT encoder checks, Linux/Windows simulator checks, a zero-failure layout audit and three firmware builds. Release binaries come from the exact validated master CI commit. [Release validation](docs/releases/v2.2.0.md#validation-and-hardware-status).
 

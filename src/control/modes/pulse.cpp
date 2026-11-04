@@ -10,6 +10,7 @@ static PulseTimeline timeline;
 static std::atomic<uint32_t> pulseOnMs{500}, pulseOffMs{500}, completedCycles{0};
 static std::atomic<uint16_t> pulseCycleLimit{0};
 static std::atomic<PulsePhase> publishedPhase{PulsePhase::Complete};
+static Direction pulseDirection = DIR_CW;  // Latched at start, like Continuous and Step.
 
 static void publish_pulse() {
   completedCycles.store(timeline.completed());
@@ -19,7 +20,7 @@ static bool start_motor() {
   const uint32_t rate = motor_milli_hz_for_rpm_calibrated(speed_get_target_rpm());
   if (!rate) return false;
   motor_set_target_milli_hz(rate);
-  return speed_get_direction() == DIR_CW ? motor_run_cw() : motor_run_ccw();
+  return pulseDirection == DIR_CW ? motor_run_cw() : motor_run_ccw();
 }
 void pulse_start(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
   // ENABLING = replay of an already-admitted start after the driver settle.
@@ -27,6 +28,7 @@ void pulse_start(uint32_t on_ms, uint32_t off_ms, uint16_t cycles) {
   pulseOnMs = constrain(on_ms, PULSE_MS_MIN, PULSE_MS_MAX);
   pulseOffMs = constrain(off_ms, PULSE_MS_MIN, PULSE_MS_MAX);
   pulseCycleLimit = cycles;
+  pulseDirection = speed_get_direction();
   timeline.start(millis(), pulseOnMs.load(), pulseOffMs.load(), cycles);
   if (!start_motor() || !control_transition_to(STATE_PULSE)) {
     timeline.cancel();

@@ -35,6 +35,7 @@ static lv_obj_t* text(lv_obj_t* parent, int x, int y, int width, const char* val
   lv_label_set_text(obj,value); lv_label_set_long_mode(obj,LV_LABEL_LONG_MODE_WRAP);
   lv_obj_set_style_text_font(obj,font,0); lv_obj_set_style_text_color(obj,color,0); return obj;
 }
+float screen_program_edit_rpm_max() { return speed_get_rpm_max_for_diameter(editPreset.workpiece_diameter_mm); }
 static void do_cleanup_kb() { entry.close(); kbClosePending = false; }
 void screen_program_edit_leave() { do_cleanup_kb(); }
 static void lock_pending_draft(lv_obj_t* obj) {
@@ -57,9 +58,9 @@ static void input_cb(lv_event_t* e) {
   const char* value = entry.text();
   if (entryRpm) {
     float rpm = 0;
-    if (!parse_float_entry(value,rpm) || rpm < MIN_RPM || rpm > speed_get_rpm_max()) {
+    if (!parse_float_entry(value,rpm) || rpm < MIN_RPM || rpm > screen_program_edit_rpm_max()) {
       char error[96], minimum[16], maximum[16];
-      ui_format_rpm(minimum,sizeof(minimum),MIN_RPM); ui_format_rpm(maximum,sizeof(maximum),speed_get_rpm_max());
+      ui_format_rpm(minimum,sizeof(minimum),MIN_RPM); ui_format_rpm(maximum,sizeof(maximum),screen_program_edit_rpm_max());
       snprintf(error,sizeof(error),"Enter a speed from %s to %s RPM.",minimum,maximum); entry.error(error); return;
     }
     editPreset.rpm = rpm;
@@ -99,7 +100,7 @@ static void available_cb(lv_event_t* e) {
 static void rpm_adjust_cb(lv_event_t* e) {
   if (savePending) return;
   const float increment = ui_rpm_increment(editPreset.rpm);
-  editPreset.rpm = constrain(editPreset.rpm + ((intptr_t)lv_event_get_user_data(e) < 0 ? -increment : increment),MIN_RPM,speed_get_rpm_max());
+  editPreset.rpm = constrain(editPreset.rpm + ((intptr_t)lv_event_get_user_data(e) < 0 ? -increment : increment),MIN_RPM,screen_program_edit_rpm_max());
   screen_program_edit_update_ui();
 }
 static void mode_settings_cb(lv_event_t*) {
@@ -139,7 +140,7 @@ static void delete_preset_prompt_cb(lv_event_t* e) {
 static void save_preset_cb(lv_event_t*) {
   if (savePending || entry.active()) return;
   preset_clamp_mode_to_mask(&editPreset);
-  editPreset.rpm = constrain(editPreset.rpm,MIN_RPM,speed_get_rpm_max());
+  editPreset.rpm = constrain(editPreset.rpm,MIN_RPM,screen_program_edit_rpm_max());
   xSemaphoreTake(g_presets_mutex,portMAX_DELAY);
   if (editSlot >= 0 && editSlot < (int)g_presets.size()) {
     editPreset.id = editSlot+1; g_presets[editSlot] = editPreset;
@@ -201,7 +202,7 @@ void screen_program_edit_create(int slot) {
 
   renderedValid = false;
   if (!std::isfinite(editPreset.rpm)) editPreset.rpm = MIN_RPM;
-  editPreset.rpm = constrain(editPreset.rpm,MIN_RPM,speed_get_rpm_max());
+  editPreset.rpm = constrain(editPreset.rpm,MIN_RPM,screen_program_edit_rpm_max());
   ui_create_header(root,editSlot >= 0 ? "Edit program" : "New program","PROGRAM DRAFT",nullptr);
   nameButton = ui_create_btn(root,20,90,760,56,editPreset.name,FONT_XL,UI_BTN_NORMAL,open_input_cb,nullptr);
   auto name = lv_obj_get_child(nameButton,0); lv_obj_set_width(name,660); lv_obj_set_style_text_align(name,LV_TEXT_ALIGN_LEFT,0);

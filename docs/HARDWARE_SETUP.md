@@ -85,7 +85,7 @@ Pick the row that equals **200 × (Motor Config microstep value)**. Wrong table 
 
 - **Common GND:** Driver signal **GND** / **`COM`** / logic reference must tie to **ESP32 GND**.
 - **ESP32 GPIO is 3.3 V logic, not 5 V tolerant.** A series resistor alone is not a substitute for a compatible interface. Direct GPIO wiring is only appropriate if the actual driver interface satisfies the ESP32 voltage/current limits and the driver's input requirements. Keep the firmware's **HIGH = inhibit** contract when choosing or configuring the interface.
-- **HMI policy:** if the GT911 touchscreen fails to initialize, new motion starts stay blocked (`HMI_REQUIRED_FOR_MOTION` in `src/config.h`; set 0 to allow pedal motion without touch). The physical E-STOP path is independent and always available. Formatting storage likewise requires a restart before new motion.
+- **HMI policy:** if the GT911 touchscreen fails to initialize, new motion starts stay blocked (`HMI_REQUIRED_FOR_MOTION` in `src/config.h`; set 0 to allow pedal motion without touch). The E-STOP input does not depend on touch or LVGL, but it is **not independent of the controller**: it acts through GPIO34, firmware and the driver ENA input, and it does not disconnect motor power. Formatting storage likewise requires a restart before new motion.
 
 **Pulse timing (datasheet vs firmware):**
 
@@ -130,6 +130,7 @@ Firmware: **LOW** on the ENA GPIO line requests **motor enabled**, **HIGH** requ
   - Pin 1 (CCW) -> GND
   - Pin 2 (Wiper) -> `GPIO 49`
   - Pin 3 (CW) -> 3.3V
+- **Pot wiring limit:** 0 V is a legal value and means maximum speed. Firmware latches **SPEED POT** when the reading jumps to the rail within one 20 ms sample (for example a lost 3.3 V lead), but it cannot detect a floating wiper. The analog pedal is not jump-checked; releasing its switch stops motion.
 - **E-STOP conditioned input (active LOW):**
   - Firmware requires healthy = HIGH and fault = LOW at GPIO34, with a FALLING interrupt.
   - A bare NC contact to GND with a pull-up has the opposite logic and must not be described as compatible.

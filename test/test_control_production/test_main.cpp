@@ -17,6 +17,7 @@ SimSerial Serial;
 SimEsp ESP;
 std::atomic<uint32_t> g_inputHeartbeatMs{0};
 std::atomic<bool> g_restartRequired{false};
+std::atomic<bool> g_flashWriting{false};
 std::atomic<bool> g_wakePending{false}, g_dir_switch_cache{false};
 SystemSettings g_settings{};
 SemaphoreHandle_t g_settings_mutex = nullptr;
@@ -50,6 +51,7 @@ float speed_get_rpm_min_for_diameter(float) { return 0.020f; }
 float speed_get_rpm_min() { return 0.020f; }
 float speed_clamp_rpm(float r) { return std::isfinite(r) ? constrain(r, speed_get_rpm_min(), speed_get_rpm_max()) : 0; }
 float speed_get_rpm_max() { return g_settings.max_rpm; }
+float speed_get_rpm_max_for_diameter(float) { return g_settings.max_rpm; }
 float rpmToStepHzCalibrated(float rpm) { return rpm * 1000.0f; }
 long angleToStepsForDiameter(float angle,float) { return static_cast<long>(angle*100.0f); }
 long angleToSteps(float angle) { return static_cast<long>(angle * 100.0f); }
@@ -482,19 +484,33 @@ void test_jog_lease_expires_while_driver_is_enabling() {
   TEST_ASSERT_EQUAL(STATE_IDLE, control_get_state());
   TEST_ASSERT_EQUAL(HIGH, simTestPins[PIN_ENA]);
 }
-void test_step_repeat_waits_for_enable_after_dwell() {
+void test_step_dwell_holds_torque_and_repeats_after_dwell_time() {
   TEST_ASSERT_TRUE(control_start_step_sequence(90, 2, 0.1f)); control_run_cycle();
   TEST_ASSERT_EQUAL(1, testStepper.moves);
   testStepper.position = 9000; testStepper.running = false;
   simTestMillis += 50; control_run_cycle();
-  TEST_ASSERT_EQUAL(HIGH, simTestPins[PIN_ENA]);
-  for (int i = 0; i < 20; ++i) { simTestMillis += 5; control_run_cycle(); }
+  TEST_ASSERT_EQUAL(LOW, simTestPins[PIN_ENA]);
+  for (int i = 0; i < 19; ++i) { simTestMillis += 5; control_run_cycle(); }
   TEST_ASSERT_EQUAL(1, testStepper.moves);
   TEST_ASSERT_EQUAL(LOW, simTestPins[PIN_ENA]);
-  for (int i = 0; i < 39; ++i) { simTestMillis += 5; control_run_cycle(); }
-  TEST_ASSERT_EQUAL(1, testStepper.moves);
   simTestMillis += 5; control_run_cycle();
   TEST_ASSERT_EQUAL(2, testStepper.moves);
+}
+void test_acceleration_setting_is_physical_across_microsteps() {
+  TEST_ASSERT_EQUAL_UINT32(7500u, motion_scaled_acceleration(7500u, 16));
+  TEST_ASSERT_EQUAL_UINT32(15000u, motion_scaled_acceleration(7500u, 32));
+  TEST_ASSERT_EQUAL_UINT32(1875u, motion_scaled_acceleration(7500u, 4));
+  TEST_ASSERT_FLOAT_WITHIN(0.5f, 77.8f, motion_stop_angle_deg(3.0f, 64800.0f, 7500u));
+}
+void test_pulse_keeps_direction_from_start() {
+  testDirection = DIR_CW;
+  TEST_ASSERT_TRUE(control_start_pulse(100, 100, 0)); control_run_cycle();
+  TEST_ASSERT_TRUE(motor_direction_is_cw());
+  testDirection = DIR_CCW;  // Operator flips the switch mid-program.
+  for (int i = 0; i < 60; ++i) {
+    simTestMillis += 5; testStepper.running = false; control_run_cycle();
+  }
+  TEST_ASSERT_TRUE(motor_direction_is_cw());
 }
 void test_standard_driver_starts_without_settle_window() {
   g_settings.stepper_driver = STEPPER_DRIVER_STANDARD; motor_apply_settings();
@@ -578,7 +594,9 @@ int main() {
   RUN_TEST(test_driver_change_rearms_enable_settle);
   RUN_TEST(test_motor_entry_points_cannot_bypass_enable_settle);
   RUN_TEST(test_jog_lease_expires_while_driver_is_enabling);
-  RUN_TEST(test_step_repeat_waits_for_enable_after_dwell);
+  RUN_TEST(test_step_dwell_holds_torque_and_repeats_after_dwell_time);
+  RUN_TEST(test_acceleration_setting_is_physical_across_microsteps);
+  RUN_TEST(test_pulse_keeps_direction_from_start);
   RUN_TEST(test_standard_driver_starts_without_settle_window);
   RUN_TEST(test_stop_during_enabling_aborts_without_pulses);
   RUN_TEST(test_inhibit_during_enabling_fails_closed);

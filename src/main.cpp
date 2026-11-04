@@ -26,6 +26,7 @@
 #include <esp_timer.h>
 #include <esp_heap_caps.h>
 #include "esp_task_wdt.h"
+#include "esp_system.h"
 #include <cstdint>
 #include "onchip_temp.h"
 
@@ -57,7 +58,7 @@ void lvglTask(void* pvParameters) {
   screens_init();
 
   // Show boot screen during initialization.
-  // All lv_* calls wrapped in lvgl_lock/unlock per AGENTS.md, even in boot sequence:
+  // All lv_* calls wrapped in lvgl_lock/unlock, even in boot sequence:
   // storageTask starts soon after and also acquires the LVGL mutex.
   auto boot_step = [](uint8_t pct, const char* label, uint32_t delayMs) {
     lvgl_lock();
@@ -76,18 +77,21 @@ void lvglTask(void* pvParameters) {
   }
   lvgl_unlock();
 
-  boot_step(30, "TOUCH + STORAGE", 100);
-  boot_step(50, "MOTOR DRIVER CHECK", 100);
-  boot_step(70, "SAFETY INPUTS", 100);
-  boot_step(90, "PEDAL + SPEED INPUT", 100);
+  // Progress only: these steps wait for the UI, they do not test the hardware.
+  boot_step(30, "SETTINGS LOADED", 100);
+  boot_step(50, "MOTOR CONFIGURED", 100);
+  boot_step(70, "STARTING TASKS", 100);
+  boot_step(90, "STARTING INTERFACE", 100);
   boot_step(100, "READY HANDOFF", 50);
 
   lvgl_lock();
   screens_show_startup();
   lvgl_unlock();
+  g_uiHeartbeatMs.store(millis(), std::memory_order_release);
   safety_task_ready(8u);
 
   for (;;) {
+    g_uiHeartbeatMs.store(millis(), std::memory_order_release);
     screens_process_pending();
 
     if (g_flashWriting.load(std::memory_order_acquire)) {
@@ -300,6 +304,14 @@ void setup() {
   // Load NVS settings BEFORE display/motor so saved brightness, acceleration, microstep, etc.
   // apply on first init (previously storage ran after motor_apply_settings and stepper kept defaults).
   storage_init();
+  if (storage_boot_corrupt()) safety_report_boot_fault(FAULT_STORAGE_CORRUPT);
+
+  const esp_reset_reason_t resetReason = esp_reset_reason();
+  if (resetReason == ESP_RST_PANIC || resetReason == ESP_RST_INT_WDT || resetReason == ESP_RST_TASK_WDT ||
+      resetReason == ESP_RST_WDT || resetReason == ESP_RST_BROWNOUT) {
+    event_log_addf("RESET CAUSE %d", static_cast<int>(resetReason));
+    safety_report_boot_fault(FAULT_WATCHDOG_RESET);
+  }
 
   // Initialize display (MIPI-DSI + GT911 touch)
   display_init();
@@ -314,7 +326,6 @@ void setup() {
   microstep_init();
   calibration_init();
   motor_apply_settings();
-  safety_cache_stepper();
   motor_refresh_hz_cache();
 
   // Speed/pot + ADS1115 on display I2C bus (must run after display_init)

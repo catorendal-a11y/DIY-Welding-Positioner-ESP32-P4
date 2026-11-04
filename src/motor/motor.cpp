@@ -167,7 +167,7 @@ static void motor_init_on_control_core() {
   int accelSteps = 7500;
   uint8_t driverKind = STEPPER_DRIVER_STANDARD;
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  accelSteps = g_settings.acceleration;
+  accelSteps = static_cast<int>(motion_scaled_acceleration(g_settings.acceleration, g_settings.microstep));
   driverKind = g_settings.stepper_driver;
   xSemaphoreGive(g_settings_mutex);
 
@@ -412,7 +412,7 @@ bool motor_apply_settings() {
 }
 
 bool motor_apply_settings(const SystemSettings& settings) {
-  const int accelSteps = settings.acceleration;
+  const int accelSteps = static_cast<int>(motion_scaled_acceleration(settings.acceleration, settings.microstep));
   const uint8_t driverKind = settings.stepper_driver;
   const uint16_t dirDelayUs = motor_dir_delay_us_from_driver(driverKind);
   const uint16_t settleMs = motor_ena_settle_ms_from_driver(driverKind);
@@ -440,14 +440,17 @@ bool motor_apply_settings(const SystemSettings& settings) {
 
 void motor_apply_soft_start_acceleration() {
   uint32_t configured = 7500u;
+  int microstep = 16;
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   configured = (uint32_t)g_settings.acceleration;
+  microstep = g_settings.microstep;
   xSemaphoreGive(g_settings_mutex);
 
   uint32_t softAccel = motor_clamp_acceleration(configured / 4u);
   if (softAccel >= configured) {
     softAccel = motor_clamp_acceleration(configured);
   }
+  softAccel = motion_scaled_acceleration(softAccel, microstep);
 
   if (g_stepperMutex == nullptr) return;
   if (!motor_lock()) return;
@@ -467,7 +470,7 @@ bool motor_restore_configured_acceleration() {
 
   uint32_t configured = 7500u;
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  configured = motor_clamp_acceleration((uint32_t)g_settings.acceleration);
+  configured = motion_scaled_acceleration(motor_clamp_acceleration((uint32_t)g_settings.acceleration), g_settings.microstep);
   xSemaphoreGive(g_settings_mutex);
 
   if (g_stepperMutex == nullptr) {

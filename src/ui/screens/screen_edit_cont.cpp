@@ -88,7 +88,7 @@ static void update_rpm_display() {
 static void rpm_adj_cb(lv_event_t* e) {
   intptr_t delta = (intptr_t)lv_event_get_user_data(e);
   editRpm += (float)delta * ui_rpm_increment(editRpm);
-  float mx = speed_get_rpm_max();
+  float mx = screen_program_edit_rpm_max();
   if (editRpm < MIN_RPM) editRpm = MIN_RPM;
   if (editRpm > mx) editRpm = mx;
 

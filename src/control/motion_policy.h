@@ -20,6 +20,20 @@ inline uint32_t motion_stop_timeout_ms(uint32_t milli_hz, uint32_t acceleration)
   return 2000u + static_cast<uint32_t>((static_cast<uint64_t>(milli_hz) + acceleration - 1) / acceleration);
 }
 
+// The acceleration setting is steps/s2 at 1/16 microstepping, so a ramp takes the same
+// physical time at every microstep setting. Existing 1/16 machines are unchanged.
+inline uint32_t motion_scaled_acceleration(uint32_t acceleration, int microstep) {
+  if (microstep <= 0) microstep = 16;
+  return static_cast<uint32_t>(uint64_t(acceleration) * uint32_t(microstep) / 16u);
+}
+
+// Workpiece degrees travelled decelerating from rpm, where hz_at_16 is the step rate
+// for that rpm at 1/16 and acceleration is the setting above.
+inline float motion_stop_angle_deg(float rpm, float hz_at_16, uint32_t acceleration) {
+  if (acceleration == 0u) return 0.0f;
+  return rpm * 6.0f * (hz_at_16 / float(acceleration)) / 2.0f;
+}
+
 enum class PulsePhase : uint8_t { On, Decelerating, Off, Complete };
 enum class PulseAction : uint8_t { None, Stop, Start, Complete };
 

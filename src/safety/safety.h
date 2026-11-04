@@ -15,8 +15,8 @@ void safety_task_ready(uint32_t bit);
 void safety_register_watchdog();
 void safety_report_input_fault();
 void safety_report_motor_fault(FaultReason reason);
+void safety_report_boot_fault(FaultReason reason);  // Before control_init(); it preserves the fault.
 void safety_init();           // Initialize safety system
-void safety_cache_stepper();  // Compatibility no-op; safety never calls the stepper library
 void safety_attach_estop();   // Attach ESTOP interrupt (call after motor_init)
 
 // ESTOP status
@@ -28,7 +28,6 @@ bool safety_is_estop_locked();          // Returns true if in ESTOP state
 FaultReason safety_get_fault_reason();  // Last latched fault source for diagnostics/UI
 const char* safety_fault_reason_name(FaultReason reason);
 const char* safety_fault_reason_message(FaultReason reason);
-void safety_reset_estop();     // Reset ESTOP (only when physical button released)
 bool safety_check_ui_reset();  // Check if UI requested reset, process if safe
 
 // Watchdog

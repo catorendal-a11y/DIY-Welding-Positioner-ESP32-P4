@@ -64,6 +64,31 @@ class PedalInterlock {
   uint32_t releasedAt = 0, pressSinceMs = 0;
 };
 
+// The panel pot legitimately reaches 0 V (max speed), so 0 V alone proves nothing.
+// A lost supply lead jumps to the rail within one 20 ms sample; a hand cannot.
+// Keep the last speed while suspect, latch after three samples, clear on a real reading.
+class PotBreakDetector {
+ public:
+  void update(int raw) {
+    if (raw > kRail) {
+      last = raw; suspect = 0; latched = false;
+    } else if (last >= kJump && !latched && ++suspect >= kConfirm) {
+      latched = true;
+    }
+  }
+  bool holding() const { return suspect > 0 || latched; }
+  bool broken() const { return latched; }
+
+ private:
+  static constexpr int kRail = 40, kJump = 1500, kConfirm = 3;
+  int last = 0, suspect = 0;
+  bool latched = false;
+};
+
+// ADS1115 single-ended codes dip a little below zero at 0 V, which is full pedal.
+constexpr int kAdsMinValid = -64, kAdsMaxValid = 28000, kAdsInvalidLimit = 3;
+inline bool ads_code_in_range(int code) { return code >= kAdsMinValid && code <= kAdsMaxValid; }
+
 inline bool input_sample_fresh(bool valid, uint32_t sample, uint32_t now, uint32_t deadline = 150u) {
   return valid && now - sample <= deadline;
 }

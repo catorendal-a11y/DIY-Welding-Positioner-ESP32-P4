@@ -1,9 +1,9 @@
 # Project Status
 
-**Last Updated:** 2026-10-05
+**Last Updated:** 2026-11-04
 **Published firmware:** v2.2.1
 **Source:** master @ c4ea129 — pedal runtime source selection + ADS1115 wiring diagram rev 2.7 (released as v2.2.1)
-**Build:** 453 native/control/speed/storage test cases, packaging regressions, Linux/Windows simulator self-tests/layout audits and release/debug/mirror builds. On 2026-10-05 the pedal-fix build was flashed and hash-verified on the owner's ESP32-P4 (COM3); the boot I2C scan detects the ADS1115 at 0x48, and the owner confirms the foot pedal (GPIO33 start/stop + ADS1115 analog speed) is tested and working. Quantitative measurements have not been reported. Historical releases retain their original assets.
+**Build:** 511 native/control/speed/storage/safety test cases, packaging regressions, Linux/Windows simulator self-tests/layout audits and release/debug/mirror builds. On 2026-10-05 the pedal-fix build was flashed and hash-verified on the owner's ESP32-P4 (COM3); the boot I2C scan detects the ADS1115 at 0x48, and the owner confirms the foot pedal (GPIO33 start/stop + ADS1115 analog speed) is tested and working. Quantitative measurements have not been reported. Historical releases retain their original assets.
 
 ---
 
@@ -23,7 +23,7 @@ Runtime stepper calls belong to controlTask; inputTask samples ADC/pedal separat
 - [x] **`applySpeedAcceleration()`** for immediate speed changes during running
 - [x] **Linear acceleration phase** (resonance-zone traversal)
 - [x] **Microstepping selection** (1/4, 1/8, 1/16, 1/32)
-- [x] **ISR IRAM-safe RMT/GPTIMER flags**
+- [x] **Flash writes only at rest** (the prebuilt framework has no IRAM-safe RMT/GPIO ISRs, so saves wait for IDLE/ESTOP)
 - [x] **ADC potentiometer** (IIR filtering, 0-3315 ADC range, 200-count override threshold)
 
 ### Safety
@@ -62,7 +62,7 @@ v2.2.0 includes the [idle screen saver](docs/SCREEN_SAVER.md) and [LVGL UI refin
 - [x] **Settings-before-presets load order** (preset RPM clamp uses saved `max_rpm`)
 - [x] **Microstep validation on load** (only 4/8/16/32 accepted; invalid NVS falls back to 16)
 - [x] **Mutex-protected presets** (`g_presets_mutex`)
-- [x] **Debounced flash writes** (500ms presets, 1000ms settings)
+- [x] **Debounced flash writes** (500ms presets, 1000ms settings; deferred while the motor runs)
 
 ### Hardware
 - [x] **Foot pedal firmware support** (analog speed via ADS1115 I2C ADC, digital switch GPIO33)

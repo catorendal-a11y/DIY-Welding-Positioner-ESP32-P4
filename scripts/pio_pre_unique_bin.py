@@ -7,8 +7,23 @@
 Import("env")
 
 import os
+import subprocess
 import time
 
 pid = os.getpid()
 ms = int(time.time() * 1000) & 0xFFFFFF
 env.Replace(PROGNAME="fw_%x_%x" % (pid, ms))
+
+
+def git_output(*args):
+    return subprocess.check_output(["git", "-C", env["PROJECT_DIR"], *args], text=True).strip()
+
+
+# Identify the exact source on the About screen: FW_VERSION alone hides unreleased changes.
+try:
+    build_id = git_output("rev-parse", "--short", "HEAD")
+    if git_output("status", "--porcelain"):
+        build_id += "-dirty"
+except (OSError, subprocess.CalledProcessError):
+    build_id = "local"
+env.Append(CPPDEFINES=[("FW_BUILD_ID", env.StringifyMacro(build_id))])

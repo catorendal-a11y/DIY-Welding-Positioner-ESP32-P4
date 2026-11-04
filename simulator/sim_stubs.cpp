@@ -169,6 +169,7 @@ float speed_get_rpm_min_for_diameter(float mm) {
 float speed_get_rpm_min() { return speed_get_rpm_min_for_diameter(s_workpieceDiameterMm); }
 float speed_clamp_rpm(float rpm) { return std::isfinite(rpm) && speed_get_rpm_min() <= sim_rpm_cap() ? constrain(rpm, speed_get_rpm_min(), sim_rpm_cap()) : 0; }
 float speed_get_rpm_max() { return sim_rpm_cap(); }
+float speed_get_rpm_max_for_diameter(float) { return sim_rpm_cap(); }
 void speed_slider_set(float rpm) { s_targetRpm = speed_clamp_rpm(rpm); }
 void speed_set_slider_priority(bool on) { s_sliderPriority = on; }
 float speed_get_target_rpm() { return s_targetRpm; }
@@ -231,7 +232,6 @@ void acceleration_clear_pending() {}
 
 // Safety
 void safety_init() {}
-void safety_cache_stepper() {}
 void safety_attach_estop() {}
 void simulator_set_estop_input(bool active) { digitalWrite(PIN_ESTOP, active ? LOW : HIGH); simFault = active; if (active) safety_report_motor_fault(FAULT_ESTOP_PRESSED); }
 bool safety_is_estop_active() { return simFault; }

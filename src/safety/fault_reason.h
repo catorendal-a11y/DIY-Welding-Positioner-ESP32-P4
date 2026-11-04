@@ -5,18 +5,17 @@ typedef enum {
   FAULT_ESTOP_PRESSED,
   FAULT_ESTOP_GLITCH,
   FAULT_DRIVER_ALARM,
-  FAULT_MOTOR_INIT_FAILED,
-  FAULT_DISPLAY_INIT_FAILED,
-  FAULT_LVGL_INIT_FAILED,
   FAULT_STORAGE_CORRUPT,
   FAULT_PEDAL_INPUT,
   FAULT_WATCHDOG_RESET,
   FAULT_MOTOR_COMMAND,
   FAULT_MOTOR_TIMEOUT,
+  FAULT_POT_INPUT,
   // Supervisor faults (safetyTask dead-man detection). Keep last: the
   // safety_get_fault_reason() range check bounds to the final member.
   FAULT_CONTROL_STALE,
-  FAULT_INPUT_STALE
+  FAULT_INPUT_STALE,
+  FAULT_HMI_STALE
 } FaultReason;
 
 inline const char* safety_fault_reason_name(FaultReason reason) {
@@ -25,6 +24,8 @@ inline const char* safety_fault_reason_name(FaultReason reason) {
     case FAULT_MOTOR_TIMEOUT: return "MOTOR TIMEOUT";
     case FAULT_CONTROL_STALE: return "CONTROL STALE";
     case FAULT_INPUT_STALE: return "INPUT STALE";
+    case FAULT_POT_INPUT: return "SPEED POT";
+    case FAULT_HMI_STALE: return "HMI STALE";
     case FAULT_PEDAL_INPUT:
       return "PEDAL INPUT";
     case FAULT_NONE:
@@ -35,16 +36,10 @@ inline const char* safety_fault_reason_name(FaultReason reason) {
       return "E-STOP GLITCH";
     case FAULT_DRIVER_ALARM:
       return "DRIVER ALM";
-    case FAULT_MOTOR_INIT_FAILED:
-      return "MOTOR INIT";
-    case FAULT_DISPLAY_INIT_FAILED:
-      return "DISPLAY INIT";
-    case FAULT_LVGL_INIT_FAILED:
-      return "LVGL INIT";
     case FAULT_STORAGE_CORRUPT:
       return "STORAGE";
     case FAULT_WATCHDOG_RESET:
-      return "WATCHDOG";
+      return "UNEXPECTED RESET";
     default:
       return "UNKNOWN";
   }
@@ -56,6 +51,8 @@ inline const char* safety_fault_reason_message(FaultReason reason) {
     case FAULT_MOTOR_TIMEOUT: return "Motor response timed out; inspect drive and reset";
     case FAULT_CONTROL_STALE: return "Control updates stopped; motion inhibited - restart the controller";
     case FAULT_INPUT_STALE: return "Input task stopped responding; motion inhibited - restart the controller";
+    case FAULT_POT_INPUT: return "Speed pot jumped to zero; check wiring, then turn the knob up";
+    case FAULT_HMI_STALE: return "Touchscreen stopped responding; motion stopped - restart the controller";
     case FAULT_PEDAL_INPUT:
       return "Pedal measurement unavailable; release pedal and restore input";
     case FAULT_NONE:
@@ -66,16 +63,10 @@ inline const char* safety_fault_reason_message(FaultReason reason) {
       return "E-STOP input changed during debounce";
     case FAULT_DRIVER_ALARM:
       return "DM542T driver alarm input is active";
-    case FAULT_MOTOR_INIT_FAILED:
-      return "Motor driver init failed";
-    case FAULT_DISPLAY_INIT_FAILED:
-      return "Display init failed";
-    case FAULT_LVGL_INIT_FAILED:
-      return "LVGL init failed";
     case FAULT_STORAGE_CORRUPT:
-      return "Storage data was invalid";
+      return "Saved data is invalid; motion disabled and data kept - reflash or erase";
     case FAULT_WATCHDOG_RESET:
-      return "Watchdog reset was detected";
+      return "Controller restarted after a crash, watchdog or brownout; see event log";
     default:
       return "Unknown fault";
   }

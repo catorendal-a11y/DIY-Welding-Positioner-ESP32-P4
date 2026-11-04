@@ -43,6 +43,7 @@ float speed_get_rpm_min_for_diameter(float) { return 0.020f; }
 float speed_get_rpm_min() { return 0.020f; }
 float speed_clamp_rpm(float r) { return std::isfinite(r) ? constrain(r, speed_get_rpm_min(), speed_get_rpm_max()) : 0; }
 float speed_get_rpm_max() { return g_settings.max_rpm; }
+float speed_get_rpm_max_for_diameter(float) { return g_settings.max_rpm; }
 float rpmToStepHzCalibrated(float rpm) { return rpm * 1000.0f; }
 long angleToStepsForDiameter(float angle, float) { return static_cast<long>(angle * 100.0f); }
 long angleToSteps(float angle) { return static_cast<long>(angle * 100.0f); }
@@ -113,9 +114,10 @@ void test_old_flash_snapshot_cannot_overwrite_committed_direction_cache() {
   testNvsBeforePut = [] {
     testNvsBeforePut = nullptr;
     auto proposal = g_settings; proposal.dir_switch_enabled = false;
-    control_apply_motor_settings(proposal); process_pending_requests();
+    control_apply_motor_settings(proposal);
   };
   storage_flush();
+  process_pending_requests();  // Motion commands wait until the save has finished.
   TEST_ASSERT_EQUAL(CONFIG_APPLIED, control_config_status());
   TEST_ASSERT_FALSE(g_settings.dir_switch_enabled);
   TEST_ASSERT_FALSE(g_dir_switch_cache.load());

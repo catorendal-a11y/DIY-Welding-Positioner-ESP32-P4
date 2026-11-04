@@ -1,6 +1,6 @@
 # Code review — 1 October 2026
 
-Historical review before fixes: branch `codex/ui-v3-integration`, based on `929b1f6` (v2.0.9), including uncommitted UI integration. Locations below refer to that earlier working copy. See [implementation and final verification](IMPROVEMENTS_2026-10-01.md) for subsequent changes.
+Historical review before fixes: branch `codex/ui-v3-integration`, based on `929b1f6` (v2.0.9), including uncommitted UI integration. Locations below refer to that earlier working copy. See [implementation and final verification](../IMPROVEMENTS_2026-10-01.md) for subsequent changes.
 
 ## Scope and verification
 

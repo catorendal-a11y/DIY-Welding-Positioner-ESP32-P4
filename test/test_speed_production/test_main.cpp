@@ -36,6 +36,7 @@ void setUp() {
   calibration_discard_draft(); calibration_process_pending();
   speed_set_workpiece_diameter_mm(300); speed_sync_rpm_limits_from_settings();
   sliderPriorityOverride = false; buttonsActive = false; programDirectionOverrideActive = false;
+  programRestorePending = false; potBroken = false;
   pedalEnabled = false; adcFiltered = 3000; pedalFiltered = 1000;
   simTestMillis = 100; adsSampleValid = true; adsSampleMs = 100;
   ads1115Connected = true;
@@ -103,6 +104,63 @@ static void direction_filter_initial_cw() {
   simTestPins[PIN_DIR_SWITCH] = HIGH;
   speed_update_adc();
 }
+void test_pot_supply_loss_holds_speed_then_blocks_motion() {
+  PotBreakDetector pot;
+  pot.update(2000);
+  pot.update(0); TEST_ASSERT_TRUE(pot.holding()); TEST_ASSERT_FALSE(pot.broken());
+  pot.update(0); TEST_ASSERT_FALSE(pot.broken());
+  pot.update(0); TEST_ASSERT_TRUE(pot.broken());
+  pot.update(500); TEST_ASSERT_FALSE(pot.holding());
+  potBroken = true;
+  TEST_ASSERT_FALSE(speed_pedal_input_healthy());
+  potBroken = false;
+}
+void test_pot_glitch_is_ignored_and_clears() {
+  PotBreakDetector pot;
+  pot.update(2000); pot.update(0); pot.update(2000);
+  TEST_ASSERT_FALSE(pot.holding());
+  pot.update(0); pot.update(0);
+  TEST_ASSERT_FALSE(pot.broken());
+}
+void test_pot_turned_to_zero_by_hand_is_not_a_fault() {
+  PotBreakDetector pot;
+  for (int adc = 2000; adc >= 0; adc -= 330) pot.update(adc);
+  for (int i = 0; i < 5; ++i) pot.update(0);
+  TEST_ASSERT_FALSE(pot.holding());
+}
+void test_ads_small_negative_code_at_full_pedal_is_valid() {
+  TEST_ASSERT_TRUE(ads_code_in_range(-3));
+  TEST_ASSERT_TRUE(ads_code_in_range(0));
+  TEST_ASSERT_FALSE(ads_code_in_range(-200));
+  TEST_ASSERT_FALSE(ads_code_in_range(28001));
+}
+void test_rpm_ceiling_respects_motor_limit_for_large_diameter() {
+  speed_set_workpiece_diameter_mm(300);
+  TEST_ASSERT_EQUAL_FLOAT(MAX_RPM, speed_get_rpm_max());
+  speed_set_workpiece_diameter_mm(1000);  // 3 RPM would need 4050 motor RPM; the limit allows 1.11.
+  const float cap = speed_get_rpm_max();
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 1.11f, cap);
+  TEST_ASSERT_TRUE(rpmToStepHzCalibrated(cap) <= MOTOR_RPM_LIMIT / 60.0f * 3200.0f);
+  TEST_ASSERT_TRUE(motor_milli_hz_for_rpm_calibrated(cap) > 0);
+  TEST_ASSERT_EQUAL(0, motor_milli_hz_for_rpm_calibrated(cap + 0.1f));
+  speed_set_workpiece_diameter_mm(300);
+}
+void test_mechanics_come_from_settings() {
+  const float hz = rpmToStepHz(1.0f);
+  g_settings.roller_mm = 160.0f;
+  TEST_ASSERT_FLOAT_WITHIN(0.5f, hz / 2.0f, rpmToStepHz(1.0f));
+  g_settings.roller_mm = D_RULLE * 1000.0f;
+}
+void test_program_values_do_not_leak_into_manual_mode() {
+  speed_set_workpiece_diameter_mm(300); speed_slider_set(1.0f);
+  speed_set_program_direction_override(DIR_CCW);
+  speed_set_workpiece_diameter_mm(500); speed_slider_set(2.0f);
+  speed_clear_program_direction_override();
+  TEST_ASSERT_EQUAL_FLOAT(300.0f, speed_get_workpiece_diameter_mm());
+  TEST_ASSERT_EQUAL_FLOAT(1.0f, sliderRPM.load());
+  speed_clear_program_direction_override();  // Idempotent: IDLE and fault paths both call it.
+  TEST_ASSERT_EQUAL_FLOAT(300.0f, speed_get_workpiece_diameter_mm());
+}
 void test_direction_change_at_zero_timestamp_is_accepted() {
   simTestMillis = UINT32_MAX - 20u; direction_filter_initial_cw();
   simTestMillis = 0; simTestPins[PIN_DIR_SWITCH] = LOW; speed_update_adc();
@@ -133,6 +191,13 @@ int main() {
   RUN_TEST(test_requested_and_effective_directions_are_distinct);
   RUN_TEST(test_pedal_enabled_without_ads_stays_healthy_and_uses_panel_pot);
   RUN_TEST(test_pedal_with_detected_ads_still_blocks_on_stale_samples);
+  RUN_TEST(test_pot_supply_loss_holds_speed_then_blocks_motion);
+  RUN_TEST(test_pot_glitch_is_ignored_and_clears);
+  RUN_TEST(test_pot_turned_to_zero_by_hand_is_not_a_fault);
+  RUN_TEST(test_ads_small_negative_code_at_full_pedal_is_valid);
+  RUN_TEST(test_rpm_ceiling_respects_motor_limit_for_large_diameter);
+  RUN_TEST(test_mechanics_come_from_settings);
+  RUN_TEST(test_program_values_do_not_leak_into_manual_mode);
   RUN_TEST(test_direction_change_at_zero_timestamp_is_accepted);
   RUN_TEST(test_direction_change_waits_across_clock_wrap);
   RUN_TEST(test_direction_bounce_restarts_stability_window);

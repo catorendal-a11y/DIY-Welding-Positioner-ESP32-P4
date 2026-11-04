@@ -2,7 +2,7 @@
 
 Baseline: commit `1bcac75`, firmware version `v2.1.0`.
 
-**Follow-up:** software corrections were implemented in source v2.1.1. See the [maintenance implementation and validation report](MAINTENANCE_2026-10-02.md). Findings below describe the original review baseline.
+**Follow-up:** software corrections were implemented in source v2.1.1. See the [maintenance implementation and validation report](../MAINTENANCE_2026-10-02.md). Findings below describe the original review baseline.
 
 This review covers the firmware architecture, motion modes, safety and input handling, persistence, LVGL UI, simulator, USB mirror, tests, packaging and CI. Critical control paths received detailed source inspection; other screens, helpers and tooling received targeted inspection and repository searches. This is not a claim that every line of third-party or generated code was audited. No firmware behavior was changed during this review.
 

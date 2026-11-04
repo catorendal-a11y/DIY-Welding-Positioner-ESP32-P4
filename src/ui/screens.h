@@ -228,6 +228,7 @@ void ui_create_action_bar_three(lv_obj_t* parent, lv_coord_t pad_x, lv_coord_t y
 
 void screens_set_back_button(lv_obj_t* btn, ScreenId dest);  // Configure back button
 void screens_set_edit_slot(int slot);                        // Set slot for SCREEN_PROGRAM_EDIT creation
+float screen_program_edit_rpm_max();  // Ceiling for the draft's own diameter
 Preset* screen_program_edit_get_preset();                    // Get current preset being edited
 void screen_program_edit_update_ui();                        // Update UI with current preset values
 void screen_program_edit_poll_keyboard();  // Deferred keyboard close (call each LVGL tick while on edit

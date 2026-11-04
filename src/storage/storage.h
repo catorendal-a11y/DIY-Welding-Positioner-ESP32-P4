@@ -35,6 +35,9 @@ struct SystemSettings {
   bool pedal_enabled;         // Foot pedal GPIO33 start/stop armed; ADS1115 only adds analog speed
   uint8_t settings_version;
   bool setup_completed = false; // Missing key in a valid legacy settings document migrates to true.
+  float workpiece_diameter_mm = 0.0f;  // Manual workpiece OD; 0 = default D_EMNE
+  float roller_mm = D_RULLE * 1000.0f;  // Drive roller diameter of this machine
+  float gear_ratio = GEAR_RATIO;        // Motor revolutions per roller revolution
 };
 
 // Preset struct matching the system's control capabilities
@@ -119,6 +122,7 @@ bool storage_save_presets();
 bool storage_load_settings();
 void storage_save_settings();
 void storage_flush();
+bool storage_boot_corrupt();  // Saved data failed validation; motion disabled, data left untouched.
 
 // Helper functions
 bool storage_get_preset(uint8_t id, Preset* out);

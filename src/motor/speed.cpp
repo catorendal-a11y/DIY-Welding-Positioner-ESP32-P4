@@ -10,6 +10,7 @@
 #include "calibration.h"
 #include "../storage/storage.h"
 #include "../control/control.h"
+#include <algorithm>
 #include <atomic>
 #include "../control/input_policy.h"
 #include "../safety/safety.h"
@@ -29,10 +30,9 @@ static_assert((int)(60.0f * 72.0f / 40.0f + 0.5f) == 108,
               "GEAR_RATIO must match motor.worm.svg (1:108 = 60*72/40)");
 
 #if ENABLE_ADS1115_PEDAL
-// Full 7-bit address probe on touch I2C: LOG_I is stripped in release; Serial is not.
-// Set to 0 (or -DADS_BOOT_I2C_RAW_SCAN=0) after field verification to shorten boot.
+// Full 7-bit address probe on touch I2C for wiring diagnosis: debug builds only.
 #ifndef ADS_BOOT_I2C_RAW_SCAN
-#define ADS_BOOT_I2C_RAW_SCAN 1
+#define ADS_BOOT_I2C_RAW_SCAN DEBUG_BUILD
 #endif
 
 #define ADS_REG_PTR_CONVERT 0x00
@@ -98,6 +98,7 @@ static uint32_t s_adsStartedMs = 0;
 static int16_t s_adsLastValue = 0;
 static std::atomic<uint32_t> adsSampleMs{0};
 static std::atomic<bool> adsSampleValid{false};
+static int adsInvalidCount = 0;
 
 // Kick off a new conversion (non-blocking). Returns false on I2C error.
 static bool ads_start_conversion() {
@@ -136,14 +137,20 @@ static bool ads_poll_and_start(int16_t* out) {
   uint16_t raw = 0;
   const bool fresh = ads_i2c_read_reg_timeout(ADS_REG_PTR_CONVERT, &raw, ADS_I2C_RUNTIME_TIMEOUT_MS);
   s_adsState = ADS_IDLE;
-  if (fresh) {
-    s_adsLastValue = static_cast<int16_t>(raw);
-    adsSampleMs.store(now);
-    adsSampleValid.store(s_adsLastValue >= 0 && s_adsLastValue <= 28000);
-    if (out) *out = s_adsLastValue;
+  if (!fresh) return false;
+  const int16_t code = static_cast<int16_t>(raw);
+  if (!ads_code_in_range(code)) {
+    // One noisy code must not stop a weld; persistent ones mean a wiring fault.
+    if (++adsInvalidCount >= kAdsInvalidLimit) adsSampleValid.store(false);
+    return false;
   }
+  adsInvalidCount = 0;
+  s_adsLastValue = code < 0 ? 0 : code;
+  adsSampleMs.store(now);
+  adsSampleValid.store(true);
+  if (out) *out = s_adsLastValue;
   // Start the next conversion on a later poll: at most two 2ms I2C calls here.
-  return fresh;
+  return true;
 }
 #endif
 
@@ -169,6 +176,13 @@ static std::atomic<bool> pedalApplyPending{false};
 static std::atomic<float> pedalFiltered{2047.5f};
 static std::atomic<float> cachedTargetRpm{MIN_RPM};
 static std::atomic<bool> sliderPriorityOverride{false};
+static PotBreakDetector potBreak;
+static std::atomic<bool> potBroken{false};
+// Manual values replaced while a program runs; restored when it ends.
+static bool programRestorePending = false;
+static float programSavedDiameter = 0.0f, programSavedSlider = MIN_RPM;
+static bool programSavedButtons = false;
+static uint8_t programSavedDir = DIR_CW;
 static uint8_t lastDirSwitchState = 1;
 static std::atomic<bool> stableDirSwitch{true};
 static uint8_t dirSwitchCandidate = 1;
@@ -188,6 +202,20 @@ static float effective_emne_d_m(void) {
   float mm = g_workpiece_od_mm.load(std::memory_order_relaxed);
   if (mm < 1.0f || mm > 20000.0f) return D_EMNE;
   return mm / 1000.0f;
+}
+
+static float machine_gear_ratio() {
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  const float gear = g_settings.gear_ratio;
+  xSemaphoreGive(g_settings_mutex);
+  return gear;
+}
+
+static float machine_roller_m() {
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  const float roller = g_settings.roller_mm;
+  xSemaphoreGive(g_settings_mutex);
+  return roller / 1000.0f;
 }
 
 static float diameter_mm_to_m(float mm) {
@@ -210,11 +238,11 @@ float speed_get_workpiece_diameter_mm(void) { return g_workpiece_od_mm.load(std:
 //   steps_per_gear_output_rev = spr * GEAR_RATIO (one 360° on 72T output).
 //   steps per workpiece rev = steps_per_gear_output_rev * (d_emne / D_RULLE).
 // Forward Hz: rpm_workpiece * steps_per_workpiece_rev / 60. Inverse: speed_get_actual_rpm.
-float speed_steps_per_gear_output_rev(void) { return (float)microstep_get_steps_per_rev() * GEAR_RATIO; }
+float speed_steps_per_gear_output_rev(void) { return (float)microstep_get_steps_per_rev() * machine_gear_ratio(); }
 
 float rpmToStepHz(float rpm_workpiece) {
   const float d_m = effective_emne_d_m();
-  const float steps_per_wp_rev = speed_steps_per_gear_output_rev() * (d_m / D_RULLE);
+  const float steps_per_wp_rev = speed_steps_per_gear_output_rev() * (d_m / machine_roller_m());
   return rpm_workpiece * steps_per_wp_rev / 60.0f;
 }
 
@@ -227,7 +255,7 @@ long angleToSteps(float degrees) {
 
 long angleToStepsForDiameter(float degrees, float mm_od) {
   const float d_m = diameter_mm_to_m(mm_od);
-  const float steps_per_wp_rev = speed_steps_per_gear_output_rev() * (d_m / D_RULLE);
+  const float steps_per_wp_rev = speed_steps_per_gear_output_rev() * (d_m / machine_roller_m());
   int32_t steps = 0;
   motion_checked_steps(double(degrees) / 360.0 * double(steps_per_wp_rev) * calibration_get_factor(), steps);
   return steps;
@@ -313,9 +341,12 @@ void speed_init() {
   speed_sync_rpm_limits_from_settings();
 
   bool pedalPersist = false;
+  float savedDiameter = 0.0f;
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   pedalPersist = g_settings.pedal_enabled;
+  savedDiameter = g_settings.workpiece_diameter_mm;
   xSemaphoreGive(g_settings_mutex);
+  speed_set_workpiece_diameter_mm(savedDiameter);
   pedalEnabled.store(pedalPersist, std::memory_order_release);
 
   LOG_I("Speed control init: pot=%.0f pedal=%.0f ads=%d pedal_on=%d",
@@ -342,7 +373,7 @@ void speed_sync_rpm_limits_from_settings() {
 
 float speed_get_rpm_min() { return speed_get_rpm_min_for_diameter(speed_get_workpiece_diameter_mm()); }
 float speed_get_rpm_min_for_diameter(float mm) {
-  const float hz = speed_steps_per_gear_output_rev() * diameter_mm_to_m(mm) / D_RULLE * calibration_get_factor() / 60.0f;
+  const float hz = speed_steps_per_gear_output_rev() * diameter_mm_to_m(mm) / machine_roller_m() * calibration_get_factor() / 60.0f;
   if (!std::isfinite(hz) || hz <= 0) return MAX_RPM + 1;
   // Round upwards to the UI's 0.001 RPM precision, never hide a rate increase.
   return std::max(MIN_RPM, std::ceil(START_SPEED / hz * 1000.0f) / 1000.0f);
@@ -352,7 +383,15 @@ float speed_clamp_rpm(float rpm) {
   if (!std::isfinite(rpm) || minimum > maximum) return 0;
   return constrain(rpm, minimum, maximum);
 }
-float speed_get_rpm_max() { return rpmMaxUi.load(std::memory_order_acquire); }
+float speed_get_rpm_max_for_diameter(float mm) {
+  const float configured = rpmMaxUi.load(std::memory_order_acquire);
+  const float hzPerRpm = speed_steps_per_gear_output_rev() * diameter_mm_to_m(mm) / machine_roller_m() * calibration_get_factor() / 60.0f;
+  if (!std::isfinite(hzPerRpm) || hzPerRpm <= 0) return configured;
+  const float limitHz = std::min(MAX_STEP_HZ, MOTOR_RPM_LIMIT / 60.0f * (float)microstep_get_steps_per_rev());
+  // Round down to the UI's 0.001 RPM precision: the limit must never be exceeded.
+  return std::min(configured, std::floor(limitHz / hzPerRpm * 1000.0f) / 1000.0f);
+}
+float speed_get_rpm_max() { return speed_get_rpm_max_for_diameter(speed_get_workpiece_diameter_mm()); }
 
 void speed_update_adc() {
   bool pedalSettingsTick = pedalApplyPending.exchange(false, std::memory_order_acq_rel);
@@ -361,8 +400,11 @@ void speed_update_adc() {
   }
 
   float raw = (float)analogRead(PIN_POT);
+  const bool potInUse = !(pedalEnabled.load(std::memory_order_acquire) && ads1115Connected);
+  if (potInUse) potBreak.update(static_cast<int>(raw));
+  potBroken.store(potInUse && potBreak.broken(), std::memory_order_release);
   float prev = adcFiltered.load(std::memory_order_acquire);
-  float filtered = IIR_ALPHA * raw + (1.0f - IIR_ALPHA) * prev;
+  float filtered = (potInUse && potBreak.holding()) ? prev : IIR_ALPHA * raw + (1.0f - IIR_ALPHA) * prev;
   adcFiltered.store(filtered, std::memory_order_release);
   if (fabsf(filtered - prev) > POT_WAKE_THRESHOLD) {
     g_wakePending.store(true, std::memory_order_release);
@@ -431,7 +473,7 @@ float speed_get_actual_rpm() {
   if (spr == 0u) return 0.0f;
   float rpm_motor = hz * 60.0f / (float)spr;
   const float d_m = effective_emne_d_m();
-  float rpm_workpiece = rpm_motor / GEAR_RATIO * (D_RULLE / d_m);
+  float rpm_workpiece = rpm_motor / machine_gear_ratio() * (machine_roller_m() / d_m);
   return calibration_apply_angle(rpm_workpiece);
 }
 
@@ -447,6 +489,12 @@ void speed_apply() {
   const bool liveSpeedState = (state == STATE_RUNNING || state == STATE_PULSE);
   const bool motorRunning = liveSpeedState && motor_is_running();
 
+  if (potBroken.load(std::memory_order_acquire)) {
+    // Hold the last speed; RESET stays blocked until the pot reads plausibly again.
+    if (state != STATE_ESTOP) safety_report_motor_fault(FAULT_POT_INPUT);
+    return;
+  }
+
   const bool usePedal = speed_get_pedal_enabled() && speed_ads1115_pedal_present();
   if (usePedal && !speed_pedal_input_healthy()) {
     cachedTargetRpm.store(MIN_RPM);
@@ -461,7 +509,7 @@ void speed_apply() {
   if (snapMax > 0.0f && adc <= snapMax) {
     normalized = 1.0f;
   }
-  float cap = rpmMaxUi.load(std::memory_order_relaxed);
+  float cap = speed_get_rpm_max();
   const float minimum = speed_get_rpm_min();
   float pot_rpm = speed_clamp_rpm(minimum + normalized * (cap - minimum));
 
@@ -522,6 +570,13 @@ void speed_set_direction(Direction dir) {
 }
 
 void speed_set_program_direction_override(Direction dir) {
+  if (!programRestorePending) {
+    programSavedDiameter = g_workpiece_od_mm.load(std::memory_order_relaxed);
+    programSavedSlider = sliderRPM.load(std::memory_order_relaxed);
+    programSavedButtons = buttonsActive.load(std::memory_order_acquire);
+    programSavedDir = currentDir.load(std::memory_order_acquire);
+    programRestorePending = true;
+  }
   currentDir.store((uint8_t)dir, std::memory_order_release);
   programDirectionOverride.store((uint8_t)dir, std::memory_order_release);
   programDirectionOverrideActive.store(true, std::memory_order_release);
@@ -529,6 +584,13 @@ void speed_set_program_direction_override(Direction dir) {
 
 void speed_clear_program_direction_override() {
   programDirectionOverrideActive.store(false, std::memory_order_release);
+  if (programRestorePending) {
+    programRestorePending = false;
+    g_workpiece_od_mm.store(programSavedDiameter, std::memory_order_relaxed);
+    sliderRPM.store(programSavedSlider, std::memory_order_relaxed);
+    buttonsActive.store(programSavedButtons, std::memory_order_release);
+    currentDir.store(programSavedDir, std::memory_order_release);
+  }
 }
 
 bool speed_program_direction_override_active() {
@@ -563,6 +625,7 @@ bool speed_ads1115_pedal_present(void) {
 }
 
 bool speed_pedal_input_healthy() {
+  if (potBroken.load(std::memory_order_acquire)) return false;
 #if ENABLE_ADS1115_PEDAL
   // GPIO33 switch stays usable when no ADS1115 answered at boot; only an
   // ADS1115 that was actually detected must keep delivering fresh samples.

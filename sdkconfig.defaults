@@ -1,6 +1,7 @@
-# ESP32-P4 board configuration reference for the pinned Arduino/ESP-IDF build.
-# Precompiled framework sdkconfig values remain authoritative; verify actual
-# build settings before treating this file as an applied runtime configuration.
+# Reference for ESP-IDF experiments only. PlatformIO Arduino builds do NOT apply this
+# file: the precompiled framework sdkconfig is authoritative (for example interrupt WDT
+# 300 ms, and RMT/GPTIMER/GPIO ISRs not IRAM-safe). See include/sdkconfig.h in
+# framework-arduinoespressif32-libs before relying on any value here.
 # MIPI-DSI Configuration for ESP32-P4
 CONFIG_MIPI_DSI_ENABLED=y
 CONFIG_MIPI_DSI_BUS_COUNT=1
@@ -33,5 +34,4 @@ CONFIG_RMT_ISR_IRAM_SAFE=y
 CONFIG_GPTIMER_ISR_IRAM_SAFE=y
 
 # Interrupt watchdog — see ESP-IDF wdts.rst: tick ISR must run within this window.
-# PSRAM + MIPI-DSI flush + heavy lv_timer_handler() can defer interrupts; 800ms was still tight in practice.
 CONFIG_ESP_INT_WDT_TIMEOUT_MS=2000

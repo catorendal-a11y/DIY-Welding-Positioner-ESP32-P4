@@ -214,7 +214,7 @@ void screen_example_invalidate_widgets() {
 ---
 
 ## Resources
-- [JC4880P433C BSP](https://github.com/csvke/esp32_p4_jc4880p433c_bsp) - Reference implementation
+- [JC4880P443C BSP](https://github.com/csvke/esp32_p4_jc4880p433c_bsp) - Reference implementation
 - [ST7701 Driver](https://github.com/espressif/esp_lcd_st7701) - ESP-IDF component
 - [GT911 Driver](https://github.com/espressif/esp_lcd_touch_gt911) - Touch controller
 - [LVGL Documentation](https://docs.lvgl.io/) - UI framework

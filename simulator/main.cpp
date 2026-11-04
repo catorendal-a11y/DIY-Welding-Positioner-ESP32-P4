@@ -9,6 +9,7 @@
 
 #include "../src/control/control.h"
 #include "../src/safety/safety.h"
+void safety_reset_estop();  // Simulator-only helper (sim_stubs.cpp): clears the simulated fault.
 #include "../src/motor/speed.h"
 #include "../src/motor/motor.h"
 #include "../src/motor/calibration.h"
@@ -367,6 +368,9 @@ static bool sim_test_navigation_flows() {
 }
 
 static bool sim_test_settings_and_programs() {
+  const ScreenId calibrationReturn = screens_get_current();
+  screens_show(SCREEN_CALIBRATION); speed_set_slider_priority(true); screens_show(calibrationReturn);
+  if (!sim_expect(!speed_using_slider(), "leaving calibration left the panel pot ignored")) return false;
   if (!sim_show_and_check(SCREEN_MENU)) return false;
   if (!sim_click_label("SETUP")) return false;
   if (!sim_expect(screens_get_current() == SCREEN_SETTINGS, "SETUP did not open settings")) return false;

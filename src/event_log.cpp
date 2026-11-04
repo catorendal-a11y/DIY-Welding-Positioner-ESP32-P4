@@ -7,9 +7,22 @@
 #include <stdio.h>
 #include <string.h>
 
-static EventLogEntry s_entries[EVENT_LOG_CAPACITY] = {};
-static size_t s_next = 0;
-static size_t s_count = 0;
+// Kept across panic/watchdog resets (not power loss) so a crash leaves its history.
+struct EventLogStore {
+  uint32_t magic;
+  size_t next, count;
+  EventLogEntry entries[EVENT_LOG_CAPACITY];
+};
+static constexpr uint32_t kEventLogMagic = 0x45564C47u;
+#if defined(ARDUINO_ARCH_ESP32)
+#include "esp_attr.h"
+#include "esp_system.h"
+static __NOINIT_ATTR EventLogStore s_log;
+static bool event_log_survived_reset() { return esp_reset_reason() != ESP_RST_POWERON; }
+#else
+static EventLogStore s_log{};
+static bool event_log_survived_reset() { return false; }
+#endif
 static SemaphoreHandle_t s_mutex = nullptr;
 static std::atomic<uint32_t> s_version{0};
 static std::atomic<uint32_t> s_dropped{0};
@@ -27,6 +40,13 @@ void event_log_init() {
   if (s_mutex == nullptr) {
     s_mutex = xSemaphoreCreateMutex();
   }
+  if (event_log_survived_reset() && s_log.magic == kEventLogMagic && s_log.next < EVENT_LOG_CAPACITY &&
+      s_log.count <= EVENT_LOG_CAPACITY) {
+    for (auto& entry : s_log.entries) entry.text[EVENT_LOG_TEXT_LEN - 1] = '\0';
+    event_log_add("BOOT (LOG RESTORED)");
+    return;
+  }
+  s_log.magic = kEventLogMagic;
   event_log_clear();
   event_log_add("BOOT");
 }
@@ -35,13 +55,13 @@ void event_log_add(const char* text) {
   if (text == nullptr) return;
   if (!event_log_lock()) { s_dropped.fetch_add(1); s_version.fetch_add(1); return; }
 
-  EventLogEntry& entry = s_entries[s_next];
+  EventLogEntry& entry = s_log.entries[s_log.next];
   entry.ms = millis();
   snprintf(entry.text, sizeof(entry.text), "%s", text);
 
-  s_next = (s_next + 1) % EVENT_LOG_CAPACITY;
-  if (s_count < EVENT_LOG_CAPACITY) {
-    s_count++;
+  s_log.next = (s_log.next + 1) % EVENT_LOG_CAPACITY;
+  if (s_log.count < EVENT_LOG_CAPACITY) {
+    s_log.count++;
   }
   s_version.fetch_add(1, std::memory_order_release);
 
@@ -68,10 +88,10 @@ size_t event_log_snapshot(EventLogEntry* out, size_t max_entries) {
 bool event_log_try_snapshot(EventLogEntry* out, size_t max_entries, size_t* count, uint32_t* version) {
   if (!out || !max_entries || !count || !version || !event_log_lock()) return false;
 
-  size_t n = s_count < max_entries ? s_count : max_entries;
+  size_t n = s_log.count < max_entries ? s_log.count : max_entries;
   for (size_t i = 0; i < n; i++) {
-    size_t idx = (s_next + EVENT_LOG_CAPACITY - 1 - i) % EVENT_LOG_CAPACITY;
-    out[i] = s_entries[idx];
+    size_t idx = (s_log.next + EVENT_LOG_CAPACITY - 1 - i) % EVENT_LOG_CAPACITY;
+    out[i] = s_log.entries[idx];
   }
 
   *count = n;
@@ -85,9 +105,9 @@ uint32_t event_log_version() { return s_version.load(std::memory_order_acquire);
 void event_log_clear() {
   if (!event_log_lock()) return;
 
-  memset(s_entries, 0, sizeof(s_entries));
-  s_next = 0;
-  s_count = 0;
+  memset(s_log.entries, 0, sizeof(s_log.entries));
+  s_log.next = 0;
+  s_log.count = 0;
   s_version.fetch_add(1, std::memory_order_release);
 
   event_log_unlock();

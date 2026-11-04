@@ -104,10 +104,6 @@ void step_update() {
   if (control_get_state() != STATE_STEP) return;
   if (step_waiting_dwell) {
     if ((int32_t)(millis() - step_dwell_until_ms) < 0) return;
-    // Dwell disables ENA. Assert it once, then wait for the driver again
-    // without blocking the control or safety task.
-    if (!motor_prepare_start()) { control_transition_to(STATE_STOPPING); return; }
-    if (motor_ena_settle_pending()) return;
     if (!start_step_move() && !safety_inhibit_motion()) control_transition_to(STATE_STOPPING);
     return;
   }
@@ -123,7 +119,8 @@ void step_update() {
   accumulatedAngle = stepCurrentAngle.load(); ++stepsTaken; ++step_sequence_completed;
   if (step_sequence_completed < step_sequence_target_repeats) {
     if (step_sequence_dwell_ms) {
-      motor_disable(); step_waiting_dwell = true; step_dwell_until_ms = millis() + step_sequence_dwell_ms;
+      // ENA stays asserted: holding torque keeps the indexed position during the dwell.
+      step_waiting_dwell = true; step_dwell_until_ms = millis() + step_sequence_dwell_ms;
       return;
     }
     if (start_step_move()) return;

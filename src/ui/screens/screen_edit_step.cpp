@@ -103,7 +103,8 @@ static void rpm_adj_cb(lv_event_t* e) {
   float delta = (float)(intptr_t)lv_event_get_user_data(e) * ui_rpm_increment(editRpm);
   editRpm += delta;
   if (editRpm < MIN_RPM) editRpm = MIN_RPM;
-  if (editRpm > speed_get_rpm_max()) editRpm = speed_get_rpm_max();
+  const float rpmMax = speed_get_rpm_max_for_diameter(editDiameterMm);  // Diameter is edited on this screen.
+  if (editRpm > rpmMax) editRpm = rpmMax;
   if (rpmLabel) ui_set_rpm(rpmLabel, editRpm);
   update_computed();
 }

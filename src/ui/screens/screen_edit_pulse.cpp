@@ -71,7 +71,7 @@ static void update_computed_info() {
     lv_bar_set_value(offBar, pct, LV_ANIM_OFF);
   }
   if (rpmBar) {
-    float mx = speed_get_rpm_max();
+    float mx = screen_program_edit_rpm_max();
     float span = mx - MIN_RPM;
     if (span < 1e-6f) span = 1e-6f;
     int pct = (int)((editRpm - MIN_RPM) * 100.0f / span + 0.5f);
@@ -120,7 +120,7 @@ static void rpm_adj_cb(lv_event_t* e) {
   else if (editRpm > MIN_RPM)
     editRpm -= ui_rpm_increment(editRpm);
   if (editRpm < MIN_RPM) editRpm = MIN_RPM;
-  if (editRpm > speed_get_rpm_max()) editRpm = speed_get_rpm_max();
+  if (editRpm > screen_program_edit_rpm_max()) editRpm = screen_program_edit_rpm_max();
   ui_set_rpm(rpmLabel, editRpm);
   update_computed_info();
 }

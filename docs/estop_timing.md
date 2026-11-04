@@ -1,7 +1,7 @@
 # ESTOP Timing Verification
 
 ## Hardware: GUITION JC4880P443C (ESP32-P4 + ESP32-C6)
-## Firmware: v2.1.1 (see `FW_VERSION` in `src/config.h`)
+## Firmware: see `FW_VERSION` in `src/config.h`
 ## Test Date: [FILL IN AFTER HARDWARE TEST]
 
 ---
@@ -33,6 +33,8 @@ The former NC-to-GND example was removed because it contradicted the firmware.
 ```
   [GPIO 34]──[100 nF ceramic]──[GND]
 ```
+
+Flash writes defer this ISR because the prebuilt framework does not register the GPIO ISR service as IRAM-safe. Firmware therefore saves settings only at rest (IDLE/ESTOP). When measuring, include a press during a settings save at rest.
 
 The time constant depends on the actual pull resistance and wiring. Measure the resulting input delay and noise response on the assembled machine.
 

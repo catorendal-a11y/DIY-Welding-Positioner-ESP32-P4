@@ -20,7 +20,6 @@ static std::atomic<bool> estopLocked{false};
 static std::atomic<uint32_t> readyTasks{0};
 void safety_task_ready(uint32_t bit) { readyTasks.fetch_or(bit); }
 
-static std::atomic<bool> estopResetPending{false};
 static std::atomic<uint8_t> s_faultReason{FAULT_NONE};
 // Any latched fault also disarms the USB mirror: a previously authorized PC
 // must not be able to drive the UI (including RESET TO IDLE) after a fault.
@@ -39,6 +38,7 @@ void safety_report_motor_fault(FaultReason reason) {
   safety_latch_fault(reason);
   control_transition_to(STATE_ESTOP);
 }
+void safety_report_boot_fault(FaultReason reason) { safety_latch_fault(reason); }
 void safety_report_input_fault() {
   safety_latch_fault(FAULT_PEDAL_INPUT);
   control_transition_to(STATE_ESTOP);
@@ -58,16 +58,13 @@ static uint32_t g_estopConfirmed = 0;
 #endif
 
 // ───────────────────────────────────────────────────────────────────────────────
-// SAFETY INITIALIZATION — Cache stepper pointer for ISR
-// ───────────────────────────────────────────────────────────────────────────────
-void safety_cache_stepper() {} // Compatibility: no library pointer crosses task boundaries.
-
-// ───────────────────────────────────────────────────────────────────────────────
 // ESTOP INTERRUPT SERVICE ROUTINE
 // Layer 1: direct hardware action only; no measured latency is asserted.
 // Invariants:
-//   - No flash access (millis/forceStop/LOG_*) — cache may be disabled during
-//     LittleFS/NVS writes, would crash IWDT.
+//   - No flash access (millis/forceStop/LOG_*).
+//   - The Arduino GPIO ISR service is not registered IRAM-safe in the prebuilt
+//     framework, so this ISR is deferred while a flash write has the cache off.
+//     storage_flush() therefore only writes while the motor is at rest.
 //   - Only GPIO register writes + atomic flag stores are allowed here.
 //   - g_estopTriggerMs is set by safetyTask (after flag load), never by ISR.
 // ───────────────────────────────────────────────────────────────────────────────
@@ -120,6 +117,12 @@ bool safety_is_estop_active() { return (digitalRead(PIN_ESTOP) == LOW); }
 
 bool safety_is_driver_alarm_latched() { return s_driverAlarmLatched.load(std::memory_order_acquire); }
 
+static constexpr uint32_t kUiHeartbeatDeadlineMs = 2000u;  // Far above a heavy LVGL frame.
+static bool ui_heartbeat_fresh(uint32_t now) {
+  return (readyTasks.load(std::memory_order_acquire) & 8u) == 0u ||
+         now - g_uiHeartbeatMs.load(std::memory_order_acquire) <= kUiHeartbeatDeadlineMs;
+}
+
 bool safety_inhibit_motion() {
   return readyTasks.load() != 15u || estopLocked.load() || g_estopPending.load() ||
          !speed_pedal_input_healthy() || safety_is_estop_active() ||
@@ -128,7 +131,7 @@ bool safety_inhibit_motion() {
 #if HMI_REQUIRED_FOR_MOTION
          !display_touch_operational() ||
 #endif
-         !input_task_heartbeat_fresh(millis());
+         !input_task_heartbeat_fresh(millis()) || !ui_heartbeat_fresh(millis());
 }
 
 bool safety_can_reset_from_overlay() {
@@ -146,23 +149,10 @@ bool safety_is_estop_locked() { return estopLocked.load(std::memory_order_acquir
 
 FaultReason safety_get_fault_reason() {
   uint8_t reason = s_faultReason.load(std::memory_order_acquire);
-  if (reason > FAULT_INPUT_STALE) {
+  if (reason > FAULT_HMI_STALE) {
     return FAULT_NONE;
   }
   return (FaultReason)reason;
-}
-
-void safety_reset_estop() { estopResetPending.store(true, std::memory_order_release); }
-
-static void safety_handle_reset() {
-  if (safety_can_reset_from_overlay()) {
-    estopLocked.store(false, std::memory_order_release);
-    safety_set_fault_reason(FAULT_NONE);
-    event_log_add("FAULT RESET");
-    LOG_I("ESTOP reset");
-  } else {
-    LOG_W("ESTOP reset failed - input still unsafe");
-  }
 }
 
 bool safety_check_ui_reset() {
@@ -211,11 +201,15 @@ void safety_run_cycle() {
   // healthy->stale transition only, never every millisecond while stale.
   static bool controlWasStale = false;
   static bool inputWasStale = false;
+  static bool hmiWasLost = false;
+  // A flash operation stalls every task; storage only writes at rest and holds this
+  // flag until the tasks have run again, so the stall itself is not a dead task.
+  const bool flashing = g_flashWriting.load(std::memory_order_acquire);
 
   // Dead-man supervisor, edge-triggered: latch (and log) only on the
   // healthy->stale transition, never every millisecond while stale. The
   // input channel arms only after inputTask stamped its first heartbeat.
-  const bool controlStale = control_heartbeat_stale(millis());
+  const bool controlStale = !flashing && control_heartbeat_stale(millis());
   if (controlStale && !controlWasStale) {
     safety_latch_fault(FAULT_CONTROL_STALE);
     if (control_get_state() != STATE_ESTOP) control_transition_to(STATE_ESTOP);
@@ -225,7 +219,7 @@ void safety_run_cycle() {
 
   const bool inputStarted = (readyTasks.load(std::memory_order_acquire) & 2u) != 0u &&
                             g_inputHeartbeatValid.load(std::memory_order_acquire);
-  const bool inputStale = inputStarted && !input_task_heartbeat_fresh(millis());
+  const bool inputStale = !flashing && inputStarted && !input_task_heartbeat_fresh(millis());
   if (inputStale && !inputWasStale) {
     safety_latch_fault(FAULT_INPUT_STALE);
     if (control_get_state() != STATE_ESTOP) control_transition_to(STATE_ESTOP);
@@ -233,12 +227,22 @@ void safety_run_cycle() {
   }
   inputWasStale = inputStale;
 
+  // Without a live touchscreen the on-screen STOP is gone: stop active motion.
+  // At rest safety_inhibit_motion() already refuses new starts.
+  bool hmiLost = !flashing && !ui_heartbeat_fresh(millis());
+#if HMI_REQUIRED_FOR_MOTION
+  hmiLost = hmiLost || !display_touch_operational();
+#endif
+  const SystemState state = control_get_state();
+  if (hmiLost && !hmiWasLost && state != STATE_IDLE && state != STATE_STOPPING && state != STATE_ESTOP) {
+    safety_latch_fault(FAULT_HMI_STALE);
+    control_transition_to(STATE_ESTOP);
+    LOG_E("Touchscreen/UI stopped responding - motion stopped");
+  }
+  hmiWasLost = hmiLost;
+
   safety_poll_driver_alarm();
   control_check_stop_deadline(millis());
-
-  if (estopResetPending.exchange(false, std::memory_order_acq_rel)) {
-    safety_handle_reset();
-  }
 
   // Redundant level channel: a sustained LOW must latch even when the
   // FALLING edge never reached the ISR (flash-write window, glitch below
@@ -286,6 +290,11 @@ void safety_run_cycle() {
     }
   }
 
+  // A fault latched while controlTask was completing a reset must not end in
+  // IDLE: motion would stay locked with no overlay and no way to reset.
+  if (estopLocked.load(std::memory_order_acquire) && control_get_state() != STATE_ESTOP) {
+    control_transition_to(STATE_ESTOP);
+  }
 }
 
 void safetyTask(void* pvParameters) {

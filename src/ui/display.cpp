@@ -23,7 +23,7 @@
 #include <cstring>
 
 // ───────────────────────────────────────────────────────────────────────────────
-// TOUCH CONFIGURATION (GT911 - from JC4880P433C BSP)
+// TOUCH CONFIGURATION (GT911 - from JC4880P443C BSP)
 // ───────────────────────────────────────────────────────────────────────────────
 #define TOUCH_I2C_SDA    7
 #define TOUCH_I2C_SCL    8
@@ -36,7 +36,7 @@ static esp_lcd_panel_io_handle_t touch_io = nullptr;
 static std::atomic<bool> s_touchOperational{false};
 
 // ───────────────────────────────────────────────────────────────────────────────
-// ST7701 VENDOR INITIALIZATION COMMANDS (from JC4880P433C BSP)
+// ST7701 VENDOR INITIALIZATION COMMANDS (from JC4880P443C BSP)
 // Critical for proper panel initialization
 // ───────────────────────────────────────────────────────────────────────────────
 static const st7701_lcd_init_cmd_t st7701_lcd_cmds[] = {
@@ -94,8 +94,8 @@ static esp_lcd_panel_io_handle_t    dsi_io     = nullptr;
 // ───────────────────────────────────────────────────────────────────────────────
 // BACKLIGHT CONTROL - RetroESP32-P4 working configuration
 // ───────────────────────────────────────────────────────────────────────────────
-#define BL_GPIO         23    // Backlight GPIO (JC4880P433)
-#define LCD_RST         5     // Reset pin (JC4880P433)
+#define BL_GPIO         23    // Backlight GPIO (JC4880P443)
+#define LCD_RST         5     // Reset pin (JC4880P443)
 #define BL_LEDC_CHANNEL LEDC_CHANNEL_0
 #define BL_LEDC_TIMER   LEDC_TIMER_0
 #define BL_LEDC_FREQ    5000
@@ -402,6 +402,14 @@ void display_init() {
 
 i2c_master_bus_handle_t display_touch_i2c_bus_handle() {
   return touch_i2c_bus;
+}
+
+// Single reader (LVGL indev). Tolerates brief HF/I2C noise; 100 failures in a row means a lost touchscreen.
+void display_touch_report_read(bool ok) {
+  static constexpr uint32_t kFailLimit = 100u;
+  static uint32_t failures = 0;
+  failures = ok ? 0u : failures + (failures < kFailLimit ? 1u : 0u);
+  s_touchOperational.store(failures < kFailLimit, std::memory_order_release);
 }
 
 bool display_touch_operational() {

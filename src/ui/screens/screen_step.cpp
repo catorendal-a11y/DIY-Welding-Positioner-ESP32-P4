@@ -210,6 +210,10 @@ static void diameter_keyboard_cb(lv_event_t* e) {
       float mm = step_parse_first_float(txt);
       if (ui_control_state() == STATE_IDLE && mm >= 1.0f && mm <= 20000.0f) {
         speed_set_workpiece_diameter_mm(mm);
+        xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+        g_settings.workpiece_diameter_mm = mm;
+        xSemaphoreGive(g_settings_mutex);
+        storage_request_settings_save();
         refresh_diameter_summary();
         update_info_panel();
       }
@@ -311,12 +315,14 @@ static void target_card_cb(lv_event_t* e) {
 
 static void rpm_minus_cb(lv_event_t* e) {
   (void)e;
+  if (ui_control_state() != STATE_IDLE) return;
   targetRpm -= ui_rpm_increment(targetRpm);
   step_push_rpm_to_speed_and_label();
 }
 
 static void rpm_plus_cb(lv_event_t* e) {
   (void)e;
+  if (ui_control_state() != STATE_IDLE) return;
   targetRpm += ui_rpm_increment(targetRpm);
   step_push_rpm_to_speed_and_label();
 }

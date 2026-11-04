@@ -63,6 +63,8 @@ void screen_calibration_enter() {
 }
 void screen_calibration_leave() {
   control_set_calibration_active(false);
+  // MOVE 360 fixes the speed; the panel pot and pedal must work again afterwards.
+  speed_set_slider_priority(false);
   close_entry(); control_stop(); calibration_discard_draft();
   session.abort("Calibration closed. Unsaved correction discarded.");
 }
@@ -112,6 +114,9 @@ static void apply_cb(lv_event_t*) {
 }
 static void save_cb(lv_event_t*) {
   if (!safe_idle() || !session.passed() || !context_matches()) return;
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  g_settings.workpiece_diameter_mm = session.diameter;  // The factor is only valid for this diameter.
+  xSemaphoreGive(g_settings_mutex);
   saveTicket = calibration_save(); session.stage = CalibrationSession::Saving; screen_calibration_update();
 }
 static lv_obj_t* label(lv_obj_t* parent, int x, int y, int w, const char* text, const lv_font_t* font, lv_color_t color) {

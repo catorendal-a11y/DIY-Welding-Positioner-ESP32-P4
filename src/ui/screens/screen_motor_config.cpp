@@ -5,6 +5,8 @@
 #include "../value_binding.h"
 #include "../../config.h"
 #include "../../motor/microstep.h"
+#include "../../control/motion_policy.h"
+#include "../../storage/settings_policy.h"
 #include "../../control/control.h"
 #include "../../safety/safety.h"
 #include "../../utils/numeric_input.h"
@@ -17,12 +19,17 @@ static constexpr int kAccelMin = 1000, kAccelMax = 30000;
 static constexpr int kMaxRpmMilliMin = 1, kMaxRpmMilliMax = 3000;
 static int selectedMicro = 0, motorAccelUi = 10000, motorMaxRpmMilliUi = 3000;
 static bool invertDir = false, dirSwitchEnabled = false, saveRequested = false;
-static bool entryAcceleration = false, entryClosePending = false;
+enum EntryField : intptr_t { ENTRY_MAX_RPM, ENTRY_ACCEL, ENTRY_ROLLER, ENTRY_GEAR };
+static EntryField entryField = ENTRY_MAX_RPM;
+static bool entryClosePending = false;
+static float motorRollerUi = D_RULLE * 1000.0f, motorGearUi = GEAR_RATIO;
+static lv_obj_t *rollerButton = nullptr, *gearButton = nullptr;
 static lv_obj_t *microBtns[4]{}, *accelSlider = nullptr, *maxRpmSlider = nullptr;
 static lv_obj_t *accelButton = nullptr, *maxRpmButton = nullptr;
 static lv_obj_t *invertToggle = nullptr, *dirToggle = nullptr, *saveButton = nullptr;
 static UiInputPanel entry;
-static UiTextBinding<24> accelValue, maxRpmValue, invertValue, dirValue;
+static UiTextBinding<24> accelValue, maxRpmValue, invertValue, dirValue, rollerValue, gearValue;
+static UiTextBinding<48> accelTitle;
 static UiTextBinding<48> motorStatus;
 static UiTextBinding<96> saveFeedback;
 
@@ -30,17 +37,33 @@ static bool can_edit() {
   return !saveRequested && ui_control_fresh() && ui_control_state() == STATE_IDLE && !safety_inhibit_motion();
 }
 static void changed() { saveFeedback.set("Unsaved changes"); }
+static void sync_stop_angle() {
+  // Stop distance does not depend on microstepping: both rate and setting are per 1/16.
+  const float rpm = motorMaxRpmMilliUi / 1000.0f;
+  const float hzAt16 = rpmToStepHz(rpm) * 16.0f / (microstep_get_steps_per_rev() / 200.0f);
+  char text[48];
+  snprintf(text, sizeof(text), "ACCEL AT 1/16 / STOP %.0f DEG AT MAX",
+           (double)motion_stop_angle_deg(rpm, hzAt16, motorAccelUi));
+  accelTitle.set(text);
+}
+static void sync_mechanics() {
+  char text[24];
+  snprintf(text, sizeof(text), "ROLLER %.1f", (double)motorRollerUi); rollerValue.set(text);
+  snprintf(text, sizeof(text), "GEAR %.1f", (double)motorGearUi); gearValue.set(text);
+}
 static void sync_acceleration(int value) {
   motorAccelUi = constrain(value, kAccelMin, kAccelMax);
   char text[24]; snprintf(text, sizeof(text), "%d", motorAccelUi); accelValue.set(text);
   if (accelSlider && lv_slider_get_value(accelSlider) != motorAccelUi)
     lv_slider_set_value(accelSlider, motorAccelUi, LV_ANIM_OFF);
+  sync_stop_angle();
 }
 static void sync_rpm(int value) {
   motorMaxRpmMilliUi = constrain(value, kMaxRpmMilliMin, kMaxRpmMilliMax);
   char text[24]; snprintf(text, sizeof(text), "%.3f", motorMaxRpmMilliUi / 1000.0); maxRpmValue.set(text);
   if (maxRpmSlider && lv_slider_get_value(maxRpmSlider) != motorMaxRpmMilliUi)
     lv_slider_set_value(maxRpmSlider, motorMaxRpmMilliUi, LV_ANIM_OFF);
+  sync_stop_angle();
 }
 static void sync_toggles() {
   lv_obj_set_checked(invertToggle, invertDir);
@@ -87,7 +110,14 @@ static void input_cb(lv_event_t* event) {
   if (!can_edit()) { entry.error("Stop the motor and restore fresh status before confirming."); return; }
   float value = 0;
   if (!parse_float_entry(entry.text(), value)) { entry.error("Enter one complete number. Use a dot or comma for decimals."); return; }
-  if (entryAcceleration) {
+  if (entryField == ENTRY_ROLLER || entryField == ENTRY_GEAR) {
+    const float roller = entryField == ENTRY_ROLLER ? value : motorRollerUi;
+    const float gear = entryField == ENTRY_GEAR ? value : motorGearUi;
+    if (!settings_mechanics_valid(roller, gear)) {
+      entry.error(entryField == ENTRY_ROLLER ? "Enter 10 to 1000 mm." : "Enter a ratio from 1 to 1000."); return;
+    }
+    motorRollerUi = roller; motorGearUi = gear; sync_mechanics();
+  } else if (entryField == ENTRY_ACCEL) {
     if (value < kAccelMin || value > kAccelMax || std::floor(value) != value) {
       entry.error("Enter a whole number from 1000 to 30000 steps/s2."); return;
     }
@@ -104,14 +134,23 @@ static void input_cb(lv_event_t* event) {
 }
 static void open_input_cb(lv_event_t* event) {
   if (!can_edit() || entry.active()) return;
-  entryAcceleration = (intptr_t)lv_event_get_user_data(event) != 0;
+  entryField = static_cast<EntryField>((intptr_t)lv_event_get_user_data(event));
   char value[24];
-  if (entryAcceleration) snprintf(value, sizeof(value), "%d", motorAccelUi);
-  else snprintf(value, sizeof(value), "%.3f", motorMaxRpmMilliUi/1000.0);
-  entry.open(entryAcceleration ? "Motor acceleration" : "Maximum workpiece speed",
-             entryAcceleration ? "Whole steps/s2: 1000 to 30000. SAVE & APPLY commits the draft." :
-                                 "0.001 to 3.000 RPM. SAVE & APPLY commits the draft.",
-             value, "0123456789.,", 12, LV_KEYBOARD_MODE_NUMBER, input_cb);
+  const char* title = "Maximum workpiece speed";
+  const char* hint = "0.001 to 3.000 RPM. SAVE & APPLY commits the draft.";
+  if (entryField == ENTRY_ACCEL) {
+    snprintf(value, sizeof(value), "%d", motorAccelUi);
+    title = "Motor acceleration"; hint = "Whole steps/s2 at 1/16: 1000 to 30000. SAVE & APPLY commits the draft.";
+  } else if (entryField == ENTRY_ROLLER) {
+    snprintf(value, sizeof(value), "%.1f", (double)motorRollerUi);
+    title = "Drive roller diameter"; hint = "10 to 1000 mm. SAVE & APPLY commits the draft.";
+  } else if (entryField == ENTRY_GEAR) {
+    snprintf(value, sizeof(value), "%.1f", (double)motorGearUi);
+    title = "Gear ratio"; hint = "Motor turns per roller turn, 1 to 1000. SAVE & APPLY commits the draft.";
+  } else {
+    snprintf(value, sizeof(value), "%.3f", motorMaxRpmMilliUi/1000.0);
+  }
+  entry.open(title, hint, value, "0123456789.,", 12, LV_KEYBOARD_MODE_NUMBER, input_cb);
 }
 static void save_cb(lv_event_t*) {
   if (!can_edit() || entry.active()) return;
@@ -120,6 +159,7 @@ static void save_cb(lv_event_t*) {
   xSemaphoreGive(g_settings_mutex);
   request.microstep = microOptions[selectedMicro]; request.acceleration = motorAccelUi;
   request.max_rpm = motorMaxRpmMilliUi/1000.0f;
+  request.roller_mm = motorRollerUi; request.gear_ratio = motorGearUi;
   request.invert_direction = invertDir; request.dir_switch_enabled = dirSwitchEnabled;
   if (!control_apply_motor_settings(request)) { saveFeedback.set("Apply blocked / try when idle"); return; }
   saveRequested = true; saveFeedback.set("Apply queued"); screen_motor_config_update();
@@ -127,12 +167,14 @@ static void save_cb(lv_event_t*) {
 static void reset_bindings() {
   accelValue.reset(); maxRpmValue.reset(); invertValue.reset(); dirValue.reset();
   motorStatus.reset(); saveFeedback.reset();
+  rollerValue.reset(); gearValue.reset(); accelTitle.reset();
 }
 void screen_motor_config_leave() { entry.close(); entryClosePending = false; }
 void screen_motor_config_invalidate_widgets() {
   screen_motor_config_leave(); reset_bindings();
   for (auto& button : microBtns) button = nullptr;
   accelSlider = maxRpmSlider = accelButton = maxRpmButton = invertToggle = dirToggle = saveButton = nullptr;
+  rollerButton = gearButton = nullptr;
 }
 void screen_motor_config_create() {
   screen_motor_config_invalidate_widgets(); saveRequested = false;
@@ -143,6 +185,7 @@ void screen_motor_config_create() {
   motorAccelUi = constrain(static_cast<int>(settings.acceleration), kAccelMin, kAccelMax);
   motorMaxRpmMilliUi = constrain(static_cast<int>(std::round(settings.max_rpm * 1000)), kMaxRpmMilliMin, kMaxRpmMilliMax);
   invertDir = settings.invert_direction; dirSwitchEnabled = settings.dir_switch_enabled;
+  motorRollerUi = settings.roller_mm; motorGearUi = settings.gear_ratio;
   selectedMicro = 0;
   for (int i=0; i<4; ++i) if (microOptions[i] == settings.microstep) selectedMicro = i;
   ui_create_settings_header(root, "Motor configuration", "EDIT / SAVE", COL_HDR_MUTED);
@@ -158,7 +201,7 @@ void screen_motor_config_create() {
   }
   auto speed = ui_create_post_card(root, 20, 170, 368, 130);
   ui_create_text(speed, 14, 12, 340, "MAX SPEED / RPM", FONT_SMALL, COL_TEXT_DIM);
-  maxRpmButton = ui_create_btn(speed, 14, 34, 178, 48, "", FONT_XL, UI_BTN_NORMAL, open_input_cb, nullptr);
+  maxRpmButton = ui_create_btn(speed, 14, 34, 178, 48, "", FONT_XL, UI_BTN_NORMAL, open_input_cb, (void*)ENTRY_MAX_RPM);
   maxRpmValue.bind(lv_obj_get_child(maxRpmButton, 0));
   lv_obj_set_size(ui_create_pm_btn(speed, 204, 34, "-", FONT_XL, UI_BTN_NORMAL, adjust_cb, (void*)-1), 66, 48);
   lv_obj_set_size(ui_create_pm_btn(speed, 278, 34, "+", FONT_XL, UI_BTN_ACCENT, adjust_cb, (void*)1), 76, 48);
@@ -166,8 +209,8 @@ void screen_motor_config_create() {
   lv_obj_set_pos(maxRpmSlider, 20, 101); lv_obj_set_size(maxRpmSlider, 328, 12);
   ui_style_slider(maxRpmSlider); lv_obj_add_event_cb(maxRpmSlider, slider_cb, LV_EVENT_VALUE_CHANGED, nullptr);
   auto acceleration = ui_create_post_card(root, 404, 170, 376, 130);
-  ui_create_text(acceleration, 14, 12, 348, "ACCELERATION / STEPS/S2", FONT_SMALL, COL_TEXT_DIM);
-  accelButton = ui_create_btn(acceleration, 14, 34, 178, 48, "", FONT_XL, UI_BTN_NORMAL, open_input_cb, (void*)1);
+  accelTitle.bind(ui_create_text(acceleration, 14, 12, 348, "", FONT_SMALL, COL_TEXT_DIM));
+  accelButton = ui_create_btn(acceleration, 14, 34, 178, 48, "", FONT_XL, UI_BTN_NORMAL, open_input_cb, (void*)ENTRY_ACCEL);
   accelValue.bind(lv_obj_get_child(accelButton, 0));
   lv_obj_set_size(ui_create_pm_btn(acceleration, 204, 34, "-", FONT_XL, UI_BTN_NORMAL, adjust_cb, (void*)-500), 66, 48);
   lv_obj_set_size(ui_create_pm_btn(acceleration, 278, 34, "+", FONT_XL, UI_BTN_ACCENT, adjust_cb, (void*)500), 84, 48);
@@ -193,16 +236,21 @@ void screen_motor_config_create() {
   motorStatus.bind(ui_create_text(root, 24, 385, 220, "", FONT_SMALL, COL_TEXT_DIM));
   auto feedback = ui_create_text(root, 254, 385, 522, "", FONT_SMALL, COL_TEXT_DIM);
   lv_obj_set_style_text_align(feedback, LV_TEXT_ALIGN_RIGHT, 0); saveFeedback.bind(feedback);
-  ui_create_btn(root, 20, 408, 240, 56, "< BACK", FONT_BTN, UI_BTN_NORMAL, back_cb, nullptr);
-  saveButton = ui_create_btn(root, 276, 408, 504, 56, "SAVE & APPLY", FONT_BTN, UI_BTN_ACCENT, save_cb, nullptr);
-  sync_rpm(motorMaxRpmMilliUi); sync_acceleration(motorAccelUi); sync_toggles();
+  ui_create_btn(root, 20, 408, 130, 56, "< BACK", FONT_BTN, UI_BTN_NORMAL, back_cb, nullptr);
+  rollerButton = ui_create_btn(root, 162, 408, 190, 56, "", FONT_BTN, UI_BTN_NORMAL, open_input_cb, (void*)ENTRY_ROLLER);
+  rollerValue.bind(lv_obj_get_child(rollerButton, 0));
+  gearButton = ui_create_btn(root, 364, 408, 170, 56, "", FONT_BTN, UI_BTN_NORMAL, open_input_cb, (void*)ENTRY_GEAR);
+  gearValue.bind(lv_obj_get_child(gearButton, 0));
+  saveButton = ui_create_btn(root, 546, 408, 234, 56, "SAVE & APPLY", FONT_BTN, UI_BTN_ACCENT, save_cb, nullptr);
+  sync_rpm(motorMaxRpmMilliUi); sync_acceleration(motorAccelUi); sync_toggles(); sync_mechanics();
   saveFeedback.set("Tap a value for exact entry"); screen_motor_config_update();
 }
 static void lock_edits(lv_obj_t* root, bool lock) {
   if (!root) return;
   if (lv_obj_check_type(root, &lv_button_class) || lv_obj_check_type(root, &lv_slider_class)) {
     // Navigation remains available during failed storage writes.
-    if (lv_obj_get_parent(root) != screenRoots[SCREEN_MOTOR_CONFIG] || root == saveButton)
+    if (lv_obj_get_parent(root) != screenRoots[SCREEN_MOTOR_CONFIG] || root == saveButton ||
+        root == rollerButton || root == gearButton)
       lv_obj_set_disabled(root, lock);
   }
   for (uint32_t i=0; i<lv_obj_get_child_count(root); ++i) lock_edits(lv_obj_get_child(root, i), lock);

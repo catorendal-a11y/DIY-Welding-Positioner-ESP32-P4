@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- UI and touch supervision: `safetyTask` stops active motion and latches **HMI STALE** if the LVGL loop stalls for 2 s or the touch controller fails 100 reads in a row; at rest new starts are blocked instead.
+- Speed-pot break detection: a jump to the rail within one 20 ms sample holds the speed, then latches **SPEED POT** after three samples. Reset stays blocked until the pot reads plausibly again. Turning the knob to zero by hand is unaffected.
+- Physical speed limits: workpiece RPM is capped per diameter by `MAX_STEP_HZ` (200 kHz) and `MOTOR_RPM_LIMIT` (1500 RPM). Programs above the cap are rejected.
+- Unexpected restarts (panic, watchdog, brownout) latch a visible fault at boot, and the event log survives them. It is still cleared by power loss.
+- Roller diameter and gear ratio are settings in Motor Config (defaults 80 mm and 108). Motor Config shows the stop angle at Max RPM.
+- The manual workpiece diameter survives a restart.
+- About shows the build commit next to the version.
 - Driver enable settle (Leadshine-class t1): with **Driver = DM542T**, a fully validated start now asserts ENA and waits out a 200 ms settle window in the new **ENABLING** state before the first step pulse (`motor_prepare_start()` / `motor_ena_settle_pending()` in the motor layer, command replay in the control layer). The wait is non-blocking; E-STOP, the redundant E-STOP level poll, driver-alarm polling and STOP all keep their immediate paths during the window, and a STOP or inhibit during the window aborts without pulses (fail-closed to IDLE, ENA HIGH). Standard PUL/DIR drivers keep zero settle. Mode entry guards accept the ENABLING replay.
 - Redundant E-STOP level channel: `safetyTask` polls GPIO34 every millisecond in addition to the FALLING-edge ISR, so a sustained LOW latches through the same 5 ms confirm path even if the edge never reached the ISR.
 - Task dead-man supervision: `safetyTask` latches **FAULT_CONTROL_STALE** when the control loop stops publishing fresh cycles and **FAULT_INPUT_STALE** when the `inputTask` heartbeat goes stale (100 ms). Both write ENA HIGH directly — `motionGate.stop()` alone waited on the very task that hung, leaving pulses running until the 5 s TWDT. The input supervisor arms only after `inputTask` stamped its first heartbeat (no false boot fault), latching is edge-triggered (one fault/log per stale transition), and RESET additionally requires both channels fresh.
@@ -20,6 +27,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Leaving Calibration restores the panel pot and pedal; previously they stayed ignored until restart after MOVE 360 from the Settings menu. A saved calibration also stores its diameter.
+- Jog releases no longer look active, and the header shows STOPPING during deceleration.
+- Pulse shows the RPM it will actually run and reports START BLOCKED. Step speed buttons act only when idle.
+- Settings and programs are saved only at rest, and a start waits for a save in progress. Flash stalls no longer count as dead tasks.
+- The acceleration setting now means steps/s2 at 1/16, so ramps take the same physical time at every microstep setting. **1/16 is unchanged; other microstep settings get a different ramp than before.**
+- Step mode keeps ENA asserted during the dwell, so holding torque keeps the indexed position and the dwell no longer gains a 200 ms settle.
+- Pulse mode latches direction at start instead of re-reading the switch every cycle.
+- A running program no longer leaves its diameter, RPM or direction behind in manual mode.
+- Invalid saved data now boots to a visible **STORAGE** fault with motion disabled and the data untouched, instead of halting with a black screen.
+- ADS1115: small negative codes at full pedal are valid, and a pedal fault needs three out-of-range samples.
+- Boot-screen labels no longer imply hardware checks that are not performed. The I2C address scan runs in debug builds only.
+- Removed `board_build.vdd` and the `-DCONFIG_*_ISR_IRAM_SAFE` flags, which did not change the prebuilt framework, plus unused fault reasons and `safety_reset_estop`/`safety_cache_stepper`.
 - Driver-alarm handling inhibits ENA and latches DRIVER ALARM on the **first** LOW sample. Even a short alarm cancels the planner; it cannot leave the UI running while the disabled driver loses steps. Raw ALM also blocks start/reset before the scheduled poll.
 - Motor Config applies a private proposal to hardware before publishing its motor fields to `g_settings`. Concurrent saves only snapshot committed values; failed hardware apply rolls back without exposing the cancelled proposal to RAM, NVS or runtime caches.
 - `storage_format()` sets `g_restartRequired`: runtime caches are intentionally not re-applied, and new motion stays inhibited until a restart.
@@ -80,7 +99,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Validate complete JSON serialization and exact NVS byte counts; bound blobs and program counts, validate object types, normalize program IDs and validate both legacy files before migration. Preserve valid legacy UTF-8 names; new editor names use printable ASCII supported by the screen font.
 - Show program and Display save receipts, lock program edits during pending writes, preserve the dim-time draft through theme reconstruction, review sequence/timing before program START and identify stale motion actions by explicit markers.
 - Bound USB receive work and partial-frame lifetime, release the viewer pointer on focus loss and close failed transmit links. Replace unsupported LVGL CLIB heap monitoring with ESP-IDF heap statistics.
-- Add real production speed/ADS and storage/migration test environments to CI, including allocation and short-write failures. See [the review and resolution report](docs/CODE_LOGIC_REVIEW_2026-10-03.md).
+- Add real production speed/ADS and storage/migration test environments to CI, including allocation and short-write failures. See [the review and resolution report](docs/archive/CODE_LOGIC_REVIEW_2026-10-03.md).
 
 ### Release packaging
 

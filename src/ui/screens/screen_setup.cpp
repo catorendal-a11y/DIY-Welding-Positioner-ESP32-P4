@@ -110,8 +110,11 @@ void screen_setup_create() {
   if (progress.stage == SetupStage::Motor) {
     ui_create_text(s, 24, 240, 752, "Match microstep to the drive switches before movement.", FONT_NORMAL, COL_TEXT_DIM);
     auto gear = ui_create_text(s, 24, 270, 752, "", FONT_NORMAL, COL_TEXT_DIM);
-    lv_label_set_text_fmt(gear, "FIXED GEAR RATIO %.1f / roller %.0f mm / default workpiece %.0f mm",
-                          (double)GEAR_RATIO, (double)(D_RULLE * 1000), (double)(D_EMNE * 1000));
+    xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+    const float gearRatio = g_settings.gear_ratio, rollerMm = g_settings.roller_mm;
+    xSemaphoreGive(g_settings_mutex);
+    lv_label_set_text_fmt(gear, "GEAR RATIO %.1f / roller %.0f mm / default workpiece %.0f mm",
+                          (double)gearRatio, (double)rollerMm, (double)(D_EMNE * 1000));
     driverBtn = ui_create_btn(s, 24, 320, 300, 56, "", FONT_BTN, UI_BTN_NORMAL, driver_cb, nullptr);
     ui_create_btn(s, 344, 320, 432, 56, "OPEN MOTOR CONFIG", FONT_BTN, UI_BTN_ACCENT, open_cb, (void*)(intptr_t)SCREEN_MOTOR_CONFIG);
   } else if (progress.stage == SetupStage::Direction) {

@@ -3,6 +3,9 @@
 // Waveshare/Guition ESP32-P4 4.3" Touch Display Dev Board
 
 #define FW_VERSION "v2.2.1"
+#ifndef FW_BUILD_ID
+#define FW_BUILD_ID "local"  // Firmware builds get the commit from scripts/pio_pre_unique_bin.py
+#endif
 
 // ───────────────────────────────────────────────────────────────────────────────
 // GPIO HEADER PINS (2×13 pin header)
@@ -24,7 +27,7 @@
 #define ENABLE_ADS1115_PEDAL 0  // 1 = probe touch I2C bus for ADS1115 pedal ADC (SDA7/SCL8)
 #endif
 // HMI policy: a failed GT911 boot initialization blocks NEW motion starts
-// (runtime touch health is not monitored yet — boot-init result only).
+// Touch that stops answering at runtime also blocks starts and stops active motion.
 // Set 0 to allow pedal motion without touch.
 #ifndef HMI_REQUIRED_FOR_MOTION
 #define HMI_REQUIRED_FOR_MOTION 1
@@ -65,6 +68,14 @@
 // §3. Workpiece RPM: pot/slider span MIN_RPM .. speed_get_rpm_max() (max stored in NVS, Motor Config).
 #define MIN_RPM 0.001f  // Minimum workpiece RPM (pot CCW / clamp floor)
 #define MAX_RPM 3.0f    // Absolute ceiling for Max RPM setting and firmware clamp
+// Physical limits applied on top of Max RPM; workpiece RPM is capped per diameter so an
+// open-loop stepper is never commanded past them. Override with -D for a different drive.
+#ifndef MAX_STEP_HZ
+#define MAX_STEP_HZ 200000.0f  // DM542T maximum pulse input
+#endif
+#ifndef MOTOR_RPM_LIMIT
+#define MOTOR_RPM_LIMIT 1500.0f  // Above this a NEMA 23 at 24-36 V has little usable torque
+#endif
 
 // Saved as g_settings.stepper_driver — must match screen + motor.cpp
 #define STEPPER_DRIVER_STANDARD 0u  // PUL/DIR without extra DIR holdoff
@@ -74,6 +85,7 @@
 // Stage 1: NMRV030 worm gearbox, 60:1 motor to worm-wheel shaft.
 // Stage 2: spur m=1.5, 40T (on worm shaft) drives 72T output => x1.8 (see docs/images/motor.worm.svg).
 // Total 1:108 per docs/images/motor.worm.svg (NMRV 60:1 * spur 72/40) = 108 motor rev / 1 out rev.
+// GEAR_RATIO and D_RULLE are factory defaults; Motor Config stores the built machine's values.
 #define GEAR_RATIO (60.0f * 72.0f / 40.0f)  // = 108
 #define D_EMNE 0.300f                       // Workpiece diameter: 300mm
 #define D_RULLE 0.080f                      // Roller diameter: 80mm

@@ -54,8 +54,7 @@ void test_storage_bounds_blob_and_requires_exact_read_write() {
 }
 void test_storage_migration_validates_both_before_either_write() {
   testLegacy[SETTINGS_FILE]={'{','}'}; testLegacy[PRESETS_FILE]={'[','4','2',']'};
-  bool rejected=false; try { storage_migrate_littlefs_to_nvs(); } catch(const std::runtime_error&) { rejected=true; }
-  TEST_ASSERT_TRUE(rejected); TEST_ASSERT_EQUAL(0,g_prefs.getBytesLength("cfg"));
+  TEST_ASSERT_FALSE(storage_migrate_littlefs_to_nvs()); TEST_ASSERT_EQUAL(0,g_prefs.getBytesLength("cfg"));
   TEST_ASSERT_EQUAL(2,testLegacy.size());
 }
 void test_storage_preset_receipt_is_not_success_before_exact_commit() {

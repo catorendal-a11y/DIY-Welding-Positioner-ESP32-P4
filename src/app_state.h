@@ -30,6 +30,9 @@ extern std::atomic<bool> g_uiResetPending;      // UI (Core 1) set; safetyTask c
 // safetyTask latches FAULT_INPUT_STALE when a valid heartbeat goes stale.
 extern std::atomic<uint32_t> g_inputHeartbeatMs;
 extern std::atomic<bool> g_inputHeartbeatValid;
+// lvglTask stamps this every loop. A frozen UI leaves no working touchscreen STOP, so
+// safetyTask stops motion when it goes stale (see safety_run_cycle).
+extern std::atomic<uint32_t> g_uiHeartbeatMs;
 extern std::atomic<bool> g_restartRequired;
 extern std::atomic<bool> g_storageFormatting; // Temporary inhibit owned only by storage_format().
 

@@ -13,7 +13,8 @@ SimSerial Serial;
 std::atomic<bool> g_estopPending{false}, g_uiResetPending{false}, g_wakePending{false};
 std::atomic<bool> g_inputHeartbeatValid{false}, g_restartRequired{false};
 std::atomic<bool> g_storageFormatting{false};
-std::atomic<uint32_t> g_inputHeartbeatMs{0}, g_estopTriggerMs{0};
+std::atomic<uint32_t> g_inputHeartbeatMs{0}, g_estopTriggerMs{0}, g_uiHeartbeatMs{0};
+std::atomic<bool> g_flashWriting{false};
 static SystemState testState = STATE_IDLE;
 static bool testControlStale = false, testCleanup = false, testPedalHealthy = true, testTouchHealthy = true;
 static bool testMirrorArmed = true;
@@ -39,10 +40,50 @@ void setUp() {
   g_estopPending.store(false); g_estopTriggerMs.store(0); g_uiResetPending.store(false);
   g_restartRequired.store(false); g_storageFormatting.store(false);
   g_inputHeartbeatValid.store(true); g_inputHeartbeatMs.store(simTestMillis);
+  g_uiHeartbeatMs.store(simTestMillis); g_flashWriting.store(false);
   safety_run_cycle(); // Re-arm edge supervisors on fresh task heartbeats.
 }
 void tearDown() {}
 
+void test_frozen_ui_stops_active_motion_and_blocks_starts() {
+  testState = STATE_RUNNING;
+  simTestMillis += 2001; g_inputHeartbeatMs.store(simTestMillis);
+  safety_run_cycle();
+  TEST_ASSERT_EQUAL(STATE_ESTOP, testState);
+  TEST_ASSERT_EQUAL(FAULT_HMI_STALE, safety_get_fault_reason());
+  TEST_ASSERT_EQUAL(HIGH, simTestPins[PIN_ENA]);
+  TEST_ASSERT_TRUE(safety_inhibit_motion());
+}
+void test_touch_loss_at_rest_blocks_starts_without_latching() {
+  testTouchHealthy = false;
+  safety_run_cycle();
+  TEST_ASSERT_TRUE(safety_inhibit_motion());
+  TEST_ASSERT_EQUAL(FAULT_NONE, safety_get_fault_reason());
+  TEST_ASSERT_EQUAL(STATE_IDLE, testState);
+}
+void test_touch_loss_during_motion_latches() {
+  testState = STATE_PULSE; testTouchHealthy = false;
+  safety_run_cycle();
+  TEST_ASSERT_EQUAL(FAULT_HMI_STALE, safety_get_fault_reason());
+}
+void test_flash_stall_is_not_a_dead_task() {
+  g_flashWriting.store(true); testControlStale = true;
+  simTestMillis += 5000;  // Input and UI heartbeats are stale too.
+  safety_run_cycle();
+  TEST_ASSERT_EQUAL(FAULT_NONE, safety_get_fault_reason());
+  TEST_ASSERT_EQUAL(STATE_IDLE, testState);
+}
+void test_fault_latched_during_reset_cannot_end_in_idle() {
+  estopLocked.store(true); s_faultReason.store(FAULT_ESTOP_PRESSED); testState = STATE_IDLE;
+  simTestPins[PIN_ESTOP] = HIGH;
+  safety_run_cycle();
+  TEST_ASSERT_EQUAL(STATE_ESTOP, testState);
+}
+void test_boot_fault_is_visible_to_control_init() {
+  safety_report_boot_fault(FAULT_WATCHDOG_RESET);
+  TEST_ASSERT_EQUAL(FAULT_WATCHDOG_RESET, safety_get_fault_reason());
+  TEST_ASSERT_TRUE(safety_is_estop_locked());
+}
 void test_first_alarm_sample_blocks_new_motion() {
   simTestPins[PIN_DRIVER_ALM] = LOW;
   TEST_ASSERT_TRUE(safety_inhibit_motion());
@@ -135,6 +176,12 @@ void test_alarm_release_does_not_reset_fault_automatically() {
 }
 int main() {
   UNITY_BEGIN();
+  RUN_TEST(test_frozen_ui_stops_active_motion_and_blocks_starts);
+  RUN_TEST(test_touch_loss_at_rest_blocks_starts_without_latching);
+  RUN_TEST(test_touch_loss_during_motion_latches);
+  RUN_TEST(test_flash_stall_is_not_a_dead_task);
+  RUN_TEST(test_fault_latched_during_reset_cannot_end_in_idle);
+  RUN_TEST(test_boot_fault_is_visible_to_control_init);
   RUN_TEST(test_first_alarm_sample_blocks_new_motion);
   RUN_TEST(test_short_alarm_does_not_leave_controller_running_with_driver_disabled);
   RUN_TEST(test_alarm_reset_requires_healthy_raw_input);

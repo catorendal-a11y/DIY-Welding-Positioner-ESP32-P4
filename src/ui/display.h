@@ -1,6 +1,6 @@
 // TIG Rotator Controller - Display Driver
 // ESP32-P4: ST7701S 480×800 via MIPI-DSI + GT911 touch
-// GUITION JC4880P433 4.3" Touch Display Dev Board
+// GUITION JC4880P443 4.3" Touch Display Dev Board
 // Uses ESP-IDF native MIPI-DSI and LCD panel APIs
 
 #pragma once
@@ -29,6 +29,7 @@ i2c_master_bus_handle_t display_touch_i2c_bus_handle();
 // HMI liveness: true only after GT911 initialization succeeded. Feeds the
 // HMI_REQUIRED_FOR_MOTION admission policy in safety_inhibit_motion().
 bool display_touch_operational();
+void display_touch_report_read(bool ok);
 void display_set_brightness(uint8_t brightness);  // 0–255
 
 // Fill physical panel with black (used at boot). Do not call during LVGL runtime — raw draw_bitmap races MIPI flush and can break touch.

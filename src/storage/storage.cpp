@@ -54,7 +54,9 @@ static constexpr size_t SETTINGS_BLOB_MAX = 4096, PRESETS_BLOB_MAX = 16384;
 static Preferences g_prefs;
 static bool g_prefs_open = false;
 
-static void storage_migrate_littlefs_to_nvs();
+static bool storage_migrate_littlefs_to_nvs();
+static std::atomic<bool> s_bootCorrupt{false};
+bool storage_boot_corrupt() { return s_bootCorrupt.load(); }
 static bool storage_apply_settings_doc(JsonObjectConst doc);
 static bool storage_parse_presets_buffer(const uint8_t* data, size_t len);
 static int storage_sanitize_microstep(int value);
@@ -78,13 +80,17 @@ void storage_init() {
   g_prefs_open = true;
   xSemaphoreGive(g_nvs_mutex);
 
-  storage_migrate_littlefs_to_nvs();
-  if (!storage_load_settings() || !storage_load_presets())
-    fatal_halt("storage corrupt: motion disabled; restore validated data");
+  // Fail closed but keep booting: without a display the operator would only see a
+  // black screen. Defaults stay in RAM, nothing is saved, and the fault overlay stays up.
+  if (!storage_migrate_littlefs_to_nvs() || !storage_load_settings() || !storage_load_presets()) {
+    LOG_E("storage corrupt: motion disabled; restore validated data");
+    s_bootCorrupt.store(true);
+    g_restartRequired.store(true, std::memory_order_release);
+  }
   LOG_I("NVS storage ready.");
 }
 
-static void storage_migrate_littlefs_to_nvs() {
+static bool storage_migrate_littlefs_to_nvs() {
   xSemaphoreTake(g_nvs_mutex, portMAX_DELAY);
   const size_t haveCfg = g_prefs.getBytesLength(NVS_KEY_SETTINGS);
   const size_t havePrs = g_prefs.getBytesLength(NVS_KEY_PRESETS);
@@ -92,7 +98,7 @@ static void storage_migrate_littlefs_to_nvs() {
 
   if (!LittleFS.begin(false)) {
     LOG_I("LittleFS not available; skipping legacy file migration");
-    return;
+    return true;
   }
 
   auto readLegacy = [](const char* path, size_t maximum, std::vector<uint8_t>& buffer) {
@@ -123,7 +129,7 @@ static void storage_migrate_littlefs_to_nvs() {
     valid = cfgWritten && prsWritten;
   }
   LittleFS.end();
-  if (!valid) fatal_halt("Legacy migration failed: original files retained; motion disabled");
+  return valid;  // On failure the original files are retained.
 }
 
 bool storage_load_presets() {
@@ -346,6 +352,13 @@ static bool storage_decode_settings_doc(JsonObjectConst doc, SystemSettings& dec
   decoded.pedal_enabled = doc["pedal_enabled"] | false;
   decoded.settings_version = doc["settings_version"] | 0;
   decoded.setup_completed = setup_migration_completed(!doc["setup_completed"].isNull(), doc["setup_completed"] | false);
+  const SystemSettings defaults = default_settings();
+  const float diameter = doc["workpiece_diameter_mm"] | 0.0f;
+  decoded.workpiece_diameter_mm = std::isfinite(diameter) && diameter >= 1.0f && diameter <= 20000.0f ? diameter : 0.0f;
+  const float roller = doc["roller_mm"] | defaults.roller_mm, gear = doc["gear_ratio"] | defaults.gear_ratio;
+  if (!settings_mechanics_valid(roller, gear)) return false;
+  decoded.roller_mm = roller;
+  decoded.gear_ratio = gear;
   return true;
 }
 
@@ -380,6 +393,9 @@ static bool storage_save_settings_internal() {
   doc["pedal_enabled"] = snap.pedal_enabled;
   doc["settings_version"] = snap.settings_version;
   doc["setup_completed"] = snap.setup_completed;
+  doc["workpiece_diameter_mm"] = snap.workpiece_diameter_mm;
+  doc["roller_mm"] = snap.roller_mm;
+  doc["gear_ratio"] = snap.gear_ratio;
 
   if (!storage_write_doc(NVS_KEY_SETTINGS, doc, SETTINGS_BLOB_MAX)) return false;
   LOG_I("Saved settings to NVS.");
@@ -390,10 +406,15 @@ static bool storage_save_settings_internal() {
 void storage_save_settings() { storage_request_settings_save(); }
 
 void storage_flush() {
+  // Flash writes stall both cores and defer the E-STOP ISR: never write during motion.
+  if (s_bootCorrupt.load()) return;  // Keep the invalid data intact for recovery.
   auto write = [](SaveRequest& request, bool (*save)(), const char* label) {
+    const SystemState state = control_get_state();
+    if (state != STATE_IDLE && state != STATE_ESTOP) return;
     if (!request.begin(millis())) return;
     g_flashWriting.store(true);
     const bool saved = save();
+    vTaskDelay(pdMS_TO_TICKS(10));  // Let stalled tasks stamp fresh heartbeats (safety_run_cycle).
     g_flashWriting.store(false);
     request.complete(saved);
     g_screenRedraw.store(true);

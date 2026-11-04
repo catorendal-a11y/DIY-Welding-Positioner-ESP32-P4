@@ -1,6 +1,6 @@
 // TIG Rotator Controller - LVGL Hardware Abstraction Layer Implementation
 // LVGL 9.x with internal SRAM strips, PPA rotation, MIPI-DSI DPI panel flush
-// Color format: RGB565 (matching ST7701S and JC4880P433C BSP)
+// Color format: RGB565 (matching ST7701S and JC4880P443C BSP)
 // 90° CCW rotation in flush callback (LVGL rotation crashes on ESP32-P4)
 
 #include "lvgl_hal.h"
@@ -164,7 +164,9 @@ void lvgl_touchpad_read_cb(lv_indev_t* indev_drv, lv_indev_data_t* data) {
     return;
   }
 
-  if (esp_lcd_touch_read_data(display_touch) != ESP_OK) {
+  const bool readOk = esp_lcd_touch_read_data(display_touch) == ESP_OK;
+  display_touch_report_read(readOk);
+  if (!readOk) {
     data->state = LV_INDEV_STATE_RELEASED;
     return;
   }

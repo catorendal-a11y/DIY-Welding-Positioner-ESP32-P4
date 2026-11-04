@@ -69,12 +69,11 @@ static void cw_hold_event_cb(lv_event_t* e) {
     control_renew_jog();
   } else if (code == LV_EVENT_PRESSED) {
     speed_set_direction(DIR_CW);
-    control_start_jog_cw();
-    style_hold_btn(cwHoldBtn, true);
+    style_hold_btn(cwHoldBtn, control_start_jog_cw());
     style_hold_btn(ccwHoldBtn, false);
   } else if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) {
     control_stop_jog();
-    style_hold_btn(cwHoldBtn, true);
+    style_hold_btn(cwHoldBtn, false);
   }
 }
 
@@ -84,12 +83,10 @@ static void ccw_hold_event_cb(lv_event_t* e) {
     control_renew_jog();
   } else if (code == LV_EVENT_PRESSED) {
     speed_set_direction(DIR_CCW);
-    control_start_jog_ccw();
     style_hold_btn(cwHoldBtn, false);
-    style_hold_btn(ccwHoldBtn, true);
+    style_hold_btn(ccwHoldBtn, control_start_jog_ccw());
   } else if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) {
     control_stop_jog();
-    style_hold_btn(cwHoldBtn, true);
     style_hold_btn(ccwHoldBtn, false);
   }
 }
@@ -157,8 +154,11 @@ void screen_jog_update() {
 
   SystemState state = ui_control_state();
   if (jogHdrRight) {
-    if (state == STATE_JOG) {
+    if (state == STATE_JOG || state == STATE_ENABLING) {
       lv_label_set_text(jogHdrRight, "RUN");
+      lv_obj_set_style_text_color(jogHdrRight, COL_ACCENT, 0);
+    } else if (state == STATE_STOPPING) {
+      lv_label_set_text(jogHdrRight, "STOPPING");
       lv_obj_set_style_text_color(jogHdrRight, COL_ACCENT, 0);
     } else {
       lv_label_set_text(jogHdrRight, "IDLE");

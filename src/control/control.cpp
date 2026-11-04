@@ -6,6 +6,7 @@
 #include "../motor/acceleration.h"
 #include "input_policy.h"
 #include "../storage/storage.h"
+#include "../storage/settings_policy.h"
 #include "../config.h"
 #include "../event_log.h"
 #include "../motor/motor.h"
@@ -282,12 +283,6 @@ bool control_transition_to(SystemState newState) {
       stoppingAt.store(millis() | 1u); // Encodes an even millisecond + 1; never zero across wrap.
       motor_stop();
       break;
-    case STATE_ESTOP:
-      clear_pending_motion_requests();
-      speed_clear_program_direction_override();
-      // The safety task has already disabled ENA. Cleanup belongs to controlTask.
-      digitalWrite(PIN_ENA, HIGH);
-      break;
     default:
       break;
   }
@@ -439,6 +434,8 @@ static void copy_motor_settings(SystemSettings& destination, const SystemSetting
   destination.dir_switch_enabled = source.dir_switch_enabled;
   destination.invert_direction = source.invert_direction;
   destination.stepper_driver = source.stepper_driver;
+  destination.roller_mm = source.roller_mm;
+  destination.gear_ratio = source.gear_ratio;
 }
 
 static void process_pending_requests() {
@@ -464,6 +461,8 @@ static void process_pending_requests() {
     stop_active_mode(cur);
     return;
   }
+  // A start waits out a save in progress: flash writes stall the pulse refill.
+  if (g_flashWriting.load(std::memory_order_acquire)) return;
   MotionCommand cmd{};
   if (xQueueReceive(controlQueue, &cmd, 0) != pdTRUE) return;
   if (!motionGate.valid(cmd.ticket) || cur != STATE_IDLE || safety_inhibit_motion()) {
@@ -627,12 +626,13 @@ void controlTask(void* pvParameters) {
 }
 
 bool control_program_feasible(const Preset& p) {
-  if (!std::isfinite(p.rpm) || p.rpm < MIN_RPM || p.rpm > speed_get_rpm_max() ||
+  if (!std::isfinite(p.rpm) || p.rpm < MIN_RPM ||
       !std::isfinite(p.workpiece_diameter_mm) || p.workpiece_diameter_mm < 0 || p.workpiece_diameter_mm > 20000 ||
       !std::isfinite(p.step_angle) || !std::isfinite(p.step_dwell_sec) ||
       (p.mode == STATE_STEP && (p.step_angle <= 0 || p.step_angle > 3600 || p.step_repeats < 1 ||
                                p.step_repeats > 99 || p.step_dwell_sec < 0 || p.step_dwell_sec > 30))) return false;
-  if (p.rpm < speed_get_rpm_min_for_diameter(p.workpiece_diameter_mm)) return false;
+  if (p.rpm < speed_get_rpm_min_for_diameter(p.workpiece_diameter_mm) ||
+      p.rpm > speed_get_rpm_max_for_diameter(p.workpiece_diameter_mm)) return false;
   if (p.mode == STATE_STEP && angleToStepsForDiameter(p.step_angle, p.workpiece_diameter_mm) <= 0) return false;
   return p.mode == STATE_RUNNING || p.mode == STATE_PULSE || p.mode == STATE_STEP;
 }
@@ -669,6 +669,7 @@ bool control_apply_motor_settings(const SystemSettings& settings) {
   if (!std::isfinite(settings.max_rpm) || settings.max_rpm < MIN_RPM || settings.max_rpm > MAX_RPM ||
       !std::isfinite(settings.calibration_factor) || settings.calibration_factor < 0.5f || settings.calibration_factor > 1.5f ||
       settings.acceleration < 1000 || settings.acceleration > 30000 || settings.stepper_driver > 1 ||
+      !settings_mechanics_valid(settings.roller_mm, settings.gear_ratio) ||
       (settings.microstep != 4 && settings.microstep != 8 && settings.microstep != 16 && settings.microstep != 32)) {
     configStatus.store(CONFIG_CANCELLED); return false;
   }

@@ -6,7 +6,9 @@
 #include "../screens.h"
 #include "../theme.h"
 #include "../../control/control.h"
+#include "../../motor/motor.h"
 #include "../../motor/speed.h"
+#include "../../safety/safety.h"
 #include "../../config.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -141,9 +143,7 @@ static void rpm_adj_cb(lv_event_t* e) {
     targetRpm += 0.1f;
   else if (targetRpm > MIN_RPM)
     targetRpm -= 0.1f;
-  float mx = speed_get_rpm_max();
-  if (targetRpm < MIN_RPM) targetRpm = MIN_RPM;
-  if (targetRpm > mx) targetRpm = mx;
+  targetRpm = speed_clamp_rpm(targetRpm);
   ui_set_rpm(rpmLabel, targetRpm);
   update_computed_info();
 }
@@ -151,6 +151,7 @@ static void rpm_adj_cb(lv_event_t* e) {
 static void start_event_cb(lv_event_t* e) {
   SystemState state = ui_control_state();
   if (state == STATE_IDLE) {
+    if (!motor_milli_hz_for_rpm_calibrated(targetRpm)) return;
     speed_slider_set(targetRpm);
     control_start_pulse(pulseOnMs, pulseOffMs);
   } else {
@@ -174,6 +175,7 @@ void screen_pulse_create() {
   rpmLabel = ui_create_adjust_card(screen, 536, 94, 240, "TARGET SPEED / RPM", rpm_adj_cb);
   lv_label_set_text_fmt(onTimeLabel, "%.1fs", pulseOnMs / 1000.0f);
   lv_label_set_text_fmt(offTimeLabel, "%.1fs", pulseOffMs / 1000.0f);
+  targetRpm = speed_clamp_rpm(targetRpm);
   ui_set_rpm(rpmLabel, targetRpm);
   onBar = offBar = rpmBar = nullptr;
   ui_create_text(screen, 24, 238, 500, "CYCLE PREVIEW / continuous repeat", FONT_SUBTITLE, COL_TEXT_DIM);
@@ -225,14 +227,8 @@ void screen_pulse_update() {
   // Update START button appearance
   lv_obj_t* startLbl = lv_obj_get_child(startBtn, 0);
   if (!startLbl) return;
-  if (state == STATE_PULSE) {
-    lv_label_set_text(startLbl, "[] STOP");
-    lv_obj_set_style_text_color(startLbl, ui_btn_label_color_post(UI_BTN_ACCENT), 0);
-  } else {
-    lv_label_set_text(startLbl, "> START");
-    lv_obj_set_style_text_color(startLbl, ui_btn_label_color_post(UI_BTN_ACCENT), 0);
-  }
-
-  // Refresh computed info
-  update_computed_info();
+  const bool blocked = state == STATE_IDLE && (safety_inhibit_motion() || !motor_milli_hz_for_rpm_calibrated(targetRpm));
+  lv_label_set_text(startLbl, state == STATE_PULSE ? "[] STOP" : blocked ? "START BLOCKED" : "> START");
+  lv_obj_set_style_text_color(startLbl, ui_btn_label_color_post(UI_BTN_ACCENT), 0);
+  lv_obj_set_disabled(startBtn, blocked);
 }

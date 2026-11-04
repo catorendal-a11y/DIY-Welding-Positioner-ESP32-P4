@@ -4,7 +4,7 @@
 
 ## Current Status: v2.3.0 - Safety supervision and audit fixes
 
-Release **v2.3.0** is the current firmware identifier (**`FW_VERSION`**). It adds UI, touch and pot supervision, visible crash and storage faults, per-diameter RPM limits and settings for roller diameter and gear ratio. The owner reported it tested on the assembled machine on 2026-11-04, without measurements.
+Release **v2.3.0** is the current firmware identifier (**`FW_VERSION`**). It adds UI, touch and pot supervision, visible crash and storage faults, per-diameter RPM limits and settings for roller diameter and gear ratio. The owner reported it tested on the assembled machine on 2026-11-04, including TIG HF.
 
 Earlier releases include v2.0.8 version alignment and v2.0.7 dark/light mode. See the repository changelog for history.
 

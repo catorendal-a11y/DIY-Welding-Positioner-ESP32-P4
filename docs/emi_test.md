@@ -1,6 +1,6 @@
 # EMI Test — TIG Welder HF Arc Start
 
-Historical v2.0.9 field record. Repeat this procedure for the firmware you run and record new measurements separately; these results do not validate later input, STOP or supervision changes. On v2.3.0, also watch for false **HMI STALE** or pedal faults during HF start.
+Historical v2.0.9 field record. The owner reports that v2.3.0 also works during TIG HF. Repeat this procedure on your own build and watch for false **HMI STALE** or pedal faults during HF start. Jitter and noise measurements are optional.
 
 ## Hardware: GUITION JC4880P443C (ESP32-P4 + ESP32-C6)
 ## Firmware: v2.0.9

@@ -16,22 +16,23 @@ Runtime FastAccelStepper calls have one owner: controlTask. inputTask publishes 
 
 **Critical rule:** All `lv_*` calls must come from `lvglTask` on Core 1 only. Motor control functions on Core 0 must never call LVGL directly.
 
-**WDT:** inputTask, controlTask, safetyTask are subscribed to TWDT. lvglTask and storageTask are NOT subscribed (they do blocking I/O that can exceed WDT timeout).
+**WDT:** inputTask, controlTask, safetyTask are subscribed to TWDT. lvglTask and storageTask are NOT subscribed (they do blocking I/O that can exceed WDT timeout). safetyTask supervises the control, input and UI loops and touch reads, and latches a fault when one stalls.
 
-**Flash safety:** `CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y` + `CONFIG_SPIRAM_RODATA=y` keeps code reachable when flash cache is disabled during **NVS** (and any filesystem) writes. Settings/presets use NVS `putBytes`, not LittleFS `.tmp` + rename. IWDT timeout is 2000ms (`CONFIG_ESP_INT_WDT_TIMEOUT_MS=2000`).
+**Flash safety:** the flash cache is disabled during **NVS** writes, and the prebuilt Arduino framework has no IRAM-safe RMT/GPIO ISRs. Settings and presets are therefore saved only in IDLE or ESTOP. `sdkconfig.defaults` does not change the prebuilt framework. Settings/presets use NVS `putBytes`, not LittleFS `.tmp` + rename.
 
 ## State Machine
 
 State transitions use compare-and-swap (CAS) for race-free multi-core access:
 
 ```
-IDLE ──> RUNNING ──> STOPPING ──> IDLE
+IDLE ──> [ENABLING] ──> RUNNING ──> STOPPING ──> IDLE
 IDLE ──> PULSE   ──> STOPPING ──> IDLE
 IDLE ──> STEP    ──> STOPPING ──> IDLE
 IDLE ──> JOG     ──> STOPPING ──> IDLE
-IDLE ──> TIMER   ──> STOPPING ──> IDLE
 Any  ──> ESTOP   ──> IDLE (manual reset via Core 0)
 ```
+
+With Driver = DM542T, any start passes through ENABLING: ENA is asserted 200 ms before the first pulse. The countdown is a UI step before a continuous start, not a state.
 
 | State | Description |
 |-------|-------------|
@@ -40,7 +41,7 @@ Any  ──> ESTOP   ──> IDLE (manual reset via Core 0)
 | `STATE_PULSE` | Rotate/pause cycles with configurable on/off times |
 | `STATE_STEP` | Rotate exact angle, then stop |
 | `STATE_JOG` | Run while button held, stop on release |
-| `STATE_TIMER` | Run for configurable duration |
+| `STATE_ENABLING` | Validated start waiting out the driver ENA settle window |
 | `STATE_STOPPING` | Decelerating to stop (smooth ramp) |
 | `STATE_ESTOP` | Latched fault, ENA inhibited; physical stop time unmeasured |
 
@@ -102,6 +103,7 @@ Preset vector access protected by `g_presets_mutex` semaphore. Copy-based API: `
 | `motor.cpp` | FastAccelStepper init, enable/disable, direction, ESTOP halt |
 | `motor.h` | Public API: `motor_init()`, `motor_read_driver_info()`, `motor_is_running()` |
 | `speed.cpp` | RPM-to-Hz conversion, ADC pot filtering, direction switch, pedal |
+| `acceleration.cpp` | Acceleration ramps |
 | `microstep.cpp` | Microstepping config persistence |
 | `calibration.cpp` | Calibration factor validation |
 
@@ -111,16 +113,18 @@ Preset vector access protected by `g_presets_mutex` semaphore. Copy-based API: `
 |------|---------------|
 | `control.cpp` | State transitions (CAS), mode dispatch, controlTask cycle |
 | `control.h` | `SystemState` enum, mode control functions |
-| `modes/` | continuous, jog, pulse, step_mode, timer |
+| `modes/` | continuous, jog, pulse, step_mode |
 
 ### `src/safety/` — Emergency Stop
 
-Two-layer ESTOP architecture:
+Layered ESTOP and fault architecture:
 1. **ISR layer (latency unmeasured):** GPIO 34 interrupt sets ENA HIGH via direct register write + sets `g_estopPending.store(true, std::memory_order_release)` + `g_wakePending.store(true, ...)` (NO function calls — flash may be disabled during NVS writes)
 2. **Task layer:** `safetyTask` debounces and transitions to STATE_ESTOP; stores `g_estopTriggerMs` on the debounced fault edge
 3. **UI layer:** `lvglTask` shows/hides red overlay based on current state
 4. **Reset:** UI sets `g_uiResetPending.store(true, ...)`, Core 0 processes via `controlTask`
 5. **Boot sampling:** `safety_init()` takes 3 samples of `PIN_ESTOP` with 500 µs spacing after `INPUT_PULLUP` + 2 ms settle, requires ≥2/3 LOW before treating ESTOP as pressed (startup sampling does not verify wiring continuity)
+
+6. **Supervision:** stale control or input tasks, a stalled UI, failed touch, a pot break, crash restarts and invalid saved data latch visible faults. The first reason is kept until reset. See [[Troubleshooting]].
 
 All shared flags (`g_estopPending`, `g_estopTriggerMs`, `g_uiResetPending`, `g_wakePending`) are declared in `src/app_state.h` / defined in `src/app_state.cpp` — single source of truth.
 
@@ -131,6 +135,8 @@ All shared flags (`g_estopPending`, `g_estopTriggerMs`, `g_uiResetPending`, `g_w
 - Up to **16** presets; mutexes: `g_nvs_mutex`, `g_presets_mutex`, `g_settings_mutex`
 - Debounced writes in `storageTask`: ~**500 ms** presets, ~**1000 ms** settings (`storage_flush()`)
 - **Legacy migration:** if NVS keys are empty, one-time copy from LittleFS `/settings.json` and `/presets.json` when that partition exists
+- **Only at rest:** writes run in IDLE or ESTOP, and a start waits for a save in progress
+- **Invalid data:** boots to a visible STORAGE fault with motion disabled and the data untouched
 - **UI:** `g_flashWriting` pauses LVGL-sensitive paths during NVS commits to reduce visible glitches
 - storageTask NOT subscribed to WDT (blocking flash I/O)
 
@@ -144,12 +150,12 @@ All shared flags (`g_estopPending`, `g_estopTriggerMs`, `g_uiResetPending`, `g_w
 | `theme.h` / `theme.cpp` | Color palette: runtime **`g_col_*`** from **`NEUT_DARK`/`NEUT_LIGHT`** via `theme_sync_colors()` (`color_scheme` in settings); **`COL_HDR_MUTED`** for header secondary labels; fonts; layout constants (**`MAIN_GAUGE_*`**, **`MAIN_RPM_*`**, **`JOG_RPM_*`**, settings `SET_*`, etc.) |
 | `screens/` | `screen_*.cpp` — 23 registered `ScreenId` roots + ESTOP overlay module |
 
-**V5 layout:** Large orange main speed panel with a native 104 px numeric font, idle RPM +/− controls, CW/CCW selection and wide START/STOP. Shared graphite/orange styles apply across all registered screens. Calibration uses fixed Align → Measure → Verify → Save stages; New/Edit Program separates run mode, availability and full-screen name/RPM input. Setup Wizard adds four-stage commissioning.
+**V5 layout:** Large main speed panel in the selected accent color with a native 104 px numeric font, idle RPM +/− controls, CW/CCW selection and wide START/STOP. Shared graphite styles apply across all registered screens. Calibration uses fixed Align → Measure → Verify → Save stages; New/Edit Program separates run mode, availability and full-screen name/RPM input. Setup Wizard adds four-stage commissioning.
 
 **USB mirror note:** mirror builds use LVGL partial rendering so `lvgl_hal.cpp`
 streams dirty RGB565 rectangles to the Windows viewer instead of repeatedly
 sending full 800x480 frames. PC input is registered as a second LVGL pointer
-device and is accepted only while **Settings > Display > USB MIRROR** is armed.
+device and is accepted only while **Settings > Display > USB remote control** is armed.
 
 **Calibration note:** measurements require completed moves. The correction is a runtime draft until verification passes 360 ± 0.5 degrees and its Save receipt succeeds; Restart restores the saved factor.
 
@@ -188,7 +194,7 @@ NVS commit / flash write  ──>  flash cache DISABLED  ──>  code in flash 
 ```
 
 Mitigations:
-1. **`CONFIG_SPIRAM_FETCH_INSTRUCTIONS=y` + `CONFIG_SPIRAM_RODATA=y`** — moves instructions/rodata to PSRAM
+1. **Writes only at rest** — storageTask waits for IDLE or ESTOP
 2. **Deferred UI saves** — UI sets pending flags; `storageTask` performs `putBytes` after debounce
 3. **storageTask not in WDT** — blocking I/O (flash) can exceed 5s timeout
 4. **`g_flashWriting`** — signals active NVS write so the display path can skip work during cache-off windows
@@ -198,4 +204,4 @@ Mitigations:
 SCREEN_TIMER provides a visual countdown before rotation starts:
 - Configurable 1-10s delay with progress ring, pulsing number, color transition
 - Starts continuous rotation at countdown zero
-- Settings saved on screen exit only
+- The setting is saved on START or screen exit, only if it changed

@@ -6,7 +6,7 @@ New installations open the wizard after boot. Existing valid settings without `s
 
 ## 1. Motor
 
-Select Standard or DM542T timing, then open Motor Config. Match the microstep setting to the physical drive switches. Set acceleration and maximum RPM, then **SAVE & APPLY**. Continue only after the settings are applied and saved. Gear ratio and default roller/workpiece diameters are shown as fixed project values, not new editable settings.
+Select Standard or DM542T timing, then open Motor Config. Match the microstep setting to the physical drive switches. Set acceleration and maximum RPM, then **SAVE & APPLY**. Continue only after the settings are applied and saved. The page shows the current gear ratio, roller diameter and default workpiece diameter. Gear ratio and roller diameter are set in Motor Config (defaults 108 and 80 mm).
 
 ![Motor setup](images/setup_v1/01_motor.png)
 

@@ -1,7 +1,7 @@
 # Load Test — Thermal Validation
 
 ## Hardware: GUITION JC4880P443C (ESP32-P4 + ESP32-C6)
-## Firmware under test: v2.1.0 (record the exact commit before testing)
+## Firmware under test: [FILL IN version and exact commit before testing]
 ## Test Date: [FILL IN AFTER HARDWARE TEST]
 
 ---

@@ -133,7 +133,7 @@ Historical release; v2.3.0 above is current.
 
 ## Next
 
-- [ ] Increase MAX_RPM to 5.0 with DM542T
+- [ ] Test v2.3.0 on the assembled machine
+- [ ] Wider tested RPM range with DM542T
 - [ ] Enclosure design files (3D printable)
 - [ ] Assembly guide
-- [ ] Bidirectional state sync (phone mirrors display)

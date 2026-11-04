@@ -28,12 +28,15 @@ pio run -e esp32p4-mirror
 PYTHONUTF8=1 pio run --target upload
 
 # Run native tests (Unity framework)
-pio test -e native -e native-control
+pio test -e native -e native-control -e native-speed -e native-storage -e native-safety -e native-control-storage
+
+# Run packaging tests
+python -m unittest discover -s test/tooling
 ```
 
 Windows PowerShell: set `$env:PYTHONUTF8='1'` before upload if the terminal uses a legacy encoding. Detect the port with `pio device list`, then pass `--upload-port COM3` (example).
 
-Run the actual LVGL simulator with `.\simulator\run.ps1 -SelfTest`. CI checks native tests, all three firmware variants and simulator navigation. Device tests require an isolated bench with motor power controlled; see [test/README.md](test/README.md).
+Run the actual LVGL simulator with `.\simulator\run.ps1 -SelfTest`. CI runs the six native environments, packaging tests, all three firmware variants and the simulator self-test and layout audit on Linux and Windows. Device tests require an isolated bench with motor power controlled; see [test/README.md](test/README.md).
 
 ## Development Workflow
 
@@ -61,7 +64,7 @@ controlTask (pri 3, 4KB)
 |-----------|---------|
 | `src/control/` | State machine, welding modes |
 | `src/motor/` | FastAccelStepper driver, speed, acceleration, microstep, calibration |
-| `src/safety/` | E-STOP interrupt, watchdog |
+| `src/safety/` | E-STOP interrupt, watchdog, task/UI/touch supervision, fault latching |
 | `src/storage/` | NVS persistence (`Preferences`), presets + settings as JSON blobs, optional LittleFS migration |
 | `src/ui/` | LVGL display, screens, theme |
 
@@ -78,6 +81,7 @@ controlTask (pri 3, 4KB)
 - UI callbacks request control actions or deferred saves; never execute motor operations directly. `volatile` does not synchronize cross-core state.
 - Shared state between cores: use `std::atomic` with explicit memory ordering where required; `volatile` alone is insufficient on RISC-V SMP
 - Mutex-protected data (`g_presets_mutex`, `g_settings_mutex`, `g_stepperMutex`, `g_nvs_mutex`): always `xSemaphoreGive` before ANY return path
+- Flash writes go through `storageTask` and run only in IDLE or ESTOP. A start waits for a save in progress.
 - **`g_stepperMutex` is a FreeRTOS mutex** (`SemaphoreHandle_t`) — NOT a spinlock. Uses `xSemaphoreTake`/`xSemaphoreGive`
 - **Never use `lv_obj_delete()` inside event callbacks** for the triggering object — use `lv_obj_delete_async()`
 - Screens with static widget pointers must implement `screen_*_invalidate_widgets()` called from `screens_reinit()`
@@ -110,7 +114,7 @@ controlTask (pri 3, 4KB)
 | Local variables | `camelCase` | `stepper`, `adcFiltered`, `mainScreenPtr` |
 | Global variables | `g_` prefix + `camelCase` | `g_settings`, `g_presets` |
 | Constants/macros | `UPPER_SNAKE_CASE` | `PIN_ENA`, `MAX_RPM`, `GEAR_RATIO` |
-| FreeRTOS tasks | `camelCase` + "Task" | `controlTask`, `motorTask`, `lvglTask` |
+| FreeRTOS tasks | `camelCase` + "Task" | `controlTask`, `inputTask`, `lvglTask` |
 
 ## Known Platform Constraints
 
@@ -121,7 +125,7 @@ controlTask (pri 3, 4KB)
 
 ## Documentation
 
-Use English for source comments, UI labels, documentation, issue templates, commit messages and release notes. Preserve builder content and hardware photos when updating the README.
+Use English for source comments, UI labels, documentation, issue templates, commit messages and release notes. Keep the README short. Move detail to [the builder guide](docs/BUILDER_GUIDE.md) rather than deleting builder content or hardware photos.
 
 Before modifying code, read:
 - `AGENTS.md`, if supplied locally; this file is not required for a clone/build
@@ -130,4 +134,4 @@ Before modifying code, read:
 
 ## Release workflow
 
-Update `FW_VERSION`, README, STATUS, CHANGELOG, current wiki pages and English notes in `docs/releases/<version>.md`. Push to master and wait for all CI jobs, then create the matching `vX.Y.Z` tag. The release workflow requires successful native, firmware and actual LVGL CI for that exact commit, downloads its release/debug/mirror binaries, verifies version/partition layout and publishes bundles with licenses and SHA-256 checksums. [Flashing instructions](docs/releases/FLASHING.md) document the current release.
+Update `FW_VERSION`, README, STATUS, CHANGELOG, current wiki pages and English notes in `docs/releases/<version>.md`. Land the change on `master` through a pull request and wait for all CI jobs, then create the matching `vX.Y.Z` tag. The release workflow waits for and requires a successful master CI run on that exact commit, downloads its release/debug/mirror binaries, verifies version/partition layout and publishes bundles with licenses and SHA-256 checksums. [Flashing instructions](docs/releases/FLASHING.md) document the current release.

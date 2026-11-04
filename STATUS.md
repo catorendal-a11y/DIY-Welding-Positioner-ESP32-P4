@@ -17,7 +17,7 @@ Runtime stepper calls belong to controlTask; inputTask samples ADC/pedal separat
 - [x] **LVGL 9.6.0 UI framework** (800x480 landscape, 23 registered `ScreenId` roots + E-STOP overlay)
 - [x] **FastAccelStepper motor control** (hardware RMT pulses, v1.4.0, pinned upstream commit)
 - [x] **FreeRTOS dual-core architecture** (Core 0: Input/Control/Safety, Core 1: UI/Storage)
-- [x] **5 welding modes:** Continuous, Jog, Pulse, Step, Timer
+- [x] **4 rotation modes:** Continuous, Jog, Pulse, Step, plus a start countdown
 - [x] **RPM adjustment** (live potentiometer input; idle main-screen +/−; Jog and program/edit controls)
 - [x] **Thread-safe cross-core speed updates** (atomic + request flag pattern, FreeRTOS mutex for stepper)
 - [x] **`applySpeedAcceleration()`** for immediate speed changes during running
@@ -34,6 +34,10 @@ Runtime stepper calls belong to controlTask; inputTask samples ADC/pedal separat
 - [x] **CAS state transitions** (race-free between safetyTask and controlTask)
 - [x] **E-STOP UI overlay** (full-screen red, blocks all interaction)
 - [x] **UI reset from ESTOP** (via Core 0 pending flag pattern)
+- [x] **Task, UI and touch supervision** (CONTROL STALE, INPUT STALE, HMI STALE)
+- [x] **Speed-pot break detection** (SPEED POT after three samples at the rail)
+- [x] **Visible crash and storage faults** (UNEXPECTED RESET, STORAGE)
+- [x] **Per-diameter RPM cap** (`MAX_STEP_HZ`, `MOTOR_RPM_LIMIT`)
 
 ### UI/UX
 
@@ -48,7 +52,7 @@ v2.2.0 includes the [idle screen saver](docs/SCREEN_SAVER.md) and [LVGL UI refin
 - [x] **Diagnostics** (live ESTOP, ALM, DIR switch, pedal switch, ENA, direction, RPM, motion-block state, recent event log)
 - [x] **Pedal Settings** (pedal arm/disarm, GPIO33 switch status, ADS1115 analog status)
 - [x] **Workpiece diameter per preset** (`workpiece_diameter_mm`, 0 = default reference diameter)
-- [x] **Motor Config** (microstepping, acceleration, direction switch, pedal enable)
+- [x] **Motor Config** (driver type, microstepping, acceleration, max RPM, roller diameter, gear ratio, stop angle at max RPM, direction switch, pedal enable)
 - [x] **Guided calibration** (non-scrolling stages, same-page diameter, interrupted-move rejection, isolated draft, verification and storage receipt)
 - [x] **About screen** (firmware version, hardware info)
 - [x] **Program Edit** (fixed layout, explicit run/available modes, exact RPM, full-screen input and retained drafts)
@@ -68,7 +72,7 @@ v2.2.0 includes the [idle screen saver](docs/SCREEN_SAVER.md) and [LVGL UI refin
 - [x] **Foot pedal firmware support** (analog speed via ADS1115 I2C ADC, digital switch GPIO33)
 - [x] **Pedal/ADS1115 hardware commissioning** (2026-10-05: ADS1115 detected at 0x48; GPIO33 switch + analog speed owner-confirmed working; runtime switch-only fallback when no ADS1115 is present)
 - [x] **Direction switch** (GPIO29, CW/CCW toggle)
-- [x] **Gear ratio 1:108** total (60 x 72/40, NMRV030 + spur)
+- [x] **Gear ratio 1:108** default (60 x 72/40, NMRV030 + spur), editable in Motor Config
 - [x] **TIG HF field validation** (welding works with ESP32-P4 screen, driver, and PSU inside one grounded metal enclosure)
 
 ### Documentation
@@ -94,7 +98,7 @@ v2.2.0 includes the [idle screen saver](docs/SCREEN_SAVER.md) and [LVGL UI refin
 
 ### v2.0.5 — Cross-core & Error-handling Cleanup
 - [x] **Centralised cross-core atomics** in `src/app_state.h`/`app_state.cpp` (single source of truth; no more scattered `std::atomic` definitions across safety/storage/main)
-- [x] **`fatal_halt()`** utility (logs reason via `LOG_E`, drains serial, reboots) — replaces scattered `ESP.restart()` calls in storage and motor init paths
+- [x] **`fatal_halt()`** utility (logs reason via `LOG_E`) — replaces scattered `ESP.restart()` calls in storage and motor init paths. It rebooted in v2.0.5; it now stays halted with ENA disabled
 - [x] **`LOG_E` always compiled in** (release + debug) so field failures are serial-visible; `LOG_W/I/D` stay debug-only
 - [x] **Boot-time ESTOP de-floating** (3-sample majority vote, 500 µs spacing, on `INPUT_PULLUP` settle) — avoids false ESTOP from unstabilised GPIO34 at power-on
 - [x] **Non-blocking ADS1115 pedal ADC** (state-machine `ads_poll_and_start()` in `inputTask`; blocking helper reserved for `speed_init()`)
@@ -105,24 +109,37 @@ v2.2.0 includes the [idle screen saver](docs/SCREEN_SAVER.md) and [LVGL UI refin
 
 ## In Progress
 
+- [ ] **Test v2.3.0 on the assembled machine** ([checks](docs/releases/v2.3.0.md#validation-and-hardware-status))
 - [ ] **Higher-RPM DM542T tuning** (DM542T driver mode and ALM input exist; wider tested RPM range is still field work)
 
 ## Planned
 
 - [ ] **Enclosure design** (3D printable)
 - [ ] **Assembly guide**
+
+## Known open items
+
+Found in the v2.3.0 audit and not changed:
+
+- A blocked program start shows no message.
+- REBOOT does nothing visible while a save is pending.
+- An invalid Step angle closes the keyboard without an error.
+- Jog changes the manual direction.
+- The screen saver colors do not follow the theme.
+- A floating pot wiper and an open E-STOP wire are not detected, and the analog pedal is not jump-checked.
+
 ---
 
 ## Build Info
 
-See the [dependency inventory and migration analysis](docs/DEPENDENCY_UPGRADE_2026-10-02.md). Metrics describe the v2.1.1 release build; prior v2.1.0 artifacts are unchanged.
+See the [dependency inventory and migration analysis](docs/DEPENDENCY_UPGRADE_2026-10-02.md). Metrics describe the v2.3.0 release build.
 
 | Metric | Value |
 |--------|-------|
 | **Platform** | pioarduino 55.03.312-1 (Arduino 3.3.12 / ESP-IDF 5.5.5) |
 | **Board** | GUITION JC4880P443C (ESP32-P4 + ESP32-C6) |
-| **RAM Usage** | 10.0% (32,692 bytes / 327,680 bytes, release build) |
-| **Flash Usage** | 16.9% (1,109,552 bytes / 6,553,600 bytes, release build) |
+| **RAM Usage** | 11.1% (36,504 bytes / 327,680 bytes, release build) |
+| **Flash Usage** | 17.6% (1,153,124 bytes / 6,553,600 bytes, release build) |
 | **FastAccelStepper** | 1.4.0, upstream `f24a659` |
 | **LVGL** | 9.6.0 (RGB565) |
 | **ArduinoJson** | 7.4.3 |

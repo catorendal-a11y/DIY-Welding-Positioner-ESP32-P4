@@ -4,7 +4,9 @@
 
 | Version | Supported |
 | ------- | --------- |
-| 2.1.x   | Current; use the latest release |
+| 2.3.x   | Current. Not yet tested on the assembled machine; run the checks in the release notes |
+| 2.2.x   | Upgrade recommended for supervision and audit fixes. 2.2.1 is the last hardware-verified build |
+| 2.1.x   | Upgrade recommended |
 | 2.0.x   | Upgrade recommended for STOP, pedal, JOG and persistence fixes |
 | 1.x.x   | No |
 | < 1.0   | No |
@@ -24,9 +26,10 @@ This project controls a motorized welding positioner. Safety is critical.
 ### Motor Safety
 - ENA pin defaults HIGH (motor disabled) on boot
 - ENA never driven LOW without ESTOP check
-- Task Watchdog Timer (TWDT) on motor, control and safety tasks, with checked setup and critical-task readiness gating
+- Task Watchdog Timer (TWDT) on input, control and safety tasks, with checked setup and critical-task readiness gating
 - Stepper access protected by FreeRTOS mutex
 - STOP has a separate latch and invalidates queued starts. JOG requires renewal; pedal requires stable release before arming and fresh active ADC data.
+- `safetyTask` supervises the control, input and UI tasks and touch reads. A stalled task or failed touchscreen latches a fault; see [fault names](wiki/Troubleshooting.md#fault-names).
 
 ## Reporting a Vulnerability
 

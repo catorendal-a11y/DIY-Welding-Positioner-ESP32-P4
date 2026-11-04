@@ -3,7 +3,7 @@
 **Board**: GUITION JC4880P443C ESP32-P4 4.3" Touch Display (with ESP32-C6 co-processor)
 **Display**: ST7701S 480x800 MIPI-DSI (rotated to 800x480 landscape)
 **Touch**: GT911 capacitive touch controller
-**Source**: v2.1.1 (`FW_VERSION` in `src/config.h`); published firmware is v2.1.1; historical v2.1.0 artifacts are unchanged.
+**Source**: v2.3.0 (`FW_VERSION` in `src/config.h`), the published firmware. It has not been tested on the assembled machine.
 
 See [control/setup implementation and validation](CONTROL_SETUP_IMPLEMENTATION.md) for the single-owner executor, coherent snapshots and guided commissioning.
 
@@ -29,8 +29,8 @@ See [control/setup implementation and validation](CONTROL_SETUP_IMPLEMENTATION.m
 - **Pixel Format**: RGB565 (16-bit)
 - **Framebuffers**: 2 (double-buffered)
 - **DMA2D**: Disabled (causes crashes with PSRAM on ESP32-P4)
-- **Rotation**: Software rotation via `sw_rotate = 1` in LVGL driver (do NOT use `lv_display_set_rotation()` — crashes ESP32-P4)
-- **Buffers**: Internal DMA-RAM (not PSRAM) — 80 lines x 800 pixels x 2 bytes = 128KB
+- **Rotation**: Manual rotation in the flush callback (do NOT use `lv_display_set_rotation()` — crashes ESP32-P4)
+- **Buffers**: Internal SRAM (not PSRAM) — 1/10-frame draw and rotation strips, 48 lines x 800 pixels x 2 bytes = 76,800 bytes per strip
 - **Render mode**: LVGL partial rendering. The flush path receives dirty rectangles, rotates them for the physical panel, and feeds the optional USB mirror with packed logical RGB565 rectangles.
 
 ### Touch (GT911)
@@ -52,11 +52,12 @@ See [control/setup implementation and validation](CONTROL_SETUP_IMPLEMENTATION.m
 
 | Task | Core | Priority | Stack | Purpose |
 |------|------|----------|-------|---------|
-| safetyTask | 0 | 5 | 4 KB | E-STOP ISR processing, state guard |
+| safetyTask | 0 | 5 | 4 KB | E-STOP ISR processing, state guard, task/UI/touch supervision |
 | inputTask | 0 | 4 | 5 KB | GPIO pedal at 5 ms, ADC at 20 ms; no stepper calls |
 | controlTask | 0 | 3 | 4 KB | Sole runtime stepper owner at 5 ms: dispatch, modes, live speed, settings and fault cleanup |
 | lvglTask | 1 | 2 | 64 KB | LVGL rendering, screen updates, dim, ESTOP overlay |
-| storageTask | 1 | 1 | 12 KB | NVS flush (settings/presets), periodic housekeeping |
+| storageTask | 1 | 1 | 12 KB | NVS flush (settings/presets) in IDLE or ESTOP, periodic housekeeping |
+| usbMirrorTask (mirror build) | 1 | 1 | 8 KB | Pixel transport and gated remote pointer input |
 
 - inputTask, controlTask, safetyTask: subscribed to WDT
 - lvglTask, storageTask: NOT subscribed (blocking I/O can exceed WDT timeout)
@@ -87,7 +88,8 @@ See [control/setup implementation and validation](CONTROL_SETUP_IMPLEMENTATION.m
 - **CAS transitions**: `control_transition_to()` uses `compare_exchange_strong` for race-free state changes
 - **UI reset**: `g_uiResetPending.store(true, std::memory_order_release)` from UI, processed in controlTask on Core 0
 - **Overlay**: lvglTask auto-shows/hides ESTOP overlay based on current state
-- **Fatal errors**: Storage/motor init failures call `fatal_halt("<context>")` (in `src/app_state.h`) instead of `ESP.restart()` directly — it logs the reason via `LOG_E` (always compiled in) and drains serial before rebooting.
+- **Fatal errors**: Storage/motor init failures call `fatal_halt("<context>")` (in `src/app_state.h`) instead of `ESP.restart()` — it logs the reason via `LOG_E` (always compiled in), disables ENA and stays halted without rebooting.
+- **Supervision**: stalled tasks, stalled UI, failed touch, a pot break, crash restarts and invalid saved data latch visible faults. See [Safety System](SAFETY_SYSTEM.md#7-runtime-supervision).
 
 ---
 
@@ -97,10 +99,11 @@ See [control/setup implementation and validation](CONTROL_SETUP_IMPLEMENTATION.m
 - **Keys**: `cfg` — JSON object for `SystemSettings` (acceleration, microstep, calibration, brightness, **`color_scheme`** (0=dark / 1=light UI neutral palette), accent index, countdown, etc.); `prs` — JSON array for up to **16** presets, including per-program `workpiece_diameter_mm` (`0` = default reference diameter)
 - **Serialization**: ArduinoJson → buffer → `putBytes` / `getBytes` (plaintext JSON on flash)
 - **Legacy**: One-time import from LittleFS `/settings.json` and `/presets.json` if NVS keys are empty and those files exist
-- **Load order / validation**: settings are loaded before presets so preset RPM clamp uses the saved `max_rpm`; invalid persisted microstep values are sanitized to 16.
+- **Load order / validation**: settings are loaded before presets so preset RPM clamp uses the saved `max_rpm`; invalid persisted microstep values are sanitized to 16. Roller diameter and gear ratio are stored settings (defaults 80 mm and 108).
 - **Thread safety**: `g_nvs_mutex` around Preferences I/O; `g_presets_mutex` / `g_settings_mutex` for in-RAM structures
 - **Copy-based API**: `storage_get_preset()` returns copy, never pointer into vector
-- **Debounce**: ~500ms presets, ~1000ms settings in `storage_flush()` on **storageTask**
+- **Debounce**: ~500ms presets, ~1000ms settings in `storage_flush()` on **storageTask**. Writes run only in IDLE or ESTOP
+- **Invalid data**: boots to a visible **STORAGE** fault with motion disabled and the data untouched
 - **UI coordination**: `g_flashWriting` during NVS writes; LVGL mutex held around the flag window where required
 - **storageTask**: 12KB stack, handles NVS I/O off the UI thread (not TWDT-subscribed)
 
@@ -119,7 +122,7 @@ See [control/setup implementation and validation](CONTROL_SETUP_IMPLEMENTATION.m
 - **Theme**: neutral backgrounds and text colors are **runtime** values (`g_col_*` in `theme.h`), filled by `theme_sync_colors()` from **`NEUT_DARK`** vs **`NEUT_LIGHT`** packs according to `g_settings.color_scheme`. Accent hue comes from `accent_color` + `theme_palette[]`. **`COL_HDR_MUTED`** is used for secondary labels on the dark header strip (better contrast than `COL_TEXT_DIM` on the fixed dark header bar in both schemes).
 - **Footer navigation**: BACK button at bottom of all settings screens
 - **Calibration guard**: `SCREEN_CALIBRATION` uses larger layout constants for bench readability and blocks SAVE until the verify result is within tolerance.
-- **USB mirror arm**: Display Settings exposes a volatile `USB MIRROR` arm control for mirror builds. It is not persisted, starts disabled after boot, and gates PC pointer injection.
+- **USB mirror arm**: Display Settings exposes a volatile `USB remote control` arm control for mirror builds. It is not persisted, starts disabled after boot, and gates PC pointer injection.
 
 ---
 
@@ -218,4 +221,4 @@ void screen_example_invalidate_widgets() {
 - [ST7701 Driver](https://github.com/espressif/esp_lcd_st7701) - ESP-IDF component
 - [GT911 Driver](https://github.com/espressif/esp_lcd_touch_gt911) - Touch controller
 - [LVGL Documentation](https://docs.lvgl.io/) - UI framework
-- [FastAccelStepper](https://github.com/hinxx/FastAccelStepper) - Motor driver
+- [FastAccelStepper](https://github.com/gin66/FastAccelStepper) - Motor driver

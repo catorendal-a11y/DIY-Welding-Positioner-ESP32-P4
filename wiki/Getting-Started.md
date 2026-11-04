@@ -70,7 +70,7 @@ pio run -e esp32p4-mirror --target upload
 .\simulator\run.ps1 -UsbMirror COM5 -Baud 4000000
 ```
 
-Then arm **Settings > Display > USB MIRROR** on the physical screen. PC clicks are ignored until armed, and E-STOP/driver faults still override all input.
+Then arm **Settings > Display > USB remote control** on the physical screen. PC clicks are ignored until armed, and E-STOP/driver faults still override all input.
 
 For simulator-only UI review:
 

@@ -67,7 +67,7 @@ Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Posit
 
 **Current release: v2.3.1, updated 4 November 2026.** V5 identifies the UI design iteration. [Download firmware and read the release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.3.1). The current firmware and simulator include LVGL 9.6, FastAccelStepper 1.4, guided setup/calibration and the revised program editor.
 
-v2.3.1 explains blocked program starts and REBOOT, keeps the Step keypad open on an invalid entry, stops Jog changing the manual direction and names every fault on the overlay. These changes have run in the simulator, not on the machine. [Release notes](releases/v2.3.1.md).
+v2.3.1 explains blocked program starts and REBOOT, keeps the Step keypad open on an invalid entry, stops Jog changing the manual direction and names every fault on the overlay. The owner reported them working on the assembled machine on 2026-11-04. [Release notes](releases/v2.3.1.md).
 
 v2.3.0 adds UI, touch and pot supervision, visible crash and storage faults, per-diameter RPM limits and settings for roller diameter and gear ratio. The owner reported it tested on the assembled machine on 2026-11-04, including TIG HF; the v2.2.0 notes below describe the earlier build.
 
@@ -701,7 +701,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 | LVGL self-test | Passed: navigation, program edits, RPM adjustment, fault reset, full setup/calibration workflows, save failure/retry and stale control |
 | Firmware builds | Release, debug and mirror passed |
 | Device upload | Functional pre-release commit 673e078 uploaded to COM3 and flash data verified on 2026-10-03. On 2026-10-05 the pedal-fix build (c4ea129) was flashed and hash-verified; the boot scan detects the ADS1115 at 0x48 and the owner confirms the pedal (GPIO33 + analog speed) works. No quantitative stop-time measurements were supplied. |
-| Physical motor/safety testing | The owner reported v2.3.0 tested on the assembled machine on 2026-11-04, including TIG HF. The v2.3.1 changes have run in the simulator, not on the machine. Stop time has not been measured. The upload records above are v2.2.x builds |
+| Physical motor/safety testing | The owner reported v2.3.0 tested on the assembled machine on 2026-11-04, including TIG HF. The owner reported the v2.3.1 build working on the same machine the same day. Stop time has not been measured. The upload records above are v2.2.x builds |
 
 [Dependency validation logs](../docs/validation/2026-10-02/dependencies) and [program editor validation](../docs/validation/2026-10-03/program-editor/README.md) record local runs. Native tests include direct production-policy tests, but older tests also model behavior separately; simulator hardware is stubbed. CI runs native and packaging tests, three firmware variants and SDL self-test and layout checks. The badge links to the current GitHub result.
 

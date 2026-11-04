@@ -4,7 +4,7 @@
 
 ## Current Status: v2.3.1 - Operator feedback and test fixes
 
-Release **v2.3.1** is the current firmware identifier (**`FW_VERSION`**). It explains blocked program starts and REBOOT, keeps the Step keypad open on an invalid entry, stops Jog changing the manual direction and names every fault on the overlay. These changes have run in the simulator, not on the machine.
+Release **v2.3.1** is the current firmware identifier (**`FW_VERSION`**). It explains blocked program starts and REBOOT, keeps the Step keypad open on an invalid entry, stops Jog changing the manual direction and names every fault on the overlay. The owner reported them working on the assembled machine on 2026-11-04.
 
 v2.3.0 adds UI, touch and pot supervision, visible crash and storage faults, per-diameter RPM limits and settings for roller diameter and gear ratio. The owner reported it tested on the assembled machine on 2026-11-04, including TIG HF.
 

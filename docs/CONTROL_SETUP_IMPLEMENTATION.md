@@ -1,6 +1,6 @@
 # Control ownership and guided setup
 
-Introduced in v2.1.1 and current through v2.3.1. The owner reported v2.3.0 tested on the assembled machine on 2026-11-04, including TIG HF. The operator-feedback changes in v2.3.1 have run in the simulator, not on the machine. The design keeps the V5 UI and the physical E-STOP input.
+Introduced in v2.1.1 and current through v2.3.1. The owner reported v2.3.0 tested on the assembled machine on 2026-11-04, including TIG HF. The owner reported the v2.3.1 build working on the same machine the same day. The design keeps the V5 UI and the physical E-STOP input.
 
 ## Control and safety boundaries
 

@@ -141,10 +141,10 @@ jobs:
           set -euo pipefail
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" release/* --clobber
-            gh release edit "$RELEASE_TAG" --title "$RELEASE_TAG â€” Welding Positioner Controller" \
+            gh release edit "$RELEASE_TAG" --title "$RELEASE_TAG - Welding Positioner Controller" \
               --notes-file release-notes.md --draft=false --latest
           else
             gh release create "$RELEASE_TAG" release/* --verify-tag --latest \
-              --title "$RELEASE_TAG â€” Welding Positioner Controller" \
+              --title "$RELEASE_TAG - Welding Positioner Controller" \
               --notes-file release-notes.md
           fi

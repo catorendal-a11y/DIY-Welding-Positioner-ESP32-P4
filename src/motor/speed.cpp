@@ -242,8 +242,7 @@ float speed_steps_per_gear_output_rev(void) { return (float)microstep_get_steps_
 
 float rpmToStepHz(float rpm_workpiece) {
   const float d_m = effective_emne_d_m();
-  const float steps_per_wp_rev = speed_steps_per_gear_output_rev() * (d_m / machine_roller_m());
-  return rpm_workpiece * steps_per_wp_rev / 60.0f;
+  return rpm_workpiece * motion_steps_per_workpiece_rev(speed_steps_per_gear_output_rev(), d_m, machine_roller_m()) / 60.0f;
 }
 
 // Command-side calibration (same factor intent as calibration_apply_steps on angleToSteps).
@@ -255,7 +254,7 @@ long angleToSteps(float degrees) {
 
 long angleToStepsForDiameter(float degrees, float mm_od) {
   const float d_m = diameter_mm_to_m(mm_od);
-  const float steps_per_wp_rev = speed_steps_per_gear_output_rev() * (d_m / machine_roller_m());
+  const float steps_per_wp_rev = motion_steps_per_workpiece_rev(speed_steps_per_gear_output_rev(), d_m, machine_roller_m());
   int32_t steps = 0;
   motion_checked_steps(double(degrees) / 360.0 * double(steps_per_wp_rev) * calibration_get_factor(), steps);
   return steps;
@@ -467,14 +466,8 @@ float speed_get_target_rpm() { return cachedTargetRpm.load(std::memory_order_acq
 
 float speed_get_actual_rpm() {
   // Hz from motor_refresh_hz_cache() (no g_stepperMutex — safe from lvglTask).
-  float hz = motor_get_step_frequency_hz();
-  if (hz < 1e-9f) return 0.0f;
-  uint32_t spr = microstep_get_steps_per_rev();
-  if (spr == 0u) return 0.0f;
-  float rpm_motor = hz * 60.0f / (float)spr;
-  const float d_m = effective_emne_d_m();
-  float rpm_workpiece = rpm_motor / machine_gear_ratio() * (machine_roller_m() / d_m);
-  return calibration_apply_angle(rpm_workpiece);
+  return motion_step_hz_to_rpm(motor_get_step_frequency_hz(), microstep_get_steps_per_rev(), machine_gear_ratio(),
+                               effective_emne_d_m(), machine_roller_m(), calibration_get_factor());
 }
 
 bool speed_using_slider() {
@@ -502,13 +495,8 @@ void speed_apply() {
     return;
   }
   float activeAdc = usePedal ? pedalFiltered.load(std::memory_order_acquire) : adcFiltered.load(std::memory_order_acquire);
-  float adc = constrain(activeAdc, 0.0f, 4095.0f);
-  float normalized = (3315.0f - adc) / 3315.0f;
-  normalized = constrain(normalized, 0.0f, 1.0f);
   float snapMax = motorRunning ? (float)POT_ADC_SNAP_MAX_RPM_RUNNING : (float)POT_ADC_SNAP_MAX_RPM;
-  if (snapMax > 0.0f && adc <= snapMax) {
-    normalized = 1.0f;
-  }
+  float normalized = motion_pot_normalized(activeAdc, 3315.0f, snapMax);
   float cap = speed_get_rpm_max();
   const float minimum = speed_get_rpm_min();
   float pot_rpm = speed_clamp_rpm(minimum + normalized * (cap - minimum));
@@ -521,8 +509,7 @@ void speed_apply() {
   } else if (active) {
     if (baselinePedal.exchange(usePedal) != usePedal) lastPotAdc.store(activeAdc);
     float lastAdc = lastPotAdc.load(std::memory_order_relaxed);
-    float adcDelta = fabsf(activeAdc - lastAdc);
-    if (adcDelta > POT_UI_TAKEOVER_ADC_DELTA) {
+    if (motion_pot_takeover(activeAdc, lastAdc, POT_UI_TAKEOVER_ADC_DELTA)) {
       buttonsActive.store(false, std::memory_order_release);
       sliderRPM.store(pot_rpm, std::memory_order_relaxed);
       cachedTargetRpm.store(pot_rpm, std::memory_order_relaxed);
@@ -548,16 +535,13 @@ void speed_apply() {
 }
 
 Direction speed_get_requested_direction() {
-  Direction dir;
-  if (programDirectionOverrideActive.load(std::memory_order_acquire)) {
-    dir = (Direction)programDirectionOverride.load(std::memory_order_acquire);
-  } else if (g_dir_switch_cache.load(std::memory_order_acquire)) {
-    // Debounced level: a START must not sample a bouncing/EMI direction.
-    dir = stableDirSwitch.load(std::memory_order_relaxed) ? DIR_CW : DIR_CCW;
-  } else {
-    dir = (Direction)currentDir.load(std::memory_order_acquire);
-  }
-  return dir;
+  // Debounced level: a START must not sample a bouncing/EMI direction.
+  return motion_requested_cw(programDirectionOverrideActive.load(std::memory_order_acquire),
+                             (Direction)programDirectionOverride.load(std::memory_order_acquire) == DIR_CW,
+                             g_dir_switch_cache.load(std::memory_order_acquire),
+                             stableDirSwitch.load(std::memory_order_relaxed),
+                             (Direction)currentDir.load(std::memory_order_acquire) == DIR_CW)
+             ? DIR_CW : DIR_CCW;
 }
 
 Direction speed_get_direction() {

@@ -8,7 +8,7 @@
 #include <cstdio>
 
 #include "../../src/ui/test_screen_logic.h"
-#include "../../src/motor/test_speed_logic.h"
+#include "../support/logic_under_test.h"
 
 void setUp(void) {}
 void tearDown(void) {}

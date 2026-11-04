@@ -78,6 +78,10 @@ configure_file(build_identity.h.in generated/build_identity.h @ONLY)
 add_executable(rotator_simulator
   main.cpp
   sim_stubs.cpp
+  sim_test_support.cpp
+  sim_self_test.cpp
+  sim_previews.cpp
+  sim_audit.cpp
   "${PROJECT_ROOT}/src/control/program_executor.cpp"
   "${PROJECT_ROOT}/src/control/control.cpp"
   "${PROJECT_ROOT}/src/control/modes/continuous.cpp"

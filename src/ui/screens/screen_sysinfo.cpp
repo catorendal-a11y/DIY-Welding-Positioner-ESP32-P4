@@ -35,12 +35,24 @@ static uint32_t prevIdleCore1Time = 0;
 
 static void back_cb(lv_event_t* e) { screens_show(SCREEN_SETTINGS); }
 
+static bool reboot_allowed_or_explain() {
+  if (control_get_state() != STATE_IDLE) {
+    screen_confirm_create("RESTART NOT POSSIBLE", "The machine is not idle.\nStop it first, then try again.", nullptr, nullptr);
+    return false;
+  }
+  if (storage_status() != STORAGE_SAVED) {
+    screen_confirm_create("RESTART NOT POSSIBLE", "Settings are still being saved.\nWait a moment, then try again.", nullptr, nullptr);
+    return false;
+  }
+  return true;
+}
+
 static void reboot_cb(lv_event_t* e) {
-  if (control_get_state() != STATE_IDLE || storage_status() != STORAGE_SAVED) return;
+  if (!reboot_allowed_or_explain()) return;
   screen_confirm_create(
       "REBOOT DEVICE", "Are you sure? All unsaved data will be lost.",
       []() {
-        if (control_get_state() == STATE_IDLE && storage_status() == STORAGE_SAVED) {
+        if (reboot_allowed_or_explain()) {
           motor_disable();
           esp_restart();
         }

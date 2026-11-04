@@ -3,23 +3,13 @@
 
 #pragma once
 #include <Arduino.h>
+#include "system_state.h"
 #include "snapshot.h"
 #include "../motor/speed.h"
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SYSTEM STATE ENUM
 // ───────────────────────────────────────────────────────────────────────────────
-typedef enum {
-  STATE_IDLE = 0,  // Motor stopped, ready for command
-  STATE_RUNNING,   // Continuous rotation mode
-  STATE_PULSE,     // Pulse mode (rotate/pause cycles)
-  STATE_STEP,      // Step mode (fixed angle steps)
-  STATE_JOG,       // Jog mode (run while button held)
-  STATE_STOPPING,  // Decelerating to stop
-  STATE_ESTOP,     // Emergency stop activated
-  // Appended after ESTOP so existing logged/serialized values stay stable.
-  STATE_ENABLING   // Validated start waiting out the driver ENA settle window
-} SystemState;
 
 // ───────────────────────────────────────────────────────────────────────────────
 // STATE MACHINE FUNCTIONS
@@ -28,7 +18,6 @@ void control_init();                            // Initialize state machine
 bool control_transition_to(SystemState s);      // State transition with validation
 SystemState control_get_state();                // Get current state
 const char* control_get_state_string();         // Get human-readable state name
-const char* control_state_name(SystemState s);  // Internal: state enum to string
 
 // ───────────────────────────────────────────────────────────────────────────────
 // MODE CONTROL FUNCTIONS

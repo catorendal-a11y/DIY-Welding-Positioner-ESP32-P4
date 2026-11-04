@@ -17,7 +17,7 @@ void calibration_process_pending() {
 
 void calibration_init() {
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  if (!std::isfinite(g_settings.calibration_factor) || g_settings.calibration_factor < 0.5f || g_settings.calibration_factor > 1.5f) {
+  if (!motion_calibration_factor_valid(g_settings.calibration_factor)) {
     g_settings.calibration_factor = 1.0f;
   }
   [[maybe_unused]] float f = g_settings.calibration_factor;
@@ -26,7 +26,7 @@ void calibration_init() {
 }
 
 void calibration_set_factor(float factor) {
-  if (!std::isfinite(factor) || factor < 0.5f || factor > 1.5f) return;
+  if (!motion_calibration_factor_valid(factor)) return;
   discardPending.store(false);
   draftFactor.store(factor);
 }
@@ -66,7 +66,7 @@ uint32_t calibration_save() {
 
 bool calibration_validate() {
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  if (!std::isfinite(g_settings.calibration_factor) || g_settings.calibration_factor < 0.5f || g_settings.calibration_factor > 1.5f) {
+  if (!motion_calibration_factor_valid(g_settings.calibration_factor)) {
     g_settings.calibration_factor = 1.0f;
     xSemaphoreGive(g_settings_mutex);
     return false;

@@ -13,7 +13,6 @@ uint32_t lastActivity = 0, lastFrame = 0;
 unsigned heldInputs = 0, frame = 0;
 bool visible = false, previewRequested = false, preview = false;
 const auto background = lv_color_hex(0x11191B);
-const auto accent = lv_color_hex(0xFF693B);
 const auto text = lv_color_hex(0xE9EEEB);
 const auto muted = lv_color_hex(0x9CAAA8);
 
@@ -37,6 +36,7 @@ lv_obj_t* circle(lv_obj_t* parent, int x, int y, int size, lv_color_t color, int
   return obj;
 }
 void create() {
+  const lv_color_t accent = theme_accent_on_dark();
   overlay = box(lv_layer_top(), 0, 0, SCREEN_W, SCREEN_H, background);
   // A complete input shield; input filtering consumes the wake press as well.
   lv_obj_set_clickable(overlay, true);

@@ -110,8 +110,7 @@
 #define POT_UI_TAKEOVER_ADC_DELTA 200.0f
 
 // Pulse timing limits used by control, storage and UI.
-#define PULSE_MS_MIN 100u
-#define PULSE_MS_MAX 10000u
+#include "control/motion_policy.h"  // PULSE_MS_MIN, PULSE_MS_MAX
 
 // ───────────────────────────────────────────────────────────────────────────────
 // BUILD CONFIGURATION

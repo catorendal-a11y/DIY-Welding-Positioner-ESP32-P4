@@ -68,7 +68,6 @@ static void cw_hold_event_cb(lv_event_t* e) {
   if (code == LV_EVENT_PRESSING) {
     control_renew_jog();
   } else if (code == LV_EVENT_PRESSED) {
-    speed_set_direction(DIR_CW);
     style_hold_btn(cwHoldBtn, control_start_jog_cw());
     style_hold_btn(ccwHoldBtn, false);
   } else if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) {
@@ -82,7 +81,6 @@ static void ccw_hold_event_cb(lv_event_t* e) {
   if (code == LV_EVENT_PRESSING) {
     control_renew_jog();
   } else if (code == LV_EVENT_PRESSED) {
-    speed_set_direction(DIR_CCW);
     style_hold_btn(cwHoldBtn, false);
     style_hold_btn(ccwHoldBtn, control_start_jog_ccw());
   } else if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) {

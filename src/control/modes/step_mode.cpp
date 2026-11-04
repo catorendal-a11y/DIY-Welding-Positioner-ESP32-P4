@@ -53,7 +53,7 @@ void step_execute_sequence(float angle_deg, uint16_t repeats, float dwell_sec) {
   if (control_get_state() != STATE_IDLE && control_get_state() != STATE_ENABLING) return;
 
   // Validate angle range
-  if (!std::isfinite(angle_deg) || !std::isfinite(dwell_sec) || angle_deg <= 0.0f || angle_deg > 3600.0f) {
+  if (!motion_step_angle_valid(angle_deg) || !std::isfinite(dwell_sec)) {
     LOG_W("Invalid step angle: %.1f", angle_deg);
     return;
   }

@@ -6,21 +6,21 @@ The screen saver uses the V5 graphite palette with the selected accent color, in
 
 ## Settings and waking
 
-Open **Settings → Display → Screen saver after**. Choose **OFF, 30s, 1m, 2m or 5m**, then **SAVE**. This reuses the existing saved dim timeout; no settings migration is required. **PREVIEW** opens the screen saver immediately at normal brightness, including when the automatic timeout is OFF. Automatic activation reduces the backlight to 38/255 and restores the configured brightness on wake.
+Open **Settings → Display → Screen saver after**. Choose **Off, 30s, 1m, 2m or 5m**, then **Save**. This reuses the existing saved dim timeout; no settings migration is required. **Preview** opens the screen saver immediately at normal brightness, including when the automatic timeout is Off. Automatic activation reduces the backlight to 38/255 and restores the configured brightness on wake.
 
-The first touch only wakes the display. The entire press is consumed until release, so holding a finger over START cannot start rotation. A subsequent deliberate touch operates the UI normally. The same filter serves the touchscreen, USB mirror and simulator inputs. Physical input activity also wakes the display; physical controls keep their existing behavior.
+The first touch only wakes the display. The entire press is consumed until release, so holding a finger over Start cannot start rotation. A subsequent deliberate touch operates the UI normally. The same filter serves the touchscreen, USB mirror and simulator inputs. Physical input activity also wakes the display; physical controls keep their existing behavior.
 
 The previous page stays loaded underneath. Waking does not navigate, save changes, reset a fault or issue a motion command.
 
 ## When it stays awake
 
-Automatic activation is limited to idle navigation/status pages: Main, Menu, Run Modes, Settings, Display, About, System Info and Diagnostics. It remains off during motion (including pulse pauses and stopping), setup, calibration, editing, confirmation dialogs, input overlays, stale control status and pending/failed storage writes. Fault/E-STOP overlays take priority and restore normal brightness. PREVIEW is disabled when these conditions prevent activation.
+Automatic activation is limited to idle navigation/status pages: Main, Menu, Run Modes, Settings, Display, About, System Info and Diagnostics. It remains off during motion (including pulse pauses and stopping), setup, calibration, editing, confirmation dialogs, input overlays, stale control status and pending/failed storage writes. Fault/E-STOP overlays take priority and restore normal brightness. Preview is disabled when these conditions prevent activation.
 
 All widget changes run in the UI task under the LVGL lock. Touch-controller read failures do not release the wake-consumption latch; a successful release sample is required.
 
 ## Verification
 
-The simulator self-test covers timeout activation, OFF, preview, held-touch consumption through actual LVGL pointer hit testing over START, a second deliberate START touch, external motion start, physical wake requests, E-STOP priority, stale status, editing/commissioning exclusion, failed storage and repeated theme/overlay recreation. The capture checks text bounds and absence of shadows. The simulator records backlight commands but does not emulate physical LCD brightness.
+The simulator self-test covers timeout activation, Off, preview, held-touch consumption through actual LVGL pointer hit testing over Start, a second deliberate Start touch, external motion start, physical wake requests, E-STOP priority, stale status, editing/commissioning exclusion, failed storage and repeated theme/overlay recreation. The capture checks text bounds and absence of shadows. The simulator records backlight commands but does not emulate physical LCD brightness.
 
 Build the simulator, then run:
 

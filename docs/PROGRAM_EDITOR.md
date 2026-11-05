@@ -4,7 +4,7 @@ The editor uses the existing V5 palette at 800×480, with no page scrolling. The
 
 ## Create or edit
 
-Open **Programs → + NEW**, or edit an existing slot. The top field opens the name keyboard. **RUN MODE** selects Continuous, Pulse or Step. Selecting the same mode again leaves it selected. **AVAILABLE** controls which other modes are offered for this preset; the active run mode is always included.
+Open **Programs → + New**, or edit an existing slot. The top field opens the name keyboard. **Run mode** selects Continuous, Pulse or Step. Selecting the same mode again leaves it selected. **Available** controls which other modes are offered for this preset; the active run mode is always included.
 
 ![New Program](images/program_v2/01_new_program.png)
 
@@ -12,7 +12,7 @@ Open **Programs → + NEW**, or edit an existing slot. The top field opens the n
 
 ## Name and exact speed
 
-Tap the name, edit it, and use the keyboard's confirm key or the visible **CANCEL** button. Leading/trailing spaces are trimmed. An empty confirmed name becomes `Untitled`. New editor names use up to 31 printable ASCII characters supported by the display font; invalid or oversized entries show an error instead of truncating. Valid legacy UTF-8 names remain intact in storage, with the font's glyph limitations. Long ASCII names use a smaller summary font.
+Tap the name, edit it, and use the keyboard's confirm key or the visible **Cancel** button. Leading/trailing spaces are trimmed. An empty confirmed name becomes `Untitled`. New editor names use up to 31 printable ASCII characters supported by the display font; invalid or oversized entries show an error instead of truncating. Valid legacy UTF-8 names remain intact in storage, with the font's glyph limitations. Long ASCII names use a smaller summary font.
 
 ![Name keyboard](images/program_v2/03_name_editor.png)
 
@@ -24,11 +24,11 @@ Tap the RPM value to enter exact speed. Dot and comma decimal separators are acc
 
 ## Mode settings and saving
 
-**MODE SETTINGS** opens the selected mode's direction/timing controls. Save there returns updated values to the draft; Cancel retains the previous draft values. Neither operation starts motion or writes the program itself.
+**Mode settings** opens the selected mode's direction/timing controls. Save there returns updated values to the draft; Cancel retains the previous draft values. Neither operation starts motion or writes the program itself.
 
 ![Pulse draft](images/program_v2/05_pulse_program.png)
 
-The main editor's **SAVE** adds/replaces the preset and queues its debounced NVS save. Edits and Cancel stay locked while the write is pending. The editor shows **SAVING** or **FAILED / RETRYING** and returns to Programs only after the matching successful storage receipt. Before saving, **CANCEL** discards the editor draft. Existing slots additionally offer **DELETE** with confirmation. The list remains limited to 16 programs.
+The main editor's **Save** adds/replaces the preset and queues its debounced NVS save. Edits and Cancel stay locked while the write is pending. The button shows **Saving...** or **Save failed, retrying** and returns to Programs only after the matching successful storage receipt. Before saving, **Cancel** discards the editor draft. Existing slots additionally offer **Delete** with confirmation. The list remains limited to 16 programs.
 
 ![Saved program list](images/program_v2/06_saved_programs.png)
 

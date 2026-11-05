@@ -77,6 +77,6 @@ The scheduled E-STOP level poll inhibits ENA on the first observed LOW, then use
 | LVGL loop stalled for 2 s, or 100 failed touch reads in a row | Stops active motion and latches **HMI STALE**. At rest, new starts are blocked instead |
 | Speed pot jumps to the rail within one 20 ms sample | Holds the speed, then latches **SPEED POT** after three samples. Reset stays blocked until the pot reads plausibly. Turning the knob to zero by hand is unaffected |
 | Restart after a panic, watchdog or brownout | Latches **UNEXPECTED RESET** at boot. The event log survives these resets, but not power loss |
-| Invalid saved data at boot | Latches **STORAGE** with motion disabled and the data untouched |
+| Invalid saved data at boot | Latches **STORAGE** with motion disabled and the data untouched. Only this fault offers **Hold 3 s to erase data** on the overlay |
 
 A floating pot wiper is not detected and the analog pedal is not jump-checked. An open E-STOP wire reads as healthy. E-STOP acts through the MCU and the driver ENA input; it does not disconnect motor power. [All fault names](../wiki/Troubleshooting.md#fault-names).

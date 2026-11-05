@@ -54,11 +54,11 @@ Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Posit
 ## What changed
 
 - Dark graphite/orange UI, larger text, rounded controls and a native 104 px bold numeric font.
-- Large speed panel, CW/CCW selection, main-screen RPM +/− adjustment and a fixed wide START/STOP area. The physical direction switch retains priority when enabled.
+- Large speed panel, CW/CCW selection, main-screen RPM +/− adjustment and a fixed wide Start/Stop area. The physical direction switch retains priority when enabled.
 - More visible red stop controls and a full-screen fault overlay with input state and guarded reset.
-- STOP has a separate latch and invalidates pending starts. Start requests no longer overwrite stop requests.
+- Stop has a separate latch and invalidates pending starts. Start requests no longer overwrite stop requests.
 - Pedal control requires stable release before arming. Stale/failed active pedal data blocks motion instead of silently selecting the panel potentiometer.
-- Touch read errors release input; JOG requires regular UI renewal. Motion is blocked until critical tasks are ready.
+- Touch read errors release input; Jog requires regular UI renewal. Motion is blocked until critical tasks are ready.
 - Program drafts survive navigation. Program parameters and motor configuration are applied through the control task.
 - Failed NVS writes stay pending and retry; UI reports pending/failed saves. Five-minute inactivity timeouts store correctly. Current source adds a flat idle screen saver with wake-touch consumption.
 - Pulse pause timing begins after the motor library reports stopped. USB mirror writes have bounded waits and release remote input on failure.
@@ -67,7 +67,7 @@ Builder docs: [GitHub Wiki](https://github.com/catorendal-a11y/DIY-Welding-Posit
 
 **Current release: v2.3.1, updated 4 November 2026.** V5 identifies the UI design iteration. [Download firmware and read the release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.3.1). The current firmware and simulator include LVGL 9.6, FastAccelStepper 1.4, guided setup/calibration and the revised program editor.
 
-v2.3.1 explains blocked program starts and REBOOT, keeps the Step keypad open on an invalid entry, stops Jog changing the manual direction and names every fault on the overlay. The owner reported them working on the assembled machine on 2026-11-04. [Release notes](releases/v2.3.1.md).
+v2.3.1 explains blocked program starts and Reboot, keeps the Step keypad open on an invalid entry, stops Jog changing the manual direction and names every fault on the overlay. The owner reported them working on the assembled machine on 2026-11-04. [Release notes](releases/v2.3.1.md).
 
 v2.3.0 adds UI, touch and pot supervision, visible crash and storage faults, per-diameter RPM limits and settings for roller diameter and gear ratio. The owner reported it tested on the assembled machine on 2026-11-04, including TIG HF; the v2.2.0 notes below describe the earlier build.
 
@@ -207,10 +207,10 @@ The project combines dedicated welding modes, input diagnostics and documented e
 
 1. Power the ESP32-P4/controller logic first. The firmware boots with ENA disabled.
 2. Verify the main screen appears, touch responds, and E-STOP is released.
-3. Set driver current and microstep DIP switches to match **Settings > Motor Config**.
+3. Set driver current and microstep DIP switches to match **Settings > Motor configuration**.
 4. Turn on the motor supply after STEP/DIR/ENA and E-STOP wiring are checked.
-5. Use the main potentiometer or the idle-screen **+ / −** controls to set workpiece RPM, then press **START** for continuous mode.
-6. Use **JOG** for manual positioning, **PULSE** for tack cycles, **STEP** for indexed rotation, or **TIMER** for countdown start.
+5. Use the main potentiometer or the idle-screen **+ / −** controls to set workpiece RPM, then press **Start** for continuous mode.
+6. From **Menu > Run modes**, use **Jog** for manual positioning, **Pulse** for tack cycles, **Step** for indexed rotation, or **Countdown** for a delayed start.
 7. Use the E-STOP as the first response to unsafe motion. The red overlay only resets after the physical fault is cleared.
 
 ---
@@ -221,7 +221,7 @@ The UI is built from **23 registered screen types** (including the Setup Wizard)
 
 ![Emergency-stop overlay](../docs/images/ui_runtime_v5/ESTOP_ACTIVE.png)
 
-Simulated active fault: the physical input must be cleared before reset is available. Reset returns to idle and requires a new START.
+Simulated active fault: the physical input must be cleared before reset is available. Reset returns to idle and requires a new Start.
 
 ### Design reference
 
@@ -235,9 +235,9 @@ The 30 design views cover all 22 screen types, additional states and keyboards. 
 | Screen | `ScreenId` | Description |
 |:---|:---|:---|
 | **Boot** | `SCREEN_BOOT` | Startup splash / transition to main |
-| **Main** | `SCREEN_MAIN` | Large accent-colored RPM panel, idle RPM +/−, CW/CCW and wide START/STOP |
+| **Main** | `SCREEN_MAIN` | Large accent-colored RPM panel, idle RPM +/−, CW/CCW and wide Start/Stop |
 | **Menu** | `SCREEN_MENU` | Advanced mode selection and settings |
-| **Run Modes** | `SCREEN_RUN_MODES` | Pulse / Step / Jog / Timer selection |
+| **Run Modes** | `SCREEN_RUN_MODES` | Pulse / Step / Jog / Countdown selection |
 | **Setup Wizard** | `SCREEN_SETUP` | Motor, direction, verified calibration and physical E-STOP function check (v2.1.1) |
 | **Jog** | `SCREEN_JOG` | Touch-and-hold rotation for manual positioning (has its own RPM +/-) |
 | **Pulse** | `SCREEN_PULSE` | ON/OFF cycle for tack welding |
@@ -360,7 +360,7 @@ The source now uses **LVGL 9.6.0** and **FastAccelStepper 1.4.0** with the curre
 
 ## Program Editor (v2.1.1)
 
-**New Program** keeps the V5 dark/orange style with a fixed 800×480 layout. Select one **RUN MODE**, choose the other modes the preset allows, enter an exact RPM, and open **MODE SETTINGS** for direction and timing. Name and RPM have separate full-screen editors; invalid input keeps the draft unchanged. Low-speed adjustments preserve 0.001 RPM precision in every mode editor. Save stores the program without starting rotation. v2.2.0 shows SAVING/FAILED feedback and returns to the list only after a confirmed NVS write. New names use printable ASCII (31 characters); valid legacy UTF-8 names remain intact in storage, although the built-in font has limited glyph coverage.
+**New Program** keeps the V5 dark/orange style with a fixed 800×480 layout. Select one **Run mode**, choose the other modes the preset allows, enter an exact RPM, and open **Mode settings** for direction and timing. Name and RPM have separate full-screen editors; invalid input keeps the draft unchanged. Low-speed adjustments preserve 0.001 RPM precision in every mode editor. Save stores the program without starting rotation. The Save button shows progress or a failed write, and the editor returns to the list only after a confirmed NVS write. New names use printable ASCII (31 characters); valid legacy UTF-8 names remain intact in storage, although the built-in font has limited glyph coverage.
 
 <img src="../docs/images/program_v2/01_new_program.png" width="800" alt="Actual LVGL New Program page with run mode, availability, exact speed and mode settings">
 
@@ -368,7 +368,7 @@ The source now uses **LVGL 9.6.0** and **FastAccelStepper 1.4.0** with the curre
 
 ## Guided Setup (v2.1.1)
 
-The source includes a four-step **Setup Wizard** using the existing V5 dark/orange UI: motor settings, hold-to-run direction checks, verified manual calibration, and a user-confirmed function check of the **physical E-STOP switch**, reset and normal START/STOP. New installations open the wizard; existing valid settings without the new field remain configured. Re-run it from **Settings → Setup Wizard**. Completing setup does not start motion, and completion is confirmed only after its save succeeds.
+The source includes a four-step **Setup Wizard** using the existing V5 dark/orange UI: motor settings, hold-to-run direction checks, verified manual calibration, and a user-confirmed function check of the **physical E-STOP switch**, reset and normal Start/Stop. New installations open the wizard; existing valid settings without the new field remain configured. Re-run it from **Settings → Setup wizard**. Completing setup does not start motion, and completion is confirmed only after its save succeeds.
 
 <img src="../docs/images/setup_v1/01_motor.png" width="800" alt="Actual LVGL setup wizard motor stage">
 
@@ -509,7 +509,7 @@ Do not judge TIG reliability from an open-bench test. Bench wiring is acceptable
 
 | Mode | Description |
 |:---|:---|
-| **Continuous** | Runs at set RPM. Start with ON, stop with STOP. |
+| **Continuous** | Runs at set RPM. Press Start, then Stop. |
 | **Jog** | Touch-and-hold rotation for manual positioning. |
 | **Pulse** | Rotate ON ms, pause OFF ms, repeat. For tack welding. Direction is latched at start. |
 | **Step** | Rotate exact angle (e.g., 90 deg), then stop. Holding torque stays on during the dwell. |
@@ -533,7 +533,7 @@ Open `src/config.h` to adjust hardware parameters:
 #define START_SPEED     20      // Hz operational minimum; lower RPM requests are rejected
 ```
 
-Settings can also be changed from the touchscreen via **Settings > Motor Config** and are persisted to **NVS** (see [Persistence (NVS)](#persistence-nvs)).
+Settings can also be changed from the touchscreen via **Settings > Motor configuration** and are persisted to **NVS** (see [Persistence (NVS)](#persistence-nvs)).
 
 Open **Settings → Calibration** for the guided **Align → Measure → Verify → Save** workflow. Set workpiece diameter on the same page, align with hold-to-run Jog, measure a completed 360-degree move, and verify the correction with another completed move. Save requires 360 ± 0.5 degrees and confirms the actual storage receipt. STOP cancels a measurement; unverified corrections remain temporary and cannot leak into autosaves. Restart restores the saved factor. See the [calibration guide](../docs/CALIBRATION_WORKFLOW.md).
 
@@ -562,7 +562,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 **Troubleshooting**
 
 - You do **not** need to upload a LittleFS filesystem for settings/presets on current firmware.
-- Invalid saved data boots to a visible **STORAGE** fault with motion disabled and the data untouched. Reflash a matching build, or erase flash and reconfigure.
+- Invalid saved data boots to a visible **STORAGE** fault with motion disabled and the data untouched. Reflash a matching build to keep the data, or use **Hold 3 s to erase data** on the fault overlay. That erases the saved data and restarts, and you reconfigure the machine.
 
 ---
 
@@ -613,13 +613,13 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 </details>
 
 <details>
-<summary><b>Main START does not always start motor</b></summary>
+<summary><b>Main Start does not always start motor</b></summary>
 
-- STOP has a separate latch and invalidates pending starts. A new explicit START is required after STOP is processed; inspect fault, task-readiness and pedal state if motion stays blocked.
-- Go to **Settings > Diagnostics** and verify `MOTION BLOCK = NO`, `ESTOP GPIO34 = HIGH OK`, `DM542T ALM GPIO32 = HIGH OK`, and `ENA GPIO52 = HIGH DISABLED` while idle
-- The Diagnostics event log shows the last START/STOP, pedal, program and fault events, so you can see whether the UI requested motion or safety blocked it
-- If a foot pedal is connected, use **Settings > Pedal Settings** to confirm `GPIO33 switch` changes between `HIGH OPEN` and `LOW PRESSED`
-- JOG release cancels a pending JOG start so a quick tap/release cannot start motion after the button was released
+- Stop has a separate latch and invalidates pending starts. A new explicit Start is required after Stop is processed; inspect fault, task-readiness and pedal state if motion stays blocked.
+- Go to **Settings > Diagnostics** and verify that `E-STOP` and `Driver alarm` show `High / OK`, `State` shows `IDLE` and `Enable output` shows `High / disabled` while idle
+- The Diagnostics event log shows the last start/stop, pedal, program and fault events, so you can see whether the UI requested motion or safety blocked it
+- If a foot pedal is connected, use **Settings > Pedal settings** to confirm `Start switch / GPIO33` changes between `Open` and `Pressed`
+- Releasing Jog cancels a pending Jog start so a quick tap/release cannot start motion after the button was released
 
 </details>
 
@@ -793,4 +793,4 @@ MIT License — see [LICENSE](../LICENSE) for details. Dependencies retain their
 
 ## Idle screen saver (v2.2.0)
 
-Open Settings > Display > Screen saver after, choose OFF/30s/1m/2m/5m and SAVE. PREVIEW shows the design immediately. The first touch wakes only; motion, faults and editing stay visible. See [behavior and captures](SCREEN_SAVER.md).
+Open Settings > Display > Screen saver after, choose Off/30s/1m/2m/5m and Save. Preview shows the design immediately. The first touch wakes only; motion, faults and editing stay visible. See [behavior and captures](SCREEN_SAVER.md).

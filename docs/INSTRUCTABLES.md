@@ -187,8 +187,8 @@ IMAGE: docs/images/ui_runtime_v5/01_MAIN.png
 
 - **Speed panel** — V5 orange target RPM with panel input and idle +/− adjustment. Pulse-derived speed is calculated rather than encoder-measured.
 - **CW/CCW button** — toggle rotation direction
-- **START/STOP** — continuous rotation mode
-- **Menu / Run Modes** — access Jog, Pulse, Step and Timer
+- **Start/Stop** — continuous rotation mode
+- **Menu / Run modes** — access Pulse, Step, Jog and Countdown
 
 ---
 

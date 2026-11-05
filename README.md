@@ -104,12 +104,12 @@ pio run
 
 ## First run
 
-New installations open the **Setup Wizard**, and valid existing settings are kept. Run it again from **Settings > Setup Wizard**.
+New installations open the **Setup Wizard**, and valid existing settings are kept. Run it again from **Settings > Setup wizard**.
 
-1. **Motor:** match driver timing and microsteps, set limits, then **SAVE & APPLY**.
+1. **Motor:** match driver timing and microsteps, set limits, then **Save & apply**.
 2. **Direction:** hold CW/CCW and check the workpiece.
-3. **Calibration:** complete **MOVE 360**, measure, apply, complete **VERIFY 360**, then save.
-4. **Function check:** press and release E-STOP, reset to idle, test START and STOP.
+3. **Calibration:** complete **Move 360°**, measure, apply, complete **Verify 360°**, then save.
+4. **Function check:** press and release E-STOP, reset to idle, test Start and Stop.
 
 The wizard does not measure stop time or certify wiring. [Every wizard screen](docs/SETUP_WIZARD.md) · [Calibration](docs/CALIBRATION_WORKFLOW.md) · [Program editor](docs/PROGRAM_EDITOR.md)
 

@@ -57,3 +57,21 @@ This review is a documentation correction. No device was flashed, no wiring
 was changed, and no physical E-STOP, cable-break or TIG HF test was performed.
 Use [the input truth table and stop-time procedure](estop_timing.md) when
 commissioning the actual controller.
+
+## Revision 2.8 - 2026-11-05
+
+Legibility only. The layout and every connection are unchanged: an automated
+comparison of wire endpoints gives the same 19 nets as revision 2.7.
+A browser measured every text box and wire path; these defects were fixed:
+
+- 18 labels had a wire through them: field-device terminal names, GND BUS,
+  the band title and the motor colour plate on top of the coil wires.
+- 7 parallel runs were 6-9 px apart: STEP/DIR/ENA, ALM, and the ADS1115
+  lanes. They are now at least 12 px apart.
+- The level-adapter box let the signal wires run through its text.
+- DIR switch text sat under the knob and past the pill edge.
+- GPIO32, I2C_SDA and I2C_SCL were drawn as unused pins.
+- Driver and motor terminal names sat under the wires; they now sit inside the housing.
+- The USB-C ports sat across the GPIO29 wire; the 3.3 V wires were half transparent.
+- The DIP switches showed a pattern that matches no documented setting.
+- Card shadows, mismatched header corners and three orange headers; only the ESP32-P4 keeps the accent.

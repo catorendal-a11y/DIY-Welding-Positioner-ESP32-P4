@@ -76,7 +76,7 @@ Match the driver's current and microstep switches to the touchscreen settings (1
 
 ## Wiring
 
-[![Wiring diagram in the V5 UI design](docs/images/Wiring_diagram.v2.svg?rev=2.6)](docs/images/Wiring_diagram.v2.svg)
+[![Wiring diagram in the V5 UI design](docs/images/Wiring_diagram.v2.svg?rev=2.8)](docs/images/Wiring_diagram.v2.svg)
 
 Dashed blocks specify interface requirements, not verified installed circuitry. The driver routing shown is common-cathode. Confirm the E-STOP interface and ENA polarity on your assembled controller. [Electrical wiring guide](docs/HARDWARE_SETUP.md)
 

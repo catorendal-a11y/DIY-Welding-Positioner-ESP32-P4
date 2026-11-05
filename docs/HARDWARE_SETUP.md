@@ -108,7 +108,7 @@ Identify your stepper motor pairs (use a multimeter on continuity mode if unsure
 
 Opto-isolated drivers support **two common layouts**. Your **PCB silkscreen** and **manual** decide which one applies — mixing them causes no motion or wrong enable polarity.
 
-**Style 1 — “Minus to GND, plus to MCU”** (common on some **DIP breakout** boards; retained in the project's wiring diagram, revision 2.6):
+**Style 1 — “Minus to GND, plus to MCU”** (common on some **DIP breakout** boards; retained in the project's wiring diagram, revision 2.8):
 
 1. Tie **PUL−**, **DIR−**, **ENA−** together → **GND** on the ESP32-P4.
 2. **PUL+** → `GPIO 50` (STEP)

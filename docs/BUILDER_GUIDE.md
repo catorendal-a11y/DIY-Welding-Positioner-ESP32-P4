@@ -89,7 +89,15 @@ v2.2.0 adds an idle screen saver, exact motor-settings input and flat LVGL UI re
 
 Fast path for builders who already have PlatformIO installed.
 
-**Needed:** GUITION JC4880P443C ESP32-P4 board, PlatformIO, verified driver wiring, and a grounded metal enclosure for TIG HF welding. No LittleFS upload is needed; settings and presets use NVS.
+**Needed:**
+
+- [ ] GUITION JC4880P443C ESP32-P4 board
+- [ ] PlatformIO
+- [ ] Verified driver wiring
+- [ ] A grounded metal enclosure for TIG HF welding
+
+> [!NOTE]
+> No LittleFS upload is needed. Settings and presets use NVS.
 
 1. **Clone the repository:**
 
@@ -133,9 +141,12 @@ Fast path for builders who already have PlatformIO installed.
    .\simulator\run.ps1 -UsbMirror COM5 -Baud 4000000
    ```
 
-   On the device, open **Settings > Display > USB remote control** and arm it after the PC viewer shows a link. E-STOP and driver faults still override all UI input.
+   On the device, open <kbd>Settings</kbd> › <kbd>Display settings</kbd> › <kbd>USB remote control</kbd> and arm it after the PC viewer shows a link. E-STOP and driver faults still override all UI input.
 
-6. **Connect hardware** per the [wiring diagram](#wiring-diagram). Keep motor PSU off until logic power, E-STOP, ENA, STEP, DIR, and driver settings are verified.
+6. **Connect hardware** per the [wiring diagram](#wiring-diagram).
+
+   > [!IMPORTANT]
+   > Keep motor PSU off until logic power, E-STOP, ENA, STEP, DIR, and driver settings are verified.
 
 7. **For TIG HF start welding:** put the ESP32-P4 screen, stepper driver, and motor PSU inside the same grounded metal enclosure before welding near the controller.
 
@@ -205,13 +216,23 @@ The project combines dedicated welding modes, input diagnostics and documented e
 
 ## Operator Workflow
 
-1. Power the ESP32-P4/controller logic first. The firmware boots with ENA disabled.
-2. Verify the main screen appears, touch responds, and E-STOP is released.
-3. Set driver current and microstep DIP switches to match **Settings > Motor configuration**.
-4. Turn on the motor supply after STEP/DIR/ENA and E-STOP wiring are checked.
-5. Use the main potentiometer or the idle-screen **+ / −** controls to set workpiece RPM, then press **Start** for continuous mode.
-6. From **Menu > Run modes**, use **Jog** for manual positioning, **Pulse** for tack cycles, **Step** for indexed rotation, or **Countdown** for a delayed start.
-7. Use the E-STOP as the first response to unsafe motion. The red overlay only resets after the physical fault is cleared.
+1. **Power** the ESP32-P4/controller logic first. The firmware boots with ENA disabled.
+2. **Verify** the main screen appears, touch responds, and E-STOP is released.
+3. **Match** driver current and microstep DIP switches to <kbd>Settings</kbd> › <kbd>Motor configuration</kbd>.
+4. **Turn on** the motor supply after STEP/DIR/ENA and E-STOP wiring are checked.
+5. **Set** workpiece RPM with the main potentiometer or the idle-screen <kbd>+</kbd> / <kbd>−</kbd> controls, then press <kbd>Start</kbd> for continuous mode.
+6. **Pick a mode** from <kbd>Menu</kbd> › <kbd>Run modes</kbd>: Jog for manual positioning, Pulse for tack cycles, Step for indexed rotation, or Countdown for a delayed start.
+7. **Use** the E-STOP as the first response to unsafe motion.
+
+> [!NOTE]
+> The red overlay only resets after the physical fault is cleared.
+
+<table>
+<tr>
+<td align="center"><img src="images/ui_runtime_v5/02_MENU.png" width="390" alt="Menu screen"><br><sub>Menu</sub></td>
+<td align="center"><img src="images/ui_runtime_v5/22_RUN_MODES.png" width="390" alt="Run modes screen"><br><sub>Run modes</sub></td>
+</tr>
+</table>
 
 ---
 
@@ -221,7 +242,8 @@ The UI is built from **23 registered screen types** (including the Setup Wizard)
 
 ![Emergency-stop overlay](../docs/images/ui_runtime_v5/ESTOP_ACTIVE.png)
 
-Simulated active fault: the physical input must be cleared before reset is available. Reset returns to idle and requires a new Start.
+> [!NOTE]
+> Simulated active fault: the physical input must be cleared before reset is available. Reset returns to idle and requires a new Start.
 
 ### Design reference
 
@@ -306,7 +328,13 @@ controlTask  (pri 3, 4 KB)
   <img src="images/Wiring_diagram.v2.svg?rev=2.8" width="800" alt="Original project wiring diagram in the V5 UI design">
 </div>
 
-**Input contract:** Firmware expects GPIO34 HIGH when healthy and LOW when faulted. The original NC button is shown through a required input interface because a bare NC contact to GND produces the opposite behavior. Dashed boxes specify interface requirements, not verified installed circuitry. The original common-cathode driver routing is retained; confirm signal levels and ENA HIGH=disabled on the actual driver. Verify the assembled interface against [Hardware Setup](../docs/HARDWARE_SETUP.md). Revision 2.6 corrected DIP notes, input annotations and RPM limits and removed the unmeasured 0.5 ms claim. Revision 2.8 only improves legibility; every connection is unchanged.
+> [!WARNING]
+> **Input contract:** Firmware expects `GPIO34` `HIGH` when healthy and `LOW` when faulted. The original NC button is shown through a required input interface because a bare NC contact to GND produces the opposite behavior.
+
+Dashed boxes specify interface requirements, not verified installed circuitry. The original common-cathode driver routing is retained; confirm signal levels and ENA HIGH=disabled on the actual driver. Verify the assembled interface against [Hardware Setup](../docs/HARDWARE_SETUP.md).
+
+> [!NOTE]
+> Revision 2.6 corrected DIP notes, input annotations and RPM limits and removed the unmeasured 0.5 ms claim. Revision 2.8 only improves legibility; every connection is unchanged.
 
 ### Pinout
 
@@ -360,7 +388,18 @@ The source now uses **LVGL 9.6.0** and **FastAccelStepper 1.4.0** with the curre
 
 ## Program Editor (v2.1.1)
 
-**New Program** keeps the V5 dark/orange style with a fixed 800×480 layout. Select one **Run mode**, choose the other modes the preset allows, enter an exact RPM, and open **Mode settings** for direction and timing. Name and RPM have separate full-screen editors; invalid input keeps the draft unchanged. Low-speed adjustments preserve 0.001 RPM precision in every mode editor. Save stores the program without starting rotation. The Save button shows progress or a failed write, and the editor returns to the list only after a confirmed NVS write. New names use printable ASCII (31 characters); valid legacy UTF-8 names remain intact in storage, although the built-in font has limited glyph coverage.
+**New Program** keeps the V5 dark/orange style with a fixed 800×480 layout.
+
+1. **Select** one <kbd>Run mode</kbd>.
+2. **Choose** the other modes the preset allows (<kbd>Available</kbd>).
+3. **Enter** an exact RPM.
+4. **Open** <kbd>Mode settings</kbd> for direction and timing.
+5. **Press** <kbd>Save</kbd>. It stores the program without starting rotation.
+
+- Name and RPM have separate full-screen editors; invalid input keeps the draft unchanged.
+- Low-speed adjustments preserve 0.001 RPM precision in every mode editor.
+- The <kbd>Save</kbd> button shows progress or a failed write, and the editor returns to the list only after a confirmed NVS write.
+- New names use printable ASCII (31 characters); valid legacy UTF-8 names remain intact in storage, although the built-in font has limited glyph coverage.
 
 <img src="../docs/images/program_v2/01_new_program.png" width="800" alt="Actual LVGL New Program page with run mode, availability, exact speed and mode settings">
 
@@ -368,7 +407,19 @@ The source now uses **LVGL 9.6.0** and **FastAccelStepper 1.4.0** with the curre
 
 ## Guided Setup (v2.1.1)
 
-The source includes a four-step **Setup Wizard** using the existing V5 dark/orange UI: motor settings, hold-to-run direction checks, verified manual calibration, and a user-confirmed function check of the **physical E-STOP switch**, reset and normal Start/Stop. New installations open the wizard; existing valid settings without the new field remain configured. Re-run it from **Settings → Setup wizard**. Completing setup does not start motion, and completion is confirmed only after its save succeeds.
+The source includes a four-step **Setup Wizard** using the existing V5 dark/orange UI:
+
+| Step | What it does |
+|:---|:---|
+| 1 | Motor settings |
+| 2 | Hold-to-run direction checks |
+| 3 | Verified manual calibration |
+| 4 | User-confirmed function check of the **physical E-STOP switch**, reset and normal Start/Stop |
+
+New installations open the wizard; existing valid settings without the new field remain configured. Re-run it from <kbd>Settings</kbd> › <kbd>Setup wizard</kbd>.
+
+> [!NOTE]
+> Completing setup does not start motion, and completion is confirmed only after its save succeeds.
 
 <img src="../docs/images/setup_v1/01_motor.png" width="800" alt="Actual LVGL setup wizard motor stage">
 
@@ -422,9 +473,14 @@ Run the Windows viewer:
 .\simulator\run.ps1 -UsbMirror COM5 -Baud 4000000
 ```
 
-Use `-Baud 2000000` or `-Baud 921600` if the Windows USB serial driver is unstable at 4M. Native USB CDC baud is mostly a host/driver setting; the main speed win is partial dirty-rectangle traffic. `COM5` must not be open in PlatformIO Monitor while the viewer is connected.
+> [!TIP]
+> Use `-Baud 2000000` or `-Baud 921600` if the Windows USB serial driver is unstable at 4M. Native USB CDC baud is mostly a host/driver setting; the main speed win is partial dirty-rectangle traffic.
 
-Remote control is fail-closed: it starts disabled after boot, requires **Settings > Display > USB remote control** to be armed on the physical screen, and releases on USB disconnect/keepalive timeout. The PC only injects LVGL touch input; it has no direct motor command API.
+> [!WARNING]
+> `COM5` must not be open in PlatformIO Monitor while the viewer is connected.
+
+> [!IMPORTANT]
+> Remote control is fail-closed: it starts disabled after boot, requires <kbd>Settings</kbd> › <kbd>Display settings</kbd> › <kbd>USB remote control</kbd> to be armed on the physical screen, and releases on USB disconnect/keepalive timeout. The PC only injects LVGL touch input; it has no direct motor command API.
 
 ---
 
@@ -471,7 +527,8 @@ Remote control is fail-closed: it starts disabled after boot, requires **Setting
 
 ## Safety-Critical Wiring
 
-Verify these signals with a meter before enabling motor power:
+> [!IMPORTANT]
+> Verify these signals with a meter before enabling motor power.
 
 | Signal | Required Safe Behavior |
 |:---|:---|
@@ -483,7 +540,8 @@ Verify these signals with a meter before enabling motor power:
 | Grounds | ESP32 logic ground, driver signal ground, and pedal/ADS1115 ground must be common |
 | Enclosure | ESP32-P4 screen, driver, and motor PSU must be inside one grounded metal enclosure for TIG HF use |
 
-The firmware never intentionally enables the motor while E-STOP is active. If the motor moves at boot or while ENA is HIGH, treat it as a wiring or driver configuration fault before continuing.
+> [!CAUTION]
+> The firmware never intentionally enables the motor while E-STOP is active. If the motor moves at boot or while ENA is HIGH, treat it as a wiring or driver configuration fault before continuing.
 
 At motion start, firmware checks the safety inputs before taking the stepper mutex and again immediately after ENA is pulled LOW. If E-STOP or DM542T ALM becomes active in that final window, ENA is driven HIGH again before a run/move command is sent.
 
@@ -491,17 +549,22 @@ At motion start, firmware checks the safety inputs before taking the stepper mut
 
 ## TIG HF Noise Requirement
 
-Real TIG welding validation has been completed. The controller, motor logic, UI, and E-STOP behavior worked during TIG welding after the electronics were installed in a shared grounded metal enclosure.
+> [!NOTE]
+> Real TIG welding validation has been completed. The controller, motor logic, UI, and E-STOP behavior worked during TIG welding after the electronics were installed in a shared grounded metal enclosure.
 
-This is a hard installation requirement for HF-start TIG environments:
+> [!IMPORTANT]
+> This is a hard installation requirement for HF-start TIG environments.
 
-- Put the ESP32-P4 display board, stepper driver, and motor PSU in the same aluminum or steel enclosure.
-- Bond the enclosure to protective earth / welding chassis ground using a short, low-impedance connection.
-- Route motor power separately from GPIO, ADC, I2C, E-STOP, and foot-pedal wiring.
-- Use shielded external cables where practical, with the shield terminated to the enclosure at the controller side.
-- Add ferrites on motor, E-STOP, pedal/pot, USB/power, and external signal cables if the welder still injects noise.
+Checklist:
 
-Do not judge TIG reliability from an open-bench test. Bench wiring is acceptable for firmware and motion checks only.
+- [ ] Put the ESP32-P4 display board, stepper driver, and motor PSU in the same aluminum or steel enclosure.
+- [ ] Bond the enclosure to protective earth / welding chassis ground using a short, low-impedance connection.
+- [ ] Route motor power separately from GPIO, ADC, I2C, E-STOP, and foot-pedal wiring.
+- [ ] Use shielded external cables where practical, with the shield terminated to the enclosure at the controller side.
+- [ ] Add ferrites on motor, E-STOP, pedal/pot, USB/power, and external signal cables if the welder still injects noise.
+
+> [!WARNING]
+> Do not judge TIG reliability from an open-bench test. Bench wiring is acceptable for firmware and motion checks only.
 
 ---
 
@@ -533,9 +596,19 @@ Open `src/config.h` to adjust hardware parameters:
 #define START_SPEED     20      // Hz operational minimum; lower RPM requests are rejected
 ```
 
-Settings can also be changed from the touchscreen via **Settings > Motor configuration** and are persisted to **NVS** (see [Persistence (NVS)](#persistence-nvs)).
+Settings can also be changed from the touchscreen via <kbd>Settings</kbd> › <kbd>Motor configuration</kbd> and are persisted to **NVS** (see [Persistence (NVS)](#persistence-nvs)).
 
-Open **Settings → Calibration** for the guided **Align → Measure → Verify → Save** workflow. Set workpiece diameter on the same page, align with hold-to-run Jog, measure a completed 360-degree move, and verify the correction with another completed move. Save requires 360 ± 0.5 degrees and confirms the actual storage receipt. STOP cancels a measurement; unverified corrections remain temporary and cannot leak into autosaves. Restart restores the saved factor. See the [calibration guide](../docs/CALIBRATION_WORKFLOW.md).
+Open <kbd>Settings</kbd> › <kbd>Calibration</kbd> for the guided **Align → Measure → Verify → Save** workflow.
+
+1. **Align** with hold-to-run Jog. Set workpiece diameter on the same page.
+2. **Measure** a completed 360-degree move.
+3. **Verify** the correction with another completed move.
+4. **Save.** It requires 360 ± 0.5 degrees and confirms the actual storage receipt.
+
+> [!NOTE]
+> STOP cancels a measurement; unverified corrections remain temporary and cannot leak into autosaves. Restart restores the saved factor.
+
+See the [calibration guide](../docs/CALIBRATION_WORKFLOW.md).
 
 ![Guided calibration](../docs/images/calibration_v2/01_align.png)
 
@@ -555,14 +628,20 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 - **`storage_init()`** opens the namespace, then runs a **one-time migration**: if `cfg` / `prs` are empty but legacy LittleFS files exist (`/settings.json`, `/presets.json`), their contents are copied into NVS. After that, normal operation uses NVS only.
 - **Load order:** settings load before presets, so preset RPM values are clamped against the saved **Max RPM** setting. Invalid persisted microstep values are sanitized to the safe default `1/16`.
 - **Display / UI:** the settings blob includes e.g. **`color_scheme`** (`0` = dark neutral palette, `1` = light), **`accent_color`** (0–7), brightness and dim-timeout fields — see `SystemSettings` / `storage.cpp` for the authoritative list.
-- **Saves** run on **Core 1** in `storageTask`: debounced **~500 ms** after preset changes and **~1 s** after settings changes (`storage_flush()`). UI code sets a pending flag; it does not write flash directly. Writes run only in IDLE or ESTOP, and a start waits for a save in progress.
+- **Saves** run on **Core 1** in `storageTask`: debounced **~500 ms** after preset changes and **~1 s** after settings changes (`storage_flush()`). UI code sets a pending flag; it does not write flash directly.
+
+> [!NOTE]
+> Writes run only in IDLE or ESTOP, and a start waits for a save in progress.
 - **Write failures:** failed saves remain pending and retry with backoff; the UI shows pending/error state. Changes arriving during a write remain queued for another save. The inactivity timeout uses a 16-bit field so 300 seconds persists correctly.
 - **Flash cache:** NVS commits disable the flash cache briefly, and the prebuilt framework has no IRAM-safe RMT/GPIO ISRs, which is why writes wait for rest. The firmware sets `g_flashWriting` so the UI can avoid glitches during writes.
 
 **Troubleshooting**
 
 - You do **not** need to upload a LittleFS filesystem for settings/presets on current firmware.
-- Invalid saved data boots to a visible **STORAGE** fault with motion disabled and the data untouched. Reflash a matching build to keep the data, or use **Hold 3 s to erase data** on the fault overlay. That erases the saved data and restarts, and you reconfigure the machine.
+- Invalid saved data boots to a visible **STORAGE** fault with motion disabled and the data untouched. Reflash a matching build to keep the data, or use <kbd>Hold 3 s to erase data</kbd> on the fault overlay.
+
+> [!WARNING]
+> <kbd>Hold 3 s to erase data</kbd> erases the saved data and restarts, and you reconfigure the machine.
 
 ---
 
@@ -584,7 +663,8 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 
 ## Safety Notice
 
-> **Warning:** This controller drives industrial stepper motors. Follow all safety precautions.
+> [!CAUTION]
+> This controller drives industrial stepper motors. Follow all safety precautions.
 
 | Hazard | Precaution |
 |:---|:---|
@@ -616,9 +696,9 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 <summary><b>Main Start does not always start motor</b></summary>
 
 - Stop has a separate latch and invalidates pending starts. A new explicit Start is required after Stop is processed; inspect fault, task-readiness and pedal state if motion stays blocked.
-- Go to **Settings > Diagnostics** and verify that `E-STOP` and `Driver alarm` show `High / OK`, `State` shows `IDLE` and `Enable output` shows `High / disabled` while idle
+- Go to <kbd>Settings</kbd> › <kbd>Diagnostics</kbd> and verify that `E-STOP` and `Driver alarm` show `High / OK`, `State` shows `IDLE` and `Enable output` shows `High / disabled` while idle
 - The Diagnostics event log shows the last start/stop, pedal, program and fault events, so you can see whether the UI requested motion or safety blocked it
-- If a foot pedal is connected, use **Settings > Pedal settings** to confirm `Start switch / GPIO33` changes between `Open` and `Pressed`
+- If a foot pedal is connected, use <kbd>Settings</kbd> › <kbd>Pedal settings</kbd> to confirm `Start switch / GPIO33` changes between `Open` and `Pressed`
 - Releasing Jog cancels a pending Jog start so a quick tap/release cannot start motion after the button was released
 
 </details>
@@ -635,7 +715,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 <details>
 <summary><b>Wrong rotation direction</b></summary>
 
-- Use **Invert direction** in Motor Config, or reverse A+/A- coil wiring
+- Use <kbd>Invert direction</kbd> in Motor Config, or reverse A+/A- coil wiring
 
 </details>
 
@@ -671,7 +751,10 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 ## Known Limitations
 
 - Single-axis control only
-- An open E-STOP wire reads as healthy, and E-STOP acts through the MCU and driver ENA input; it does not disconnect motor power
+
+> [!WARNING]
+> An open E-STOP wire reads as healthy, and E-STOP acts through the MCU and driver ENA input; it does not disconnect motor power.
+
 - A floating pot wiper is not detected, and the analog pedal is not jump-checked
 - No closed-loop tachometer feedback; RPM is commanded from kinematics, calibration, and step timing
 - Basic PUL/DIR drivers have no anti-resonance DSP; DM542T is recommended for smoother low-speed and higher-RPM work
@@ -693,6 +776,9 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 ---
 
 ## Validation status
+
+> [!NOTE]
+> Physical results below are owner-reported. Stop time has not been measured.
 
 | Local check | Result |
 | --- | --- |
@@ -793,4 +879,11 @@ MIT License — see [LICENSE](../LICENSE) for details. Dependencies retain their
 
 ## Idle screen saver (v2.2.0)
 
-Open Settings > Display > Screen saver after, choose Off/30s/1m/2m/5m and Save. Preview shows the design immediately. The first touch wakes only; motion, faults and editing stay visible. See [behavior and captures](SCREEN_SAVER.md).
+1. **Open** <kbd>Settings</kbd> › <kbd>Display settings</kbd> › <kbd>Screen saver after</kbd>.
+2. **Choose** <kbd>Off</kbd>, <kbd>30s</kbd>, <kbd>1m</kbd>, <kbd>2m</kbd> or <kbd>5m</kbd>.
+3. **Press** <kbd>Save</kbd>. <kbd>Preview</kbd> shows the design immediately.
+
+> [!NOTE]
+> The first touch wakes only; motion, faults and editing stay visible. See [behavior and captures](SCREEN_SAVER.md).
+
+<img src="images/ui_runtime_v5/SCREEN_SAVER.png" width="500" alt="Idle screen saver, simulator capture">

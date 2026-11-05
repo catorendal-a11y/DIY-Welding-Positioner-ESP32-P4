@@ -3,12 +3,17 @@
 This guide details the physical electrical wiring and structural assembly required to build the welding positioner safely.
 
 ## 1. Electrical Component Selection
-- **ESP32-P4 Dev Board:** GUITION JC4880P443C (4.3" MIPI-DSI display, ESP32-P4 + ESP32-C6 co-processor).
-- **Micro-Stepper Driver:** Common **PUL/DIR** boards and/or **DM542T** (Leadshine-class DSP). Must handle motor supply (often 20–50 V DC on `VM`/`V+`) and motor current for NEMA 23. **Logic supply for PUL/DIR/ENA is separate** (typically 3.3 V or 5 V on the `+` inputs — do not feed motor `VM` to the opto inputs).
-- **Motor:** NEMA 23 Stepper Motor (approx 3.0 Nm holding torque recommended).
-- **Power Supply (PSU):** **36V DC** is optimal on the stepper `VM` bus for headroom; **24V DC** also works within typical driver input range (e.g. 18–50 V). Minimum **5.0 A** — size wattage for your chosen rail (~180 W @ 36 V, ~120 W @ 24 V as a rough guide). Dedicated for the stepper driver.
-- **DC-DC Converter:** Step-down buck converter (**36V** or **24V** → **5V**, 2 A) to power the ESP32-P4 if not using USB-C.
-- **Enclosure:** **Metallic (Aluminum/Steel) grounded enclosure**. Required for TIG HF-start welding. Put the ESP32-P4 screen, stepper driver, and motor PSU inside the same enclosure.
+| Part | Requirement |
+|------|-------------|
+| **ESP32-P4 Dev Board** | GUITION JC4880P443C (4.3" MIPI-DSI display, ESP32-P4 + ESP32-C6 co-processor). |
+| **Micro-Stepper Driver** | Common **PUL/DIR** boards and/or **DM542T** (Leadshine-class DSP). Must handle motor supply (often 20–50 V DC on `VM`/`V+`) and motor current for NEMA 23. **Logic supply for PUL/DIR/ENA is separate** (typically 3.3 V or 5 V on the `+` inputs). |
+| **Motor** | NEMA 23 Stepper Motor (approx 3.0 Nm holding torque recommended). |
+| **Power Supply (PSU)** | **36V DC** is optimal on the stepper `VM` bus for headroom; **24V DC** also works within typical driver input range (e.g. 18–50 V). Minimum **5.0 A** — size wattage for your chosen rail (~180 W @ 36 V, ~120 W @ 24 V as a rough guide). Dedicated for the stepper driver. |
+| **DC-DC Converter** | Step-down buck converter (**36V** or **24V** → **5V**, 2 A) to power the ESP32-P4 if not using USB-C. |
+| **Enclosure** | **Metallic (Aluminum/Steel) grounded enclosure**. Required for TIG HF-start welding. Put the ESP32-P4 screen, stepper driver, and motor PSU inside the same enclosure. |
+
+> [!CAUTION]
+> Do not feed motor `VM` to the opto inputs (PUL/DIR/ENA).
 
 ## 2. DIP stepper driver configuration (basic PUL/DIR boards)
 Before powering on, configure the DIP switches on the side of your driver board.
@@ -25,6 +30,9 @@ Tables below match the **STEPPERONLINE DM542T** front label (same family as many
 ### 3.1 Signal voltage (PWR / logic jumper)
 
 The driver has a **5 V / 24 V** selector for the **control input** side (often labeled near **PWR** / alarm). For **ESP32-P4** (3.3 V GPIO):
+
+> [!CAUTION]
+> Keep motor `VM` (24–36 V) off the opto logic inputs and ESP32 pins.
 
 - For a driver requiring **5 V** control signals, select its **5 V** position and use a suitable **3.3 V-to-driver signal interface** as in §3.4. Direct 3.3 V drive is only appropriate if the actual driver's voltage/current specification permits it. Keep motor `VM` (24–36 V) off the opto logic inputs and ESP32 pins.
 - If pulses were ignored before, wrong voltage on this selector or on **+** inputs is a common cause.
@@ -44,6 +52,9 @@ The driver has a **5 V / 24 V** selector for the **control input** side (often l
 
 There is **no exact 2.7 A** row. For ~2.7 A class torque use **2.84 A peak** (**SW1=ON, SW2=ON, SW3=OFF**). If the motor stalls under load, step up toward **3.31 A** (within motor/driver ratings).
 
+> [!TIP]
+> Bold row = the ~2.7 A class setting: **2.84 A peak** (SW1=ON, SW2=ON, SW3=OFF).
+
 **SW4 (standstill current):** **OFF** = half current when idle, **ON** = full current when idle (more hold, more heat).
 
 ### 3.3 Pulses per revolution — SW5–SW8 (must match UI microstep)
@@ -59,7 +70,8 @@ Firmware assumes **200 full steps/rev** at the motor and **microstep factor** fr
 
 *Some DM542T boards use **SW6 ON** for 3200; follow the row on **your** driver label that matches **3200** pulses/rev.*
 
-Pick the row that equals **200 × (Motor Config microstep value)**. Wrong table vs UI = wrong speed, noise, or stalling (“crash”).
+> [!WARNING]
+> Pick the row that equals **200 × (Motor Config microstep value)**. Wrong table vs UI = wrong speed, noise, or stalling (“crash”).
 
 ### 3.4 Firmware
 
@@ -68,7 +80,10 @@ Pick the row that equals **200 × (Motor Config microstep value)**. Wrong table 
 | **Microstep** | **1/16** in **Motor Config** if DIP = **3200** pulses/rev (recommended) |
 | **Driver** | **DM542T** + **SAVE & APPLY** |
 
-**Motor power:** **+Vdc** = **+18 V … +50 V** (motor supply), **GND** = power return. Do **not** connect motor `VM` to **PUL/DIR/ENA**.
+**Motor power:** **+Vdc** = **+18 V … +50 V** (motor supply), **GND** = power return.
+
+> [!CAUTION]
+> Do **not** connect motor `VM` to **PUL/DIR/ENA**.
 
 **Signal wiring (optocoupler “+” to logic VCC, “−” to the signal interface — Style 2):**
 
@@ -84,6 +99,9 @@ Pick the row that equals **200 × (Motor Config microstep value)**. Wrong table 
 **ALM+ / ALM−:** fault output (open-drain, **active LOW** on alarm for typical DM542T wiring to ESP GND). Firmware reads **GPIO 32** (`PIN_DRIVER_ALM`, `INPUT_PULLUP`). Wire so the pin is **HIGH when OK** and **pulled LOW on driver fault** (follow your driver manual; often ALM− to signal GND and ALM+ / opto side per datasheet). **RESET** on the ESTOP overlay stays disabled until ALM is high again and the physical E-STOP is released.
 
 - **Common GND:** Driver signal **GND** / **`COM`** / logic reference must tie to **ESP32 GND**.
+> [!WARNING]
+> **ESP32 GPIO is 3.3 V logic, not 5 V tolerant.**
+
 - **ESP32 GPIO is 3.3 V logic, not 5 V tolerant.** A series resistor alone is not a substitute for a compatible interface. Direct GPIO wiring is only appropriate if the actual driver interface satisfies the ESP32 voltage/current limits and the driver's input requirements. Keep the firmware's **HIGH = inhibit** contract when choosing or configuring the interface.
 - **HMI policy:** if the GT911 touchscreen fails to initialize, new motion starts stay blocked (`HMI_REQUIRED_FOR_MOTION` in `src/config.h`; set 0 to allow pedal motion without touch). The E-STOP input does not depend on touch or LVGL, but it is **not independent of the controller**: it acts through GPIO34, firmware and the driver ENA input, and it does not disconnect motor power. Formatting storage likewise requires a restart before new motion.
 
@@ -108,48 +126,66 @@ Identify your stepper motor pairs (use a multimeter on continuity mode if unsure
 
 Opto-isolated drivers support **two common layouts**. Your **PCB silkscreen** and **manual** decide which one applies — mixing them causes no motion or wrong enable polarity.
 
-**Style 1 — “Minus to GND, plus to MCU”** (common on some **DIP breakout** boards; retained in the project's wiring diagram, revision 2.8):
+| | **Style 1 — “Minus to GND, plus to MCU”** | **Style 2 — “Plus to VCC, minus to MCU”** |
+|---|---|---|
+| **Typical boards** | Some **DIP breakout** boards; retained in the project's wiring diagram, revision 2.8 | **DM542T** / Leadshine-style inputs; see **§3 DM542T checklist** |
+| **Minus side** | Tie **PUL−**, **DIR−**, **ENA−** together → **GND** on the ESP32-P4 | **PUL−**, **DIR−**, **ENA−** → compatible interface outputs controlled by `GPIO 50`, `GPIO 51`, `GPIO 52` respectively; see §3.4 for direct-drive limits |
+| **Plus side** | **PUL+** → `GPIO 50` (STEP); **DIR+** → `GPIO 51` (DIR); **ENA+** → `GPIO 52` (ENA) | **PUL+**, **DIR+**, **ENA+** → driver logic VCC specified by its manual |
+| **GND** | ESP32-P4 **GND** (see minus side) | **GND** common between ESP32 and driver logic / `COM` as required by the manual |
 
-1. Tie **PUL−**, **DIR−**, **ENA−** together → **GND** on the ESP32-P4.
-2. **PUL+** → `GPIO 50` (STEP)
-3. **DIR+** → `GPIO 51` (DIR)
-4. **ENA+** → `GPIO 52` (ENA)
+> [!WARNING]
+> Your **PCB silkscreen** and **manual** decide which style applies. Mixing them causes no motion or wrong enable polarity.
 
-The diagram preserves the original routing; it does not establish that every DM542T revision accepts direct 3.3 V drive or the same ENA polarity. Use a suitable signal adapter where required by the actual driver's input voltage/current specification, and verify **GPIO52 HIGH inhibits motion** on the assembled system. Dashed interface blocks in the diagram are functional requirements, not verified installed components.
+For Style 1, the diagram preserves the original routing; it does not establish that every DM542T revision accepts direct 3.3 V drive or the same ENA polarity. Use a suitable signal adapter where required by the actual driver's input voltage/current specification, and verify **GPIO52 HIGH inhibits motion** on the assembled system. Dashed interface blocks in the diagram are functional requirements, not verified installed components.
 
-**Style 2 — “Plus to VCC, minus to MCU”** (common on **DM542T** / Leadshine-style inputs; see **§3 DM542T checklist**):
+| ENA GPIO level | Firmware request |
+|----------------|------------------|
+| `LOW` | Motor enabled |
+| `HIGH` | Motor disabled (after stop) |
 
-1. **PUL+**, **DIR+**, **ENA+** → driver logic VCC specified by its manual.
-2. **PUL−**, **DIR−**, **ENA−** → compatible interface outputs controlled by `GPIO 50`, `GPIO 51`, `GPIO 52` respectively; see §3.4 for direct-drive limits.
-3. **GND** common between ESP32 and driver logic / `COM` as required by the manual.
-
-Firmware: **LOW** on the ENA GPIO line requests **motor enabled**, **HIGH** requests disabled (after stop). Verify these states at the actual driver before motion. **Invert direction** in Motor Config affects direction only; it cannot correct ENA polarity. Choose wiring and interface polarity using the actual driver's manual rather than swapping styles by trial and error.
+Verify these states at the actual driver before motion. **Invert direction** in Motor Config affects direction only; it cannot correct ENA polarity. Choose wiring and interface polarity using the actual driver's manual rather than swapping styles by trial and error.
 
 ### C. External Controls
-- **Speed Potentiometer (10k Linear):**
-  - Pin 1 (CCW) -> GND
-  - Pin 2 (Wiper) -> `GPIO 49`
-  - Pin 3 (CW) -> 3.3V
+
+| Control | Pin / terminal | Connect to |
+|---------|----------------|------------|
+| **Speed Potentiometer (10k Linear)** | Pin 1 (CCW) | GND |
+| | Pin 2 (Wiper) | `GPIO 49` |
+| | Pin 3 (CW) | 3.3V |
+| **Direction Switch (CW/CCW Toggle)** | Pin 1 | `GPIO 29` |
+| | Pin 2 | GND |
+| **Foot Pedal potentiometer (optional)** | Potentiometer | **ADS1115 AIN0** on touch I2C (see `ENABLE_ADS1115_PEDAL` / project README), not the panel pot pin |
+| **Foot Pedal start switch (optional)** | Start switch | `GPIO 33` (INPUT_PULLUP, LOW = pressed) |
+| **E-STOP conditioned input** | Healthy = HIGH, fault = LOW | `GPIO34`, FALLING interrupt |
+
 - **Pot wiring limit:** 0 V is a legal value and means maximum speed. Firmware latches **SPEED POT** when the reading jumps to the rail within one 20 ms sample (for example a lost 3.3 V lead), but it cannot detect a floating wiper. The analog pedal is not jump-checked; releasing its switch stops motion.
+
+> [!CAUTION]
+> A bare NC contact to GND with a pull-up has the opposite logic and must not be described as compatible.
+
 - **E-STOP conditioned input (active LOW):**
   - Firmware requires healthy = HIGH and fault = LOW at GPIO34, with a FALLING interrupt.
-  - A bare NC contact to GND with a pull-up has the opposite logic and must not be described as compatible.
   - Verify a supervised interface for pressed, released, broken wire and power loss using the truth table in [estop_timing.md](estop_timing.md).
   - Actual ENA/opto polarity and physical stop latency have not been validated by the software tests.
 - **Direction Switch (CW/CCW Toggle):**
-  - Pin 1 -> `GPIO 29`
-  - Pin 2 -> GND
+  - Pins: see the table above.
   - Uses internal INPUT_PULLUP. Toggle via Settings > Motor Config > Direction Switch.
 - **Foot Pedal (Optional):**
-  - Potentiometer → **ADS1115 AIN0** on touch I2C (see `ENABLE_ADS1115_PEDAL` / project README), not the panel pot pin
-  - Start switch → `GPIO 33` (INPUT_PULLUP, LOW = pressed)
+  - Pins: see the table above.
   - **ADS1115 not detected (I2C scan shows 0x5D but never 0x48–0x4B):** firmware uses **GPIO7 = SDA**, **GPIO8 = SCL** (`I2C_NUM_0` in `display.cpp`) — the **same bus** as GT911 and (on JC4880P443) the **ES8311** codec (often **0x18** on scan). On the **JP1** expansion header (odd row), **pin 23 = I2C_SDA** and **pin 25 = I2C_SCL** per Guition pinout — wire ADS **D** and **S** there, **not** to pins **24 / 26** (ESP32-C6 / `C6_IO9` / `C6_CHIP_PU`). Some online notes mention “Wire1 / I2C1”; this project does **not** use a second I2C bus for touch — external ADS must join **GPIO7/8**. On **10-pin modules** (VDD, GND, SCL, SDA, ADDR, ALRT, A0–A3) the **ADDR pin is not pre-wired** and **must go to GND** for address 0x48; a floating ADDR prevents any ACK. Verify continuity, try **swap D and S** once if still no ACK, and **V → 3.3 V**, **G → GND**.
 
 ### D. Reserved Pins (Do Not Use)
+
+> [!CAUTION]
+> Treat the pins below as reserved unless the GUITION schematic confirms safe repurposing for your build.
+
 - **GPIO 28**, **GPIO 14-19**, and **GPIO 54** may be PCB-routed toward the ESP32-C6 co-processor. Treat as reserved unless the GUITION schematic confirms safe repurposing for your build. **GPIO 32 is intentionally used by this firmware for DM542T ALM**; do not reuse it for other signals.
 
 ## 5. Safety & Thermal Management
 - **Heat Sinking:** Stepper drivers get hot during long welding runs. Mount the driver to the metal enclosure for thermal dissipation or add a 40mm fan.
+> [!IMPORTANT]
+> Power the logic first, then the motor supply. See **Power Sequencing** below.
+
 - **Power Sequencing:** Always power the logic (USB-C or DC-DC) first, then the **motor supply** (24 V or 36 V on `VM`). The firmware holds the motor ENA pin HIGH (Disabled) on boot for safety.
 - **TIG HF Noise:** Open-bench wiring is only for motion/firmware testing. For welding, install the ESP32-P4 screen, stepper driver, and motor PSU inside the same grounded metal enclosure. Without this, HF start can reset the controller, freeze the touch/I2C bus, or create false GPIO/ADC inputs.
 

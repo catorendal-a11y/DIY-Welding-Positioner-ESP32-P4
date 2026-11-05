@@ -1,14 +1,21 @@
 // V5 blocking fault overlay: strong red identity, explicit input and reset state.
 #include "../screens.h"
 #include "../theme.h"
+#include "../../storage/storage.h"
+#include "esp_system.h"
 #include "../lvgl_hal.h"
 #include "../../config.h"
 #include "../../safety/safety.h"
 
 static lv_obj_t *overlay = nullptr, *title = nullptr, *reasonLabel = nullptr, *inputLabel = nullptr;
 static lv_obj_t *driverLabel = nullptr, *instruction = nullptr, *resetBtn = nullptr;
+static lv_obj_t* eraseBtn = nullptr;
+static lv_obj_t* resetHint = nullptr;
+static uint32_t erasePressMs = 0;
+static constexpr uint32_t kEraseHoldMs = 3000;
 static bool visible = false;
 static uint32_t lastUpdate = 0;
+static void erase_cb(lv_event_t* e);
 static void reset_cb(lv_event_t*) {
   if (safety_can_reset_from_overlay()) g_uiResetPending.store(true, std::memory_order_release);
 }
@@ -33,7 +40,7 @@ void estop_overlay_create() {
   lv_obj_t* icon = panel(banner, 24, 22, 62, 62, 0xFFFFFF);
   lv_obj_t* bang = ui_create_text(icon, 0, 8, 62, "!", FONT_HUGE, lv_color_hex(0xB52C35));
   lv_obj_set_style_text_align(bang, LV_TEXT_ALIGN_CENTER, 0);
-  ui_create_text(banner, 108, 19, 660, "TIG / ROTATOR - MOTION LOCKED", FONT_NORMAL, lv_color_hex(0xFFFFFF));
+  ui_create_text(banner, 108, 19, 660, "MOTION LOCKED", FONT_NORMAL, lv_color_hex(0xFFFFFF));
   title = ui_create_text(banner, 108, 48, 668, "EMERGENCY STOP", FONT_XXL, lv_color_hex(0xFFFFFF));
   ui_create_text(overlay, 24, 126, 752, "MOTOR OUTPUT DISABLED", FONT_XL, lv_color_hex(0xFFFFFF));
   reasonLabel = ui_create_text(overlay, 24, 166, 752, "", FONT_SUBTITLE, lv_color_hex(0xE3CBCD));
@@ -46,10 +53,26 @@ void estop_overlay_create() {
   driverLabel = ui_create_text(driver, 392, 18, 338, "", FONT_LARGE, COL_GREEN);
   lv_obj_set_style_text_align(driverLabel, LV_TEXT_ALIGN_RIGHT, 0);
   instruction = ui_create_text(overlay, 24, 351, 752, "", FONT_SUBTITLE, lv_color_hex(0xF4DCDD));
-  ui_create_text(overlay, 24, 438, 242, "Reset never starts motion.", FONT_NORMAL, lv_color_hex(0xE3CBCD));
+  resetHint = ui_create_text(overlay, 24, 438, 242, "Reset never starts motion.", FONT_NORMAL, lv_color_hex(0xE3CBCD));
+  eraseBtn = ui_create_btn(overlay, 24, 408, 248, 56, "Hold 3 s to erase data", FONT_SUBTITLE, UI_BTN_DANGER, nullptr, nullptr);
+  for (auto code : {LV_EVENT_PRESSED, LV_EVENT_PRESSING, LV_EVENT_RELEASED, LV_EVENT_PRESS_LOST})
+    lv_obj_add_event_cb(eraseBtn, erase_cb, code, nullptr);
+  lv_obj_set_hidden(eraseBtn, true);
   resetBtn =
       ui_create_btn(overlay, 288, 408, 488, 56, "RESET BLOCKED", FONT_BTN, UI_BTN_NORMAL, reset_cb, nullptr);
   lv_obj_set_disabled(resetBtn, true);
+}
+static void erase_cb(lv_event_t* e) {
+  const lv_event_code_t code = lv_event_get_code(e);
+  if (code == LV_EVENT_PRESSED) {
+    erasePressMs = millis() | 1u;
+  } else if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) {
+    erasePressMs = 0;
+  } else if (code == LV_EVENT_PRESSING && erasePressMs && millis() - erasePressMs >= kEraseHoldMs) {
+    erasePressMs = 0;
+    if (storage_format()) esp_restart();
+    lv_label_set_text(lv_obj_get_child(eraseBtn, 0), "Erase failed");
+  }
 }
 void estop_overlay_show() {
   dim_reset_activity();
@@ -69,7 +92,8 @@ void estop_overlay_hide() {
 bool estop_overlay_visible() { return visible; }
 void estop_overlay_destroy() {
   if (overlay) lv_obj_delete(overlay);
-  overlay = title = reasonLabel = inputLabel = driverLabel = instruction = resetBtn = nullptr;
+  overlay = title = reasonLabel = inputLabel = driverLabel = instruction = resetBtn = eraseBtn = resetHint = nullptr;
+  erasePressMs = 0;
   visible = false;
 }
 void estop_overlay_update() {
@@ -88,8 +112,11 @@ void estop_overlay_update() {
   lv_label_set_text(driverLabel, driver ? "ACTIVE" : "CLEAR");
   lv_obj_set_style_text_color(inputLabel, physical ? lv_color_hex(0xFFACAF) : lv_color_hex(0xB9F278), 0);
   lv_obj_set_style_text_color(driverLabel, driver ? lv_color_hex(0xFFACAF) : lv_color_hex(0xB9F278), 0);
+  const bool corrupt = reason == FAULT_STORAGE_CORRUPT;
+  lv_obj_set_hidden(eraseBtn, !corrupt);
+  lv_obj_set_hidden(resetHint, corrupt);
   const bool ready = safety_can_reset_from_overlay();
-  lv_label_set_text(instruction, ready ? "Check the machine. Reset returns to idle; a new START is required."
+  lv_label_set_text(instruction, ready ? "Check the machine. Reset returns to idle; a new Start is required."
                                  : reason == FAULT_PEDAL_INPUT
                                      ? "Release the pedal and restore its input before resetting."
                                      : safety_fault_reason_message(reason));

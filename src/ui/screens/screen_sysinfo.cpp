@@ -40,7 +40,7 @@ static bool reboot_allowed_or_explain() {
     screen_confirm_create("RESTART NOT POSSIBLE", "The machine is not idle.\nStop it first, then try again.", nullptr, nullptr);
     return false;
   }
-  if (storage_status() != STORAGE_SAVED) {
+  if (storage_status() == STORAGE_PENDING) {
     screen_confirm_create("RESTART NOT POSSIBLE", "Settings are still being saved.\nWait a moment, then try again.", nullptr, nullptr);
     return false;
   }
@@ -81,15 +81,15 @@ void screen_sysinfo_create() {
   bootMs = 0;
   lastUptimeSec = UINT32_MAX;
   lastMemoryRead = lastTempRead = lastCoreRead = 0;
-  ui_create_header(screen, "System information", "CONTROLLER HEALTH", nullptr);
+  ui_create_header(screen, "System information", "", nullptr);
   lv_obj_t* fw = ui_create_post_card(screen, 24, 94, 368, 82);
-  ui_create_text(fw, 16, 10, 336, "FIRMWARE", FONT_NORMAL, COL_TEXT_DIM);
+  ui_create_text(fw, 16, 10, 336, "Firmware", FONT_NORMAL, COL_TEXT_DIM);
   ui_create_text(fw, 16, 38, 336, FW_VERSION, FONT_XXL, COL_TEXT);
   lv_obj_t* up = ui_create_post_card(screen, 408, 94, 368, 82);
-  ui_create_text(up, 16, 10, 336, "UPTIME", FONT_NORMAL, COL_TEXT_DIM);
+  ui_create_text(up, 16, 10, 336, "Uptime", FONT_NORMAL, COL_TEXT_DIM);
   uptimeLabel = ui_create_text(up, 16, 38, 336, "00:00:00", FONT_XXL, COL_TEXT);
   lv_obj_t* mem = ui_create_post_card(screen, 24, 196, 368, 178);
-  ui_create_text(mem, 16, 14, 336, "MEMORY AVAILABLE", FONT_NORMAL, COL_TEXT_DIM);
+  ui_create_text(mem, 16, 14, 336, "Memory available", FONT_NORMAL, COL_TEXT_DIM);
   ui_create_text(mem, 16, 50, 110, "Heap", FONT_SUBTITLE, COL_TEXT);
   heapValueLabel = ui_create_text(mem, 180, 50, 172, "--", FONT_SUBTITLE, COL_TEXT);
   heapBar = make_bar(mem, 16, 83, 336, 8, COL_GREEN);
@@ -97,12 +97,12 @@ void screen_sysinfo_create() {
   psramValueLabel = ui_create_text(mem, 180, 111, 172, "--", FONT_SUBTITLE, COL_TEXT);
   psramBar = make_bar(mem, 16, 144, 336, 8, COL_GREEN);
   lv_obj_t* cpu = ui_create_post_card(screen, 408, 196, 368, 178);
-  ui_create_text(cpu, 16, 14, 336, "PROCESSOR", FONT_NORMAL, COL_TEXT_DIM);
+  ui_create_text(cpu, 16, 14, 336, "Processor", FONT_NORMAL, COL_TEXT_DIM);
   tempLabel = ui_create_text(cpu, 16, 48, 336, "-- C", FONT_XXL, COL_TEXT);
-  ui_create_text(cpu, 16, 104, 336, "CORE 0 / CORE 1 LOAD", FONT_NORMAL, COL_TEXT_DIM);
+  ui_create_text(cpu, 16, 104, 336, "Core 0 / core 1 load", FONT_NORMAL, COL_TEXT_DIM);
   coreLoadLabel = ui_create_text(cpu, 16, 132, 336, "-- / --", FONT_XL, COL_TEXT);
-  ui_create_btn(screen, 24, 408, 152, 56, "<  BACK", FONT_BTN, UI_BTN_NORMAL, back_cb, nullptr);
-  ui_create_btn(screen, 496, 408, 280, 56, "REBOOT", FONT_BTN, UI_BTN_NORMAL, reboot_cb, nullptr);
+  ui_create_btn(screen, 24, 408, 152, 56, UI_LABEL_BACK, FONT_BTN, UI_BTN_NORMAL, back_cb, nullptr);
+  ui_create_btn(screen, 496, 408, 280, 56, "Reboot", FONT_BTN, UI_BTN_NORMAL, reboot_cb, nullptr);
 }
 
 void screen_sysinfo_invalidate_widgets() {

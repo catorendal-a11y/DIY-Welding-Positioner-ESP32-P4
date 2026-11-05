@@ -17,7 +17,15 @@ lv_obj_t* ui_create_adjust_card(lv_obj_t* parent, int x, int y, int width, const
 void ui_mark_motion_action(lv_obj_t* obj);
 void ui_mark_motion_callback(lv_obj_t* root, lv_event_cb_t callback);
 enum UiActionId { UI_ACTION_START = 1, UI_ACTION_STOP, UI_ACTION_DIRECTION };
-void ui_highlight_value_card(lv_obj_t* value);
+#define UI_LABEL_BACK LV_SYMBOL_LEFT "  Back"
+#define UI_LABEL_START LV_SYMBOL_PLAY "  Start"
+#define UI_LABEL_STOP LV_SYMBOL_STOP "  Stop"
+uint32_t ui_motion_elapsed_ms();
+// True while the running direction no longer matches the physical switch (it is latched at start).
+bool ui_direction_switch_differs();
+// Direction arrow drawn as an arc, since the UI fonts have no rotation glyphs.
+lv_obj_t* ui_create_rotation_icon(lv_obj_t* parent, int size, lv_color_t color, Direction direction);
+void ui_set_rotation_icon(lv_obj_t* icon, Direction direction);
 void lvgl_lock();
 void lvgl_unlock();
 
@@ -88,6 +96,7 @@ SystemState ui_control_state();
 void ui_control_refresh();
 void screen_main_create();
 void screen_menu_create();
+void screen_programs_set_back(ScreenId screen);
 void screen_run_modes_create();
 void screen_pulse_create();
 void screen_step_create();
@@ -193,19 +202,13 @@ void ui_nav_card_btn_style(lv_obj_t* btn, bool accent);
 
 lv_obj_t* ui_create_header(lv_obj_t* parent, const char* title, const char* right_caption,
                            lv_obj_t** opt_right_lbl);
-lv_obj_t* ui_create_settings_header(lv_obj_t* parent, const char* title, const char* right_caption,
-                                    lv_color_t right_text_color);
 // POST proposal: thin inset accent line under header (HEADER_ACCENT_* in theme.h).
-void ui_add_post_header_accent(lv_obj_t* parent);
-void ui_style_post_warn(lv_obj_t* obj);
 void ui_style_post_ok(lv_obj_t* obj);
-lv_obj_t* ui_create_separator(lv_obj_t* parent, lv_coord_t y);
 lv_obj_t* ui_create_separator_line(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w,
                                    lv_color_t color);
 void ui_style_post_card(lv_obj_t* obj);
 void ui_style_post_row(lv_obj_t* obj);
 lv_obj_t* ui_create_post_card(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h);
-lv_obj_t* ui_create_post_row(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h);
 lv_obj_t* ui_create_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h,
                         const char* text, const lv_font_t* label_font, UiBtnStyle style, lv_event_cb_t cb,
                         void* user_data);
@@ -215,18 +218,7 @@ lv_obj_t* ui_create_pm_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, const c
 // Shared slider styling (used by settings sub-screens). Applies accent indicator/knob on a
 // dark track. Caller still sets size/position/range/value.
 void ui_style_slider(lv_obj_t* slider);
-void ui_create_action_bar(lv_obj_t* parent, lv_coord_t pad_x, lv_coord_t footer_y, lv_coord_t footer_h,
-                          lv_coord_t gap, lv_coord_t left_w, lv_coord_t right_w, const char* left_text,
-                          lv_event_cb_t left_cb, const char* right_text, UiBtnStyle right_style,
-                          lv_event_cb_t right_cb);
-void ui_create_action_bar_three(lv_obj_t* parent, lv_coord_t pad_x, lv_coord_t y, lv_coord_t h,
-                                lv_coord_t gap, lv_coord_t btn_w, const char* left_text,
-                                lv_event_cb_t left_cb, UiBtnStyle left_style, const char* mid_text,
-                                lv_event_cb_t mid_cb, UiBtnStyle mid_style, const char* right_text,
-                                lv_event_cb_t right_cb, UiBtnStyle right_style, lv_obj_t** out_left_btn,
-                                lv_obj_t** out_mid_btn, lv_obj_t** out_right_btn);
 
-void screens_set_back_button(lv_obj_t* btn, ScreenId dest);  // Configure back button
 void screens_set_edit_slot(int slot);                        // Set slot for SCREEN_PROGRAM_EDIT creation
 float screen_program_edit_rpm_max();  // Ceiling for the draft's own diameter
 Preset* screen_program_edit_get_preset();                    // Get current preset being edited

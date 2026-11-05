@@ -366,13 +366,6 @@ void motor_refresh_hz_cache(void) {
   }
 }
 
-uint32_t motor_get_current_hz() {
-  float hz = motor_get_step_frequency_hz();
-  if (hz < 0.001f) return 0u;
-  if (hz >= (float)UINT32_MAX) return UINT32_MAX;
-  return (uint32_t)(hz + 0.5f);
-}
-
 uint32_t motor_milli_hz_for_rpm_calibrated(float rpm_workpiece_command) {
   if (!std::isfinite(rpm_workpiece_command) || rpm_workpiece_command < MIN_RPM || rpm_workpiece_command > speed_get_rpm_max()) return 0;
   return motion_milli_hz(double(rpmToStepHzCalibrated(rpm_workpiece_command)), START_SPEED);
@@ -475,6 +468,7 @@ bool motor_restore_configured_acceleration() {
   if (stepper != nullptr) {
     if (stepper->setAcceleration(configured) != 0) motor_command_failed();
     else {
+      stepper->applySpeedAcceleration();  // stopMove() alone keeps the previous ramp.
       configuredAcceleration.store(configured);
       restored = true;
     }

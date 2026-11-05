@@ -66,4 +66,3 @@ uint32_t pulse_get_on_ms() { return pulseOnMs.load(); }
 uint32_t pulse_get_off_ms() { return pulseOffMs.load(); }
 bool pulse_is_on_phase() { return publishedPhase.load() == PulsePhase::On; }
 uint32_t pulse_get_cycle_count() { return completedCycles.load(); }
-uint16_t pulse_get_cycle_limit() { return pulseCycleLimit.load(); }

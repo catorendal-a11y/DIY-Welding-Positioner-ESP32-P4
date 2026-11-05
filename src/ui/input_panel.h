@@ -32,7 +32,7 @@ class UiInputPanel {
     auto heading = ui_create_text(root_, 24, 24, 570, title, FONT_XL, COL_TEXT);
     lv_label_set_long_mode(heading, LV_LABEL_LONG_MODE_WRAP);
     lv_label_set_max_lines(heading, 1);
-    ui_create_btn(root_, 620, 20, 156, 48, "CANCEL", FONT_BTN, UI_BTN_NORMAL,
+    ui_create_btn(root_, 620, 20, 156, 48, "Cancel", FONT_BTN, UI_BTN_NORMAL,
                   cancel, this);
     auto instruction = ui_create_text(root_, 24, 70, 752, hint, FONT_SUBTITLE, COL_TEXT_DIM);
     lv_label_set_long_mode(instruction, LV_LABEL_LONG_MODE_WRAP);

@@ -1,5 +1,7 @@
 // The --self-test regression run.
 #include "sim_test_support.h"
+#include <FastAccelStepper.h>
+#include "../src/control/motion_policy.h"
 
 static bool sim_test_all_screens_create_update() {
   const ScreenId ids[] = {
@@ -40,49 +42,49 @@ static bool sim_test_main_controls() {
 
 static bool sim_test_navigation_flows() {
   if (!sim_show_and_check(SCREEN_MAIN)) return false;
-  if (!sim_click_label("MENU")) return false;
+  if (!sim_click_label("Menu")) return false;
   if (!sim_expect(screens_get_current() == SCREEN_MENU, "MENU button did not open menu")) return false;
 
-  if (!sim_click_label("RUN MODES")) return false;
+  if (!sim_click_label("Run modes")) return false;
   if (!sim_expect(screens_get_current() == SCREEN_RUN_MODES, "RUN MODES did not open run mode picker"))
     return false;
 
-  if (!sim_click_label("PULSE")) return false;
+  if (!sim_click_label("Pulse")) return false;
   if (!sim_expect(screens_get_current() == SCREEN_PULSE, "run mode PULSE did not open pulse screen"))
     return false;
-  if (!sim_click_label("> START")) return false;
+  if (!sim_click_action(UI_ACTION_START)) return false;
   sim_pump(260);  // ENA settle window
   if (!sim_expect(control_get_state() == STATE_PULSE, "pulse START did not enter PULSE")) return false;
-  if (!sim_click_label("[] STOP")) return false;
+  if (!sim_click_action(UI_ACTION_STOP)) return false;
   if (!sim_expect(control_get_state() == STATE_IDLE, "pulse STOP did not return IDLE")) return false;
   if (!sim_click_back_to(SCREEN_MAIN)) return false;
 
   if (!sim_show_and_check(SCREEN_RUN_MODES)) return false;
-  if (!sim_click_label("STEP")) return false;
+  if (!sim_click_label("Step")) return false;
   if (!sim_expect(screens_get_current() == SCREEN_STEP, "run mode STEP did not open step screen"))
     return false;
-  if (!sim_click_label("> STEP")) return false;
+  if (!sim_click_action(UI_ACTION_START)) return false;
   sim_pump(260);  // ENA settle window
   if (!sim_expect(control_get_state() == STATE_STEP, "step button did not enter STEP")) return false;
-  if (!sim_click_label("X STOP")) return false;
+  if (!sim_click_action(UI_ACTION_STOP)) return false;
   if (!sim_expect(control_get_state() == STATE_IDLE, "step STOP did not return IDLE")) return false;
   if (!sim_click_back_to(SCREEN_MAIN)) return false;
 
   if (!sim_show_and_check(SCREEN_RUN_MODES)) return false;
-  if (!sim_click_label("JOG")) return false;
+  if (!sim_click_label("Jog")) return false;
   if (!sim_expect(screens_get_current() == SCREEN_JOG, "run mode JOG did not open jog screen")) return false;
-  if (!sim_hold_label("HOLD CW", 260)) return false;
+  if (!sim_hold_label("Hold CW", 260)) return false;
   if (!sim_expect(control_get_state() == STATE_JOG, "jog screen CW press did not enter JOG")) return false;
-  if (!sim_send_label_event("HOLD CW", LV_EVENT_RELEASED)) return false;
+  if (!sim_send_label_event("Hold CW", LV_EVENT_RELEASED)) return false;
   if (!sim_expect(control_get_state() == STATE_IDLE, "jog screen CW release did not stop")) return false;
   if (!sim_click_back_to(SCREEN_MAIN)) return false;
 
   if (!sim_show_and_check(SCREEN_RUN_MODES)) return false;
-  if (!sim_click_label("3-2-1")) return false;
+  if (!sim_click_label("Countdown")) return false;
   if (!sim_expect(screens_get_current() == SCREEN_TIMER, "run mode timer did not open timer screen"))
     return false;
   g_settings.countdown_seconds = 1;
-  if (!sim_click_label("> START")) return false;
+  if (!sim_click_label(UI_LABEL_START)) return false;
   sim_pump(3400);
   if (!sim_expect(screens_get_current() == SCREEN_MAIN, "timer countdown did not return to main"))
     return false;
@@ -94,12 +96,59 @@ static bool sim_test_navigation_flows() {
   return true;
 }
 
+// The footer holds one action: Start while idle, Stop as soon as anything moves.
+// Stop must use the configured ramp even after a soft start.
+static bool sim_test_stop_after_soft_start() {
+  screens_show(SCREEN_MAIN); sim_pump(40);
+  FastAccelStepper::simAccelerationAtStop() = 0;
+  if (!sim_expect(control_start_continuous(true, 0), "soft start rejected")) return false;
+  sim_pump(300);
+  if (!sim_expect(control_get_state() == STATE_RUNNING, "soft start did not run")) return false;
+  control_stop(); sim_pump(300);
+  const auto configured = static_cast<int32_t>(motion_scaled_acceleration(g_settings.acceleration, g_settings.microstep));
+  return sim_expect(FastAccelStepper::simAccelerationAtStop() == configured, "Stop used the soft-start ramp");
+}
+
+static bool sim_test_single_action_footer() {
+  for (ScreenId screen : {SCREEN_MAIN, SCREEN_PULSE, SCREEN_STEP}) {
+    screens_show(screen); sim_pump(60);
+    auto start = sim_find_action(screenRoots[screen], UI_ACTION_START);
+    auto stop = sim_find_action(screenRoots[screen], UI_ACTION_STOP);
+    if (!sim_expect(start && stop, "footer action missing")) return false;
+    if (!sim_expect(!lv_obj_is_hidden(start) && lv_obj_is_hidden(stop), "idle footer shows Stop")) return false;
+    if (!sim_click_action(UI_ACTION_START)) return false;
+    if (!sim_expect(lv_obj_is_hidden(start) && !lv_obj_is_hidden(stop), "Stop missing during enable settle")) return false;
+    if (screen != SCREEN_MAIN) {
+      auto plus = sim_find_label_target(screenRoots[screen], "+", false, true);
+      if (!sim_expect(plus && lv_obj_is_disabled(plus), "settings stayed editable during motion")) return false;
+    }
+    sim_pump(260);
+    if (!sim_expect(control_get_state() != STATE_IDLE && !lv_obj_is_hidden(stop), "Stop missing during motion")) return false;
+    if (!sim_click_action(UI_ACTION_STOP)) return false;
+    sim_pump(300);
+    if (!sim_expect(control_get_state() == STATE_IDLE && !lv_obj_is_hidden(start), "Stop did not return to Start")) return false;
+  }
+  screens_show(SCREEN_MAIN); sim_pump(40);
+  return true;
+}
+
+// Programs opened from the main screen must return there, and from the menu to the menu.
+static bool sim_test_programs_return() {
+  if (!sim_show_and_check(SCREEN_MAIN)) return false;
+  if (!sim_click_label("Programs")) return false;
+  if (!sim_expect(screens_get_current() == SCREEN_PROGRAMS, "Programs did not open from main")) return false;
+  if (!sim_click_back_to(SCREEN_MAIN)) return false;
+  if (!sim_click_label("Menu") || !sim_click_label("Programs")) return false;
+  if (!sim_expect(screens_get_current() == SCREEN_PROGRAMS, "Programs did not open from menu")) return false;
+  return sim_click_back_to(SCREEN_MENU);
+}
+
 static bool sim_test_settings_and_programs() {
   const ScreenId calibrationReturn = screens_get_current();
   screens_show(SCREEN_CALIBRATION); speed_set_slider_priority(true); screens_show(calibrationReturn);
   if (!sim_expect(!speed_using_slider(), "leaving calibration left the panel pot ignored")) return false;
   if (!sim_show_and_check(SCREEN_MENU)) return false;
-  if (!sim_click_label("SETUP")) return false;
+  if (!sim_click_label("Setup")) return false;
   if (!sim_expect(screens_get_current() == SCREEN_SETTINGS, "SETUP did not open settings")) return false;
 
   struct NavCase {
@@ -107,12 +156,12 @@ static bool sim_test_settings_and_programs() {
     ScreenId dest;
   };
   const NavCase settingsCases[] = {
-      {"Motor Configuration", SCREEN_MOTOR_CONFIG},
+      {"Motor configuration", SCREEN_MOTOR_CONFIG},
       {"Calibration", SCREEN_CALIBRATION},
-      {"Display Settings", SCREEN_DISPLAY},
-      {"Pedal Settings", SCREEN_PEDAL_SETTINGS},
+      {"Display settings", SCREEN_DISPLAY},
+      {"Pedal settings", SCREEN_PEDAL_SETTINGS},
       {"Diagnostics", SCREEN_DIAGNOSTICS},
-      {"System Info", SCREEN_SYSINFO},
+      {"System info", SCREEN_SYSINFO},
       {"About", SCREEN_ABOUT},
   };
 
@@ -124,16 +173,16 @@ static bool sim_test_settings_and_programs() {
   }
 
   if (!sim_show_and_check(SCREEN_PROGRAMS)) return false;
-  if (!sim_click_label("+ NEW")) return false;
+  if (!sim_click_label("+ New")) return false;
   if (!sim_expect(screens_get_current() == SCREEN_PROGRAM_EDIT, "+ NEW did not open program edit"))
     return false;
-  if (!sim_click_label("CONTINUOUS") || !sim_click_label("MODE SETTINGS >")) return false;
+  if (!sim_click_label("Continuous") || !sim_click_label("Mode settings " LV_SYMBOL_RIGHT)) return false;
   if (!sim_expect(screens_get_current() == SCREEN_EDIT_CONT, "mode settings did not open continuous edit"))
     return false;
   float previousRpm = screen_program_edit_get_preset()->rpm;
   if (!sim_click_label("+")) return false;
   sim_pump(450);
-  if (!sim_click_label("SAVE")) return false;
+  if (!sim_click_label("Save")) return false;
   if (!sim_expect(screen_program_edit_get_preset()->rpm > previousRpm,
                   "CONT edits were overwritten by periodic update"))
     return false;
@@ -141,7 +190,7 @@ static bool sim_test_settings_and_programs() {
   const uint32_t previousOn = screen_program_edit_get_preset()->pulse_on_ms;
   if (!sim_click_label("+")) return false;
   sim_pump(450);
-  if (!sim_click_label("SAVE")) return false;
+  if (!sim_click_label("Save")) return false;
   if (!sim_expect(screen_program_edit_get_preset()->pulse_on_ms > previousOn,
                   "PULSE edits were overwritten by periodic update"))
     return false;
@@ -156,7 +205,7 @@ static bool sim_test_settings_and_programs() {
                       draft->id == draftId,
                   "program draft lost on return"))
     return false;
-  if (!sim_click_label("CANCEL")) return false;
+  if (!sim_click_label("Cancel")) return false;
   if (!sim_expect(screens_get_current() == SCREEN_PROGRAMS, "program edit cancel did not return programs"))
     return false;
 
@@ -177,7 +226,7 @@ static bool sim_test_confirm_and_overlay() {
   screen_confirm_create("TEST CANCEL", "Cancel path.", sim_confirm_cb, sim_cancel_cb, SCREEN_NONE);
   sim_pump(80);
   if (!sim_expect(screens_get_current() == SCREEN_CONFIRM, "confirm dialog did not open")) return false;
-  if (!sim_click_label("CANCEL")) return false;
+  if (!sim_click_label("Cancel")) return false;
   sim_pump(80);
   if (!sim_expect(s_cancelHit, "confirm cancel callback did not run")) return false;
   if (!sim_expect(screens_get_current() == SCREEN_MAIN, "confirm cancel did not return")) return false;
@@ -185,7 +234,7 @@ static bool sim_test_confirm_and_overlay() {
   s_confirmHit = false;
   screen_confirm_create("TEST CONFIRM", "Confirm path.", sim_confirm_cb, sim_cancel_cb, SCREEN_MAIN);
   sim_pump(80);
-  if (!sim_click_label("CONFIRM")) return false;
+  if (!sim_click_label("Confirm")) return false;
   sim_pump(80);
   if (!sim_expect(s_confirmHit, "confirm callback did not run")) return false;
   if (!sim_expect(screens_get_current() == SCREEN_MAIN, "confirm success did not return to main"))
@@ -335,10 +384,10 @@ static bool sim_test_status_bindings() {
     if (!sim_expect(sim_label_object(screenRoots[SCREEN_DIAGNOSTICS], expected), "diagnostic binding lost after theme rebuild")) return false;
   }
   simulator_set_scenario("stalled-control"); sim_pump(160);
-  if (!sim_expect(sim_label_object(screenRoots[SCREEN_DIAGNOSTICS], "STATUS STALE") &&
+  if (!sim_expect(sim_label_object(screenRoots[SCREEN_DIAGNOSTICS], "Status stale") &&
                   sim_label_object(screenRoots[SCREEN_DIAGNOSTICS], "---"), "diagnostics presented stale motion values as live")) return false;
   simulator_set_scenario("none"); sim_pump(80);
-  if (!sim_expect(!sim_label_object(screenRoots[SCREEN_DIAGNOSTICS], "STATUS STALE"), "diagnostics failed to recover fresh status")) return false;
+  if (!sim_expect(!sim_label_object(screenRoots[SCREEN_DIAGNOSTICS], "Status stale"), "diagnostics failed to recover fresh status")) return false;
   speed_slider_set(previousRpm); screens_show(SCREEN_MAIN); sim_pump(40);
   return true;
 }
@@ -347,7 +396,7 @@ static bool sim_test_countdown_cancellation_and_direction() {
   g_settings.countdown_seconds=1;
   for (unsigned elapsed : {50u,900u}) {
     screens_show(SCREEN_TIMER); sim_pump(40);
-    if (!sim_click_label("> START")) return false;
+    if (!sim_click_label(UI_LABEL_START)) return false;
     sim_pump(elapsed);
     // Fault/reset happen without a UI tick: current safety state alone cannot detect this history.
     simulator_set_estop_input(true); control_run_cycle();
@@ -356,46 +405,52 @@ static bool sim_test_countdown_cancellation_and_direction() {
     if (!sim_expect(control_get_state()==STATE_IDLE && !motor_is_running(),"old countdown restarted after fault/reset")) return false;
   }
   screens_show(SCREEN_TIMER); sim_pump(40);
-  if (!sim_click_label("> START")) return false;
+  if (!sim_click_label(UI_LABEL_START)) return false;
   control_stop(); sim_pump(1200);
   if (!sim_expect(control_get_state()==STATE_IDLE,"idle STOP did not cancel countdown")) return false;
-  if (!sim_click_label("> START")) return false;
+  if (!sim_click_label(UI_LABEL_START)) return false;
   screens_show(SCREEN_MAIN); sim_pump(1200);
   if (!sim_expect(control_get_state()==STATE_IDLE,"navigation did not cancel countdown")) return false;
   screens_show(SCREEN_TIMER); sim_pump(40);
-  if (!sim_click_label("> START")) return false;
+  if (!sim_click_label(UI_LABEL_START)) return false;
   sim_pump(1200);
   if (!sim_expect(control_get_state()==STATE_RUNNING,"fresh countdown START failed")) return false;
   control_stop(); sim_pump(300);
   g_settings.invert_direction=true; speed_set_direction(DIR_CW);
   screens_show(SCREEN_PROGRAMS); sim_pump(40);
-  if (!sim_click_label("+ NEW")) return false;
+  if (!sim_click_label("+ New")) return false;
   const auto draft=screen_program_edit_get_preset();
   if (!sim_expect(draft->direction==DIR_CW && speed_resolve_direction((Direction)draft->direction)==DIR_CCW,
                   "new program inherited an already inverted direction")) return false;
-  if (!sim_click_label("CANCEL")) return false;
+  if (!sim_click_label("Cancel")) return false;
   g_settings.invert_direction=false;
   speed_set_workpiece_diameter_mm(300); speed_slider_set(0.02f);
   screens_show(SCREEN_STEP); sim_pump(40);
-  if (!sim_send_label_event("-", LV_EVENT_SHORT_CLICKED)) return false;
+  auto speedCard=lv_obj_get_parent(sim_label_object(screenRoots[SCREEN_STEP],"Speed"));
+  auto targetCard=lv_obj_get_parent(sim_label_object(screenRoots[SCREEN_STEP],"Target (calc.)"));
+  lv_obj_send_event(sim_find_label_target(speedCard,"-",false,true),LV_EVENT_SHORT_CLICKED,nullptr); sim_pump(60);
   if (!sim_expect(fabs(speed_get_target_rpm()-0.019f)<0.00001f,"Step fine adjustment failed")) return false;
+  if (!sim_click_label("90\xC2\xB0")) return false;
+  lv_obj_send_event(sim_find_label_target(targetCard,"+",false,true),LV_EVENT_SHORT_CLICKED,nullptr); sim_pump(60);
+  if (!sim_expect(sim_find_label_target(screenRoots[SCREEN_STEP],LV_SYMBOL_PLAY "  Step 95\xC2\xB0",false,true) != nullptr,"Step angle + did not change the move")) return false;
+  lv_obj_send_event(sim_find_label_target(targetCard,"-",false,true),LV_EVENT_SHORT_CLICKED,nullptr); sim_pump(60);
   if (!sim_expect(audit_labels(screenRoots[SCREEN_STEP],"Step fine adjustment")==0,"Step labels overflowed")) return false;
   // Boundary geometry must produce an explanation, never a narrowed/reversed move.
   g_settings.microstep=32; g_settings.calibration_factor=1.5f;
   speed_set_workpiece_diameter_mm(20000);
-  if (!sim_click_label("TARGET")) return false;
+  if (!sim_click_label("Target (calc.)")) return false;
   auto field=sim_find_type(screenRoots[SCREEN_STEP],&lv_textarea_class);
   auto keyboard=sim_find_type(screenRoots[SCREEN_STEP],&lv_keyboard_class);
   if (!sim_expect(field && keyboard,"custom Step input missing")) return false;
   lv_textarea_set_text(field,"3600"); lv_obj_send_event(keyboard,LV_EVENT_READY,nullptr); sim_pump(80);
-  auto blockedMove=sim_find_active_label_target("OUT OF RANGE");
+  auto blockedMove=sim_find_active_label_target("Out of range");
   if (!sim_expect(blockedMove && lv_obj_is_disabled(blockedMove),"overflowing move was not visibly blocked")) return false;
   if (!sim_expect(audit_labels(screenRoots[SCREEN_STEP],"Step boundary values")==0,"boundary Step labels overflowed")) return false;
   g_settings.microstep=16; g_settings.calibration_factor=1; speed_set_workpiece_diameter_mm(300);
-  if (!sim_click_label("90")) return false;
+  if (!sim_click_label("90\xC2\xB0")) return false;
   screens_show(SCREEN_DISPLAY); sim_pump(40);
   lv_obj_t* dim=nullptr;
-  for (const char* value : {"OFF","30s","1m","2m","5m"})
+  for (const char* value : {"Off","30s","1m","2m","5m"})
     if (!dim) dim=sim_find_active_label_target(value);
   if (!sim_expect(dim!=nullptr,"Display dim setting missing")) return false;
   lv_obj_send_event(dim,LV_EVENT_CLICKED,nullptr); sim_pump(40);
@@ -421,6 +476,8 @@ static bool sim_test_v23_fault_scenarios() {
     if (!sim_expect(control_get_state() == STATE_ESTOP, "fault scenario did not latch")) return false;
     if (!sim_expect(sim_label_object(lv_layer_top(), fault.title) != nullptr, "fault overlay heading wrong")) return false;
     if (!sim_expect(!control_start_continuous(), "fault scenario admitted motion")) return false;
+    auto erase = sim_find_label_target(lv_layer_top(), "Hold 3 s to erase data", false, true);
+    if (!sim_expect(erase && lv_obj_is_hidden(erase) == (std::strcmp(fault.scenario, "storage") != 0), "erase offered for the wrong fault")) return false;
     if (!fault.resettable) {
       auto blocked = sim_find_label_target(lv_layer_top(), "RESET BLOCKED", false, true);
       if (!sim_expect(blocked && lv_obj_is_disabled(blocked), "fault reset was not blocked")) return false;
@@ -451,12 +508,12 @@ static bool sim_test_operator_feedback() {
   lv_obj_send_event(row, LV_EVENT_CLICKED, nullptr); sim_pump(80);
   if (!sim_expect(screens_get_current() == SCREEN_CONFIRM, "program review did not open")) return false;
   simulator_set_scenario("speed-pot");
-  if (!sim_click_label("CONFIRM")) return false;
+  if (!sim_click_label("Confirm")) return false;
   sim_pump(120);
   if (!sim_expect(screens_get_current() == SCREEN_CONFIRM &&
                   sim_label_object(screenRoots[SCREEN_CONFIRM], "PROGRAM BLOCKED"), "blocked start was silent")) return false;
   if (!sim_expect(audit_labels(screenRoots[SCREEN_CONFIRM], "program blocked") == 0, "blocked text overflowed")) return false;
-  if (!sim_click_label("CANCEL")) return false;
+  if (!sim_click_label("Cancel")) return false;
   sim_pump(80);
   if (!sim_expect(screens_get_current() == SCREEN_PROGRAMS, "blocked dialog lost its return screen")) return false;
   simulator_set_scenario("none"); safety_reset_estop(); control_transition_to(STATE_IDLE); sim_pump(40);
@@ -465,27 +522,34 @@ static bool sim_test_operator_feedback() {
 
   // REBOOT explains a pending save, and that dialog must not offer REBOOT.
   screens_show(SCREEN_SYSINFO); sim_pump(40);
-  simulator_set_scenario("nvs-failure"); sim_pump(600);
-  if (!sim_click_label("REBOOT")) return false;
+  storage_request_settings_save();
+  if (!sim_click_label("Reboot")) return false;
   sim_pump(80);
   if (!sim_expect(sim_label_object(screenRoots[SCREEN_CONFIRM], "RESTART NOT POSSIBLE") &&
-                  sim_label_object(screenRoots[SCREEN_CONFIRM], "CONFIRM"), "blocked REBOOT was silent")) return false;
-  if (!sim_click_label("CANCEL")) return false;
+                  sim_label_object(screenRoots[SCREEN_CONFIRM], "Confirm"), "blocked REBOOT was silent")) return false;
+  if (!sim_click_label("Cancel")) return false;
   sim_pump(80);
   if (!sim_expect(screens_get_current() == SCREEN_SYSINFO, "REBOOT dialog lost its return screen")) return false;
+  // A save that keeps failing must not lock the on-screen restart.
+  simulator_set_scenario("nvs-failure"); storage_request_settings_save(); sim_pump(600);
+  if (!sim_click_label("Reboot")) return false;
+  sim_pump(80);
+  if (!sim_expect(sim_label_object(screenRoots[SCREEN_CONFIRM], "REBOOT DEVICE") != nullptr, "failed save blocked REBOOT")) return false;
+  if (!sim_click_label("Cancel")) return false;
+  sim_pump(80);
   simulator_set_scenario("none"); sim_pump(1500);
 
   // Jog must not change the manual direction.
   speed_set_direction(DIR_CW);
   screens_show(SCREEN_JOG); sim_pump(40);
-  if (!sim_hold_label("HOLD CCW", 80)) return false;
+  if (!sim_hold_label("Hold CCW", 80)) return false;
   sim_pump(300);
   if (!sim_expect(speed_get_requested_direction() == DIR_CW, "Jog changed the manual direction")) return false;
 
   // Invalid Step entries keep the keypad open and explain the limit.
   speed_set_workpiece_diameter_mm(300);
   screens_show(SCREEN_STEP); sim_pump(40);
-  if (!sim_click_label("TARGET")) return false;
+  if (!sim_click_label("Target (calc.)")) return false;
   auto field = sim_find_type(screenRoots[SCREEN_STEP], &lv_textarea_class);
   auto keyboard = sim_find_type(screenRoots[SCREEN_STEP], &lv_keyboard_class);
   if (!sim_expect(field && keyboard, "Step keypad missing")) return false;
@@ -495,7 +559,7 @@ static bool sim_test_operator_feedback() {
                   "invalid Step angle was silent")) return false;
   lv_textarea_set_text(field, "90"); lv_obj_send_event(keyboard, LV_EVENT_READY, nullptr); sim_pump(80);
   if (!sim_expect(!sim_find_type(screenRoots[SCREEN_STEP], &lv_keyboard_class), "valid Step angle kept the keypad")) return false;
-  if (!sim_click_label("DIA")) return false;
+  if (!sim_click_label("Diameter", true)) return false;
   field = sim_find_type(screenRoots[SCREEN_STEP], &lv_textarea_class);
   keyboard = sim_find_type(screenRoots[SCREEN_STEP], &lv_keyboard_class);
   if (!sim_expect(field && keyboard, "diameter keypad missing")) return false;
@@ -509,7 +573,7 @@ static bool sim_test_operator_feedback() {
   const auto previousAccent = g_settings.accent_color;
   theme_set_color(1); screen_saver_destroy();
   screen_saver_request_preview(); sim_pump(80);
-  auto standby = sim_label_object(lv_layer_top(), "01 / STANDBY");
+  auto standby = sim_label_object(lv_layer_top(), "Standby");
   const bool follows = standby && lv_color_eq(lv_obj_get_style_text_color(standby, LV_PART_MAIN), theme_accent_on_dark());
   screen_saver_destroy(); theme_set_color(previousAccent); sim_pump(40);
   return sim_expect(follows, "screen saver ignored the accent");
@@ -527,8 +591,15 @@ int run_self_test() {
   if (!sim_test_navigation_flows()) return 4;
   std::puts("SIM SELFTEST: run mode flows ok");
   if (!sim_test_settings_and_programs()) return 5;
+  if (!sim_test_single_action_footer()) return 22;
+  if (!sim_test_stop_after_soft_start()) return 24;
+  if (!sim_test_programs_return()) return 23;
+  std::puts("SIM SELFTEST: one-action footer and Programs return ok");
   std::puts("SIM SELFTEST: settings/programs ok");
-  if (run_program_edit_test() != 0) return 15;
+  if (const int step = run_program_edit_test()) {
+    std::printf("SELFTEST FAIL: program editor step %d\n", step);
+    return 15;
+  }
   std::puts("SIM SELFTEST: new program modes/precision/input/save/cancel ok");
   if (run_motor_config_test() != 0) return 18;
   std::puts("SIM SELFTEST: motor exact input/cancel/save lock/lifecycle ok");
@@ -559,7 +630,7 @@ int run_self_test() {
   screens_show(SCREEN_MAIN); sim_pump(80);
   simulator_set_scenario("stalled-control"); sim_pump(160);
   if (!sim_expect(!ui_control_fresh() && !control_start_continuous(), "stale control admitted motion")) return 11;
-  auto start = sim_find_label_target(screenRoots[SCREEN_MAIN], "START BLOCKED", false, true);
+  auto start = sim_find_label_target(screenRoots[SCREEN_MAIN], "Start blocked", false, true);
   if (!sim_expect(start && lv_obj_is_disabled(start), "stale START not disabled")) return 12;
   control_stop(); sim_pump(60);
   if (!sim_expect(control_get_state() == STATE_ESTOP, "stalled executor did not fault on STOP")) return 13;

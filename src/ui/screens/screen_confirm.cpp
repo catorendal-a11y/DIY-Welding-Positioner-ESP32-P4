@@ -64,15 +64,15 @@ void screen_confirm_create_static() {
   if (!screen) return;
   lv_obj_clean(screen);
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
-  ui_create_header(screen, "Confirm action", "REVIEW", nullptr);
+  ui_create_header(screen, "Confirm action", "", nullptr);
   lv_obj_t* dialog = ui_create_post_card(screen, 56, 94, 688, 280);
   bodyTitleLabel = ui_create_text(dialog, 24, 26, 640, "", FONT_XL, COL_TEXT);
   lv_label_set_long_mode(bodyTitleLabel, LV_LABEL_LONG_MODE_WRAP);
   bodyMsgLabel = ui_create_text(dialog, 24, 94, 640, "", FONT_SUBTITLE, COL_TEXT_DIM);
   lv_label_set_long_mode(bodyMsgLabel, LV_LABEL_LONG_MODE_WRAP);
-  ui_create_btn(screen, 24, 408, 368, 56, "CANCEL", FONT_BTN, UI_BTN_NORMAL, cancel_event_cb, nullptr);
+  ui_create_btn(screen, 24, 408, 368, 56, "Cancel", FONT_BTN, UI_BTN_NORMAL, cancel_event_cb, nullptr);
   lv_obj_t* confirm =
-      ui_create_btn(screen, 408, 408, 368, 56, "CONFIRM", FONT_BTN, UI_BTN_DANGER, confirm_event_cb, nullptr);
+      ui_create_btn(screen, 408, 408, 368, 56, "Confirm", FONT_BTN, UI_BTN_DANGER, confirm_event_cb, nullptr);
   dangerBtnLabel = lv_obj_get_child(confirm, 0);
 }
 
@@ -100,11 +100,11 @@ void screen_confirm_create(const char* title, const char* message, void (*on_con
   lv_label_set_text(bodyTitleLabel, title);
   lv_label_set_text(bodyMsgLabel, message);
 
-  const char* dangerTxt = "CONFIRM";
+  const char* dangerTxt = "Confirm";
   if (strstr(title, "Delete") != nullptr || strstr(title, "DELETE") != nullptr) {
-    dangerTxt = "DELETE";
+    dangerTxt = "Delete";
   } else if (strstr(title, "REBOOT") != nullptr || strstr(title, "Reboot") != nullptr) {
-    dangerTxt = "REBOOT";
+    dangerTxt = "Reboot";
   }
   lv_label_set_text(dangerBtnLabel, dangerTxt);
 

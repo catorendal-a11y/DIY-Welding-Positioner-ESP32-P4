@@ -26,7 +26,7 @@ static lv_obj_t* mirrorBtnLabel = nullptr;
 static lv_obj_t* infoLabel = nullptr;
 
 static const int dimTimeouts[] = {0, 30, 60, 120, 300};
-static const char* dimStrings[] = {"OFF", "30s", "1m", "2m", "5m"};
+static const char* dimStrings[] = {"Off", "30s", "1m", "2m", "5m"};
 static const int dimCount = 5;
 static int currentDimIdx = 0;
 static bool dimDraftLoaded = false;
@@ -61,7 +61,7 @@ static void update_slider_from_settings() {
 
 static void display_changed() {
   displaySaveTicket = 0;
-  if (displaySaveButton) lv_label_set_text(lv_obj_get_child(displaySaveButton,0),"SAVE");
+  if (displaySaveButton) lv_label_set_text(lv_obj_get_child(displaySaveButton,0),"Save");
 }
 
 static void back_cb(lv_event_t* e) {
@@ -145,11 +145,11 @@ static void mirror_toggle_cb(lv_event_t* e) {
 static void update_mirror_label() {
   if (!mirrorBtnLabel) return;
   if (usb_mirror_is_armed()) {
-    lv_label_set_text(mirrorBtnLabel, "ARMED");
+    lv_label_set_text(mirrorBtnLabel, "Armed");
   } else if (usb_mirror_is_connected()) {
-    lv_label_set_text(mirrorBtnLabel, "LINK");
+    lv_label_set_text(mirrorBtnLabel, "Linked");
   } else {
-    lv_label_set_text(mirrorBtnLabel, "NO LINK");
+    lv_label_set_text(mirrorBtnLabel, "No link");
   }
 }
 #endif
@@ -158,7 +158,7 @@ static void update_info_text() {
   if (!infoLabel) return;
   char buf[64];
   if (dimTimeouts[currentDimIdx] == 0) {
-    snprintf(buf, sizeof(buf), "Screen saver is OFF. Preview it below.");
+    snprintf(buf, sizeof(buf), "Screen saver is off. Preview it below.");
   } else {
     snprintf(buf, sizeof(buf), "Screen saver after %s idle. First touch wakes only.", dimStrings[currentDimIdx]);
   }
@@ -182,8 +182,8 @@ void screen_display_create() {
     for (int i = 0; i < dimCount; ++i) if (dimTimeouts[i] == dimSec) currentDimIdx = i;
     dimDraftLoaded = true;
   }
-  ui_create_header(screen, "Display settings", "SCREEN & USB", nullptr);
-  ui_create_text(screen, 24, 94, 400, "BRIGHTNESS", FONT_SUBTITLE, COL_TEXT_DIM);
+  ui_create_header(screen, "Display settings", "", nullptr);
+  ui_create_text(screen, 24, 94, 400, "Brightness", FONT_SUBTITLE, COL_TEXT_DIM);
   brightnessValueLabel = ui_create_text(screen, 656, 94, 120, "", FONT_LARGE, COL_TEXT);
   lv_obj_set_style_text_align(brightnessValueLabel, LV_TEXT_ALIGN_RIGHT, 0);
   brightnessSlider = lv_slider_create(screen);
@@ -206,7 +206,7 @@ void screen_display_create() {
   themeBtn = setting(288, "Accent color", theme_get_name(accent), theme_cycle_cb);
   themeBtnLabel = lv_obj_get_child(themeBtn, 0);
 #if ENABLE_USB_UI_MIRROR
-  mirrorBtn = setting(346, "USB remote control", "NO LINK", mirror_toggle_cb);
+  mirrorBtn = setting(346, "USB remote control", "No link", mirror_toggle_cb);
   mirrorBtnLabel = lv_obj_get_child(mirrorBtn, 0);
   update_mirror_label();
   infoLabel = nullptr;
@@ -214,10 +214,10 @@ void screen_display_create() {
   infoLabel = ui_create_text(screen, 24, 358, 752, "", FONT_SUBTITLE, COL_TEXT_DIM);
   update_info_text();
 #endif
-  ui_create_btn(screen, 24, 408, 152, 56, "BACK", FONT_BTN, UI_BTN_NORMAL, back_cb, nullptr);
-  previewButton = ui_create_btn(screen, 192, 408, 280, 56, "PREVIEW", FONT_BTN, UI_BTN_NORMAL,
+  ui_create_btn(screen, 24, 408, 152, 56, UI_LABEL_BACK, FONT_BTN, UI_BTN_NORMAL, back_cb, nullptr);
+  previewButton = ui_create_btn(screen, 192, 408, 280, 56, "Preview", FONT_BTN, UI_BTN_NORMAL,
                 [](lv_event_t*) { screen_saver_request_preview(); }, nullptr);
-  displaySaveButton = ui_create_btn(screen, 496, 408, 280, 56, "SAVE", FONT_BTN, UI_BTN_ACCENT, save_cb, nullptr);
+  displaySaveButton = ui_create_btn(screen, 496, 408, 280, 56, "Save", FONT_BTN, UI_BTN_ACCENT, save_cb, nullptr);
 }
 
 void screen_display_invalidate_widgets() {
@@ -243,7 +243,7 @@ void screen_display_update() {
   if (previewButton) lv_obj_set_disabled(previewButton, !screen_saver_available());
   if (displaySaveTicket && displaySaveButton) {
     const auto status = storage_settings_save_status(displaySaveTicket);
-    lv_label_set_text(lv_obj_get_child(displaySaveButton,0), status == STORAGE_SAVED ? "SAVED" : status == STORAGE_ERROR ? "FAILED / RETRYING" : "SAVING...");
+    lv_label_set_text(lv_obj_get_child(displaySaveButton,0), status == STORAGE_SAVED ? "Saved" : status == STORAGE_ERROR ? "Failed, retrying" : "SAVING...");
   }
   if (themeRefreshPending.load(std::memory_order_acquire)) {
     themeRefreshPending.store(false, std::memory_order_release);

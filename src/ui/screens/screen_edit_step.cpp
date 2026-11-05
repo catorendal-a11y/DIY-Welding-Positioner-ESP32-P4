@@ -39,7 +39,7 @@ static void update_computed() {
 
   // Total angle = angle * repeats
   float totalAngle = editAngle * editRepeats;
-  lv_label_set_text_fmt(totalAngleLabel, "%.0f deg", totalAngle);
+  lv_label_set_text_fmt(totalAngleLabel, "%.0f\xC2\xB0", totalAngle);
 
   // Duration: time for all steps + dwell between steps
   // Step duration = angle / 360 / RPM * 60 seconds
@@ -51,7 +51,7 @@ static void update_computed() {
       if (totalDuration >= 60.0f) {
         lv_label_set_text_fmt(durationLabel, "%.1f min", totalDuration / 60.0f);
       } else {
-        lv_label_set_text_fmt(durationLabel, "%.1f sec", totalDuration);
+        lv_label_set_text_fmt(durationLabel, "%.1f s", totalDuration);
       }
     }
   } else {
@@ -68,7 +68,7 @@ static void update_computed() {
 static void update_diameter_label() {
   if (!diameterLabel) return;
   if (editDiameterMm < 1.0f) {
-    lv_label_set_text(diameterLabel, "DEFAULT");
+    lv_label_set_text(diameterLabel, "Default");
   } else {
     lv_label_set_text_fmt(diameterLabel, "%.0f mm", editDiameterMm);
   }
@@ -95,7 +95,7 @@ static void angle_adj_cb(lv_event_t* e) {
   editAngle += delta;
   if (editAngle < 1.0f) editAngle = 1.0f;
   if (editAngle > 360.0f) editAngle = 360.0f;
-  if (angleLabel) lv_label_set_text_fmt(angleLabel, "%.0f", editAngle);
+  if (angleLabel) lv_label_set_text_fmt(angleLabel, "%.0f\xC2\xB0", editAngle);
   update_computed();
 }
 
@@ -105,7 +105,7 @@ static void rpm_adj_cb(lv_event_t* e) {
   if (editRpm < MIN_RPM) editRpm = MIN_RPM;
   const float rpmMax = speed_get_rpm_max_for_diameter(editDiameterMm);  // Diameter is edited on this screen.
   if (editRpm > rpmMax) editRpm = rpmMax;
-  if (rpmLabel) ui_set_rpm(rpmLabel, editRpm);
+  if (rpmLabel) ui_set_rpm_unit(rpmLabel, editRpm);
   update_computed();
 }
 
@@ -125,7 +125,7 @@ static void diameter_adj_cb(lv_event_t* e) {
   if (editDiameterMm < 1.0f) editDiameterMm = 0.0f;
   if (editDiameterMm > 20000.0f) editDiameterMm = 20000.0f;
   editRpm = constrain(editRpm, MIN_RPM, speed_get_rpm_max_for_diameter(editDiameterMm));
-  if (rpmLabel) ui_set_rpm(rpmLabel, editRpm);
+  if (rpmLabel) ui_set_rpm_unit(rpmLabel, editRpm);
   update_diameter_label();
   update_computed();
 }
@@ -144,7 +144,7 @@ static void dwell_adj_cb(lv_event_t* e) {
   editDwell += delta;
   if (editDwell < 0.0f) editDwell = 0.0f;
   if (editDwell > 30.0f) editDwell = 30.0f;
-  if (dwellLabel) lv_label_set_text_fmt(dwellLabel, "%.1f sec", editDwell);
+  if (dwellLabel) lv_label_set_text_fmt(dwellLabel, "%.1f s", editDwell);
   update_computed();
 }
 
@@ -195,28 +195,28 @@ void screen_edit_step_create() {
   editDir = p ? speed_resolve_direction((Direction)p->direction) : DIR_CW;
   editRepeats = p ? p->step_repeats : 1;
   editDwell = p ? p->step_dwell_sec : 0.0f;
-  ui_create_header(screen, "Step settings", "PROGRAM EDIT", nullptr);
-  angleLabel = ui_create_adjust_card(screen, 24, 86, 240, "ANGLE / degrees", angle_adj_cb);
-  rpmLabel = ui_create_adjust_card(screen, 280, 86, 240, "SPEED / RPM", rpm_adj_cb);
-  diameterLabel = ui_create_adjust_card(screen, 536, 86, 240, "PART DIAMETER", diameter_adj_cb);
-  repeatsLabel = ui_create_adjust_card(screen, 24, 226, 240, "REPEATS", repeats_adj_cb);
-  dwellLabel = ui_create_adjust_card(screen, 280, 226, 240, "DWELL / s", dwell_adj_cb);
+  ui_create_header(screen, "Step settings", "", nullptr);
+  angleLabel = ui_create_adjust_card(screen, 24, 86, 240, "Angle", angle_adj_cb);
+  rpmLabel = ui_create_adjust_card(screen, 280, 86, 240, "Speed", rpm_adj_cb);
+  diameterLabel = ui_create_adjust_card(screen, 536, 86, 240, "Diameter", diameter_adj_cb);
+  repeatsLabel = ui_create_adjust_card(screen, 24, 226, 240, "Repeats", repeats_adj_cb);
+  dwellLabel = ui_create_adjust_card(screen, 280, 226, 240, "Dwell", dwell_adj_cb);
   ui_create_post_card(screen, 536, 226, 240, 124);
-  ui_create_text(screen, 550, 238, 212, "DIRECTION", FONT_NORMAL, COL_TEXT_DIM);
+  ui_create_text(screen, 550, 238, 212, "Direction", FONT_NORMAL, COL_TEXT_DIM);
   dirBtns[0] = ui_create_btn(screen, 550, 282, 100, 56, "CW", FONT_BTN, UI_BTN_NORMAL, dir_cb, (void*)0);
   dirBtns[1] = ui_create_btn(screen, 662, 282, 100, 56, "CCW", FONT_BTN, UI_BTN_NORMAL, dir_cb, (void*)1);
-  lv_label_set_text_fmt(angleLabel, "%.0f", editAngle);
-  ui_set_rpm(rpmLabel, editRpm);
+  lv_label_set_text_fmt(angleLabel, "%.0f\xC2\xB0", editAngle);
+  ui_set_rpm_unit(rpmLabel, editRpm);
   lv_label_set_text_fmt(repeatsLabel, "%d", editRepeats);
-  lv_label_set_text_fmt(dwellLabel, "%.1f sec", editDwell);
-  ui_create_text(screen, 24, 366, 70, "TOTAL", FONT_SMALL, COL_TEXT_DIM);
+  lv_label_set_text_fmt(dwellLabel, "%.1f s", editDwell);
+  ui_create_text(screen, 24, 366, 70, "Total", FONT_SMALL, COL_TEXT_DIM);
   totalAngleLabel = ui_create_text(screen, 98, 362, 160, "", FONT_SUBTITLE, COL_TEXT);
-  ui_create_text(screen, 280, 366, 72, "EST.", FONT_SMALL, COL_TEXT_DIM);
+  ui_create_text(screen, 280, 366, 72, "Time", FONT_SMALL, COL_TEXT_DIM);
   durationLabel = ui_create_text(screen, 356, 362, 160, "", FONT_SUBTITLE, COL_TEXT);
-  ui_create_text(screen, 536, 366, 70, "STEPS", FONT_SMALL, COL_TEXT_DIM);
+  ui_create_text(screen, 536, 366, 70, "Steps", FONT_SMALL, COL_TEXT_DIM);
   stepsLabel = ui_create_text(screen, 610, 362, 166, "", FONT_SUBTITLE, COL_TEXT);
-  ui_create_btn(screen, 24, 408, 152, 56, "CANCEL", FONT_BTN, UI_BTN_NORMAL, cancel_cb, nullptr);
-  ui_create_btn(screen, 496, 408, 280, 56, "SAVE", FONT_BTN, UI_BTN_ACCENT, save_cb, nullptr);
+  ui_create_btn(screen, 24, 408, 152, 56, "Cancel", FONT_BTN, UI_BTN_NORMAL, cancel_cb, nullptr);
+  ui_create_btn(screen, 496, 408, 280, 56, "Save", FONT_BTN, UI_BTN_ACCENT, save_cb, nullptr);
   update_diameter_label();
   update_dir_buttons();
   update_computed();
@@ -238,11 +238,11 @@ void screen_edit_step_invalidate_widgets() {
 void screen_edit_step_update() {
   if (!screens_is_active(SCREEN_EDIT_STEP)) return;
 
-  if (angleLabel) lv_label_set_text_fmt(angleLabel, "%.0f", editAngle);
-  if (rpmLabel) ui_set_rpm(rpmLabel, editRpm);
+  if (angleLabel) lv_label_set_text_fmt(angleLabel, "%.0f\xC2\xB0", editAngle);
+  if (rpmLabel) ui_set_rpm_unit(rpmLabel, editRpm);
   update_diameter_label();
   if (repeatsLabel) lv_label_set_text_fmt(repeatsLabel, "%d", editRepeats);
-  if (dwellLabel) lv_label_set_text_fmt(dwellLabel, "%.1f sec", editDwell);
+  if (dwellLabel) lv_label_set_text_fmt(dwellLabel, "%.1f s", editDwell);
   update_dir_buttons();
   update_computed();
 }

@@ -36,6 +36,10 @@ static lv_obj_t* bigNumberLabel = nullptr;
 static lv_obj_t* startAfterValLbl = nullptr;
 static lv_obj_t* rpmValLbl = nullptr;
 static lv_obj_t* warnDetailLbl = nullptr;
+static lv_obj_t* timerStartBtn = nullptr;
+static lv_obj_t* timerStopBtn = nullptr;
+static lv_obj_t* secMinusBtn = nullptr;
+static lv_obj_t* secPlusBtn = nullptr;
 
 static void set_countdown_arc_angle(int endAngle, lv_color_t color) {
   if (!arcRing) return;
@@ -51,16 +55,12 @@ static void set_countdown_arc_angle(int endAngle, lv_color_t color) {
 static void update_rpm_label_if_changed() {
   if (!rpmValLbl) return;
   const float rpm = speed_get_target_rpm();
-  char text[16];
-  ui_format_rpm(text, sizeof(text), rpm);
-  if (strcmp(text, lastRpmShown) == 0) return;
-  snprintf(lastRpmShown, sizeof(lastRpmShown), "%s", text);
-  lv_label_set_text(rpmValLbl, text);
+  ui_set_rpm_unit(rpmValLbl, rpm);
 }
 
 static void refresh_start_after_label() {
   if (!startAfterValLbl) return;
-  lv_label_set_text_fmt(startAfterValLbl, "%ds", countdownSec);
+  lv_label_set_text_fmt(startAfterValLbl, "%d s", countdownSec);
 }
 
 static void save_countdown_setting() {
@@ -112,7 +112,7 @@ static void start_event_cb(lv_event_t* e) {
   countdownStartMs = millis();
   speed_slider_set(speed_get_target_rpm());
   if (warnDetailLbl) {
-    lv_label_set_text(warnDetailLbl, countdownCancelled ? "Cancelled - press START again" : "Motor remains disabled until zero");
+    lv_label_set_text(warnDetailLbl, countdownCancelled ? "Cancelled - press Start again" : "Motor remains disabled until zero");
     lv_obj_set_style_text_color(warnDetailLbl, COL_TEXT, 0);
   }
 }
@@ -126,8 +126,8 @@ static void stop_event_cb(lv_event_t* e) {
 static lv_obj_t* timer_make_info_card(lv_obj_t* scr, int y, const char* title, bool isWarn) {
   const int cardH = 90;
   lv_obj_t* c = lv_obj_create(scr);
-  lv_obj_set_size(c, 380, cardH);
-  lv_obj_set_pos(c, 380, y);
+  lv_obj_set_size(c, 440, cardH);
+  lv_obj_set_pos(c, 336, y);
   if (isWarn) {
     lv_obj_set_style_bg_color(c, COL_BG_WARN_PANEL, 0);
     lv_obj_set_style_border_color(c, COL_BORDER_WARN, 0);
@@ -143,9 +143,9 @@ static lv_obj_t* timer_make_info_card(lv_obj_t* scr, int y, const char* title, b
 
   lv_obj_t* t = lv_label_create(c);
   lv_label_set_text(t, title);
-  lv_obj_set_style_text_font(t, FONT_NORMAL, 0);
+  lv_obj_set_style_text_font(t, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(t, isWarn ? COL_YELLOW : COL_TEXT_DIM, 0);
-  lv_obj_set_pos(t, 16, 16);
+  lv_obj_set_pos(t, 16, 12);
   return c;
 }
 
@@ -167,7 +167,7 @@ void screen_timer_create() {
   lastArcEndAngle = -1;
   lastRpmShown[0] = '\0';
 
-  ui_create_header(screen, "COUNTDOWN", "DELAY START", nullptr);
+  ui_create_header(screen, "Countdown", "", nullptr);
 
   ringCard = lv_obj_create(screen);
   lv_obj_set_size(ringCard, 296, 290);
@@ -198,7 +198,7 @@ void screen_timer_create() {
   bigNumberLabel = lv_label_create(ringCard);
   lv_label_set_text(bigNumberLabel, "3");
   lv_obj_set_style_text_font(bigNumberLabel, FONT_HUGE, 0);
-  lv_obj_set_style_text_color(bigNumberLabel, COL_ACCENT, 0);
+  lv_obj_set_style_text_color(bigNumberLabel, COL_TEXT, 0);
   lv_obj_set_style_text_align(bigNumberLabel, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_width(bigNumberLabel, 296);
   lv_obj_align(bigNumberLabel, LV_ALIGN_CENTER, 0, -16);
@@ -206,49 +206,45 @@ void screen_timer_create() {
   lv_obj_set_style_transform_pivot_y(bigNumberLabel, 24, 0);
 
   lv_obj_t* secCaption = lv_label_create(ringCard);
-  lv_label_set_text(secCaption, "SECONDS");
+  lv_label_set_text(secCaption, "seconds");
   lv_obj_set_style_text_font(secCaption, FONT_LARGE, 0);
   lv_obj_set_style_text_color(secCaption, COL_TEXT_DIM, 0);
   lv_obj_set_style_text_align(secCaption, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_width(secCaption, 296);
   lv_obj_align(secCaption, LV_ALIGN_CENTER, 0, 22);
 
-  lv_obj_t* afterCard = timer_make_info_card(screen, 94, "START AFTER", false);
+  lv_obj_t* afterCard = timer_make_info_card(screen, 94, "Start after", false);
   startAfterValLbl = lv_label_create(afterCard);
   refresh_start_after_label();
   lv_obj_set_style_text_font(startAfterValLbl, FONT_XXL, 0);
-  lv_obj_set_style_text_color(startAfterValLbl, COL_ACCENT, 0);
-  lv_obj_set_style_text_align(startAfterValLbl, LV_TEXT_ALIGN_LEFT, 0);
-  lv_obj_set_width(startAfterValLbl, 132);
-  lv_obj_align(startAfterValLbl, LV_ALIGN_LEFT_MID, 108, 4);
+  lv_obj_set_style_text_color(startAfterValLbl, COL_TEXT, 0);
+  lv_obj_set_pos(startAfterValLbl, 16, 40);
 
-  // Keep +/- clear of "%ds" text (was RIGHT + -64: suffix sat under + button)
-  ui_create_btn(afterCard, 268, 22, 52, 44, "-", FONT_SUBTITLE, UI_BTN_NORMAL, sec_adj_cb,
-                (void*)(intptr_t)(-1));
-  ui_create_btn(afterCard, 326, 22, 52, 44, "+", FONT_SUBTITLE, UI_BTN_ACCENT, sec_adj_cb,
-                (void*)(intptr_t)(1));
+  secMinusBtn = ui_create_btn(afterCard, 225, 17, 100, 56, "-", FONT_XL, UI_BTN_NORMAL, sec_adj_cb, (void*)(intptr_t)(-1));
+  secPlusBtn = ui_create_btn(afterCard, 331, 17, 100, 56, "+", FONT_XL, UI_BTN_NORMAL, sec_adj_cb, (void*)(intptr_t)(1));
 
-  lv_obj_t* rpmCard = timer_make_info_card(screen, 194, "TARGET RPM", false);
+  lv_obj_t* rpmCard = timer_make_info_card(screen, 194, "Target speed", false);
   rpmValLbl = lv_label_create(rpmCard);
   update_rpm_label_if_changed();
-  lv_obj_set_style_text_font(rpmValLbl, ui_readout_font(), 0);
+  lv_obj_set_style_text_font(rpmValLbl, FONT_XXL, 0);
   lv_obj_set_style_text_color(rpmValLbl, COL_TEXT, 0);
-  lv_obj_set_style_text_align(rpmValLbl, LV_TEXT_ALIGN_RIGHT, 0);
-  lv_obj_set_size(rpmValLbl, 180, ui_readout_font()->line_height);
-  lv_obj_align(rpmValLbl, LV_ALIGN_RIGHT_MID, -16, 4);
+  lv_obj_set_pos(rpmValLbl, 16, 40);
 
-  lv_obj_t* warnCard = timer_make_info_card(screen, 294, "SAFETY HOLD", true);
+  lv_obj_t* warnCard = timer_make_info_card(screen, 294, "Safety hold", true);
   warnDetailLbl = lv_label_create(warnCard);
-  lv_label_set_text(warnDetailLbl, countdownCancelled ? "Cancelled - press START again" : "Motor remains disabled until zero");
-  lv_obj_set_style_text_font(warnDetailLbl, FONT_NORMAL, 0);
+  lv_label_set_text(warnDetailLbl, countdownCancelled ? "Cancelled - press Start again" : "Motor remains disabled until zero");
+  lv_obj_set_style_text_font(warnDetailLbl, FONT_SUBTITLE, 0);
   lv_obj_set_style_text_color(warnDetailLbl, COL_TEXT, 0);
   lv_obj_set_pos(warnDetailLbl, 16, 44);
-  lv_obj_set_width(warnDetailLbl, 348);
+  lv_obj_set_width(warnDetailLbl, 408);
   lv_label_set_long_mode(warnDetailLbl, LV_LABEL_LONG_MODE_WRAP);
 
-  ui_create_action_bar_three(screen, 20, 408, 52, 16, 244, "<  BACK", back_event_cb, UI_BTN_NORMAL, "> START",
-                             start_event_cb, UI_BTN_ACCENT, "X STOP", stop_event_cb, UI_BTN_DANGER, nullptr,
-                             nullptr, nullptr);
+  ui_create_btn(screen, 24, 408, 152, 56, UI_LABEL_BACK, FONT_BTN, UI_BTN_NORMAL, back_event_cb, nullptr);
+  timerStartBtn = ui_create_btn(screen, 192, 408, 584, 56, UI_LABEL_START, FONT_LARGE, UI_BTN_ACCENT, start_event_cb, nullptr);
+  timerStopBtn = ui_create_btn(screen, 192, 408, 584, 56, UI_LABEL_STOP, FONT_LARGE, UI_BTN_DANGER, stop_event_cb, nullptr);
+  lv_obj_set_user_data(timerStartBtn, (void*)(uintptr_t)UI_ACTION_START);
+  lv_obj_set_user_data(timerStopBtn, (void*)(uintptr_t)UI_ACTION_STOP);
+  lv_obj_set_hidden(timerStopBtn, true);
 
   LOG_I("Screen countdown: POST layout created");
 }
@@ -260,6 +256,10 @@ void screen_timer_invalidate_widgets() {
   startAfterValLbl = nullptr;
   rpmValLbl = nullptr;
   warnDetailLbl = nullptr;
+  timerStartBtn = nullptr;
+  timerStopBtn = nullptr;
+  secMinusBtn = nullptr;
+  secPlusBtn = nullptr;
   countingDown.store(false, std::memory_order_release);
   startPending.store(false, std::memory_order_release);
   backPending.store(false, std::memory_order_release);
@@ -273,9 +273,22 @@ void screen_timer_update() {
   ui_mark_motion_callback(screenRoots[SCREEN_TIMER], start_event_cb);
   if (!screens_is_active(SCREEN_TIMER)) return;
 
+  const SystemState footerState = ui_control_state();
+  const bool showStop = countingDown.load() || startPending.load() || !ui_control_fresh() ||
+                        (footerState != STATE_IDLE && footerState != STATE_ESTOP);
+  lv_obj_set_hidden(timerStartBtn, showStop);
+  lv_obj_set_hidden(timerStopBtn, !showStop);
+  const bool blocked = safety_inhibit_motion() || safety_is_estop_locked() || footerState == STATE_ESTOP;
+  lv_obj_t* startText = lv_obj_get_child(timerStartBtn, 0);
+  const char* startWanted = blocked ? "Start blocked" : UI_LABEL_START;
+  if (strcmp(lv_label_get_text(startText), startWanted) != 0) lv_label_set_text(startText, startWanted);
+  lv_obj_set_disabled(timerStartBtn, blocked);
+  lv_obj_set_disabled(secMinusBtn, showStop);
+  lv_obj_set_disabled(secPlusBtn, showStop);
+
   if ((countingDown.load() || startPending.load()) && !control_deferred_start_valid(countdownGeneration)) {
     screen_timer_leave(); countdownCancelled = true;
-    if (warnDetailLbl) { lv_label_set_text(warnDetailLbl, "Countdown cancelled - press START again"); lv_obj_set_style_text_color(warnDetailLbl, COL_RED, 0); }
+    if (warnDetailLbl) { lv_label_set_text(warnDetailLbl, "Countdown cancelled - press Start again"); lv_obj_set_style_text_color(warnDetailLbl, COL_RED, 0); }
     return;
   }
   if (backPending.load(std::memory_order_acquire)) {
@@ -292,7 +305,7 @@ void screen_timer_update() {
     countingDown.store(false, std::memory_order_release);
     if (safety_inhibit_motion() || ui_control_state() != STATE_IDLE) {
       if (warnDetailLbl) {
-        lv_label_set_text(warnDetailLbl, "START BLOCKED");
+        lv_label_set_text(warnDetailLbl, "Start blocked");
         lv_obj_set_style_text_color(warnDetailLbl, COL_RED, 0);
       }
       return;
@@ -300,7 +313,7 @@ void screen_timer_update() {
     if (control_start_deferred_continuous(countdownGeneration)) {
       screens_request_show(SCREEN_MAIN);
     } else if (warnDetailLbl) {
-      lv_label_set_text(warnDetailLbl, "START BLOCKED");
+      lv_label_set_text(warnDetailLbl, "Start blocked");
       lv_obj_set_style_text_color(warnDetailLbl, COL_RED, 0);
     }
     return;
@@ -352,7 +365,7 @@ void screen_timer_update() {
     }
 
     if (warnDetailLbl) {
-      lv_label_set_text(warnDetailLbl, countdownCancelled ? "Cancelled - press START again" : "Motor remains disabled until zero");
+      lv_label_set_text(warnDetailLbl, countdownCancelled ? "Cancelled - press Start again" : "Motor remains disabled until zero");
       lv_obj_set_style_text_color(warnDetailLbl, COL_TEXT, 0);
     }
 
@@ -369,14 +382,14 @@ void screen_timer_update() {
         char buf[12];
         snprintf(buf, sizeof(buf), "%d", countdownSec);
         lv_label_set_text(bigNumberLabel, buf);
-        lv_obj_set_style_text_color(bigNumberLabel, COL_GREEN, 0);
+        lv_obj_set_style_text_color(bigNumberLabel, COL_TEXT, 0);
         lv_obj_set_style_transform_zoom(bigNumberLabel, 256, 0);
         lv_obj_update_layout(bigNumberLabel);
         lv_obj_set_style_transform_pivot_x(bigNumberLabel, lv_obj_get_width(bigNumberLabel) / 2, 0);
         lv_obj_set_style_transform_pivot_y(bigNumberLabel, lv_obj_get_height(bigNumberLabel) / 2, 0);
       }
       if (warnDetailLbl) {
-        lv_label_set_text(warnDetailLbl, countdownCancelled ? "Cancelled - press START again" : "Motor remains disabled until zero");
+        lv_label_set_text(warnDetailLbl, countdownCancelled ? "Cancelled - press Start again" : "Motor remains disabled until zero");
         lv_obj_set_style_text_color(warnDetailLbl, COL_TEXT, 0);
       }
       set_countdown_arc_angle(360, COL_GREEN);

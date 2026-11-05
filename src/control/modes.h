@@ -15,14 +15,12 @@ uint32_t pulse_get_on_ms();
 uint32_t pulse_get_off_ms();
 bool pulse_is_on_phase();
 uint32_t pulse_get_cycle_count();
-uint16_t pulse_get_cycle_limit();
 
 void step_execute(float angle_deg);
 void step_execute_sequence(float angle_deg, uint16_t repeats, float dwell_sec);
 void step_update();
 void step_reset_accumulator();
 float step_get_accumulated();
-float step_get_current_angle();
 long step_get_count();
 
 void jog_start(Direction dir);

@@ -90,6 +90,13 @@ inline float motion_pot_normalized(float adc, float adc_ref, float snap_adc) {
 inline bool motion_pot_takeover(float adc, float last_adc, float threshold) {
   return std::fabs(adc - last_adc) > threshold;
 }
+// After a speed is set on screen the pot takes over only where it matches that speed,
+// so bumping the knob cannot make the speed jump. moved_adc ignores ADC noise.
+inline bool motion_pot_pickup(float pot_rpm, float ui_rpm, bool pot_started_above, float adc, float last_adc,
+                              float moved_adc, float tolerance_rpm) {
+  if (!motion_pot_takeover(adc, last_adc, moved_adc)) return false;
+  return std::fabs(pot_rpm - ui_rpm) <= tolerance_rpm || (pot_rpm > ui_rpm) != pot_started_above;
+}
 // Zero means rejected: a rate below the operational floor is never rounded up.
 inline uint32_t motion_milli_hz(double hz, uint32_t floor_hz) {
   const double milli_hz = hz * 1000.0;

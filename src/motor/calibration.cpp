@@ -49,10 +49,6 @@ long calibration_apply_steps(long steps) {
   return checked;
 }
 
-float calibration_apply_angle(float angle) {
-  return angle / calibration_get_factor();
-}
-
 uint32_t calibration_save() {
   const float verifiedFactor = calibration_get_factor();
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
@@ -64,15 +60,3 @@ uint32_t calibration_save() {
   return ticket;
 }
 
-bool calibration_validate() {
-  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  if (!motion_calibration_factor_valid(g_settings.calibration_factor)) {
-    g_settings.calibration_factor = 1.0f;
-    xSemaphoreGive(g_settings_mutex);
-    return false;
-  }
-  [[maybe_unused]] float f = g_settings.calibration_factor;
-  xSemaphoreGive(g_settings_mutex);
-  LOG_I("Calibration loaded: factor=%.3f", f);
-  return true;
-}

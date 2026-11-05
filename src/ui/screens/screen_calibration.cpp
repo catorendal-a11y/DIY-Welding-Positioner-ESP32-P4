@@ -158,34 +158,34 @@ void screen_calibration_create() {
   bindings.reset();
   auto root = screenRoots[SCREEN_CALIBRATION]; lv_obj_clean(root);
   lv_obj_set_style_bg_color(root, COL_BG, 0); lv_obj_set_scrollable(root, false);
-  ui_create_settings_header(root, "Calibration", "WORKPIECE", COL_ACCENT);
+  ui_create_header(root, "Calibration", "", nullptr);
   for (int i=0; i<4; ++i) {
-    const char* names[] = {"1 / ALIGN", "2 / MEASURE", "3 / VERIFY", "4 / SAVE"};
+    const char* names[] = {"1  Align", "2  Measure", "3  Verify", "4  Save"};
     stageBtns[i] = ui_create_btn(root, 20+i*193, 86, 181, 40, names[i], FONT_SUBTITLE, UI_BTN_NORMAL, nullptr, nullptr);
     lv_obj_set_clickable(stageBtns[i], false);
   }
   auto card = ui_create_post_card(root, 20, 140, 552, 188);
   title = label(card, 16, 12, 520, "Align the reference mark", FONT_XL, COL_TEXT);
   hint = label(card, 16, 48, 520, "", FONT_SUBTITLE, COL_TEXT_DIM); lv_label_set_max_lines(hint, 3);
-  measurementCaption = label(card, 16, 110, 220, "ACTUAL ANGLE / DEG", FONT_SUBTITLE, COL_TEXT_DIM);
+  measurementCaption = label(card, 16, 110, 220, "Actual angle (deg)", FONT_SUBTITLE, COL_TEXT_DIM);
   measurement = ui_create_btn(card, 16, 134, 226, 44, "---", FONT_XL, UI_BTN_NORMAL, open_entry, nullptr);
-  applyBtn = ui_create_btn(card, 258, 134, 278, 44, "APPLY MEASUREMENT", FONT_SUBTITLE, UI_BTN_ACCENT, apply_cb, nullptr);
+  applyBtn = ui_create_btn(card, 258, 134, 278, 44, "Apply measurement", FONT_SUBTITLE, UI_BTN_ACCENT, apply_cb, nullptr);
   diameterBtn = ui_create_btn(card, 16, 122, 226, 54, "300 mm", FONT_XL, UI_BTN_NORMAL, open_entry, (void*)1);
-  progress = label(card, 16, 122, 520, "", FONT_XL, COL_ACCENT);
+  progress = label(card, 16, 122, 520, "", FONT_XL, COL_TEXT);
   auto summary = ui_create_post_card(root, 588, 140, 192, 188);
-  label(summary, 14, 12, 162, "CORRECTION", FONT_SUBTITLE, COL_TEXT_DIM);
-  factorValue = label(summary, 14, 42, 164, "1.0000", FONT_XL, COL_ACCENT);
+  label(summary, 14, 12, 162, "Correction", FONT_SUBTITLE, COL_TEXT_DIM);
+  factorValue = label(summary, 14, 42, 164, "1.0000", FONT_XL, COL_TEXT);
   context = label(summary, 14, 82, 164, "", FONT_SMALL, COL_TEXT_DIM); lv_label_set_max_lines(context, 4);
-  runBtn = ui_create_btn(root, 20, 342, 256, 50, "MOVE 360", FONT_SUBTITLE, UI_BTN_ACCENT, move_cb, nullptr);
-  stopBtn = ui_create_btn(root, 288, 342, 192, 50, "STOP", FONT_SUBTITLE, UI_BTN_DANGER, stop_cb, nullptr);
-  jogMinus = ui_create_btn(root, 492, 342, 138, 50, "JOG -", FONT_SUBTITLE, UI_BTN_NORMAL, jog_cb, (void*)-1);
-  jogPlus = ui_create_btn(root, 642, 342, 138, 50, "JOG +", FONT_SUBTITLE, UI_BTN_NORMAL, jog_cb, (void*)1);
+  runBtn = ui_create_btn(root, 20, 342, 460, 50, "Move 360\xC2\xB0", FONT_BTN, UI_BTN_ACCENT, move_cb, nullptr);
+  stopBtn = ui_create_btn(root, 20, 342, 460, 50, UI_LABEL_STOP, FONT_BTN, UI_BTN_DANGER, stop_cb, nullptr);
+  jogMinus = ui_create_btn(root, 492, 342, 138, 50, "Jog -", FONT_SUBTITLE, UI_BTN_NORMAL, jog_cb, (void*)-1);
+  jogPlus = ui_create_btn(root, 642, 342, 138, 50, "Jog +", FONT_SUBTITLE, UI_BTN_NORMAL, jog_cb, (void*)1);
   // Bind hold direction explicitly; ui_create_btn user data belongs to its event.
   lv_obj_remove_event_cb(jogMinus, jog_cb); lv_obj_remove_event_cb(jogPlus, jog_cb);
   lv_obj_add_event_cb(jogMinus, jog_cb, LV_EVENT_ALL, (void*)-1); lv_obj_add_event_cb(jogPlus, jog_cb, LV_EVENT_ALL, (void*)1);
-  backBtn = ui_create_btn(root, 20, 408, 152, 54, "<  BACK", FONT_SUBTITLE, UI_BTN_NORMAL, back_cb, nullptr);
-  restartBtn = ui_create_btn(root, 188, 408, 192, 54, "RESTART", FONT_SUBTITLE, UI_BTN_NORMAL, restart_cb, nullptr);
-  saveBtn = ui_create_btn(root, 396, 408, 384, 54, "SAVE CALIBRATION", FONT_SUBTITLE, UI_BTN_ACCENT, save_cb, nullptr);
+  backBtn = ui_create_btn(root, 20, 408, 152, 54, UI_LABEL_BACK, FONT_SUBTITLE, UI_BTN_NORMAL, back_cb, nullptr);
+  restartBtn = ui_create_btn(root, 188, 408, 192, 54, "Restart", FONT_SUBTITLE, UI_BTN_NORMAL, restart_cb, nullptr);
+  saveBtn = ui_create_btn(root, 396, 408, 384, 54, "Save calibration", FONT_SUBTITLE, UI_BTN_ACCENT, save_cb, nullptr);
   bindings.title.bind(title); bindings.hint.bind(hint); bindings.factor.bind(factorValue);
   bindings.context.bind(context); bindings.progress.bind(progress);
   bindings.measurement.bind(lv_obj_get_child(measurement, 0));
@@ -225,14 +225,14 @@ void screen_calibration_update() {
     lv_obj_set_style_text_color(lv_obj_get_child(stageBtns[i], 0), ui_btn_label_color_post(style), 0);
   }
   const char* heading = "Align the reference mark";
-  const char* instructions = "Set diameter below. Use JOG to align a clear mark. Then run one full workpiece revolution.";
-  if (session.moving()) { heading = session.stage == CalibrationSession::Verifying ? "Verification in progress" : "Rotation in progress"; instructions = "Wait for the complete revolution. STOP cancels this measurement."; }
+  const char* instructions = "Set diameter below. Use Jog to align a clear mark. Then run one full workpiece revolution.";
+  if (session.moving()) { heading = session.stage == CalibrationSession::Verifying ? "Verification in progress" : "Rotation in progress"; instructions = "Wait for the complete revolution. Stop cancels this measurement."; }
   else if (session.stage == CalibrationSession::Measure) { heading = "Enter the actual rotation"; instructions = "Measure from the reference mark. Enter the total angle, then apply the correction."; }
   else if (session.stage == CalibrationSession::VerifyReady) { heading = "Verify the correction"; instructions = "Mark the current start position. Run another full revolution in the same direction."; }
   else if (session.stage == CalibrationSession::VerifyMeasure) { heading = "Measure the verification move"; instructions = "Enter the total actual angle again. Save is available within 360 +/- 0.5 degrees."; }
-  else if (session.stage == CalibrationSession::Result) { heading = session.passed() ? "Verification passed" : "Verification needs another try"; instructions = session.passed() ? "The correction is verified. SAVE CALIBRATION stores it permanently." : "Outside tolerance. Repeat verification or restart to take a new measurement."; }
+  else if (session.stage == CalibrationSession::Result) { heading = session.passed() ? "Verification passed" : "Verification needs another try"; instructions = session.passed() ? "The correction is verified. Save calibration stores it permanently." : "Outside tolerance. Repeat verification or restart to take a new measurement."; }
   else if (session.stage == CalibrationSession::Saving) { heading = "Saving calibration"; instructions = storage_settings_save_status(saveTicket) == STORAGE_ERROR ? "Write failed. Retrying automatically; keep power on." : "Waiting for storage confirmation. Keep power on."; }
-  else if (session.stage == CalibrationSession::Saved) { heading = "Calibration saved"; instructions = "The verified correction is stored. Return to setup or normal operation."; }
+  else if (session.stage == CalibrationSession::Saved) { heading = "Calibration saved"; instructions = "The correction is stored. It was measured at this diameter; calibrate again for a very different one."; }
   bindings.title.set(heading); bindings.hint.set(session.error ? session.error : instructions);
   lv_obj_set_style_text_color(hint, session.error ? COL_RED : COL_TEXT_DIM, 0);
   const bool measuring = session.stage == CalibrationSession::Measure || session.stage == CalibrationSession::VerifyMeasure;
@@ -246,15 +246,17 @@ void screen_calibration_update() {
   bindings.measurement.set(text);
   snprintf(text, sizeof(text), "%.1f mm", (double)session.diameter); bindings.diameter.set(text);
   snprintf(text, sizeof(text), "%.4f", (double)session.factor); bindings.factor.set(text);
-  snprintf(text, sizeof(text), "OD %.1f mm\n%s / %.3f RPM\n~%.1f min / turn\nManual measurement", (double)session.diameter,
+  snprintf(text, sizeof(text), "Dia %.1f mm\n%s / %.3f RPM\n~%.1f min / turn\nManual measurement", (double)session.diameter,
            speed_get_direction() == DIR_CW ? "CW" : "CCW", (double)constrain(0.25f, MIN_RPM, speed_get_rpm_max()),
            (double)(1.0f / constrain(0.25f, MIN_RPM, speed_get_rpm_max()))); bindings.context.set(text);
-  if (session.moving()) snprintf(text, sizeof(text), "Estimated travel %.0f / 360 deg", (double)view.progress_degrees);
-  else snprintf(text, sizeof(text), "Measured %.2f deg  |  Error %+.2f deg", (double)session.verified, (double)(session.verified - 360));
+  if (session.moving()) snprintf(text, sizeof(text), "Estimated travel %.0f / 360\xC2\xB0", (double)view.progress_degrees);
+  else snprintf(text, sizeof(text), "Measured %.2f\xC2\xB0  |  Error %+.2f\xC2\xB0", (double)session.verified, (double)(session.verified - 360));
   bindings.progress.set(text);
-  lv_obj_set_style_text_color(progress, session.stage == CalibrationSession::Result && !session.passed() ? COL_RED : COL_ACCENT, 0);
+  lv_obj_set_style_text_color(progress, session.stage == CalibrationSession::Result && !session.passed() ? COL_RED : COL_TEXT, 0);
   enabled(runBtn, safe_idle() && !entry.active() && (session.stage == CalibrationSession::Prepare || session.stage == CalibrationSession::VerifyReady || session.stage == CalibrationSession::Result));
-  bindings.run.set( session.stage == CalibrationSession::Prepare || session.stage == CalibrationSession::Moving ? "MOVE 360" : "VERIFY 360");
+  bindings.run.set( session.stage == CalibrationSession::Prepare || session.stage == CalibrationSession::Moving ? "Move 360\xC2\xB0" : "Verify 360\xC2\xB0");
+  const bool showStop = session.moving() || !ui_control_fresh() || (view.state != STATE_IDLE && view.state != STATE_ESTOP);
+  lv_obj_set_hidden(runBtn, showStop); lv_obj_set_hidden(stopBtn, !showStop);
   enabled(measurement, safe_idle()); enabled(diameterBtn, safe_idle());
   enabled(applyBtn, safe_idle() && session.measured > 0);
   enabled(saveBtn, safe_idle() && session.passed() && context_matches());

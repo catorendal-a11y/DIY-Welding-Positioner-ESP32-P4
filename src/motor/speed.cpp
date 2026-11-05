@@ -169,6 +169,7 @@ static std::atomic<uint8_t> currentDir{DIR_CW};
 static std::atomic<uint8_t> programDirectionOverride{DIR_CW};
 static std::atomic<bool> programDirectionOverrideActive{false};
 static std::atomic<bool> buttonsActive{false};
+static std::atomic<bool> potPickupArmPending{false};
 static std::atomic<float> lastPotAdc{2047.5f};
 static std::atomic<bool> baselinePedal{false};
 static std::atomic<bool> pedalEnabled{false};
@@ -344,6 +345,7 @@ void speed_init() {
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   pedalPersist = g_settings.pedal_enabled;
   savedDiameter = g_settings.workpiece_diameter_mm;
+  currentDir.store(g_settings.manual_direction == DIR_CCW ? DIR_CCW : DIR_CW, std::memory_order_release);
   xSemaphoreGive(g_settings_mutex);
   speed_set_workpiece_diameter_mm(savedDiameter);
   pedalEnabled.store(pedalPersist, std::memory_order_release);
@@ -456,6 +458,7 @@ void speed_slider_set(float rpm) {
   lastPotAdc.store(pedal ? pedalFiltered.load() : adcFiltered.load(), std::memory_order_release);
   baselinePedal.store(pedal);
   buttonsActive.store(true, std::memory_order_release);
+  potPickupArmPending.store(true, std::memory_order_release);
   // Immediate: controlTask may call step_execute before next speed_apply tick.
   cachedTargetRpm.store(r, std::memory_order_release);
 }
@@ -507,9 +510,14 @@ void speed_apply() {
   if (sliderPriorityOverride.load(std::memory_order_acquire) || programDirectionOverrideActive.load()) {
     cachedTargetRpm.store(srpm, std::memory_order_relaxed);
   } else if (active) {
-    if (baselinePedal.exchange(usePedal) != usePedal) lastPotAdc.store(activeAdc);
+    if (baselinePedal.exchange(usePedal) != usePedal) {
+      lastPotAdc.store(activeAdc);
+      potPickupArmPending.store(true, std::memory_order_release);
+    }
+    static bool potStartedAbove = false;
+    if (potPickupArmPending.exchange(false)) potStartedAbove = pot_rpm > srpm;
     float lastAdc = lastPotAdc.load(std::memory_order_relaxed);
-    if (motion_pot_takeover(activeAdc, lastAdc, POT_UI_TAKEOVER_ADC_DELTA)) {
+    if (motion_pot_pickup(pot_rpm, srpm, potStartedAbove, activeAdc, lastAdc, POT_UI_TAKEOVER_ADC_DELTA, POT_UI_PICKUP_TOLERANCE_RPM)) {
       buttonsActive.store(false, std::memory_order_release);
       sliderRPM.store(pot_rpm, std::memory_order_relaxed);
       cachedTargetRpm.store(pot_rpm, std::memory_order_relaxed);
@@ -573,6 +581,7 @@ void speed_clear_program_direction_override() {
     g_workpiece_od_mm.store(programSavedDiameter, std::memory_order_relaxed);
     sliderRPM.store(programSavedSlider, std::memory_order_relaxed);
     buttonsActive.store(programSavedButtons, std::memory_order_release);
+    potPickupArmPending.store(true, std::memory_order_release);
     currentDir.store(programSavedDir, std::memory_order_release);
   }
 }

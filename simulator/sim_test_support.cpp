@@ -191,14 +191,12 @@ bool sim_show_and_check(ScreenId id) {
 }
 
 bool sim_click_back_to(ScreenId expected) {
-  if (sim_find_active_label_target("<  BACK")) {
-    if (!sim_click_label("<  BACK")) return false;
-  } else if (sim_find_active_label_target("< BACK")) {
-    if (!sim_click_label("< BACK")) return false;
+  if (sim_find_active_label_target(UI_LABEL_BACK)) {
+    if (!sim_click_label(UI_LABEL_BACK)) return false;
   } else if (sim_find_active_label_target("BACK")) {
     if (!sim_click_label("BACK")) return false;
-  } else if (sim_find_active_label_target("CANCEL")) {
-    if (!sim_click_label("CANCEL")) return false;
+  } else if (sim_find_active_label_target("Cancel")) {
+    if (!sim_click_label("Cancel")) return false;
   } else {
     return sim_fail("no back/cancel button found");
   }

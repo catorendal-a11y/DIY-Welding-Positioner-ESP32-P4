@@ -833,6 +833,24 @@ void test_combined_ratio() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 12: POT OVERRIDE LOGIC
 // ═══════════════════════════════════════════════════════════════════════════════
+void test_pot_pickup_ignores_a_bump_away_from_the_set_speed() {
+  // Screen 0.5 RPM, knob far above at 2.0: turning further from it must not jump the speed.
+  TEST_ASSERT_FALSE(motion_pot_pickup(1.9f, 0.5f, true, 2100.0f, 2000.0f, 40.0f, 0.01f));
+}
+
+void test_pot_pickup_needs_a_deliberate_turn() {
+  TEST_ASSERT_FALSE(motion_pot_pickup(0.5f, 0.5f, true, 2010.0f, 2000.0f, 40.0f, 0.01f));
+}
+
+void test_pot_pickup_when_the_knob_reaches_the_set_speed() {
+  TEST_ASSERT_TRUE(motion_pot_pickup(0.505f, 0.5f, true, 2100.0f, 2000.0f, 40.0f, 0.01f));
+}
+
+void test_pot_pickup_when_the_knob_crosses_the_set_speed() {
+  TEST_ASSERT_TRUE(motion_pot_pickup(0.4f, 0.5f, true, 2100.0f, 2000.0f, 40.0f, 0.01f));
+  TEST_ASSERT_TRUE(motion_pot_pickup(0.6f, 0.5f, false, 1900.0f, 2000.0f, 40.0f, 0.01f));
+}
+
 void test_pot_override_under_threshold() {
   // Threshold is usually 200.0f
   TEST_ASSERT_FALSE(pot_should_override_testable(2000.0f, 2000.0f, 200.0f));
@@ -1216,6 +1234,10 @@ int main(int argc, char** argv) {
   RUN_TEST(test_combined_ratio);
 
   // Section 12: Pot override logic (3 tests)
+  RUN_TEST(test_pot_pickup_ignores_a_bump_away_from_the_set_speed);
+  RUN_TEST(test_pot_pickup_needs_a_deliberate_turn);
+  RUN_TEST(test_pot_pickup_when_the_knob_reaches_the_set_speed);
+  RUN_TEST(test_pot_pickup_when_the_knob_crosses_the_set_speed);
   RUN_TEST(test_pot_override_under_threshold);
   RUN_TEST(test_pot_override_at_threshold);
   RUN_TEST(test_pot_override_over_threshold);

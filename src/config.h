@@ -105,9 +105,9 @@
 // Snap band (0 = off): if > 0, ADC at/below this maps to RPM ceiling (EMI helper; hurts top-end precision).
 #define POT_ADC_SNAP_MAX_RPM 0
 #define POT_ADC_SNAP_MAX_RPM_RUNNING 0
-// After +/- buttons, pot must move 200 ADC counts OR change mapped RPM by this
-// much to take over (else user at pot end stop cannot override a lower slider value).
-#define POT_UI_TAKEOVER_ADC_DELTA 200.0f
+// After a speed is set on screen, the pot takes over when turned to or past that speed.
+#define POT_UI_TAKEOVER_ADC_DELTA 40.0f  // Knob movement that counts as a deliberate turn, not ADC noise
+#define POT_UI_PICKUP_TOLERANCE_RPM 0.01f
 
 // Pulse timing limits used by control, storage and UI.
 #include "control/motion_policy.h"  // PULSE_MS_MIN, PULSE_MS_MAX

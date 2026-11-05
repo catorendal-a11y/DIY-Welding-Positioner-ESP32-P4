@@ -529,6 +529,18 @@ void test_dim_timeout_storage_width_and_migration() {
   TEST_ASSERT_EQUAL(120, settings_dim_seconds(120));
 }
 
+void test_save_request_due_only_after_backoff_with_work() {
+  SaveRequest save(1000);
+  TEST_ASSERT_FALSE(save.due(5000));
+  save.request();
+  TEST_ASSERT_TRUE(save.due(5000));
+  TEST_ASSERT_TRUE(save.begin(5000));
+  save.complete(true);
+  save.request();
+  TEST_ASSERT_FALSE(save.due(5500));
+  TEST_ASSERT_TRUE(save.due(6000));
+}
+
 void test_save_failure_retries_and_clears_error() {
   SaveRequest save(1000);
   save.request();
@@ -692,6 +704,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_pedal_glitch_below_start_debounce_never_starts);
   RUN_TEST(test_input_deadline_and_wraparound);
   RUN_TEST(test_dim_timeout_storage_width_and_migration);
+  RUN_TEST(test_save_request_due_only_after_backoff_with_work);
   RUN_TEST(test_save_failure_retries_and_clears_error);
   RUN_TEST(test_save_request_during_write_survives_completion);
   RUN_TEST(test_save_operation_waits_for_own_generation);

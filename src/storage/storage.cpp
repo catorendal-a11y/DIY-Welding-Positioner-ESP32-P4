@@ -6,6 +6,7 @@
 #include "../app_state.h"
 #include "../control/setup_policy.h"
 #include "../motor/speed.h"
+#include "../control/motion_policy.h"
 #include "../event_log.h"
 #include <cmath>
 #include <Preferences.h>
@@ -61,7 +62,7 @@ static bool storage_apply_settings_doc(JsonObjectConst doc);
 static bool storage_parse_presets_buffer(const uint8_t* data, size_t len);
 static int storage_sanitize_microstep(int value);
 static bool storage_decode_settings_doc(JsonObjectConst doc, SystemSettings& decoded);
-static bool storage_decode_presets_buffer(const uint8_t* data, size_t len, float cap, std::vector<Preset>& loaded);
+static bool storage_decode_presets_buffer(const uint8_t* data, size_t len, std::vector<Preset>& loaded);
 
 void storage_init() {
   LOG_I("Initializing NVS storage...");
@@ -119,7 +120,7 @@ static bool storage_migrate_littlefs_to_nvs() {
             storage_decode_settings_doc(doc.as<JsonObjectConst>(), decoded);
   }
   std::vector<Preset> programs;
-  if (valid && !prs.empty()) valid = storage_decode_presets_buffer(prs.data(), prs.size(), decoded.max_rpm, programs);
+  if (valid && !prs.empty()) valid = storage_decode_presets_buffer(prs.data(), prs.size(), programs);
   if (valid) {
     xSemaphoreTake(g_nvs_mutex, portMAX_DELAY);
     const bool cfgWritten = cfg.empty() || g_prefs.putBytes(NVS_KEY_SETTINGS, cfg.data(), cfg.size()) == cfg.size();
@@ -161,7 +162,7 @@ void preset_clamp_mode_to_mask(Preset* p) {
   }
 }
 
-static bool storage_decode_presets_buffer(const uint8_t* data, size_t len, float rpmCap, std::vector<Preset>& loaded) {
+static bool storage_decode_presets_buffer(const uint8_t* data, size_t len, std::vector<Preset>& loaded) {
   if (!data || !len || len > PRESETS_BLOB_MAX) return false;
   JsonDocument doc;
   const DeserializationError error = deserializeJson(doc, data, len);
@@ -202,15 +203,14 @@ static bool storage_decode_presets_buffer(const uint8_t* data, size_t len, float
     p.timer_auto_stop = obj["timer_auto_stop"] | 1;
     p.cont_soft_start = obj["cont_soft_start"] | 0;
 
-    if (rpmCap < MIN_RPM) rpmCap = MIN_RPM;
-    if (rpmCap > MAX_RPM) rpmCap = MAX_RPM;
     if (!std::isfinite(p.rpm) || !std::isfinite(p.step_angle) || !std::isfinite(p.step_dwell_sec) ||
         !std::isfinite(p.workpiece_diameter_mm))
       return false;
     p.step_repeats = constrain(p.step_repeats, (uint16_t)1, (uint16_t)99);
     p.step_dwell_sec = constrain(p.step_dwell_sec, 0.0f, 30.0f);
     p.direction = p.direction == DIR_CCW ? DIR_CCW : DIR_CW;
-    p.rpm = constrain(p.rpm, MIN_RPM, rpmCap);
+    // Only the absolute range: a lowered Max RPM blocks the program at start and never rewrites it.
+    p.rpm = constrain(p.rpm, MIN_RPM, MAX_RPM);
     p.pulse_on_ms = constrain(p.pulse_on_ms, (uint32_t)PULSE_MS_MIN, (uint32_t)PULSE_MS_MAX);
     p.pulse_off_ms = constrain(p.pulse_off_ms, (uint32_t)PULSE_MS_MIN, (uint32_t)PULSE_MS_MAX);
     p.step_angle = constrain(p.step_angle, 0.1f, 360.0f);
@@ -226,10 +226,8 @@ static bool storage_decode_presets_buffer(const uint8_t* data, size_t len, float
 }
 
 static bool storage_parse_presets_buffer(const uint8_t* data, size_t len) {
-  float cap;
-  xSemaphoreTake(g_settings_mutex, portMAX_DELAY); cap = g_settings.max_rpm; xSemaphoreGive(g_settings_mutex);
   std::vector<Preset> loaded;
-  if (!storage_decode_presets_buffer(data, len, cap, loaded)) return false;
+  if (!storage_decode_presets_buffer(data, len, loaded)) return false;
   xSemaphoreTake(g_presets_mutex, portMAX_DELAY); g_presets = std::move(loaded); xSemaphoreGive(g_presets_mutex);
   return true;
 }
@@ -359,6 +357,12 @@ static bool storage_decode_settings_doc(JsonObjectConst doc, SystemSettings& dec
   if (!settings_mechanics_valid(roller, gear)) return false;
   decoded.roller_mm = roller;
   decoded.gear_ratio = gear;
+  decoded.manual_direction = doc["manual_direction"] | 0 ? 1 : 0;
+  decoded.pulse_on_ms = (uint16_t)motion_pulse_clamp_ms(doc["pulse_on_ms"] | 500);
+  decoded.pulse_off_ms = (uint16_t)motion_pulse_clamp_ms(doc["pulse_off_ms"] | 500);
+  const float stepAngle = doc["step_angle"] | 90.0f, jogRpm = doc["jog_rpm"] | 0.5f;
+  decoded.step_angle = motion_step_angle_valid(stepAngle) ? stepAngle : 90.0f;
+  decoded.jog_rpm = std::isfinite(jogRpm) && jogRpm >= MIN_RPM && jogRpm <= MAX_RPM ? jogRpm : 0.5f;
   return true;
 }
 
@@ -396,6 +400,11 @@ static bool storage_save_settings_internal() {
   doc["workpiece_diameter_mm"] = snap.workpiece_diameter_mm;
   doc["roller_mm"] = snap.roller_mm;
   doc["gear_ratio"] = snap.gear_ratio;
+  doc["manual_direction"] = snap.manual_direction;
+  doc["pulse_on_ms"] = snap.pulse_on_ms;
+  doc["pulse_off_ms"] = snap.pulse_off_ms;
+  doc["step_angle"] = snap.step_angle;
+  doc["jog_rpm"] = snap.jog_rpm;
 
   if (!storage_write_doc(NVS_KEY_SETTINGS, doc, SETTINGS_BLOB_MAX)) return false;
   LOG_I("Saved settings to NVS.");
@@ -409,10 +418,18 @@ void storage_flush() {
   // Flash writes stall both cores and defer the E-STOP ISR: never write during motion.
   if (s_bootCorrupt.load()) return;  // Keep the invalid data intact for recovery.
   auto write = [](SaveRequest& request, bool (*save)(), const char* label) {
-    const SystemState state = control_get_state();
-    if (state != STATE_IDLE && state != STATE_ESTOP) return;
-    if (!request.begin(millis())) return;
+    auto atRest = [] {
+      const SystemState state = control_get_state();
+      return state == STATE_IDLE || state == STATE_ESTOP;
+    };
+    if (!atRest() || !request.due(millis())) return;
+    // Raise the flag first, then let a start already in dispatch become visible.
     g_flashWriting.store(true);
+    vTaskDelay(pdMS_TO_TICKS(10));
+    if (!atRest() || !request.begin(millis())) {
+      g_flashWriting.store(false);
+      return;
+    }
     const bool saved = save();
     vTaskDelay(pdMS_TO_TICKS(10));  // Let stalled tasks stamp fresh heartbeats (safety_run_cycle).
     g_flashWriting.store(false);
@@ -483,15 +500,21 @@ bool storage_get_nvs_stats(size_t* used_entries, size_t* total_entries) {
 }
 
 bool storage_format() {
-  if (control_get_state() != STATE_IDLE || storage_status() != STORAGE_SAVED) return false;
+  // Corrupt data keeps the machine in ESTOP and its saves pending; erasing is the on-device way out.
+  const SystemState state = control_get_state();
+  if (s_bootCorrupt.load() ? state != STATE_IDLE && state != STATE_ESTOP
+                           : state != STATE_IDLE || storage_status() != STORAGE_SAVED) return false;
   // This operation owns only its temporary inhibit. Fatal/restart latches
   // set by other tasks must never be cleared by a failed erase.
   bool inactive = false;
   if (!g_storageFormatting.compare_exchange_strong(inactive, true, std::memory_order_acq_rel)) return false;
   control_stop(); digitalWrite(PIN_ENA, HIGH);
+  g_flashWriting.store(true);
   xSemaphoreTake(g_nvs_mutex, portMAX_DELAY);
   const bool cleared = g_prefs_open && g_prefs.clear();
   xSemaphoreGive(g_nvs_mutex);
+  vTaskDelay(pdMS_TO_TICKS(10));
+  g_flashWriting.store(false);
   if (!cleared) {
     g_storageFormatting.store(false, std::memory_order_release);
     return false;

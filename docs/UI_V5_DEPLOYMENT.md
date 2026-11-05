@@ -3,7 +3,7 @@
 Implemented in the existing LVGL screens:
 
 - Dark graphite and orange theme, 12/16 px corner radii, minimum shared font 14 px.
-- Main screen with large orange speed panel, native 104 px bold numeric font, explicit CW/CCW selection, 0.01 RPM adjustment, source indication and fixed wide START/STOP position.
+- Main screen with large orange speed panel, native 104 px bold numeric font, explicit CW/CCW selection, 0.01 RPM adjustment, source indication and fixed wide Start/Stop position.
 - Motor configuration and physical direction-switch interlocks remain effective. Direction selection accounts for the configured inversion. Speed adjustment and direction changes are blocked during motion.
 - Strong red stop buttons. Full-width red fault banner, explicit physical input/alarm state and readable disabled reset button. Reset callback still checks the existing safety gate.
 - Orange primary-value cards in pulse/continuous editing; shared styling is applied across all 22 existing screens.

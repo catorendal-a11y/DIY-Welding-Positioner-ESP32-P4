@@ -2,33 +2,33 @@
 
 Included in v2.1.1 firmware and simulator. Historical v2.1.0 downloads do not include it. The existing V5 operating-screen design is retained.
 
-New installations open the wizard after boot. Existing valid settings without `setup_completed` migrate as configured and retain all settings/presets. Open **Settings → Setup Wizard** to run it voluntarily. An interrupted, incomplete new setup is offered again on restart. Exiting stops any requested motion and keeps settings already saved; it does not reset the machine configuration.
+New installations open the wizard after boot. Existing valid settings without `setup_completed` migrate as configured and retain all settings/presets. Open **Settings → Setup wizard** to run it voluntarily. An interrupted, incomplete new setup is offered again on restart. Exiting stops any requested motion and keeps settings already saved; it does not reset the machine configuration.
 
 ## 1. Motor
 
-Select Standard or DM542T timing, then open Motor Config. Match the microstep setting to the physical drive switches. Set acceleration and maximum RPM, then **SAVE & APPLY**. Continue only after the settings are applied and saved. The page shows the current gear ratio, roller diameter and default workpiece diameter. Gear ratio and roller diameter are set in Motor Config (defaults 108 and 80 mm).
+Select Standard or DM542T timing, then select **Open motor config**. Match the microstep setting to the physical drive switches. Set acceleration and maximum RPM, then **Save & apply**. Continue only after the settings are applied and saved. The page shows the current gear ratio, roller diameter and default workpiece diameter. Gear ratio and roller diameter are set in Motor Config (defaults 108 and 80 mm).
 
 ![Motor setup](images/setup_v1/01_motor.png)
 
 ## 2. Direction
 
-Hold **HOLD CW** and **HOLD CCW** separately and observe the actual workpiece. Releasing either button stops jog; missing hold renewal also stops it. Test speed is 0.1 RPM, capped by configured maximum. If needed, select **FLIP DIRECTION**, wait for the configuration save, and test both directions again. Select **DIRECTION CORRECT** while idle to confirm your observation.
+Hold **Hold CW** and **Hold CCW** separately and observe the actual workpiece. Releasing either button stops jog; missing hold renewal also stops it. Test speed is 0.1 RPM, capped by configured maximum. If needed, select **Flip direction**, wait for the configuration save, and test both directions again. Select **Direction correct** while idle to confirm your observation.
 
 ![Direction check](images/setup_v1/02_direction.png)
 
 ## 3. Calibration
 
-Open [guided Calibration](CALIBRATION_WORKFLOW.md). Set diameter on that page, align the mark, explicitly select **MOVE 360**, measure, apply, then select **VERIFY 360** and measure again. Save only after verification passes; return after **Calibration saved** confirms storage. Navigation never initiates a calibration movement.
+Open [guided Calibration](CALIBRATION_WORKFLOW.md). Set diameter on that page, align the mark, explicitly select **Move 360°**, measure, apply, then select **Verify 360°** and measure again. Save only after verification passes; return after **Calibration saved** confirms storage. Navigation never initiates a calibration movement.
 
 ![Calibration entry](images/setup_v1/03_calibration.png)
 
 ## 4. Function check
 
-Press the **physical E-STOP switch**. The fault overlay blocks operation. Release the switch, inspect the machine and select **RESET TO IDLE**. Reset does not start movement. Explicitly select **TEST START**, observe rotation and select **STOP ROTATION**. Confirm that the workpiece physically stops before continuing. The screen STOP is a normal software stop; it is not a substitute for the physical E-STOP.
+Press the **physical E-STOP switch**. The fault overlay blocks operation. Release the switch, inspect the machine and select **RESET TO IDLE**. Reset does not start movement. Explicitly select **Test start**, observe rotation and select **Stop**. Confirm that the workpiece physically stops before continuing. The screen Stop is a normal software stop; it is not a substitute for the physical E-STOP.
 
 ![Physical function check](images/setup_v1/04_function_check.png)
 
-The wizard observes input and controller-state sequences; **NEXT is your confirmation of the physical function check**. It does not measure electrical/mechanical stop time or certify the machine. Pedal starts are inhibited throughout commissioning.
+The wizard observes input and controller-state sequences; **Next is your confirmation of the physical function check**. It does not measure electrical/mechanical stop time or certify the machine. Pedal starts are inhibited throughout commissioning.
 
 ## Completion and failed saves
 

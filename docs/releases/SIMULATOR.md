@@ -15,7 +15,7 @@ This is an offline UI demonstration. Motor speed, inputs and fault states are si
 
 ## Screen saver
 
-Open Settings > Display > PREVIEW to see the idle screen saver. Automatic activation is initially OFF; select 30s/1m/2m/5m and SAVE to enable it. The first touch only wakes the display; release and touch again to operate it. Motion, faults and editing stay visible.
+Open Settings > Display > Preview to see the idle screen saver. Automatic activation is initially Off; select 30s/1m/2m/5m and Save to enable it. The first touch only wakes the display; release and touch again to operate it. Motion, faults and editing stay visible.
 
 ## Self-test and troubleshooting
 

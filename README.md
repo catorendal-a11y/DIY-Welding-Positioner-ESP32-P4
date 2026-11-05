@@ -1,8 +1,8 @@
 # DIY Welding Positioner Controller
 
-Touchscreen controller for a single-axis TIG/MIG welding rotator, built for the GUITION JC4880P443C 4.3" ESP32-P4 display board.
+<p align="center"><img src="docs/images/readme_hero.png" width="900" alt="DIY Welding Positioner: touchscreen controller for the GUITION JC4880P443C ESP32-P4 board, shown with the actual main screen"></p>
 
-![Main screen, actual LVGL simulator capture](docs/images/ui_runtime_v5/01_MAIN.png)
+Touchscreen controller for a single-axis TIG/MIG welding rotator, built for the GUITION JC4880P443C 4.3" ESP32-P4 display board.
 
 <p align="center">
   <a href="https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml"><img src="https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml/badge.svg" alt="Build and tests"></a>
@@ -28,15 +28,33 @@ Touchscreen controller for a single-axis TIG/MIG welding rotator, built for the 
 
 ## Safety
 
-Read this before powering the motor.
+> [!CAUTION]
+> Read this before powering the motor.
+>
+> - **E-STOP is not a safety relay.** It acts through GPIO34, firmware and the driver ENA input, and it does not disconnect motor power. An open wire can read as healthy. Physical stop time is unmeasured. [Truth table and measurement procedure](docs/estop_timing.md)
+> - **E-STOP polarity:** GPIO34 expects **HIGH when healthy, LOW on fault**. A bare NC contact to ground gives the opposite polarity. **ENA HIGH disables** the driver.
+> - **ESP32 GPIO is 3.3 V logic.** Never connect 5 V or motor-supply voltage to it.
+> - **HF-start TIG:** put the controller, driver and motor PSU in the same grounded metal enclosure. See [TIG HF](#tig-hf).
 
-- **E-STOP is not a safety relay.** It acts through GPIO34, firmware and the driver ENA input, and it does not disconnect motor power. An open wire can read as healthy. Physical stop time is unmeasured. [Truth table and measurement procedure](docs/estop_timing.md)
-- **E-STOP polarity:** GPIO34 expects **HIGH when healthy, LOW on fault**. A bare NC contact to ground gives the opposite polarity. **ENA HIGH disables** the driver.
-- **ESP32 GPIO is 3.3 V logic.** Never connect 5 V or motor-supply voltage to it.
-- **HF-start TIG:** put the controller, driver and motor PSU in the same grounded metal enclosure. See [TIG HF](#tig-hf).
-- **Tested by the owner.** The owner reported on 2026-11-04 that everything works on the assembled v2.3.0 machine, including TIG HF. The owner reported the v2.3.1 build working on the same machine the same day. Stop time is unmeasured. [Checks to run on your own build](docs/releases/v2.3.1.md#validation-and-hardware-status)
+> [!NOTE]
+> **Tested by the owner.** The owner reported on 2026-11-04 that everything works on the assembled v2.3.0 machine, including TIG HF. The owner reported the v2.3.1 build working on the same machine the same day. Stop time is unmeasured. [Checks to run on your own build](docs/releases/v2.3.1.md#validation-and-hardware-status)
 
 ## What it does
+
+<table>
+<tr>
+<td width="33%" valign="top"><img src="docs/images/ui_runtime_v5/01_MAIN.png" alt="Continuous screen"><br><b>Continuous</b><br><sub>Set speed with the pot, pedal or -/+. One Start/Stop button.</sub></td>
+<td width="33%" valign="top"><img src="docs/images/ui_runtime_v5/03_PULSE.png" alt="Pulse screen"><br><b>Pulse</b><br><sub>Rotate, pause, repeat for tack welds. The preview tracks the live cycle.</sub></td>
+<td width="33%" valign="top"><img src="docs/images/ui_runtime_v5/04_STEP.png" alt="Step screen"><br><b>Step</b><br><sub>Index by an exact angle, 45 to 360 degrees or a custom value.</sub></td>
+</tr>
+<tr>
+<td width="33%" valign="top"><img src="docs/images/ui_runtime_v5/07_PROGRAMS.png" alt="Programs screen"><br><b>Programs</b><br><sub>16 saved programs with speed, direction, diameter and mode.</sub></td>
+<td width="33%" valign="top"><img src="docs/images/calibration_v2/01_align.png" alt="Calibration screen"><br><b>Calibration</b><br><sub>Align, measure, verify and save against a real measurement.</sub></td>
+<td width="33%" valign="top"><img src="docs/images/ui_runtime_v5/20_DIAGNOSTICS.png" alt="Diagnostics screen"><br><b>Diagnostics</b><br><sub>Live inputs, runtime state and the event log.</sub></td>
+</tr>
+</table>
+
+<sub>All screens are actual LVGL simulator captures at 800 x 480. <a href="docs/images/ui_runtime_v5/overview.png">See every screen</a>.</sub>
 
 - **Continuous, Jog, Pulse and Step** rotation, with an optional countdown before starting.
 - **0.001-3.0 RPM** at the workpiece, limited by geometry and calibration. The screen shows the effective range.
@@ -61,18 +79,13 @@ Single axis with no encoder: RPM and progress are calculated, so calibration nee
 
 Match the driver's current and microstep switches to the touchscreen settings (1/4, 1/8, 1/16 or 1/32). Roller diameter and gear ratio are set in **Motor Config**.
 
-<details>
-<summary>Board, drivetrain and screen pictures</summary>
-<p>
-  <img src="docs/images/board_overview.jpg" width="320" alt="GUITION JC4880P443C 4.3-inch touch display board, front and rear">
-  <img src="docs/images/pinout.jpg" width="360" alt="GUITION JC4880P443C expansion header pin definitions">
-  <img src="docs/images/stepper_setup.png" width="400" alt="NEMA 23 stepper, worm gearbox and PUL/DIR driver">
-  <img src="docs/images/motor.worm.svg" width="400" alt="Worm and spur drivetrain reference">
-  <img src="docs/images/setup_v1/01_motor.png" width="400" alt="Setup Wizard motor stage">
-  <img src="docs/images/program_v2/01_new_program.png" width="400" alt="New Program screen">
-  <img src="docs/images/calibration_v2/01_align.png" width="400" alt="Guided calibration screen">
-</p>
-</details>
+<table>
+<tr>
+<td width="33%" valign="top"><img src="docs/images/board_overview.jpg" alt="GUITION JC4880P443C 4.3-inch touch display board, front and rear"><br><b>Controller</b><br><sub>GUITION JC4880P443C, ESP32-P4 + C6</sub></td>
+<td width="33%" valign="top"><img src="docs/images/stepper_setup.png" alt="NEMA 23 stepper, worm gearbox and PUL/DIR driver"><br><b>Drive</b><br><sub>NEMA 23, worm gearbox, PUL/DIR driver</sub></td>
+<td width="33%" valign="top"><img src="docs/images/pinout.jpg" alt="GUITION JC4880P443C expansion header pin definitions"><br><b>JP1 header</b><br><sub>2 x 13 pins used for all wiring</sub></td>
+</tr>
+</table>
 
 ## Wiring
 
@@ -110,6 +123,15 @@ New installations open the **Setup Wizard**, and valid existing settings are kep
 2. **Direction:** hold CW/CCW and check the workpiece.
 3. **Calibration:** complete **Move 360°**, measure, apply, complete **Verify 360°**, then save.
 4. **Function check:** press and release E-STOP, reset to idle, test Start and Stop.
+
+<table>
+<tr>
+<td width="25%"><img src="docs/images/setup_v1/01_motor.png" alt="Setup wizard, motor step"><br><sub>1. Motor</sub></td>
+<td width="25%"><img src="docs/images/setup_v1/02_direction.png" alt="Setup wizard, direction step"><br><sub>2. Direction</sub></td>
+<td width="25%"><img src="docs/images/setup_v1/03_calibration.png" alt="Setup wizard, calibration step"><br><sub>3. Calibration</sub></td>
+<td width="25%"><img src="docs/images/setup_v1/04_function_check.png" alt="Setup wizard, function check step"><br><sub>4. Function check</sub></td>
+</tr>
+</table>
 
 The wizard does not measure stop time or certify wiring. [Every wizard screen](docs/SETUP_WIZARD.md) · [Calibration](docs/CALIBRATION_WORKFLOW.md) · [Program editor](docs/PROGRAM_EDITOR.md)
 

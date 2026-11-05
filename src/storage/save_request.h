@@ -13,6 +13,7 @@ class SaveRequest {
     return static_cast<int32_t>(committed.load() - ticket) >= 0;
   }
   bool failed() const { return error.load(); }
+  bool due(uint32_t now) const { return now - last >= backoff && requested.load() != committed.load(); }
   bool begin(uint32_t now) {
     if (now - last < backoff || requested.load() == committed.load()) return false;
     writing.store(true);

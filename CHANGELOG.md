@@ -7,8 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Every screen is rebuilt for gloved, at-a-glance use. Orange marks choices and actions only, labels use plain sentence-case words, and alarms stay in capitals. The selected direction is filled with an arrow, and the speed scale has a pointer.
+- Main has a direct Programs button and shows elapsed time during motion.
+- Every header shows the live machine state instead of a fixed caption.
+- Pulse, Step, Countdown, Jog, Calibration and the setup check have one action slot: Start while idle, Stop as soon as anything moves. The Pulse preview shows where the running cycle is.
+- Step has larger -/+ buttons, and the target angle can be changed by 5 degrees. DIA, RST and Part are spelled out.
+- Program rows use plain text, and Edit is a real button.
+- All screens use the same Back, Start and Stop words and icons, and larger -/+ buttons where they were small.
+
+### Removed
+
+- Reset step on the Step screen, and unused internal functions and UI helpers.
+
 ### Fixed
 
+- Stop after a soft start uses the configured stop ramp instead of the slow soft-start ramp.
+- The speed pot or pedal no longer overrides a speed set on the screen until it is moved or reaches that speed.
+- Programs are limited to the firmware speed range when loaded, not to the current Max RPM, so lowering Max RPM cannot rewrite a saved program. The editor shows the limit.
+- Manual direction, pulse times, step angle and jog speed survive a restart.
+- A corrupt storage fault can be cleared on the machine: hold for 3 seconds to erase the data and restart. Other faults do not offer this.
+- Settings on Pulse, Step and Countdown are locked while the machine moves.
+- A save requested during flush is no longer lost.
+- Reboot is refused only while a save is pending.
 - `pio run -t upload` no longer hangs mid-flash on Windows when its output is piped. esptool's progress bar crashed PlatformIO, which left the board with a black screen until the next flash.
 
 ## [2.3.1] - 2026-11-04

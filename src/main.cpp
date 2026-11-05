@@ -70,7 +70,7 @@ void lvglTask(void* pvParameters) {
 
   lvgl_lock();
   screens_show(SCREEN_BOOT);
-  screen_boot_update(10, "DISPLAY + LVGL");
+  screen_boot_update(10, "Display and interface");
   for (int i = 0; i < 5; i++) {
     lv_timer_handler();
     vTaskDelay(pdMS_TO_TICKS(50));
@@ -78,11 +78,11 @@ void lvglTask(void* pvParameters) {
   lvgl_unlock();
 
   // Progress only: these steps wait for the UI, they do not test the hardware.
-  boot_step(30, "SETTINGS LOADED", 100);
-  boot_step(50, "MOTOR CONFIGURED", 100);
-  boot_step(70, "STARTING TASKS", 100);
-  boot_step(90, "STARTING INTERFACE", 100);
-  boot_step(100, "READY HANDOFF", 50);
+  boot_step(30, "Settings loaded", 100);
+  boot_step(50, "Motor configured", 100);
+  boot_step(70, "Starting tasks", 100);
+  boot_step(90, "Starting interface", 100);
+  boot_step(100, "Ready", 50);
 
   lvgl_lock();
   screens_show_startup();
@@ -330,6 +330,10 @@ void setup() {
 
   // Speed/pot + ADS1115 on display I2C bus (must run after display_init)
   speed_init();
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  const float savedJogRpm = g_settings.jog_rpm;
+  xSemaphoreGive(g_settings_mutex);
+  control_set_jog_speed(savedJogRpm);
 
   // Initialize LVGL
   lvgl_hal_init();

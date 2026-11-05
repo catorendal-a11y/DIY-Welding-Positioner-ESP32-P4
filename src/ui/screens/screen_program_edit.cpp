@@ -28,7 +28,7 @@ static bool entryRpm = false, kbClosePending = false;
 static lv_style_transition_dsc_t instantTransition;
 static const lv_style_prop_t transitionProps[] = {LV_STYLE_BG_COLOR,LV_STYLE_BG_OPA,LV_STYLE_OPA,LV_STYLE_BORDER_COLOR,LV_STYLE_OUTLINE_OPA,LV_STYLE_RECOLOR,LV_STYLE_RECOLOR_OPA,0};
 static const SystemState modes[] = {STATE_RUNNING, STATE_PULSE, STATE_STEP};
-static const char* modeNames[] = {"CONTINUOUS", "PULSE", "STEP"};
+static const char* modeNames[] = {"Continuous", "Pulse", "Step"};
 
 static lv_obj_t* text(lv_obj_t* parent, int x, int y, int width, const char* value, const lv_font_t* font, lv_color_t color) {
   auto obj = lv_label_create(parent); lv_obj_set_pos(obj,x,y); lv_obj_set_width(obj,width);
@@ -50,7 +50,7 @@ void screen_program_edit_poll_keyboard() {
   if (!savePending) return;
   const StorageStatus status = storage_presets_save_status(saveTicket);
   if (status == STORAGE_SAVED) { savePending = false; screens_request_show(SCREEN_PROGRAMS); }
-  else if (saveButton) lv_label_set_text(lv_obj_get_child(saveButton,0),status == STORAGE_ERROR ? "SAVE FAILED / RETRYING" : "SAVING...");
+  else if (saveButton) lv_label_set_text(lv_obj_get_child(saveButton,0),status == STORAGE_ERROR ? "Save failed, retrying" : "Saving...");
 }
 static void input_cb(lv_event_t* e) {
   if (lv_event_get_code(e) == LV_EVENT_CANCEL) { kbClosePending = true; return; }
@@ -153,7 +153,7 @@ static void save_preset_cb(lv_event_t*) {
     editPreset.id = g_presets.size()+1; g_presets.push_back(editPreset);
   }
   xSemaphoreGive(g_presets_mutex); saveTicket = storage_request_presets_save(); savePending = true;
-  if (saveButton) lv_label_set_text(lv_obj_get_child(saveButton,0),"SAVING...");
+  if (saveButton) lv_label_set_text(lv_obj_get_child(saveButton,0),"Saving...");
   lock_pending_draft(screenRoots[SCREEN_PROGRAM_EDIT]);
   screen_programs_mark_dirty();
 }
@@ -203,12 +203,12 @@ void screen_program_edit_create(int slot) {
   renderedValid = false;
   if (!std::isfinite(editPreset.rpm)) editPreset.rpm = MIN_RPM;
   editPreset.rpm = constrain(editPreset.rpm,MIN_RPM,screen_program_edit_rpm_max());
-  ui_create_header(root,editSlot >= 0 ? "Edit program" : "New program","PROGRAM DRAFT",nullptr);
+  ui_create_header(root,editSlot >= 0 ? "Edit program" : "New program","",nullptr);
   nameButton = ui_create_btn(root,20,90,760,56,editPreset.name,FONT_XL,UI_BTN_NORMAL,open_input_cb,nullptr);
   auto name = lv_obj_get_child(nameButton,0); lv_obj_set_width(name,660); lv_obj_set_style_text_align(name,LV_TEXT_ALIGN_LEFT,0);
   lv_label_set_long_mode(name,LV_LABEL_LONG_MODE_WRAP); lv_label_set_max_lines(name,1); lv_obj_align(name,LV_ALIGN_LEFT_MID,16,0);
-  text(nameButton,684,18,64,"EDIT",FONT_SUBTITLE,COL_ACCENT);
-  text(root,20,154,200,"RUN MODE",FONT_SUBTITLE,COL_TEXT_DIM);
+  text(nameButton,684,18,64,"Edit",FONT_SUBTITLE,COL_TEXT_DIM);
+  text(root,20,154,200,"Run mode",FONT_SUBTITLE,COL_TEXT_DIM);
   text(root,400,154,380,"One mode runs at a time",FONT_SUBTITLE,COL_TEXT_DIM);
   lv_style_transition_dsc_init(&instantTransition,transitionProps,lv_anim_path_linear,0,0,nullptr);
   for (int i=0;i<3;++i) {
@@ -220,29 +220,31 @@ void screen_program_edit_create(int slot) {
       lv_obj_set_style_transition(button,&instantTransition,LV_STATE_DISABLED);
     }
   }
-  text(root,20,247,138,"AVAILABLE",FONT_SMALL,COL_TEXT_DIM);
+  text(root,20,247,138,"Available",FONT_SMALL,COL_TEXT_DIM);
   auto speed = ui_create_post_card(root,20,288,368,100);
-  text(speed,14,10,220,"TARGET SPEED / RPM",FONT_SMALL,COL_TEXT_DIM);
+  text(speed,14,10,220,"Target speed (RPM)",FONT_SMALL,COL_TEXT_DIM);
   rpmButton = ui_create_btn(speed,14,31,170,56,"",FONT_HUGE,UI_BTN_NORMAL,open_input_cb,(void*)1);
   lv_obj_set_style_border_width(rpmButton,0,0); lv_obj_set_style_bg_opa(rpmButton,LV_OPA_TRANSP,0);
   ui_create_btn(speed,194,35,70,52,"-",FONT_XL,UI_BTN_NORMAL,rpm_adjust_cb,(void*)-1);
-  ui_create_btn(speed,274,35,78,52,"+",FONT_XL,UI_BTN_ACCENT,rpm_adjust_cb,(void*)1);
-  modeSettingsBtn = ui_create_btn(root,404,288,376,100,"MODE SETTINGS >",FONT_BTN,UI_BTN_NORMAL,mode_settings_cb,nullptr);
+  ui_create_btn(speed,274,35,78,52,"+",FONT_XL,UI_BTN_NORMAL,rpm_adjust_cb,(void*)1);
+  modeSettingsBtn = ui_create_btn(root,404,288,376,100,"Mode settings " LV_SYMBOL_RIGHT,FONT_BTN,UI_BTN_NORMAL,mode_settings_cb,nullptr);
   auto settingsTitle = lv_obj_get_child(modeSettingsBtn,0); lv_obj_align(settingsTitle,LV_ALIGN_TOP_LEFT,14,12);
   detailLabel = text(modeSettingsBtn,14,43,344,"",FONT_SMALL,COL_TEXT_DIM); lv_label_set_max_lines(detailLabel,3);
   if (editSlot >= 0) {
-    ui_create_btn(root,20,408,168,54,"DELETE",FONT_BTN,UI_BTN_DANGER,delete_preset_prompt_cb,nullptr);
-    cancelButton = ui_create_btn(root,204,408,186,54,"CANCEL",FONT_BTN,UI_BTN_NORMAL,cancel_cb,nullptr);
-    saveButton = ui_create_btn(root,406,408,374,54,"SAVE",FONT_BTN,UI_BTN_ACCENT,save_preset_cb,nullptr);
+    ui_create_btn(root,20,408,168,54,"Delete",FONT_BTN,UI_BTN_DANGER,delete_preset_prompt_cb,nullptr);
+    cancelButton = ui_create_btn(root,204,408,186,54,"Cancel",FONT_BTN,UI_BTN_NORMAL,cancel_cb,nullptr);
+    saveButton = ui_create_btn(root,406,408,374,54,"Save",FONT_BTN,UI_BTN_ACCENT,save_preset_cb,nullptr);
   } else {
-    cancelButton = ui_create_btn(root,20,408,240,54,"CANCEL",FONT_BTN,UI_BTN_NORMAL,cancel_cb,nullptr);
-    saveButton = ui_create_btn(root,276,408,504,54,"SAVE",FONT_BTN,UI_BTN_ACCENT,save_preset_cb,nullptr);
+    cancelButton = ui_create_btn(root,20,408,240,54,"Cancel",FONT_BTN,UI_BTN_NORMAL,cancel_cb,nullptr);
+    saveButton = ui_create_btn(root,276,408,504,54,"Save",FONT_BTN,UI_BTN_ACCENT,save_preset_cb,nullptr);
   }
   screen_program_edit_update_ui();
   lock_pending_draft(root);
   ui_trim_text_leading(root);
 }
 void screen_program_edit_update_ui() {
+  // Shown before saving, so Save can never lower the speed unseen.
+  editPreset.rpm = constrain(editPreset.rpm,MIN_RPM,screen_program_edit_rpm_max());
   screen_program_edit_poll_keyboard();
   if (!nameButton) return;
   // Avoid 25 Hz label allocations/style invalidations when the draft is unchanged.
@@ -258,7 +260,7 @@ void screen_program_edit_update_ui() {
   renderedPreset = editPreset; renderedValid = true;
   lv_label_set_text(lv_obj_get_child(nameButton,0),editPreset.name);
   lv_obj_set_style_text_font(lv_obj_get_child(nameButton,0),strlen(editPreset.name) > 20 ? FONT_BTN : FONT_XL,0);
-  auto rpm = lv_obj_get_child(rpmButton,0); ui_set_rpm(rpm,editPreset.rpm); lv_obj_set_style_text_color(rpm,COL_ACCENT,0);
+  auto rpm = lv_obj_get_child(rpmButton,0); ui_set_rpm(rpm,editPreset.rpm); lv_obj_set_style_text_color(rpm,COL_TEXT,0);
   for (int i=0;i<3;++i) {
     const bool active = editPreset.mode == modes[i], included = editPreset.mode_mask & preset_mode_to_mask(modes[i]);
     ui_btn_style_post(runButtons[i],active ? UI_BTN_ACCENT : UI_BTN_NORMAL); lv_obj_set_checked(runButtons[i],active);
@@ -271,20 +273,20 @@ void screen_program_edit_update_ui() {
     lv_obj_set_style_bg_color(allowed,COL_BTN_BG,LV_STATE_CHECKED);
     lv_obj_set_style_recolor_opa(allowed,LV_OPA_TRANSP,LV_STATE_CHECKED);
     lv_obj_set_style_border_color(allowed,included ? COL_ACCENT : COL_BORDER,0);
-    char status[40]; snprintf(status,sizeof(status),"%s %s",i == 0 ? "CONT" : modeNames[i],included ? "ON" : "OFF");
+    char status[40]; snprintf(status,sizeof(status),"%s %s",modeNames[i],included ? "on" : "off");
     lv_label_set_text(lv_obj_get_child(allowed,0),status);
     lv_obj_set_style_text_color(lv_obj_get_child(allowed,0),included ? COL_TEXT : COL_TEXT_VDIM,0);
   }
   char detail[160]; const char* direction = speed_resolve_direction((Direction)editPreset.direction) == DIR_CCW ? "CCW" : "CW";
   if (editPreset.mode == STATE_PULSE) {
     char cycles[24]; if (editPreset.pulse_cycles) snprintf(cycles,sizeof(cycles),"%u cycles",editPreset.pulse_cycles); else strlcpy(cycles,"Repeat continuously",sizeof(cycles));
-    snprintf(detail,sizeof(detail),"%s / ON %.2fs / OFF %.2fs\n%s",direction,editPreset.pulse_on_ms/1000.0,editPreset.pulse_off_ms/1000.0,cycles);
+    snprintf(detail,sizeof(detail),"%s / On %.2f s / off %.2f s\n%s",direction,editPreset.pulse_on_ms/1000.0,editPreset.pulse_off_ms/1000.0,cycles);
   } else if (editPreset.mode == STATE_STEP) {
-    char diameter[32]; if (editPreset.workpiece_diameter_mm >= 1) snprintf(diameter,sizeof(diameter),"OD %.1f mm",(double)editPreset.workpiece_diameter_mm); else strlcpy(diameter,"Default diameter",sizeof(diameter));
+    char diameter[32]; if (editPreset.workpiece_diameter_mm >= 1) snprintf(diameter,sizeof(diameter),"Dia %.1f mm",(double)editPreset.workpiece_diameter_mm); else strlcpy(diameter,"Default diameter",sizeof(diameter));
     snprintf(detail,sizeof(detail),"%s / %.1f deg / %u repeats\n%s / dwell %.1fs",direction,(double)editPreset.step_angle,editPreset.step_repeats,diameter,(double)editPreset.step_dwell_sec);
   } else {
     char timer[32]; if (editPreset.timer_auto_stop && editPreset.timer_ms) snprintf(timer,sizeof(timer),"Auto stop %.1fs",editPreset.timer_ms/1000.0); else strlcpy(timer,"No auto stop",sizeof(timer));
-    snprintf(detail,sizeof(detail),"%s / Soft start %s\n%s",direction,editPreset.cont_soft_start ? "ON" : "OFF",timer);
+    snprintf(detail,sizeof(detail),"%s / Soft start %s\n%s",direction,editPreset.cont_soft_start ? "on" : "off",timer);
   }
   lv_label_set_text(detailLabel,detail);
   lock_pending_draft(screenRoots[SCREEN_PROGRAM_EDIT]);

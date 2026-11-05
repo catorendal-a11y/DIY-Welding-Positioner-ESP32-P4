@@ -14,9 +14,9 @@ static void nav_click_cb(lv_event_t* e) {
 void screen_settings_create() {
   lv_obj_t* screen = screenRoots[SCREEN_SETTINGS];
   lv_obj_clean(screen);
-  ui_create_header(screen, "Settings", "SYSTEM CONFIG", nullptr);
-  const char* names[] = {"Motor Configuration", "Calibration", "Pedal Settings",
-                         "Display Settings",    "Diagnostics", "System Info"};
+  ui_create_header(screen, "Settings", "", nullptr);
+  const char* names[] = {"Motor configuration", "Calibration", "Pedal settings",
+                         "Display settings",    "Diagnostics", "System info"};
   const char* details[] = {"Drive and motion",      "Angle accuracy",    "Input and control",
                            "Screen and USB mirror", "Inputs and faults", "Health and firmware"};
   const ScreenId targets[] = {SCREEN_MOTOR_CONFIG, SCREEN_CALIBRATION, SCREEN_PEDAL_SETTINGS,
@@ -27,11 +27,13 @@ void screen_settings_create() {
     lv_obj_set_size(card, 368, 76);
     ui_nav_card_btn_style(card, false);
     lv_obj_add_event_cb(card, nav_click_cb, LV_EVENT_CLICKED, (void*)(intptr_t)targets[i]);
-    ui_create_text(card, 18, 12, 330, names[i], FONT_LARGE, COL_TEXT);
-    ui_create_text(card, 18, 44, 330, details[i], FONT_SUBTITLE, COL_TEXT_DIM);
+    ui_create_text(card, 18, 12, 300, names[i], FONT_LARGE, COL_TEXT);
+    ui_create_text(card, 18, 44, 300, details[i], FONT_SUBTITLE, COL_TEXT_DIM);
+    lv_obj_t* chevron = ui_create_text(card, 332, 26, 20, LV_SYMBOL_RIGHT, FONT_BTN, COL_TEXT_DIM);
+    lv_obj_set_clickable(chevron, false);
   }
-  ui_create_btn(screen, 24, 408, 152, 56, "<  BACK", FONT_BTN, UI_BTN_NORMAL, back_event_cb, nullptr);
-  ui_create_btn(screen, 192, 408, 288, 56, "SETUP WIZARD", FONT_BTN, UI_BTN_NORMAL, nav_click_cb, (void*)(intptr_t)SCREEN_SETUP);
+  ui_create_btn(screen, 24, 408, 152, 56, UI_LABEL_BACK, FONT_BTN, UI_BTN_NORMAL, back_event_cb, nullptr);
+  ui_create_btn(screen, 192, 408, 288, 56, "Setup wizard", FONT_BTN, UI_BTN_NORMAL, nav_click_cb, (void*)(intptr_t)SCREEN_SETUP);
   ui_create_btn(screen, 496, 408, 280, 56, "About", FONT_BTN, UI_BTN_NORMAL, nav_click_cb,
                 (void*)(intptr_t)SCREEN_ABOUT);
 }

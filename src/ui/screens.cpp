@@ -9,6 +9,8 @@
 #include "../config.h"
 #include "../motor/speed.h"
 #include "../safety/safety.h"
+#include <cmath>
+#include <cstdio>
 #include <cstring>
 
 static ControlSnapshot uiSnapshot;
@@ -49,15 +51,118 @@ lv_obj_t* ui_create_adjust_card(lv_obj_t* parent, int x, int y, int width, const
   return value;
 }
 
-void ui_highlight_value_card(lv_obj_t* value) {
-  lv_obj_t* card = lv_obj_get_parent(value);
-  lv_obj_set_style_bg_color(card, COL_ACCENT, 0);
-  lv_obj_set_style_border_width(card, 0, 0);
-  for (uint32_t i = 0; i < lv_obj_get_child_count(card); i++) {
-    lv_obj_t* child = lv_obj_get_child(card, i);
-    if (lv_obj_check_type(child, &lv_label_class))
-      lv_obj_set_style_text_color(child, lv_color_hex(0x11191C), 0);
+static uint32_t motionSinceMs = 0;
+static bool motionSeen = false;
+static void track_motion() {
+  const SystemState state = ui_control_state();
+  const bool moving = state != STATE_IDLE && state != STATE_ESTOP;
+  if (moving && !motionSeen) motionSinceMs = millis();
+  motionSeen = moving;
+}
+bool ui_direction_switch_differs() {
+  const SystemState state = ui_control_state();
+  return g_dir_switch_cache.load() && state != STATE_IDLE && state != STATE_ESTOP &&
+         !speed_program_direction_override_active() && speed_get_direction() != ui_control_view().direction;
+}
+uint32_t ui_motion_elapsed_ms() { return motionSeen ? millis() - motionSinceMs : 0; }
+
+static const char* motion_status_name(SystemState state) {
+  switch (state) {
+    case STATE_RUNNING: return "Rotating";
+    case STATE_PULSE: return "Pulsing";
+    case STATE_STEP: return "Stepping";
+    case STATE_JOG: return "Jogging";
+    case STATE_STOPPING: return "Stopping";
+    default: return "Starting";
   }
+}
+
+static constexpr int kStatusDot = 12;
+static constexpr uint8_t kLiveHeaderFlag = 1;  // Header shows the live machine status.
+
+static void set_motion_status(lv_obj_t* label, bool blocked) {
+  if (!label) return;
+  const SystemState state = ui_control_state();
+  const bool moving = state != STATE_IDLE && state != STATE_ESTOP;
+  const char* status = !ui_control_fresh() ? "Status unavailable" : blocked ? "Motion locked" : moving ? motion_status_name(state) : "Ready";
+  const lv_color_t color = blocked || !ui_control_fresh() ? COL_RED : moving ? COL_ACCENT : COL_GREEN;
+  if (strcmp(lv_label_get_text(label), status) != 0) lv_label_set_text(label, status);
+  lv_obj_set_style_text_color(label, color, 0);
+  // The dot sits left of the right-aligned text. Text fonts only have a tiny bullet glyph.
+  auto* dot = static_cast<lv_obj_t*>(lv_obj_get_user_data(label));
+  if (!dot) {
+    dot = lv_obj_create(lv_obj_get_parent(label));
+    lv_obj_remove_style_all(dot);
+    lv_obj_set_size(dot, kStatusDot, kStatusDot);
+    lv_obj_set_style_radius(dot, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
+    lv_obj_set_clickable(dot, false);
+    lv_obj_set_user_data(label, dot);
+  }
+  lv_point_t size;
+  lv_text_get_size(&size, status, lv_obj_get_style_text_font(label, LV_PART_MAIN), 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+  lv_obj_set_pos(dot, SCREEN_W - 24 - size.x - 10 - kStatusDot, (HEADER_H - kStatusDot) / 2);
+  lv_obj_set_style_bg_color(dot, color, 0);
+}
+
+static void update_header_status(lv_obj_t* root) {
+  if (!root) return;
+  const SystemState state = ui_control_state();
+  const bool blocked = !ui_control_fresh() || safety_inhibit_motion() || safety_is_estop_locked() || state == STATE_ESTOP;
+  for (uint32_t i = 0; i < lv_obj_get_child_count(root); ++i) {
+    lv_obj_t* child = lv_obj_get_child(root, i);
+    if (lv_obj_get_user_flag(child, kLiveHeaderFlag)) set_motion_status(lv_obj_get_child(child, 1), blocked);
+  }
+}
+
+static constexpr uint8_t kRotationCcwFlag = 1;  // Flag 0 marks motion buttons.
+static void draw_rotation_icon(lv_event_t* e) {
+  lv_obj_t* icon = lv_event_get_target_obj(e);
+  lv_area_t area;
+  lv_obj_get_coords(icon, &area);
+  const bool cw = !lv_obj_get_user_flag(icon, kRotationCcwFlag);
+  const lv_color_t color = lv_obj_get_style_text_color(icon, LV_PART_MAIN);
+  const float radius = lv_area_get_width(&area) / 2.0f - 4.0f;
+  const float centerX = (area.x1 + area.x2) / 2.0f, centerY = (area.y1 + area.y2) / 2.0f;
+  lv_draw_arc_dsc_t arc;
+  lv_draw_arc_dsc_init(&arc);
+  arc.color = color;
+  arc.width = 3;
+  arc.rounded = 1;
+  arc.center = {(int32_t)centerX, (int32_t)centerY};
+  arc.radius = (uint16_t)radius;
+  // LVGL angles grow clockwise from east. The gap and arrow head sit at the top.
+  arc.start_angle = cw ? 340 : 240;
+  arc.end_angle = cw ? 300 : 200;
+  lv_draw_arc(lv_event_get_layer(e), &arc);
+  const float head = (cw ? 300.0f : 240.0f) * 3.14159265f / 180.0f;
+  const float side = cw ? 1.0f : -1.0f;
+  const float x = centerX + radius * cos(head), y = centerY + radius * sin(head);
+  const float radialX = cos(head), radialY = sin(head), tangentX = -radialY * side, tangentY = radialX * side;
+  lv_draw_triangle_dsc_t triangle;
+  lv_draw_triangle_dsc_init(&triangle);
+  triangle.color = color;
+  triangle.p[0] = {(lv_value_precise_t)(x + tangentX * radius * 0.7f), (lv_value_precise_t)(y + tangentY * radius * 0.7f)};
+  triangle.p[1] = {(lv_value_precise_t)(x + radialX * radius * 0.45f), (lv_value_precise_t)(y + radialY * radius * 0.45f)};
+  triangle.p[2] = {(lv_value_precise_t)(x - radialX * radius * 0.45f), (lv_value_precise_t)(y - radialY * radius * 0.45f)};
+  lv_draw_triangle(lv_event_get_layer(e), &triangle);
+}
+
+lv_obj_t* ui_create_rotation_icon(lv_obj_t* parent, int size, lv_color_t color, Direction direction) {
+  lv_obj_t* icon = lv_obj_create(parent);
+  lv_obj_remove_style_all(icon);
+  lv_obj_set_size(icon, size, size);
+  lv_obj_set_style_text_color(icon, color, 0);
+  lv_obj_set_user_flag(icon, kRotationCcwFlag, direction == DIR_CCW);
+  lv_obj_set_clickable(icon, false);
+  lv_obj_add_event_cb(icon, draw_rotation_icon, LV_EVENT_DRAW_MAIN, nullptr);
+  return icon;
+}
+
+void ui_set_rotation_icon(lv_obj_t* icon, Direction direction) {
+  if (!icon || lv_obj_get_user_flag(icon, kRotationCcwFlag) == (direction == DIR_CCW)) return;
+  lv_obj_set_user_flag(icon, kRotationCcwFlag, direction == DIR_CCW);
+  lv_obj_invalidate(icon);
 }
 
 void lvgl_lock() {
@@ -214,7 +319,7 @@ void screens_init() {
   screen_confirm_create_static();
   staleBanner = ui_create_post_card(lv_layer_top(), 24, 94, 752, 54);
   lv_obj_set_style_bg_color(staleBanner, COL_RED, 0);
-  ui_create_text(staleBanner, 16, 15, 720, "STATUS UNAVAILABLE / STOP remains available", FONT_NORMAL, lv_color_hex(0xFFFFFF));
+  ui_create_text(staleBanner, 16, 15, 720, "Status unavailable / Stop remains available", FONT_NORMAL, lv_color_hex(0xFFFFFF));
   lv_obj_set_hidden(staleBanner, true);
   estop_overlay_create();
   create_screen(SCREEN_MAIN);
@@ -350,6 +455,8 @@ bool screens_is_active(ScreenId id) { return (currentScreen == id); }
 // ───────────────────────────────────────────────────────────────────────────────
 void screens_update_current() {
   ui_control_refresh();
+  track_motion();
+  update_header_status(screenRoots[currentScreen]);
   stale_controls(screenRoots[currentScreen], false);
   screen_setup_update();
   switch (currentScreen) {
@@ -427,20 +534,6 @@ void screens_update_current() {
 // ───────────────────────────────────────────────────────────────────────────────
 // SHARED UI WIDGETS (lvglTask only)
 // ───────────────────────────────────────────────────────────────────────────────
-void ui_add_post_header_accent(lv_obj_t* parent) {
-  lv_obj_t* ln = lv_obj_create(parent);
-  lv_coord_t w = SCREEN_W - 2 * HEADER_ACCENT_PAD_X;
-  lv_obj_set_size(ln, w, 1);
-  lv_obj_set_pos(ln, HEADER_ACCENT_PAD_X, HEADER_ACCENT_LINE_Y);
-  lv_obj_set_style_bg_color(ln, COL_ACCENT, 0);
-  lv_obj_set_style_bg_opa(ln, LV_OPA_40, 0);
-  lv_obj_set_style_border_width(ln, 0, 0);
-  lv_obj_set_style_radius(ln, 0, 0);
-  lv_obj_set_style_pad_all(ln, 0, 0);
-  lv_obj_set_scrollable(ln, false);
-  lv_obj_set_clickable(ln, false);
-}
-
 lv_obj_t* ui_create_header(lv_obj_t* parent, const char* title, const char* right_caption,
                            lv_obj_t** opt_right_lbl) {
   lv_obj_t* header = lv_obj_create(parent);
@@ -451,41 +544,25 @@ lv_obj_t* ui_create_header(lv_obj_t* parent, const char* title, const char* righ
   lv_obj_set_style_border_width(header, 0, 0);
   lv_obj_set_style_radius(header, 0, 0);
   lv_obj_set_scrollable(header, false);
-  lv_obj_t* brand = lv_label_create(header);
-  lv_label_set_text(brand, "TIG / ROTATOR");
-  lv_obj_set_style_text_font(brand, FONT_SMALL, 0);
-  lv_obj_set_style_text_color(brand, COL_TEXT_DIM, 0);
-  lv_obj_set_pos(brand, 24, 10);
   lv_obj_t* heading = lv_label_create(header);
   lv_label_set_text(heading, title);
-  lv_obj_set_style_text_font(heading, FONT_XL, 0);
+  lv_obj_set_style_text_font(heading, FONT_XXL, 0);
   lv_obj_set_style_text_color(heading, lv_color_hex(0xF5F5F0), 0);
   lv_obj_set_width(heading, 530);
   lv_label_set_long_mode(heading, LV_LABEL_LONG_MODE_DOTS);
-  lv_obj_set_pos(heading, 24, 32);
+  lv_obj_set_pos(heading, 24, 22);
   lv_obj_t* status = lv_label_create(header);
   lv_label_set_text(status, right_caption ? right_caption : "");
-  lv_obj_set_style_text_font(status, FONT_NORMAL, 0);
+  lv_obj_set_style_text_font(status, FONT_BTN, 0);
   lv_obj_set_style_text_color(status, COL_ACCENT, 0);
   lv_obj_set_width(status, 200);
   lv_label_set_long_mode(status, LV_LABEL_LONG_MODE_DOTS);
   lv_obj_set_style_text_align(status, LV_TEXT_ALIGN_RIGHT, 0);
-  lv_obj_set_pos(status, 576, 28);
+  lv_obj_set_pos(status, 576, 27);
   if (opt_right_lbl) *opt_right_lbl = status;
+  else lv_obj_set_user_flag(header, kLiveHeaderFlag, true);
   // V5 header separates the screen through its background, without a hairline.
   return header;
-}
-
-lv_obj_t* ui_create_settings_header(lv_obj_t* parent, const char* title, const char* right_caption,
-                                    lv_color_t right_text_color) {
-  lv_obj_t* status = nullptr;
-  lv_obj_t* header = ui_create_header(parent, title, right_caption, &status);
-  lv_obj_set_style_text_color(status, right_text_color, 0);
-  return header;
-}
-
-lv_obj_t* ui_create_separator(lv_obj_t* parent, lv_coord_t y) {
-  return ui_create_separator_line(parent, 0, y, SCREEN_W, COL_BORDER);
 }
 
 lv_obj_t* ui_create_separator_line(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w,
@@ -525,17 +602,6 @@ void ui_style_post_row(lv_obj_t* obj) {
   lv_obj_set_clickable(obj, false);
 }
 
-void ui_style_post_warn(lv_obj_t* obj) {
-  lv_obj_set_style_bg_color(obj, COL_BG_WARN_PANEL, 0);
-  lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, 0);
-  lv_obj_set_style_border_color(obj, COL_BORDER_WARN, 0);
-  lv_obj_set_style_border_width(obj, 1, 0);
-  lv_obj_set_style_radius(obj, RADIUS_ROW, 0);
-  lv_obj_set_style_shadow_width(obj, 0, 0);
-  lv_obj_set_style_pad_all(obj, 0, 0);
-  lv_obj_set_scrollable(obj, false);
-}
-
 void ui_style_post_ok(lv_obj_t* obj) {
   lv_obj_set_style_bg_color(obj, COL_BG_OK, 0);
   lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, 0);
@@ -553,14 +619,6 @@ lv_obj_t* ui_create_post_card(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_c
   lv_obj_set_pos(card, x, y);
   ui_style_post_card(card);
   return card;
-}
-
-lv_obj_t* ui_create_post_row(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h) {
-  lv_obj_t* row = lv_obj_create(parent);
-  lv_obj_set_size(row, w, h);
-  lv_obj_set_pos(row, x, y);
-  ui_style_post_row(row);
-  return row;
 }
 
 void ui_btn_style_post(lv_obj_t* btn, UiBtnStyle style) {
@@ -671,46 +729,7 @@ void ui_style_slider(lv_obj_t* slider) {
   lv_obj_set_style_radius(slider, 10, LV_PART_KNOB);
 }
 
-void ui_create_action_bar(lv_obj_t* parent, lv_coord_t pad_x, lv_coord_t footer_y, lv_coord_t footer_h,
-                          lv_coord_t gap, lv_coord_t left_w, lv_coord_t right_w, const char* left_text,
-                          lv_event_cb_t left_cb, const char* right_text, UiBtnStyle right_style,
-                          lv_event_cb_t right_cb) {
-  ui_create_btn(parent, pad_x, footer_y, left_w, footer_h, left_text, FONT_SUBTITLE, UI_BTN_NORMAL, left_cb,
-                nullptr);
-  ui_create_btn(parent, pad_x + left_w + gap, footer_y, right_w, footer_h, right_text, FONT_SUBTITLE,
-                right_style, right_cb, nullptr);
-}
-
-void ui_create_action_bar_three(lv_obj_t* parent, lv_coord_t pad_x, lv_coord_t y, lv_coord_t h,
-                                lv_coord_t gap, lv_coord_t btn_w, const char* left_text,
-                                lv_event_cb_t left_cb, UiBtnStyle left_style, const char* mid_text,
-                                lv_event_cb_t mid_cb, UiBtnStyle mid_style, const char* right_text,
-                                lv_event_cb_t right_cb, UiBtnStyle right_style, lv_obj_t** out_left_btn,
-                                lv_obj_t** out_mid_btn, lv_obj_t** out_right_btn) {
-  lv_coord_t x0 = pad_x;
-  lv_coord_t x1 = pad_x + btn_w + gap;
-  lv_coord_t x2 = pad_x + (btn_w + gap) * 2;
-  lv_obj_t* b0 =
-      ui_create_btn(parent, x0, y, btn_w, h, left_text, FONT_SUBTITLE, left_style, left_cb, nullptr);
-  lv_obj_t* b1 = ui_create_btn(parent, x1, y, btn_w, h, mid_text, FONT_SUBTITLE, mid_style, mid_cb, nullptr);
-  lv_obj_t* b2 =
-      ui_create_btn(parent, x2, y, btn_w, h, right_text, FONT_SUBTITLE, right_style, right_cb, nullptr);
-  if (out_left_btn) *out_left_btn = b0;
-  if (out_mid_btn) *out_mid_btn = b1;
-  if (out_right_btn) *out_right_btn = b2;
-}
-
 // ───────────────────────────────────────────────────────────────────────────────
 // BACK BUTTON HELPER
 // ───────────────────────────────────────────────────────────────────────────────
-void screens_set_back_button(lv_obj_t* btn, ScreenId dest) {
-  lv_obj_add_event_cb(
-      btn,
-      [](lv_event_t* e) {
-        ScreenId dest = (ScreenId)(size_t)lv_event_get_user_data(e);
-        screens_show(dest);
-      },
-      LV_EVENT_CLICKED, (void*)(size_t)dest);
-}
-
 void screens_set_edit_slot(int slot) { pendingEditSlot = slot; }

@@ -9,14 +9,14 @@ static SetupProgress progress;
 static bool active = false, cwTested = false, ccwTested = false;
 static uint32_t finishTicket = 0;
 static lv_obj_t *setupDetail = nullptr, *nextBtn = nullptr, *exitBtn = nullptr;
-static lv_obj_t *cwBtn = nullptr, *ccwBtn = nullptr, *startBtn = nullptr, *driverBtn = nullptr;
+static lv_obj_t *cwBtn = nullptr, *ccwBtn = nullptr, *startBtn = nullptr, *stopBtn = nullptr, *driverBtn = nullptr;
 static lv_obj_t *confirmBtn = nullptr, *flipBtn = nullptr;
 static void enabled(lv_obj_t* obj, bool yes) {
   if (!obj) return;
   lv_obj_set_style_bg_color(obj, COL_BTN_BG, LV_STATE_DISABLED);
   lv_obj_set_style_border_color(obj, COL_BORDER, LV_STATE_DISABLED);
   auto label = lv_obj_get_child(obj, 0);
-  if (label) lv_obj_set_style_text_color(label, !yes ? COL_TEXT_DIM : obj == nextBtn ? lv_color_hex(0x11191C) : COL_TEXT, 0);
+  if (label) lv_obj_set_style_text_color(label, !yes ? COL_TEXT_DIM : obj == nextBtn || obj == startBtn ? lv_color_hex(0x11191C) : COL_TEXT, 0);
   if (yes) lv_obj_set_disabled(obj, false); else lv_obj_set_disabled(obj, true);
 }
 void screen_setup_begin() {
@@ -90,14 +90,14 @@ static void next_cb(lv_event_t*) {
   screens_request_show(SCREEN_SETUP);
 }
 void screen_setup_invalidate_widgets() {
-  setupDetail = nextBtn = exitBtn = cwBtn = ccwBtn = startBtn = driverBtn = confirmBtn = flipBtn = nullptr;
+  setupDetail = nextBtn = exitBtn = cwBtn = ccwBtn = startBtn = stopBtn = driverBtn = confirmBtn = flipBtn = nullptr;
 }
 void screen_setup_create() {
   if (!active) screen_setup_begin();
   screen_setup_invalidate_widgets();
   auto s = screenRoots[SCREEN_SETUP]; lv_obj_clean(s);
-  ui_create_header(s, "Setup wizard", "USER FUNCTION CHECK", nullptr);
-  const char* tabs[] = {"1 / MOTOR", "2 / DIRECTION", "3 / CALIBRATION", "4 / CHECK"};
+  ui_create_header(s, "Setup wizard", "", nullptr);
+  const char* tabs[] = {"1  Motor", "2  Direction", "3  Calibration", "4  Check"};
   const int stage = (int)progress.stage;
   for (int i = 0; i < 4; ++i) {
     auto card = ui_create_post_card(s, 24 + i * 190, 94, 182, 46);
@@ -113,29 +113,33 @@ void screen_setup_create() {
     xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
     const float gearRatio = g_settings.gear_ratio, rollerMm = g_settings.roller_mm;
     xSemaphoreGive(g_settings_mutex);
-    lv_label_set_text_fmt(gear, "GEAR RATIO %.1f / roller %.0f mm / default workpiece %.0f mm",
+    lv_label_set_text_fmt(gear, "Gear ratio %.1f / roller %.0f mm / default workpiece %.0f mm",
                           (double)gearRatio, (double)rollerMm, (double)(D_EMNE * 1000));
     driverBtn = ui_create_btn(s, 24, 320, 300, 56, "", FONT_BTN, UI_BTN_NORMAL, driver_cb, nullptr);
-    ui_create_btn(s, 344, 320, 432, 56, "OPEN MOTOR CONFIG", FONT_BTN, UI_BTN_ACCENT, open_cb, (void*)(intptr_t)SCREEN_MOTOR_CONFIG);
+    ui_create_btn(s, 344, 320, 432, 56, "Open motor config", FONT_BTN, UI_BTN_ACCENT, open_cb, (void*)(intptr_t)SCREEN_MOTOR_CONFIG);
   } else if (progress.stage == SetupStage::Direction) {
-    cwBtn = ui_create_btn(s, 24, 224, 368, 68, "HOLD CW", FONT_XL, UI_BTN_NORMAL, nullptr, nullptr);
-    ccwBtn = ui_create_btn(s, 408, 224, 368, 68, "HOLD CCW", FONT_XL, UI_BTN_NORMAL, nullptr, nullptr);
+    cwBtn = ui_create_btn(s, 24, 224, 368, 68, "Hold CW", FONT_XL, UI_BTN_NORMAL, nullptr, nullptr);
+    ccwBtn = ui_create_btn(s, 408, 224, 368, 68, "Hold CCW", FONT_XL, UI_BTN_NORMAL, nullptr, nullptr);
+    for (auto button : {cwBtn, ccwBtn}) {
+      lv_obj_t* icon = ui_create_rotation_icon(button, 34, COL_TEXT, button == cwBtn ? DIR_CW : DIR_CCW);
+      lv_obj_align(icon, LV_ALIGN_CENTER, 90, 0);
+    }
     for (auto code : {LV_EVENT_PRESSED, LV_EVENT_PRESSING, LV_EVENT_RELEASED, LV_EVENT_PRESS_LOST}) {
       lv_obj_add_event_cb(cwBtn, hold_cb, code, (void*)(intptr_t)0);
       lv_obj_add_event_cb(ccwBtn, hold_cb, code, (void*)(intptr_t)1);
     }
-    flipBtn = ui_create_btn(s, 24, 312, 368, 56, "FLIP DIRECTION", FONT_BTN, UI_BTN_NORMAL, flip_cb, nullptr);
-    confirmBtn = ui_create_btn(s, 408, 312, 368, 56, "DIRECTION CORRECT", FONT_BTN, UI_BTN_NORMAL, confirm_direction_cb, nullptr);
+    flipBtn = ui_create_btn(s, 24, 312, 368, 56, "Flip direction", FONT_BTN, UI_BTN_NORMAL, flip_cb, nullptr);
+    confirmBtn = ui_create_btn(s, 408, 312, 368, 56, "Direction correct", FONT_BTN, UI_BTN_NORMAL, confirm_direction_cb, nullptr);
   } else if (progress.stage == SetupStage::Calibration) {
     ui_create_text(s, 24, 245, 752, "Mark the workpiece. Measure rotation manually. Verify before saving.", FONT_NORMAL, COL_TEXT_DIM);
-    ui_create_btn(s, 24, 312, 752, 56, "OPEN CALIBRATION", FONT_BTN, UI_BTN_ACCENT, open_cb, (void*)(intptr_t)SCREEN_CALIBRATION);
+    ui_create_btn(s, 24, 312, 752, 56, "Open calibration", FONT_BTN, UI_BTN_ACCENT, open_cb, (void*)(intptr_t)SCREEN_CALIBRATION);
   } else if (progress.stage == SetupStage::Check) {
     ui_create_text(s, 24, 290, 752, "This records your function check; it does not measure physical stop time.", FONT_NORMAL, COL_TEXT_DIM);
-    startBtn = ui_create_btn(s, 24, 328, 368, 56, "TEST START", FONT_BTN, UI_BTN_NORMAL, start_cb, nullptr);
-    ui_create_btn(s, 408, 328, 368, 56, "STOP ROTATION", FONT_BTN, UI_BTN_DANGER, stop_cb, nullptr);
+    startBtn = ui_create_btn(s, 24, 328, 752, 56, LV_SYMBOL_PLAY "  Test start", FONT_BTN, UI_BTN_ACCENT, start_cb, nullptr);
+    stopBtn = ui_create_btn(s, 24, 328, 752, 56, UI_LABEL_STOP, FONT_BTN, UI_BTN_DANGER, stop_cb, nullptr);
   }
-  exitBtn = ui_create_btn(s, 24, 408, 180, 56, "EXIT SETUP", FONT_BTN, UI_BTN_NORMAL, exit_cb, nullptr);
-  nextBtn = ui_create_btn(s, 408, 408, 368, 56, stage >= 4 ? "FINISH" : "NEXT", FONT_BTN, UI_BTN_ACCENT, next_cb, nullptr);
+  exitBtn = ui_create_btn(s, 24, 408, 180, 56, "Exit setup", FONT_BTN, UI_BTN_NORMAL, exit_cb, nullptr);
+  nextBtn = ui_create_btn(s, 408, 408, 368, 56, stage >= 4 ? "Finish" : "Next", FONT_BTN, UI_BTN_ACCENT, next_cb, nullptr);
   screen_setup_update();
 }
 void screen_setup_update() {
@@ -157,20 +161,24 @@ void screen_setup_update() {
   enabled(cwBtn, fresh && !locked && !configPending && configSaved && holdingJog);
   enabled(ccwBtn, fresh && !locked && !configPending && configSaved && holdingJog);
   enabled(startBtn, ready && progress.reset_seen);
+  if (startBtn && stopBtn) {
+    const bool showStop = !fresh || (!idle && ui_control_state() != STATE_ESTOP);
+    lv_obj_set_hidden(startBtn, showStop); lv_obj_set_hidden(stopBtn, !showStop);
+  }
   enabled(flipBtn, ready);
   enabled(confirmBtn, ready && cwTested && ccwTested);
   enabled(driverBtn, ready);
-  if (driverBtn) lv_label_set_text(lv_obj_get_child(driverBtn, 0), settings_copy().stepper_driver == STEPPER_DRIVER_DM542T ? "DRIVER: DM542T" : "DRIVER: STANDARD");
+  if (driverBtn) lv_label_set_text(lv_obj_get_child(driverBtn, 0), settings_copy().stepper_driver == STEPPER_DRIVER_DM542T ? "Driver: DM542T" : "Driver: standard");
   enabled(nextBtn, ready && (progress.ready() || progress.stage == SetupStage::Complete));
   enabled(exitBtn, progress.stage != SetupStage::Saving);
   const char* message = "";
   switch (progress.stage) {
-    case SetupStage::Motor: message = progress.motor_saved ? "Motor settings saved. Continue with a direction check." : "Select the driver, then open Motor Config and SAVE & APPLY."; break;
+    case SetupStage::Motor: message = progress.motor_saved ? "Motor settings saved. Continue with a direction check." : "Select the driver, then open Motor Config and Save & apply."; break;
     case SetupStage::Direction: message = progress.direction_confirmed ? "Direction confirmed. Continue with calibration." : "Hold both buttons and observe the workpiece. Flip if needed, test again, then confirm."; break;
     case SetupStage::Calibration: message = progress.calibration_saved ? "Verified calibration saved. Continue with the function check." : "Open Calibration: align, measure, verify, then save. Return here after storage confirms the result."; break;
-    case SetupStage::Check: message = !progress.estop_seen ? "Press the PHYSICAL E-STOP switch. The fault overlay must appear." : !progress.reset_seen ? "Release the physical switch, check the machine, then RESET TO IDLE." : !progress.stop_seen ? "Press TEST START, observe rotation, then STOP ROTATION. Confirm that the workpiece stops." : "E-STOP, reset and start/stop sequence observed. NEXT confirms your physical function check."; break;
-    case SetupStage::Saving: message = storage_settings_save_status(finishTicket) == STORAGE_ERROR ? "SAVE FAILED. Retrying automatically; keep power on." : "Saving completed setup. Keep power on."; break;
-    case SetupStage::Complete: message = "SETUP SAVED. Select FINISH to return to the operating screen."; break;
+    case SetupStage::Check: message = !progress.estop_seen ? "Press the physical E-STOP switch. The fault overlay must appear." : !progress.reset_seen ? "Release the physical switch, check the machine, then RESET TO IDLE." : !progress.stop_seen ? "Press Test start, observe rotation, then Stop. Confirm that the workpiece stops." : "E-STOP, reset and start/stop sequence observed. NEXT confirms your physical function check."; break;
+    case SetupStage::Saving: message = storage_settings_save_status(finishTicket) == STORAGE_ERROR ? "Save failed. Retrying automatically; keep power on." : "Saving completed setup. Keep power on."; break;
+    case SetupStage::Complete: message = "Setup saved. Select Finish to return to the operating screen."; break;
   }
-  lv_label_set_text(setupDetail, fresh ? message : "STATUS UNAVAILABLE. Motion cannot start; STOP remains available.");
+  lv_label_set_text(setupDetail, fresh ? message : "Status unavailable. Motion cannot start; Stop remains available.");
 }

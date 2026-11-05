@@ -64,11 +64,14 @@ void test_geometry_with_no_feasible_range_cannot_command_motor() {
   TEST_ASSERT_EQUAL_FLOAT(0,speed_get_target_rpm());
   TEST_ASSERT_EQUAL(0,motor_milli_hz_for_rpm_calibrated(speed_get_target_rpm()));
 }
-void test_stationary_pedal_keeps_ui_override_then_movement_takes_over() {
+void test_pedal_takes_over_only_when_it_reaches_the_ui_speed() {
   pedalEnabled=true; speed_slider_set(0.8f); speed_apply();
   TEST_ASSERT_FLOAT_WITHIN(0.00001f,0.8f,speed_get_target_rpm());
   TEST_ASSERT_EQUAL(SPEED_SOURCE_UI,speed_get_input_source());
-  pedalFiltered=1250; speed_apply();
+  pedalFiltered=1250; speed_apply();  // Moved, but further away: the speed must not jump.
+  TEST_ASSERT_EQUAL(SPEED_SOURCE_UI,speed_get_input_source());
+  TEST_ASSERT_FLOAT_WITHIN(0.00001f,0.8f,speed_get_target_rpm());
+  pedalFiltered=2600; speed_apply();  // Crossed the UI speed.
   TEST_ASSERT_EQUAL(SPEED_SOURCE_PEDAL,speed_get_input_source());
   TEST_ASSERT_TRUE(fabs(speed_get_target_rpm()-0.8f)>0.1f);
 }
@@ -76,7 +79,8 @@ void test_source_change_rebases_instead_of_simulating_movement() {
   speed_slider_set(0.8f); pedalEnabled=true; speed_apply();
   TEST_ASSERT_EQUAL(SPEED_SOURCE_UI,speed_get_input_source());
   TEST_ASSERT_FLOAT_WITHIN(0.00001f,0.8f,speed_get_target_rpm());
-  pedalFiltered=pedalFiltered.load()+201; speed_apply(); TEST_ASSERT_EQUAL(SPEED_SOURCE_PEDAL,speed_get_input_source());
+  pedalFiltered=pedalFiltered.load()+201; speed_apply(); TEST_ASSERT_EQUAL(SPEED_SOURCE_UI,speed_get_input_source());
+  pedalFiltered=2700; speed_apply(); TEST_ASSERT_EQUAL(SPEED_SOURCE_PEDAL,speed_get_input_source());
 }
 void test_requested_and_effective_directions_are_distinct() {
   g_settings.invert_direction=true; speed_set_direction(DIR_CW);
@@ -186,7 +190,7 @@ int main() {
   RUN_TEST(test_real_geometry_rejects_overflow_and_nonfinite);
   RUN_TEST(test_floor_is_visible_and_never_silently_raises_driver_rate);
   RUN_TEST(test_geometry_with_no_feasible_range_cannot_command_motor);
-  RUN_TEST(test_stationary_pedal_keeps_ui_override_then_movement_takes_over);
+  RUN_TEST(test_pedal_takes_over_only_when_it_reaches_the_ui_speed);
   RUN_TEST(test_source_change_rebases_instead_of_simulating_movement);
   RUN_TEST(test_requested_and_effective_directions_are_distinct);
   RUN_TEST(test_pedal_enabled_without_ads_stays_healthy_and_uses_panel_pot);

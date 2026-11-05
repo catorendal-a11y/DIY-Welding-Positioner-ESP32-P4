@@ -55,12 +55,12 @@ static void refresh_post_rows(int percent) {
     } else if (i == activeCount && percent < 100) {
       lv_obj_set_style_bg_color(postRows[i], COL_BG_ACTIVE, 0);
       lv_obj_set_style_border_color(postRows[i], COL_ACCENT, 0);
-      set_label(postStateLabels[i], "RUN", COL_ACCENT);
+      set_label(postStateLabels[i], "Run", COL_ACCENT);
       lv_obj_set_style_text_color(postDetailLabels[i], COL_TEXT_DIM, 0);
     } else {
       lv_obj_set_style_bg_color(postRows[i], COL_BG_DIM, 0);
       lv_obj_set_style_border_color(postRows[i], COL_BORDER_ROW, 0);
-      set_label(postStateLabels[i], "WAIT", COL_TEXT_VDIM);
+      set_label(postStateLabels[i], "Wait", COL_TEXT_VDIM);
       lv_obj_set_style_text_color(postDetailLabels[i], COL_TEXT_VDIM, 0);
     }
   }
@@ -71,10 +71,10 @@ static void refresh_pin_status() {
   const bool almOk = (digitalRead(PIN_DRIVER_ALM) == HIGH);
   const bool enaHigh = (digitalRead(PIN_ENA) == HIGH);
 
-  set_label(estopValueLabel, estopClear ? "CLEAR" : "ACTIVE", estopClear ? COL_GREEN : COL_RED);
-  set_label(almValueLabel, almOk ? "OK" : "FAULT", almOk ? COL_GREEN : COL_RED);
-  set_label(enaValueLabel, enaHigh ? "HIGH" : "LOW", enaHigh ? COL_YELLOW : COL_RED);
-  set_label(motorValueLabel, enaHigh ? "DISABLED" : "ENABLED", enaHigh ? COL_TEXT : COL_RED);
+  set_label(estopValueLabel, estopClear ? "Clear" : "Active", estopClear ? COL_GREEN : COL_RED);
+  set_label(almValueLabel, almOk ? "OK" : "Fault", almOk ? COL_GREEN : COL_RED);
+  set_label(enaValueLabel, enaHigh ? "High" : "Low", enaHigh ? COL_YELLOW : COL_RED);
+  set_label(motorValueLabel, enaHigh ? "Disabled" : "Enabled", enaHigh ? COL_TEXT : COL_RED);
 }
 
 void screen_boot_set_progress(int percent, const char* message) {
@@ -94,7 +94,7 @@ void screen_boot_set_progress(int percent, const char* message) {
   if (stepLabel) {
     char buf[16];
     int shownStep = (percent >= 100) ? 7 : (step + 1);
-    snprintf(buf, sizeof(buf), "STEP %d/7", shownStep);
+    snprintf(buf, sizeof(buf), "Step %d of 7", shownStep);
     lv_label_set_text(stepLabel, buf);
   }
 
@@ -108,7 +108,7 @@ void screen_boot_set_progress(int percent, const char* message) {
 
   if (lastLogLabel && message) {
     char buf[80];
-    snprintf(buf, sizeof(buf), "> %s", message);
+    snprintf(buf, sizeof(buf), "%s", message);
     lv_label_set_text(lastLogLabel, buf);
   }
 
@@ -116,24 +116,23 @@ void screen_boot_set_progress(int percent, const char* message) {
   refresh_pin_status();
 }
 
-void screen_boot_increment(int delta) { screen_boot_set_progress(currentProgress + delta, nullptr); }
-
 void screen_boot_create() {
   lv_obj_t* screen = screenRoots[SCREEN_BOOT];
   lv_obj_clean(screen);
-  ui_create_header(screen, "TIG / ROTATOR", "STARTUP", nullptr);
+  lv_obj_t* noLiveStatus = nullptr;  // Control is not running yet.
+  ui_create_header(screen, "TIG / ROTATOR", "", &noLiveStatus);
   ui_create_text(screen, 24, 100, 360, "Preparing the", FONT_XXL, COL_TEXT);
   ui_create_text(screen, 24, 142, 360, "next weld.", FONT_XXL, COL_TEXT);
   ui_create_text(screen, 24, 204, 368, "Initializing the operator interface.", FONT_SUBTITLE, COL_TEXT_DIM);
   ui_create_text(screen, 24, 238, 368, "Motion starts only on a new request.", FONT_SUBTITLE, COL_TEXT_DIM);
-  statusLabel = ui_create_text(screen, 24, 294, 368, "Starting...", FONT_SUBTITLE, COL_ACCENT);
+  statusLabel = ui_create_text(screen, 24, 294, 368, "Starting...", FONT_SUBTITLE, COL_TEXT);
   progressBar = lv_bar_create(screen);
   lv_obj_set_pos(progressBar, 24, 336);
   lv_obj_set_size(progressBar, 368, 8);
   lv_bar_set_range(progressBar, 0, 100);
   lv_obj_set_style_bg_color(progressBar, COL_ACCENT, LV_PART_INDICATOR);
   percentLabel = ui_create_text(screen, 24, 358, 368, "0%", FONT_SUBTITLE, COL_TEXT_DIM);
-  const char* keys[] = {"E-STOP INPUT", "DRIVER ALARM", "ENABLE OUTPUT", "MOTOR OUTPUT"};
+  const char* keys[] = {"E-STOP input", "Driver alarm", "Enable output", "Motor output"};
   lv_obj_t** vals[] = {&estopValueLabel, &almValueLabel, &enaValueLabel, &motorValueLabel};
   for (int i = 0; i < 4; ++i) {
     lv_obj_t* card = ui_create_post_card(screen, 424, 94 + i * 72, 352, 60);

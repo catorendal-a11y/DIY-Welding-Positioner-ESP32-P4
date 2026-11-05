@@ -112,6 +112,7 @@ extern lv_color_t g_accent_border;
 
 void theme_init();
 void theme_set_color(uint8_t idx);
+void ui_set_rpm_unit(lv_obj_t* label, float rpm);  // Value with its unit, for cards titled without one.
 void theme_set_scheme(uint8_t scheme);  // 0=dark, 1=light (warm cream HMI)
 void theme_refresh();
 lv_color_t theme_accent_on_dark();  // Selected accent for always-dark surfaces, in both schemes

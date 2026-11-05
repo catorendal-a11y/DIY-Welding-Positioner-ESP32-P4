@@ -110,7 +110,8 @@ void control_check_stop_deadline(uint32_t now) {
   const uint32_t motionAge = now - motionDeadlineAt.load();
   const uint32_t requested = stopRequestedAt.load();
   const uint32_t stopping = stoppingAt.load();
-  if ((requested && static_cast<int32_t>(now - (requested - 1u)) >= 50) ||
+  const bool flashing = g_flashWriting.load(std::memory_order_acquire);  // A flash write stalls controlTask too.
+  if ((requested && !flashing && static_cast<int32_t>(now - (requested - 1u)) >= 50) ||
       (deadlineState != STATE_IDLE && control_get_state() == deadlineState &&
        motionAge <= INT32_MAX && motionAge >= motionDeadlineBudget.load()) ||
       (stopping && control_get_state() == STATE_STOPPING &&
@@ -238,6 +239,7 @@ bool control_transition_to(SystemState newState) {
     case STATE_RUNNING:
       break;
     case STATE_STOPPING:
+      motor_restore_configured_acceleration();  // A soft start must not stretch the stop.
       stoppingBudget.store(motor_stop_timeout_ms());
       stoppingAt.store(millis() | 1u); // Encodes an even millisecond + 1; never zero across wrap.
       motor_stop();
@@ -332,10 +334,6 @@ bool control_stop_jog() {
 // ───────────────────────────────────────────────────────────────────────────────
 // MODE-SPECIFIC GETTERS (for UI)
 // ───────────────────────────────────────────────────────────────────────────────
-float control_get_step_accumulated() { return step_get_accumulated(); }
-
-long control_get_step_count() { return step_get_count(); }
-
 float control_get_jog_speed() { return jog_get_speed(); }
 
 void control_set_jog_speed(float rpm) { jog_set_speed(rpm); }

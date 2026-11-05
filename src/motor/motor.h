@@ -42,7 +42,6 @@ bool motor_ena_settle_pending(); // True until the asserted enable has waited ou
 bool motor_is_running();
 bool motor_direction_is_cw();
 void motor_record_direction(bool cw);  // Called only when issuing a motion command.
-uint32_t motor_get_current_hz();       // Rounded Hz from UI cache (see motor_refresh_hz_cache)
 // Step frequency magnitude (Hz), sub-Hz; lock-free read of cache (~5ms fresh, controlTask updates).
 float motor_get_step_frequency_hz();
 // controlTask: sample stepper under mutex and publish for UI (lvglTask) without cross-core mutex wait.

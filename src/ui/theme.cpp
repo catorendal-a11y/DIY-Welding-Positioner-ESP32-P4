@@ -4,6 +4,7 @@
 #include "../storage/storage.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include <cstdio>
 #include <cstring>
 
 lv_color_t g_accent;
@@ -125,10 +126,10 @@ static const NeutralPack NEUT_LIGHT = {
 };
 
 static const ThemeEntry theme_palette[] = {
-    {0xFF6B38, 0x3B2821, 0xFFF0E0, 0xD9480F, "ORANGE"}, {0x00BCD4, 0x001A1E, 0xE0F7FA, 0x00838F, "CYAN"},
-    {0x00E676, 0x001A0E, 0xE8F5E9, 0x2E7D32, "GREEN"},  {0x448AFF, 0x0A1230, 0xE3F2FD, 0x1976D2, "BLUE"},
-    {0xFF5252, 0x1A0A0A, 0xFFEBEE, 0xD32F2F, "RED"},    {0xBB86FC, 0x140E1A, 0xF3E5F5, 0x8E44D6, "PURPLE"},
-    {0xFFD600, 0x1A1A00, 0xFFFDE7, 0xA67C00, "YELLOW"}, {0xE0E0E0, 0x141414, 0xF5F5F5, 0x757575, "WHITE"},
+    {0xFF6B38, 0x3B2821, 0xFFF0E0, 0xD9480F, "Orange"}, {0x00BCD4, 0x001A1E, 0xE0F7FA, 0x00838F, "Cyan"},
+    {0x00E676, 0x001A0E, 0xE8F5E9, 0x2E7D32, "Green"},  {0x448AFF, 0x0A1230, 0xE3F2FD, 0x1976D2, "Blue"},
+    {0xFF5252, 0x1A0A0A, 0xFFEBEE, 0xD32F2F, "Red"},    {0xBB86FC, 0x140E1A, 0xF3E5F5, 0x8E44D6, "Purple"},
+    {0xFFD600, 0x1A1A00, 0xFFFDE7, 0xA67C00, "Yellow"}, {0xE0E0E0, 0x141414, 0xF5F5F5, 0x757575, "White"},
 };
 
 #define THEME_COUNT (sizeof(theme_palette) / sizeof(theme_palette[0]))
@@ -246,13 +247,21 @@ const char* theme_get_name(uint8_t idx) {
 
 uint8_t theme_get_count() { return (uint8_t)THEME_COUNT; }
 
-const char* theme_get_scheme_name(uint8_t scheme) { return (scheme != 0) ? "LIGHT" : "DARK"; }
+const char* theme_get_scheme_name(uint8_t scheme) { return (scheme != 0) ? "Light" : "Dark"; }
 
 uint8_t theme_get_scheme_count(void) { return 2; }
 
 void theme_refresh() { screens_reinit(); }
 
 #include "value_format.h"
+void ui_set_rpm_unit(lv_obj_t* label, float rpm) {
+  if (!label) return;
+  char number[16], text[24];
+  ui_format_rpm(number, sizeof(number), rpm);
+  snprintf(text, sizeof(text), "%s RPM", number);
+  if (std::strcmp(lv_label_get_text(label), text) != 0) lv_label_set_text(label, text);
+}
+
 void ui_set_rpm(lv_obj_t* label, float rpm) {
   if (!label) return;
   char text[16];

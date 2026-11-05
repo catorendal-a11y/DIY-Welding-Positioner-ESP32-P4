@@ -24,7 +24,7 @@ static void auto_stop_cb(lv_event_t* e) {
   if (autoStopSeconds)
     lv_label_set_text_fmt(autoStopLabel, "%lu sec", (unsigned long)autoStopSeconds);
   else
-    lv_label_set_text(autoStopLabel, "OFF / continuous");
+    lv_label_set_text(autoStopLabel, "Off");
 }
 static bool directionCW = true;  // true = CW, false = CCW
 
@@ -73,7 +73,7 @@ static void restyle_soft_start() {
 
 static void update_rpm_display() {
   if (rpmValueLabel) {
-    ui_set_rpm(rpmValueLabel, editRpm);
+    ui_set_rpm_unit(rpmValueLabel, editRpm);
   }
   if (rpmBar) {
     lv_bar_set_value(rpmBar, (int32_t)(editRpm * 1000.0f + 0.5f), LV_ANIM_OFF);
@@ -132,7 +132,7 @@ static void save_cb(lv_event_t* e) {
 
 // ───────────────────────────────────────────────────────────────────────────────
 // SCREEN CREATE -- new_ui.svg SCREEN_EDIT_CONT
-// Header: "EDIT CONTINUOUS" + BACK button
+// Header and Cancel / Save footer
 // Large RPM (y=58): "2.0" in huge font, #FF9500 bold
 // Progress bar (20,142,760,3) with scale marks
 // 4 adjustment buttons: -0.1, +0.1, -1.0, +1.0
@@ -150,28 +150,27 @@ void screen_edit_cont_create() {
   editRpm = p ? p->rpm : 1.0f;
   directionCW = !p || speed_resolve_direction((Direction)p->direction) == DIR_CW;
   softStartEnabled = p && p->cont_soft_start;
-  ui_create_header(screen, "Continuous settings", "PROGRAM EDIT", nullptr);
+  ui_create_header(screen, "Continuous settings", "", nullptr);
   rpmBar = nullptr;
-  rpmValueLabel = ui_create_adjust_card(screen, 24, 94, 368, "TARGET SPEED / RPM", rpm_adj_cb);
-  ui_highlight_value_card(rpmValueLabel);
-  ui_create_text(screen, 424, 94, 352, "DIRECTION", FONT_SUBTITLE, COL_TEXT_DIM);
+  rpmValueLabel = ui_create_adjust_card(screen, 24, 94, 368, "Target speed", rpm_adj_cb);
+  ui_create_text(screen, 424, 94, 352, "Direction", FONT_SUBTITLE, COL_TEXT_DIM);
   cwBtn = ui_create_btn(screen, 424, 128, 168, 64, "CW", FONT_BTN, UI_BTN_NORMAL, cw_event_cb, nullptr);
   ccwBtn = ui_create_btn(screen, 608, 128, 168, 64, "CCW", FONT_BTN, UI_BTN_NORMAL, ccw_event_cb, nullptr);
   autoStopSeconds = p && p->timer_auto_stop ? p->timer_ms / 1000u : 0;
-  autoStopLabel = ui_create_adjust_card(screen, 408, 226, 368, "AUTO STOP / 0 = OFF", auto_stop_cb);
+  autoStopLabel = ui_create_adjust_card(screen, 408, 226, 368, "Auto stop", auto_stop_cb);
   if (autoStopSeconds)
     lv_label_set_text_fmt(autoStopLabel, "%lu sec", (unsigned long)autoStopSeconds);
   else
-    lv_label_set_text(autoStopLabel, "OFF / continuous");
+    lv_label_set_text(autoStopLabel, "Off");
   ui_create_post_card(screen, 24, 226, 368, 124);
-  ui_create_text(screen, 42, 240, 200, "SOFT START", FONT_LARGE, COL_TEXT);
-  ssOnBtn = ui_create_btn(screen, 38, 282, 160, 56, "ON", FONT_BTN, UI_BTN_NORMAL, ss_on_event_cb, nullptr);
+  ui_create_text(screen, 42, 240, 200, "Soft start", FONT_LARGE, COL_TEXT);
+  ssOnBtn = ui_create_btn(screen, 38, 282, 160, 56, "On", FONT_BTN, UI_BTN_NORMAL, ss_on_event_cb, nullptr);
   ssOffBtn =
-      ui_create_btn(screen, 212, 282, 166, 56, "OFF", FONT_BTN, UI_BTN_NORMAL, ss_off_event_cb, nullptr);
+      ui_create_btn(screen, 212, 282, 166, 56, "Off", FONT_BTN, UI_BTN_NORMAL, ss_off_event_cb, nullptr);
   ui_create_text(screen, 24, 360, 752, "Settings are applied to the program when you save.", FONT_SUBTITLE,
                  COL_TEXT_DIM);
-  ui_create_btn(screen, 24, 408, 152, 56, "CANCEL", FONT_BTN, UI_BTN_NORMAL, cancel_cb, nullptr);
-  ui_create_btn(screen, 496, 408, 280, 56, "SAVE", FONT_BTN, UI_BTN_ACCENT, save_cb, nullptr);
+  ui_create_btn(screen, 24, 408, 152, 56, "Cancel", FONT_BTN, UI_BTN_NORMAL, cancel_cb, nullptr);
+  ui_create_btn(screen, 496, 408, 280, 56, "Save", FONT_BTN, UI_BTN_ACCENT, save_cb, nullptr);
   update_rpm_display();
   restyle_direction();
   restyle_soft_start();

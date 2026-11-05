@@ -123,7 +123,7 @@ int run_screen_saver_test(const char* directory) {
   simulator_set_scenario("none"); sim_pump(1500);
   screens_show(SCREEN_DISPLAY); sim_pump(40);
   capture("05_display_settings.bmp", false);
-  check(sim_click_label("PREVIEW"), "Display PREVIEW missing");
+  check(sim_click_label("Preview"), "Display PREVIEW missing");
   check(screen_saver_visible(), "Display PREVIEW did not open screen saver");
   screens_reinit(); sim_pump(80);
   check(!screen_saver_visible() && screens_get_current() == SCREEN_DISPLAY,
@@ -175,7 +175,7 @@ int run_motor_config_test(const char* directory) {
   const SystemSettings original = g_settings;
   screens_show(SCREEN_MOTOR_CONFIG); sim_pump(40);
   capture("01_motor_config.bmp");
-  if (!sim_expect(openValue("MAX SPEED / RPM"), "motor limit missing exact input")) return 1;
+  if (!sim_expect(openValue("Max speed (RPM)"), "motor limit missing exact input")) return 1;
   capture("02_speed_input.bmp", true);
   if (!enter("4") || !sim_expect(sim_find_type(lv_layer_top(), &lv_textarea_class), "invalid limit closed editor")) return 2;
   capture("03_invalid_speed.bmp", true);
@@ -183,12 +183,12 @@ int run_motor_config_test(const char* directory) {
     if (!enter(invalid) || !sim_expect(sim_find_type(lv_layer_top(), &lv_textarea_class), "invalid or over-precise motor limit accepted")) return 21;
   if (!enter("0,075") || !sim_expect(!sim_find_type(lv_layer_top(), &lv_textarea_class), "decimal comma limit was not accepted")) return 3;
   if (!sim_expect(fabs(g_settings.max_rpm-original.max_rpm) < 0.00001f, "exact input applied before SAVE")) return 4;
-  if (!openValue("MAX SPEED / RPM")) return 5;
-  auto cancel = sim_find_label_target(lv_layer_top(), "CANCEL", false, true);
+  if (!openValue("Max speed (RPM)")) return 5;
+  auto cancel = sim_find_label_target(lv_layer_top(), "Cancel", false, true);
   if (!cancel) return 5;
   lv_obj_send_event(cancel, LV_EVENT_CLICKED, nullptr); sim_pump(60);
   if (!sim_expect(sim_label_object(screenRoots[SCREEN_MOTOR_CONFIG], "0.075"), "Cancel changed speed draft")) return 6;
-  auto speedHeading = sim_label_object(screenRoots[SCREEN_MOTOR_CONFIG], "MAX SPEED / RPM");
+  auto speedHeading = sim_label_object(screenRoots[SCREEN_MOTOR_CONFIG], "Max speed (RPM)");
   auto speedCard = lv_obj_get_parent(speedHeading);
   auto plus = sim_find_label_target(speedCard, "+", false, true);
   auto minus = sim_find_label_target(speedCard, "-", false, true);
@@ -199,32 +199,32 @@ int run_motor_config_test(const char* directory) {
   if (!sim_expect(sim_label_object(speedCard, "0.078"), "hold-repeat lost precision or double-stepped on release")) return 23;
   for (unsigned i=0; i<3; ++i) lv_obj_send_event(minus, LV_EVENT_SHORT_CLICKED, nullptr);
   sim_pump(40);
-  if (!openValue("ACCEL AT 1/16") || !enter("15000.5")) return 7;
+  if (!openValue("Accel at 1/16") || !enter("15000.5")) return 7;
   if (!sim_expect(sim_find_type(lv_layer_top(), &lv_textarea_class), "fractional acceleration was silently rounded")) return 8;
   capture("04_invalid_acceleration.bmp", true);
   if (!enter("15001")) return 9;
   capture("05_motor_draft.bmp");
   simulator_set_scenario("nvs-failure");
-  if (!sim_click_label("SAVE & APPLY")) return 10;
+  if (!sim_click_label("Save & apply")) return 10;
   sim_pump(600);
   if (!sim_expect(fabs(g_settings.max_rpm-0.075f) < 0.00001f && g_settings.acceleration == 15001,
                   "motor configuration lost exact values")) return 11;
   capture("06_save_failure.bmp");
-  auto save = sim_find_active_label_target("SAVE & APPLY");
-  if (!sim_expect(save && lv_obj_is_disabled(save) && !openValue("MAX SPEED / RPM"),
+  auto save = sim_find_active_label_target("Save & apply");
+  if (!sim_expect(save && lv_obj_is_disabled(save) && !openValue("Max speed (RPM)"),
                   "pending save allowed edits or duplicate apply")) return 12;
   simulator_set_scenario("none"); sim_pump(1500);
   if (!sim_expect(!lv_obj_is_disabled(save), "save completion did not unlock motor settings")) return 13;
-  if (!openValue("MAX SPEED / RPM")) return 14;
+  if (!openValue("Max speed (RPM)")) return 14;
   screens_show(SCREEN_SETTINGS); sim_pump(50);
   if (!sim_expect(!sim_find_type(lv_layer_top(), &lv_textarea_class), "motor keyboard leaked on navigation")) return 15;
   screens_show(SCREEN_MOTOR_CONFIG); sim_pump(40);
-  if (!openValue("MAX SPEED / RPM")) return 16;
+  if (!openValue("Max speed (RPM)")) return 16;
   screens_reinit(); sim_pump(50);
   if (!sim_expect(!sim_find_type(lv_layer_top(), &lv_textarea_class), "motor keyboard leaked on theme rebuild")) return 17;
   simulator_set_scenario("stalled-control"); sim_pump(160);
-  save = sim_find_active_label_target("SAVE & APPLY");
-  if (!sim_expect(save && lv_obj_is_disabled(save) && sim_label_object(screenRoots[SCREEN_MOTOR_CONFIG], "STATUS STALE"),
+  save = sim_find_active_label_target("Save & apply");
+  if (!sim_expect(save && lv_obj_is_disabled(save) && sim_label_object(screenRoots[SCREEN_MOTOR_CONFIG], "Status stale"),
                   "stale motor settings still looked ready to apply")) return 18;
   capture("07_stale_status.bmp");
   simulator_set_scenario("none"); sim_pump(80);
@@ -260,15 +260,15 @@ int run_program_edit_test(const char* directory) {
   simulator_set_scenario("none"); safety_reset_estop(); control_stop(); sim_pump(100);
   speed_slider_set(0.08f); screens_show(SCREEN_PROGRAMS); sim_pump(80);
   const auto before = g_presets;
-  if (!sim_click_label("+ NEW")) return 1;
+  if (!sim_click_label("+ New")) return 1;
   capture("01_new_program.bmp");
   auto draft = screen_program_edit_get_preset();
-  if (!sim_click_label("PULSE") || !sim_click_label("PULSE")) return 2;
+  if (!sim_click_label("Pulse") || !sim_click_label("Pulse")) return 2;
   if (!sim_expect(draft->mode == STATE_PULSE && (draft->mode_mask & PRESET_MASK_PULSE),"repeated mode selection removed the run mode")) return 3;
-  if (!sim_click_label("STEP ON") || !sim_expect(!(draft->mode_mask & PRESET_MASK_STEP),"available-mode removal failed")) return 4;
-  if (!sim_click_label("STEP") || !sim_expect(draft->mode_mask & PRESET_MASK_STEP,"selected run mode was not made available")) return 5;
+  if (!sim_click_label("Step on") || !sim_expect(!(draft->mode_mask & PRESET_MASK_STEP),"available-mode removal failed")) return 4;
+  if (!sim_click_label("Step") || !sim_expect(draft->mode_mask & PRESET_MASK_STEP,"selected run mode was not made available")) return 5;
   capture("02_step_program.bmp");
-  if (!sim_click_label("CONTINUOUS") || !sim_click_label("New Program")) return 6;
+  if (!sim_click_label("Continuous") || !sim_click_label("New Program")) return 6;
   capture("03_name_editor.bmp",true);
   // Character-count limits must not allow a truncated UTF-8 name in the 32-byte field.
   const char* tooLong = "\xc3\xb8\xc3\xb8\xc3\xb8\xc3\xb8\xc3\xb8\xc3\xb8\xc3\xb8\xc3\xb8\xc3\xb8\xc3\xb8\xc3\xb8\xc3\xb8\xc3\xb8\xc3\xb8\xc3\xb8\xc3\xb8";
@@ -282,37 +282,37 @@ int run_program_edit_test(const char* directory) {
   if (!sim_click_label(rpmText) || !enter("4")) return 10;
   capture("04_rpm_validation.bmp",true);
   if (!sim_expect(sim_find_type(lv_layer_top(),&lv_textarea_class) && fabs(draft->rpm-0.08f) < 0.00001f,"invalid RPM closed the editor or changed the draft")) return 11;
-  auto cancelInput = sim_find_label_target(lv_layer_top(),"CANCEL",false,true);
+  auto cancelInput = sim_find_label_target(lv_layer_top(),"Cancel",false,true);
   if (!cancelInput) return 30;
   lv_obj_send_event(cancelInput,LV_EVENT_CLICKED,nullptr); sim_pump(80);
   if (!sim_expect(!sim_find_type(lv_layer_top(),&lv_textarea_class) && fabs(draft->rpm-0.08f) < 0.00001f,"RPM Cancel changed the draft")) return 31;
   if (!sim_click_label(rpmText)) return 32;
   if (!enter("0,075") || !sim_expect(fabs(draft->rpm-0.075f) < 0.00001f,"exact decimal RPM was lost")) return 12;
   if (!sim_click_label("+") || !sim_expect(fabs(draft->rpm-0.076f) < 0.00001f,"low-speed adjustment was too coarse")) return 13;
-  for (const char* mode : {"CONTINUOUS", "PULSE", "STEP"}) {
-    if (!sim_click_label(mode) || !sim_click_label("MODE SETTINGS >")) return 25;
-    const char* title = strcmp(mode,"STEP") == 0 ? "SPEED / RPM" : "TARGET SPEED / RPM";
+  for (const char* mode : {"Continuous", "Pulse", "Step"}) {
+    if (!sim_click_label(mode) || !sim_click_label("Mode settings " LV_SYMBOL_RIGHT)) return 25;
+    const char* title = strcmp(mode,"Step") == 0 ? "Speed" : "Target speed";
     auto titleLabel = findLabel(findLabel,lv_screen_active(),title);
     auto card = titleLabel ? lv_obj_get_parent(titleLabel) : nullptr;
-    if (!sim_expect(card && findLabel(findLabel,card,"0.076"),"sub-editor rounded low RPM")) return 26;
+    if (!sim_expect(card && findLabel(findLabel,card,"0.076 RPM"),"sub-editor rounded low RPM")) return 26;
     auto plus = sim_find_label_target(card,"+",false,true);
     if (!plus) return 27;
     lv_obj_send_event(plus,LV_EVENT_CLICKED,nullptr); sim_pump(60);
-    if (!sim_expect(findLabel(findLabel,card,"0.077"),"sub-editor low-speed increment was too coarse")) return 28;
-    if (!sim_click_label("CANCEL") || !sim_expect(fabs(draft->rpm-0.076f) < 0.00001f,"sub-editor Cancel changed the draft")) return 29;
+    if (!sim_expect(findLabel(findLabel,card,"0.077 RPM"),"sub-editor low-speed increment was too coarse")) return 28;
+    if (!sim_click_label("Cancel") || !sim_expect(fabs(draft->rpm-0.076f) < 0.00001f,"sub-editor Cancel changed the draft")) return 29;
   }
-  if (!sim_click_label("PULSE")) return 14;
+  if (!sim_click_label("Pulse")) return 14;
   capture("05_pulse_program.bmp");
-  if (!sim_click_label("MODE SETTINGS >") || !sim_click_label("SAVE")) return 15;
+  if (!sim_click_label("Mode settings " LV_SYMBOL_RIGHT) || !sim_click_label("Save")) return 15;
   if (!sim_expect(strcmp(draft->name,"ROOT PASS") == 0 && fabs(draft->rpm-0.076f) < 0.00001f,"sub-editor return lost program draft")) return 16;
   simulator_set_scenario("nvs-failure");
-  if (!sim_click_label("SAVE")) return 17;
+  if (!sim_click_label("Save")) return 17;
   sim_pump(600);
   if (!sim_expect(screens_get_current() == SCREEN_PROGRAM_EDIT &&
-       sim_find_label_target(screenRoots[SCREEN_PROGRAM_EDIT],"SAVE FAILED / RETRYING",false,false),
+       sim_find_label_target(screenRoots[SCREEN_PROGRAM_EDIT],"Save failed, retrying",false,false),
        "program save failure was hidden")) return 33;
   auto pendingPlus = sim_find_label_target(screenRoots[SCREEN_PROGRAM_EDIT],"+",false,true);
-  auto pendingMode = sim_find_label_target(screenRoots[SCREEN_PROGRAM_EDIT],"STEP",false,true);
+  auto pendingMode = sim_find_label_target(screenRoots[SCREEN_PROGRAM_EDIT],"Step",false,true);
   if (!sim_expect(pendingPlus && pendingMode && lv_obj_has_state(pendingPlus,LV_STATE_DISABLED) &&
        lv_obj_has_state(pendingMode,LV_STATE_DISABLED),"saving draft remained editable")) return 35;
   lv_obj_send_event(pendingPlus,LV_EVENT_CLICKED,nullptr);
@@ -324,8 +324,8 @@ int run_program_edit_test(const char* directory) {
   if (!sim_expect(g_presets.size() == before.size()+1 && strcmp(g_presets.back().name,"ROOT PASS") == 0 &&
                   g_presets.back().mode == STATE_PULSE && fabs(g_presets.back().rpm-0.076f) < 0.00001f,"saved program does not match draft")) return 18;
   capture("06_saved_programs.bmp");
-  if (!sim_click_label("+ NEW") || !sim_click_label("CANCEL") || !sim_expect(g_presets.size() == before.size()+1,"Cancel created a program")) return 19;
-  if (!sim_click_label("+ NEW") || !sim_click_label("New Program")) return 20;
+  if (!sim_click_label("+ New") || !sim_click_label("Cancel") || !sim_expect(g_presets.size() == before.size()+1,"Cancel created a program")) return 19;
+  if (!sim_click_label("+ New") || !sim_click_label("New Program")) return 20;
   screens_show(SCREEN_SETTINGS); sim_pump(80);
   if (!sim_expect(sim_find_type(lv_layer_top(),&lv_keyboard_class) == nullptr,"program keyboard leaked across navigation")) return 21;
   xSemaphoreTake(g_presets_mutex,portMAX_DELAY); g_presets = before; xSemaphoreGive(g_presets_mutex);
@@ -345,29 +345,29 @@ int run_calibration_test(const char* directory) {
   simulator_set_scenario("none"); safety_reset_estop(); control_stop(); sim_pump(100);
   screens_show(SCREEN_MAIN); sim_pump(50); g_settings.calibration_factor = 1;
   simulator_fast_motion(true); screens_show(SCREEN_CALIBRATION); sim_pump(50);
-  if (!sim_hold_label("JOG +", 260)) return 18;
+  if (!sim_hold_label("Jog +", 260)) return 18;
   if (!sim_expect(control_get_state() == STATE_JOG, "calibration jog failed across enable settle")) return 18;
-  if (!sim_send_label_event("JOG +", LV_EVENT_RELEASED)) return 18;
+  if (!sim_send_label_event("Jog +", LV_EVENT_RELEASED)) return 18;
   if (!sim_expect(control_get_state() == STATE_IDLE, "calibration jog release failed to stop")) return 18;
   capture("01_align.bmp");
-  if (!sim_click_label("MOVE 360")) return 1;
+  if (!sim_click_label("Move 360\xC2\xB0")) return 1;
   capture("02_moving.bmp");
-  if (!sim_click_label("STOP")) return 2;
+  if (!sim_click_label(UI_LABEL_STOP)) return 2;
   sim_pump(300);
-  auto save = sim_find_active_label_target("SAVE CALIBRATION");
+  auto save = sim_find_active_label_target("Save calibration");
   if (!sim_expect(save && lv_obj_is_disabled(save), "interrupted calibration allowed Save")) return 3;
-  if (!sim_click_label("RESTART") || !sim_click_label("MOVE 360")) return 4;
+  if (!sim_click_label("Restart") || !sim_click_label("Move 360\xC2\xB0")) return 4;
   sim_pump(900); capture("03_measure.bmp");
-  if (!sim_enter_calibration_measurement("345") || !sim_click_label("APPLY MEASUREMENT")) return 5;
+  if (!sim_enter_calibration_measurement("345") || !sim_click_label("Apply measurement")) return 5;
   if (!sim_expect(std::fabs(g_settings.calibration_factor-1) < 0.00001f && calibration_get_factor() > 1,
                   "unverified calibration leaked into stored settings")) return 6;
   capture("04_verify_ready.bmp");
-  if (!sim_click_label("VERIFY 360")) return 7;
+  if (!sim_click_label("Verify 360\xC2\xB0")) return 7;
   sim_pump(900);
   if (!sim_enter_calibration_measurement("359")) return 8;
   capture("05_verify_failed.bmp");
   if (!sim_expect(lv_obj_is_disabled(save), "failed verification allowed Save")) return 9;
-  if (!sim_click_label("VERIFY 360")) return 10;
+  if (!sim_click_label("Verify 360\xC2\xB0")) return 10;
   sim_pump(900);
   if (!sim_enter_calibration_measurement("360,25")) return 11;
   if (!sim_expect(!lv_obj_is_disabled(save) &&
@@ -375,11 +375,11 @@ int run_calibration_test(const char* directory) {
                   "verified calibration Save state and appearance disagree")) return 17;
   capture("06_verified.bmp");
   simulator_set_scenario("nvs-failure");
-  if (!sim_click_label("SAVE CALIBRATION")) return 12;
+  if (!sim_click_label("Save calibration")) return 12;
   sim_pump(600); capture("07_save_retry.bmp");
-  auto back = sim_find_active_label_target("<  BACK");
+  auto back = sim_find_active_label_target(UI_LABEL_BACK);
   if (!sim_expect(back && lv_obj_is_disabled(back), "calibration allowed exit before save receipt")) return 15;
-  if (!sim_click_label("STOP")) return 16;
+  if (!sim_click_label(UI_LABEL_STOP)) return 16;
   simulator_set_scenario("none"); sim_pump(1500); capture("08_saved.bmp");
   if (!sim_expect(sim_find_label_target(screenRoots[SCREEN_CALIBRATION],"Calibration saved",false,false) != nullptr,
                   "calibration save confirmation missing")) return 13;
@@ -404,31 +404,31 @@ int run_commissioning_test(const char* directory) {
   screen_setup_begin();
   if (!sim_show_and_check(SCREEN_SETUP)) return 2;
   capture("01_motor.bmp");
-  auto next = sim_find_active_label_target("NEXT");
+  auto next = sim_find_active_label_target("Next");
   if (!sim_expect(next && lv_obj_is_disabled(next), "setup skipped unsaved motor config")) return 3;
-  if (!sim_click_label("OPEN MOTOR CONFIG") || !sim_click_label("SAVE & APPLY")) return 4;
+  if (!sim_click_label("Open motor config") || !sim_click_label("Save & apply")) return 4;
   sim_pump(600);
-  if (!sim_click_back_to(SCREEN_SETUP) || !sim_click_label("NEXT")) return 5;
+  if (!sim_click_back_to(SCREEN_SETUP) || !sim_click_label("Next")) return 5;
   capture("02_direction.bmp");
-  for (const char* label : {"HOLD CW", "HOLD CCW"}) {
+  for (const char* label : {"Hold CW", "Hold CCW"}) {
     // Hold like an operator: keep the button down through the ENA settle so
     // the state reaches JOG and the direction is actually exercised.
     if (!sim_hold_label(label, 260)) return 6;
     if (!sim_send_label_event(label, LV_EVENT_RELEASED)) return 6;
     sim_pump(80);
   }
-  if (!sim_click_label("DIRECTION CORRECT") || !sim_click_label("NEXT")) return 7;
+  if (!sim_click_label("Direction correct") || !sim_click_label("Next")) return 7;
   sim_pump(40);  // let SETUP rebuild at the calibration stage
   capture("03_calibration.bmp");
-  if (!sim_click_label("OPEN CALIBRATION") || !sim_click_label("MOVE 360")) return 8;
+  if (!sim_click_label("Open calibration") || !sim_click_label("Move 360\xC2\xB0")) return 8;
   sim_pump(900);
-  if (!sim_enter_calibration_measurement() || !sim_click_label("APPLY MEASUREMENT") || !sim_click_label("VERIFY 360")) return 9;
+  if (!sim_enter_calibration_measurement() || !sim_click_label("Apply measurement") || !sim_click_label("Verify 360\xC2\xB0")) return 9;
   sim_pump(900);
-  if (!sim_enter_calibration_measurement() || !sim_click_label("SAVE CALIBRATION")) return 10;
+  if (!sim_enter_calibration_measurement() || !sim_click_label("Save calibration")) return 10;
   sim_pump(600);
-  if (!sim_click_back_to(SCREEN_SETUP) || !sim_click_label("NEXT")) return 11;
+  if (!sim_click_back_to(SCREEN_SETUP) || !sim_click_label("Next")) return 11;
   capture("04_function_check.bmp");
-  next = sim_find_active_label_target("NEXT");
+  next = sim_find_active_label_target("Next");
   if (!sim_expect(next && lv_obj_is_disabled(next), "setup skipped physical function check")) return 12;
   simulator_set_estop_input(true); estop_overlay_show(); sim_pump(100);
   simulator_set_estop_input(false); sim_pump(300);
@@ -436,23 +436,23 @@ int run_commissioning_test(const char* directory) {
   if (!sim_expect(reset && !lv_obj_is_disabled(reset), "wizard reset unavailable")) return 13;
   lv_obj_send_event(reset, LV_EVENT_CLICKED, nullptr); sim_pump(80); estop_overlay_hide();
   if (!sim_expect(control_get_state() == STATE_IDLE, "reset restarted motion")) return 14;
-  if (!sim_click_label("TEST START")) return 15;
+  if (!sim_click_label(LV_SYMBOL_PLAY "  Test start")) return 15;
   sim_pump(260);  // ENA settle: the wizard must observe STATE_RUNNING
-  if (!sim_click_label("STOP ROTATION")) return 15;
+  if (!sim_click_label(UI_LABEL_STOP)) return 15;
   simulator_set_scenario("nvs-failure");
-  if (!sim_click_label("NEXT")) return 16;
+  if (!sim_click_label("Next")) return 16;
   sim_pump(600);
-  auto finish = sim_find_active_label_target("FINISH");
+  auto finish = sim_find_active_label_target("Finish");
   if (!sim_expect(finish && lv_obj_is_disabled(finish), "setup finished before durable save")) return 17;
   capture("05_save_failed.bmp");
   simulator_set_scenario("none"); sim_pump(1500);
   capture("06_complete.bmp");
-  if (!sim_click_label("FINISH") || !sim_expect(screens_get_current() == SCREEN_MAIN && !control_setup_active(), "wizard did not finish")) return 18;
+  if (!sim_click_label("Finish") || !sim_expect(screens_get_current() == SCREEN_MAIN && !control_setup_active(), "wizard did not finish")) return 18;
   simulator_fast_motion(false);
   // Cancellation must preserve configured data and cancel a queued start.
   g_settings.setup_completed = false; screens_show_startup(); sim_pump(80);
   if (!sim_expect(screens_get_current() == SCREEN_SETUP, "new installation did not offer setup")) return 19;
-  if (!sim_click_label("EXIT SETUP")) return 19;
+  if (!sim_click_label("Exit setup")) return 19;
   if (!sim_expect(!control_setup_active() && control_get_state() == STATE_IDLE, "wizard cancellation retained motion")) return 20;
   g_settings.setup_completed = true; screens_show_startup(); sim_pump(80);
   if (!sim_expect(screens_get_current() == SCREEN_MAIN, "existing installation forced through wizard")) return 22;

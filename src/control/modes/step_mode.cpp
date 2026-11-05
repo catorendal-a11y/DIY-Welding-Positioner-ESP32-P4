@@ -148,6 +148,5 @@ void step_reset_accumulator() {
 // ───────────────────────────────────────────────────────────────────────────────
 // STEP MODE GETTERS
 // ───────────────────────────────────────────────────────────────────────────────
-float step_get_current_angle() { return stepCurrentAngle; }
 float step_get_accumulated() { return accumulatedAngle; }
 long step_get_count() { return stepsTaken; }

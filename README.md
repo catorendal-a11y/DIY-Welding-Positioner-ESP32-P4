@@ -115,7 +115,7 @@ The wizard does not measure stop time or certify wiring. [Every wizard screen](d
 
 ## Validation
 
-Every commit runs **484 native tests**, packaging tests, Linux and Windows simulator self-tests, a layout audit and three firmware builds. Release binaries come from the validated master commit. The owner reported v2.3.0 tested on the assembled machine on 2026-11-04. TIG HF works on the owner's machine. The owner reported the v2.3.1 build working on the same machine the same day. Stop time has not been measured. [v2.3.1 status](docs/releases/v2.3.1.md#validation-and-hardware-status) · [Changelog](CHANGELOG.md)
+Every commit runs **489 native tests**, packaging tests, Linux and Windows simulator self-tests, a layout audit and three firmware builds. Release binaries come from the validated master commit. The owner reported v2.3.0 tested on the assembled machine on 2026-11-04. TIG HF works on the owner's machine. The owner reported the v2.3.1 build working on the same machine the same day. Stop time has not been measured. [v2.3.1 status](docs/releases/v2.3.1.md#validation-and-hardware-status) · [Changelog](CHANGELOG.md)
 
 ## Documentation and contributions
 

@@ -68,7 +68,7 @@ static void set_pin_value(DiagnosticRow row, lv_obj_t* obj, int pinState, const 
   const bool low = (pinState == LOW);
   const char* text = low ? lowText : highText;
   lv_color_t color = (low && lowIsFault) ? COL_RED : COL_GREEN;
-  if (low && !lowIsFault) color = COL_ACCENT;
+  if (low && !lowIsFault) color = COL_TEXT;
   set_value(values[row], obj, text, color);
 }
 
@@ -78,43 +78,43 @@ void screen_diagnostics_create() {
   lv_obj_clean(screen);
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
-  ui_create_settings_header(screen, "DIAGNOSTICS", "LIVE", COL_GREEN);
+  ui_create_header(screen, "Diagnostics", "", nullptr);
 
   lv_obj_t* gpioPanel = ui_create_post_card(screen, 24, 94, 368, 224);
   lv_obj_set_scrollable(gpioPanel, false);
 
   lv_obj_t* gpioTitle = lv_label_create(gpioPanel);
-  lv_label_set_text(gpioTitle, "GPIO INPUTS");
+  lv_label_set_text(gpioTitle, "GPIO inputs");
   lv_obj_set_style_text_font(gpioTitle, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(gpioTitle, COL_ACCENT, 0);
+  lv_obj_set_style_text_color(gpioTitle, COL_TEXT, 0);
   lv_obj_set_pos(gpioTitle, 12, 10);
 
   int gy = 38;
-  estopVal = add_gpio_row(gpioPanel, gy, "ESTOP");
+  estopVal = add_gpio_row(gpioPanel, gy, "E-STOP");
   gy += 32;
-  almVal = add_gpio_row(gpioPanel, gy, "DRIVER ALM");
+  almVal = add_gpio_row(gpioPanel, gy, "Driver alarm");
   gy += 32;
-  dirSwVal = add_gpio_row(gpioPanel, gy, "DIR SWITCH");
+  dirSwVal = add_gpio_row(gpioPanel, gy, "Direction switch");
   gy += 32;
-  pedalSwVal = add_gpio_row(gpioPanel, gy, "PEDAL SW");
+  pedalSwVal = add_gpio_row(gpioPanel, gy, "Pedal switch");
 
   lv_obj_t* rtPanel = ui_create_post_card(screen, 408, 94, 368, 224);
   lv_obj_set_scrollable(rtPanel, false);
 
   lv_obj_t* rtTitle = lv_label_create(rtPanel);
-  lv_label_set_text(rtTitle, "RUNTIME STATUS");
+  lv_label_set_text(rtTitle, "Runtime status");
   lv_obj_set_style_text_font(rtTitle, FONT_SUBTITLE, 0);
-  lv_obj_set_style_text_color(rtTitle, COL_ACCENT, 0);
+  lv_obj_set_style_text_color(rtTitle, COL_TEXT, 0);
   lv_obj_set_pos(rtTitle, 12, 10);
 
   int ry = 38;
-  stateVal = add_rt_row(rtPanel, ry, "STATE");
+  stateVal = add_rt_row(rtPanel, ry, "State");
   ry += 32;
-  targetRpmVal = add_rt_row(rtPanel, ry, "TARGET RPM");
+  targetRpmVal = add_rt_row(rtPanel, ry, "Target RPM");
   ry += 32;
-  actualRpmVal = add_rt_row(rtPanel, ry, "ESTIMATED RPM");
+  actualRpmVal = add_rt_row(rtPanel, ry, "Estimated RPM");
   ry += 32;
-  enaVal = add_rt_row(rtPanel, ry, "ENA");
+  enaVal = add_rt_row(rtPanel, ry, "Enable output");
 
   driverInfoLabel = lv_label_create(rtPanel);
   lv_obj_set_pos(driverInfoLabel, 12, 180); lv_obj_set_width(driverInfoLabel, 344);
@@ -132,7 +132,7 @@ void screen_diagnostics_create() {
   lv_obj_set_width(eventStripLabel, 736);
   lv_label_set_long_mode(eventStripLabel, LV_LABEL_LONG_MODE_CLIP);
 
-  ui_create_btn(screen, 24, SET_FOOTER_Y, 152, SET_FOOTER_H, "<  BACK", FONT_SUBTITLE, UI_BTN_NORMAL, back_cb,
+  ui_create_btn(screen, 24, SET_FOOTER_Y, 152, SET_FOOTER_H, UI_LABEL_BACK, FONT_SUBTITLE, UI_BTN_NORMAL, back_cb,
                 nullptr);
   lv_obj_t* rows[] = {estopVal, almVal, dirSwVal, pedalSwVal, stateVal, targetRpmVal, actualRpmVal, enaVal};
   for (size_t i = 0; i < ROW_COUNT; ++i) values[i].bind(rows[i]);
@@ -162,14 +162,14 @@ void screen_diagnostics_update() {
   const bool fresh = ui_control_fresh();
   const SystemState state = ui_control_state();
 
-  set_value(values[STATE], stateVal, fresh ? control_state_name(state) : "STATUS STALE",
-            !fresh || state == STATE_ESTOP ? COL_RED : state == STATE_IDLE ? COL_GREEN : COL_ACCENT);
+  set_value(values[STATE], stateVal, fresh ? control_state_name(state) : "Status stale",
+            !fresh || state == STATE_ESTOP ? COL_RED : state == STATE_IDLE ? COL_GREEN : COL_TEXT);
 
-  set_pin_value(ESTOP, estopVal, digitalRead(PIN_ESTOP), "HIGH OK", "LOW PRESSED", true);
-  set_pin_value(ALARM, almVal, digitalRead(PIN_DRIVER_ALM), "HIGH OK", "LOW FAULT", true);
-  set_pin_value(DIRECTION, dirSwVal, digitalRead(PIN_DIR_SWITCH), "HIGH CW", "LOW CCW", false);
-  set_pin_value(PEDAL, pedalSwVal, digitalRead(PIN_PEDAL_SW), "HIGH OPEN", "LOW PRESSED", false);
-  set_pin_value(ENABLE, enaVal, digitalRead(PIN_ENA), "HIGH DISABLED", "LOW ENABLED", false);
+  set_pin_value(ESTOP, estopVal, digitalRead(PIN_ESTOP), "High / OK", "Low / pressed", true);
+  set_pin_value(ALARM, almVal, digitalRead(PIN_DRIVER_ALM), "High / OK", "Low / fault", true);
+  set_pin_value(DIRECTION, dirSwVal, digitalRead(PIN_DIR_SWITCH), "High / CW", "Low / CCW", false);
+  set_pin_value(PEDAL, pedalSwVal, digitalRead(PIN_PEDAL_SW), "High / open", "Low / pressed", false);
+  set_pin_value(ENABLE, enaVal, digitalRead(PIN_ENA), "High / disabled", "Low / enabled", false);
 
   char buf[24];
   snprintf(buf, sizeof(buf), "%.3f", (double)view.target_rpm);

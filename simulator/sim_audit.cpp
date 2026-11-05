@@ -32,6 +32,26 @@ int run_screenshot_dump(const char* dir) {
     std::printf("SCREENSHOT: %s\n", path);
   }
 
+  // The same screens with motion running, where Stop replaces Start.
+  const struct { ScreenId id; const char* name; } running[] = {{SCREEN_MAIN, "MAIN"}, {SCREEN_PULSE, "PULSE"}, {SCREEN_STEP, "STEP"}};
+  simulator_fast_motion(false);
+  for (const auto& entry : running) {
+    screens_show(entry.id);
+    sim_pump(80);
+    lv_obj_send_event(sim_find_action(screenRoots[entry.id], UI_ACTION_START), LV_EVENT_CLICKED, nullptr);
+    sim_pump(700);
+    lv_refr_now(nullptr);
+    lv_draw_buf_t* shot = lv_snapshot_take(screenRoots[entry.id], LV_COLOR_FORMAT_ARGB8888);
+    if (!shot) return 4;
+    char path[512];
+    std::snprintf(path, sizeof(path), "%s/RUNNING_%s.bmp", dir, entry.name);
+    const bool ok = sim_write_bmp_argb8888(path, shot);
+    lv_draw_buf_destroy(shot);
+    control_stop();
+    sim_pump(300);
+    if (!ok) return 5;
+  }
+
   screens_show(SCREEN_MAIN);
   for (bool active : {true, false}) {
     simulator_set_estop_input(active);
@@ -59,11 +79,11 @@ int run_layout_audit() {
     lv_obj_update_layout(screenRoots[id]);
     failures += audit_labels(screenRoots[id], sim_screen_name(static_cast<ScreenId>(id)));
     if (id == SCREEN_PROGRAM_EDIT) {
-      for (const char* text : {"CANCEL", "SAVE"}) {
+      for (const char* text : {"Cancel", "Save"}) {
         auto button = sim_find_label_target(screenRoots[id], text, false, true);
         if (!button || lv_obj_get_y(button) < 400) { std::printf("LAYOUT EDITOR FOOTER: %s\n", text); ++failures; }
       }
-      for (const char* text : {"CONTINUOUS", "PULSE", "STEP"}) {
+      for (const char* text : {"Continuous", "Pulse", "Step"}) {
         auto button = sim_find_label_target(screenRoots[id], text, false, true);
         if (!button || lv_obj_get_y(button) < 160) { std::printf("LAYOUT EDITOR MODE: %s\n", text); ++failures; }
       }

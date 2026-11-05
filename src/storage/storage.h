@@ -38,6 +38,12 @@ struct SystemSettings {
   float workpiece_diameter_mm = 0.0f;  // Manual workpiece OD; 0 = default D_EMNE
   float roller_mm = D_RULLE * 1000.0f;  // Drive roller diameter of this machine
   float gear_ratio = GEAR_RATIO;        // Motor revolutions per roller revolution
+  // Manual values, kept across restarts.
+  uint8_t manual_direction = 0;         // Direction when the physical switch is off
+  uint16_t pulse_on_ms = 500;
+  uint16_t pulse_off_ms = 500;
+  float step_angle = 90.0f;
+  float jog_rpm = 0.5f;
 };
 
 // Preset struct matching the system's control capabilities

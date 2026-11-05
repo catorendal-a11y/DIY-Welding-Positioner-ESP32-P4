@@ -41,18 +41,18 @@ static void update_computed_info() {
   float duty = (cycleSec > 0.0f) ? (onSec / cycleSec * 100.0f) : 0.0f;
   float freq = (cycleSec > 0.0f) ? (1.0f / cycleSec) : 0.0f;
 
-  if (infoDutyLabel) lv_label_set_text_fmt(infoDutyLabel, "DUTY %d%%", (int)(duty + 0.5f));
-  if (infoCycleLabel) lv_label_set_text_fmt(infoCycleLabel, "CYCLE %.1fs", cycleSec);
-  if (infoFreqLabel) lv_label_set_text_fmt(infoFreqLabel, "FREQ %.1fHz", freq);
+  if (infoDutyLabel) lv_label_set_text_fmt(infoDutyLabel, "Duty %d%%", (int)(duty + 0.5f));
+  if (infoCycleLabel) lv_label_set_text_fmt(infoCycleLabel, "Cycle %.1f s", cycleSec);
+  if (infoFreqLabel) lv_label_set_text_fmt(infoFreqLabel, "%.1f Hz", freq);
   if (infoTotalLabel) {
     if (editCycles > 0) {
       float totalSec = cycleSec * editCycles;
       if (totalSec < 60.0f)
-        lv_label_set_text_fmt(infoTotalLabel, "TOTAL %.0fs", totalSec);
+        lv_label_set_text_fmt(infoTotalLabel, "Total %.0f s", totalSec);
       else
-        lv_label_set_text_fmt(infoTotalLabel, "TOTAL %.1fm", totalSec / 60.0f);
+        lv_label_set_text_fmt(infoTotalLabel, "Total %.1f min", totalSec / 60.0f);
     } else {
-      lv_label_set_text(infoTotalLabel, "TOTAL INF");
+      lv_label_set_text(infoTotalLabel, "No time limit");
     }
   }
 
@@ -95,7 +95,7 @@ static void on_time_adj_cb(lv_event_t* e) {
     editOnMs -= (uint32_t)(-delta);
   if (editOnMs < PULSE_MS_MIN) editOnMs = PULSE_MS_MIN;
   if (editOnMs > PULSE_MS_MAX) editOnMs = PULSE_MS_MAX;
-  lv_label_set_text_fmt(onTimeLabel, "%.1fs", editOnMs / 1000.0f);
+  lv_label_set_text_fmt(onTimeLabel, "%.1f s", editOnMs / 1000.0f);
   update_computed_info();
 }
 
@@ -108,7 +108,7 @@ static void off_time_adj_cb(lv_event_t* e) {
     editOffMs -= (uint32_t)(-delta);
   if (editOffMs < PULSE_MS_MIN) editOffMs = PULSE_MS_MIN;
   if (editOffMs > PULSE_MS_MAX) editOffMs = PULSE_MS_MAX;
-  lv_label_set_text_fmt(offTimeLabel, "%.1fs", editOffMs / 1000.0f);
+  lv_label_set_text_fmt(offTimeLabel, "%.1f s", editOffMs / 1000.0f);
   update_computed_info();
 }
 
@@ -121,7 +121,7 @@ static void rpm_adj_cb(lv_event_t* e) {
     editRpm -= ui_rpm_increment(editRpm);
   if (editRpm < MIN_RPM) editRpm = MIN_RPM;
   if (editRpm > screen_program_edit_rpm_max()) editRpm = screen_program_edit_rpm_max();
-  ui_set_rpm(rpmLabel, editRpm);
+  ui_set_rpm_unit(rpmLabel, editRpm);
   update_computed_info();
 }
 
@@ -132,7 +132,7 @@ static void cycles_adj_cb(lv_event_t* e) {
   if (editCycles < 0) editCycles = 0;
   if (editCycles > 999) editCycles = 999;
   if (editCycles == 0)
-    lv_label_set_text(cyclesLabel, "INF");
+    lv_label_set_text(cyclesLabel, "No limit");
   else
     lv_label_set_text_fmt(cyclesLabel, "%d", editCycles);
   update_computed_info();
@@ -174,26 +174,25 @@ void screen_edit_pulse_create() {
   editOffMs = p ? p->pulse_off_ms : 300;
   editRpm = p ? p->rpm : 1.2f;
   editCycles = p ? p->pulse_cycles : 0;
-  ui_create_header(screen, "Pulse settings", "PROGRAM EDIT", nullptr);
-  onTimeLabel = ui_create_adjust_card(screen, 24, 86, 368, "ROTATE FOR / s", on_time_adj_cb, 100);
-  ui_highlight_value_card(onTimeLabel);
-  offTimeLabel = ui_create_adjust_card(screen, 408, 86, 368, "PAUSE FOR / s", off_time_adj_cb, 100);
-  rpmLabel = ui_create_adjust_card(screen, 24, 226, 368, "TARGET SPEED / RPM", rpm_adj_cb);
-  cyclesLabel = ui_create_adjust_card(screen, 408, 226, 368, "CYCLES / 0 = continuous", cycles_adj_cb);
-  lv_label_set_text_fmt(onTimeLabel, "%.1fs", editOnMs / 1000.0f);
-  lv_label_set_text_fmt(offTimeLabel, "%.1fs", editOffMs / 1000.0f);
-  ui_set_rpm(rpmLabel, editRpm);
+  ui_create_header(screen, "Pulse settings", "", nullptr);
+  onTimeLabel = ui_create_adjust_card(screen, 24, 86, 368, "Rotate for", on_time_adj_cb, 100);
+  offTimeLabel = ui_create_adjust_card(screen, 408, 86, 368, "Pause for", off_time_adj_cb, 100);
+  rpmLabel = ui_create_adjust_card(screen, 24, 226, 368, "Target speed", rpm_adj_cb);
+  cyclesLabel = ui_create_adjust_card(screen, 408, 226, 368, "Cycles (0 = no limit)", cycles_adj_cb);
+  lv_label_set_text_fmt(onTimeLabel, "%.1f s", editOnMs / 1000.0f);
+  lv_label_set_text_fmt(offTimeLabel, "%.1f s", editOffMs / 1000.0f);
+  ui_set_rpm_unit(rpmLabel, editRpm);
   if (editCycles)
     lv_label_set_text_fmt(cyclesLabel, "%d", editCycles);
   else
-    lv_label_set_text(cyclesLabel, "INF");
+    lv_label_set_text(cyclesLabel, "No limit");
   onBar = offBar = rpmBar = nullptr;
   infoDutyLabel = ui_create_text(screen, 24, 366, 176, "", FONT_NORMAL, COL_TEXT_DIM);
   infoCycleLabel = ui_create_text(screen, 216, 366, 176, "", FONT_NORMAL, COL_TEXT_DIM);
   infoFreqLabel = ui_create_text(screen, 408, 366, 176, "", FONT_NORMAL, COL_TEXT_DIM);
   infoTotalLabel = ui_create_text(screen, 600, 366, 176, "", FONT_NORMAL, COL_TEXT_DIM);
-  ui_create_btn(screen, 24, 408, 152, 56, "CANCEL", FONT_BTN, UI_BTN_NORMAL, cancel_event_cb, nullptr);
-  ui_create_btn(screen, 496, 408, 280, 56, "SAVE", FONT_BTN, UI_BTN_ACCENT, save_event_cb, nullptr);
+  ui_create_btn(screen, 24, 408, 152, 56, "Cancel", FONT_BTN, UI_BTN_NORMAL, cancel_event_cb, nullptr);
+  ui_create_btn(screen, 496, 408, 280, 56, "Save", FONT_BTN, UI_BTN_ACCENT, save_event_cb, nullptr);
   update_computed_info();
 }
 
@@ -223,12 +222,12 @@ void screen_edit_pulse_update() {
   // Draft is loaded on entry. Preserve edits until SAVE or CANCEL.
 
   // Update labels
-  if (onTimeLabel) lv_label_set_text_fmt(onTimeLabel, "%.1fs", editOnMs / 1000.0f);
-  if (offTimeLabel) lv_label_set_text_fmt(offTimeLabel, "%.1fs", editOffMs / 1000.0f);
-  if (rpmLabel) ui_set_rpm(rpmLabel, editRpm);
+  if (onTimeLabel) lv_label_set_text_fmt(onTimeLabel, "%.1f s", editOnMs / 1000.0f);
+  if (offTimeLabel) lv_label_set_text_fmt(offTimeLabel, "%.1f s", editOffMs / 1000.0f);
+  if (rpmLabel) ui_set_rpm_unit(rpmLabel, editRpm);
   if (cyclesLabel) {
     if (editCycles == 0)
-      lv_label_set_text(cyclesLabel, "INF");
+      lv_label_set_text(cyclesLabel, "No limit");
     else
       lv_label_set_text_fmt(cyclesLabel, "%d", editCycles);
   }

@@ -27,7 +27,7 @@ static lv_obj_t* make_mode_card(lv_obj_t* parent, int16_t x, int16_t y, int16_t 
   lv_label_set_text(titleLbl, title);
   lv_obj_set_style_text_font(titleLbl, FONT_XL, 0);
   lv_obj_set_style_text_color(titleLbl, accent ? COL_ACCENT : COL_TEXT, 0);
-  lv_obj_set_pos(titleLbl, 24, 24);
+  lv_obj_set_pos(titleLbl, 24, 38);
 
   lv_obj_t* detailLbl = lv_label_create(card);
   lv_label_set_text(detailLbl, detail);
@@ -35,10 +35,10 @@ static lv_obj_t* make_mode_card(lv_obj_t* parent, int16_t x, int16_t y, int16_t 
   lv_obj_set_style_text_color(detailLbl, COL_TEXT_DIM, 0);
   lv_obj_set_width(detailLbl, w - 64);
   lv_label_set_long_mode(detailLbl, LV_LABEL_LONG_MODE_DOTS);
-  lv_obj_set_pos(detailLbl, 24, 64);
+  lv_obj_set_pos(detailLbl, 24, 78);
 
   lv_obj_t* chevron = lv_label_create(card);
-  lv_label_set_text(chevron, ">");
+  lv_label_set_text(chevron, LV_SYMBOL_RIGHT);
   lv_obj_set_style_text_font(chevron, FONT_BTN, 0);
   lv_obj_set_style_text_color(chevron, accent ? COL_ACCENT : COL_TEXT_DIM, 0);
   lv_obj_align(chevron, LV_ALIGN_RIGHT_MID, -20, 0);
@@ -50,29 +50,29 @@ void screen_run_modes_create() {
   lv_obj_clean(screen);
   lv_obj_set_style_bg_color(screen, COL_BG, 0);
 
-  ui_create_header(screen, "RUN MODES", "SELECT MODE", nullptr);
+  ui_create_header(screen, "Run modes", "", nullptr);
 
   const int cardW = 368;
-  const int cardH = 122;
+  const int cardH = 140;
   const int padX = 24;
   const int midGap = 16;
-  const int row1Y = 94;
-  const int rowGap = 18;
+  const int row1Y = 96;
+  const int rowGap = 16;
   const int row2Y = row1Y + cardH + rowGap;
   const int leftX = padX;
   const int rightX = padX + cardW + midGap;
   const int footerY = 408;
   const int footerH = 56;
 
-  make_mode_card(screen, leftX, row1Y, cardW, cardH, "PULSE", "Timed on/off rotation cycles", SCREEN_PULSE,
+  make_mode_card(screen, leftX, row1Y, cardW, cardH, "Pulse", "Timed on/off rotation cycles", SCREEN_PULSE,
                  false);
-  make_mode_card(screen, rightX, row1Y, cardW, cardH, "STEP", "Move by angle, then stop", SCREEN_STEP, false);
-  make_mode_card(screen, leftX, row2Y, cardW, cardH, "JOG", "Hold to run, release to stop", SCREEN_JOG,
+  make_mode_card(screen, rightX, row1Y, cardW, cardH, "Step", "Move by angle, then stop", SCREEN_STEP, false);
+  make_mode_card(screen, leftX, row2Y, cardW, cardH, "Jog", "Hold to run, release to stop", SCREEN_JOG,
                  false);
-  make_mode_card(screen, rightX, row2Y, cardW, cardH, "3-2-1", "Countdown then start continuous",
+  make_mode_card(screen, rightX, row2Y, cardW, cardH, "Countdown", "Countdown then start continuous",
                  SCREEN_TIMER, false);
 
-  ui_create_btn(screen, padX, footerY, 152, footerH, "<  BACK", FONT_SUBTITLE, UI_BTN_NORMAL, back_event_cb,
+  ui_create_btn(screen, padX, footerY, 152, footerH, UI_LABEL_BACK, FONT_BTN, UI_BTN_NORMAL, back_event_cb,
                 nullptr);
 
   LOG_I("Screen run modes: POST picker created");

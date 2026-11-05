@@ -696,7 +696,7 @@ Non-volatile settings and program presets are stored in the ESP32 **NVS** (Non-V
 
 | Local check | Result |
 | --- | --- |
-| Native suites | 484 / 484 passed (native/control/speed/storage/safety suites) |
+| Native suites | 489 / 489 passed (native/control/speed/storage/safety suites) |
 | Packaging tests | 10 / 10 passed |
 | LVGL self-test | Passed: navigation, program edits, RPM adjustment, fault reset, full setup/calibration workflows, save failure/retry and stale control |
 | Firmware builds | Release, debug and mirror passed |

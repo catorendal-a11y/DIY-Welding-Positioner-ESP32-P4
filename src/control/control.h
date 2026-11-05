@@ -50,8 +50,6 @@ bool control_start_pulse(uint32_t on_ms, uint32_t off_ms, uint16_t cycles = 0);
 bool control_start_step(float angle_deg);
 bool control_start_step_sequence(float angle_deg, uint16_t repeats, float dwell_sec);
 void control_reset_step_accumulator();
-float control_get_step_accumulated();  // For UI display
-long control_get_step_count();         // For UI display
 
 // Jog mode
 bool control_start_jog_cw();

@@ -42,7 +42,7 @@ void create() {
   lv_obj_set_clickable(overlay, true);
   ui_create_text(overlay, 40, 34, 360, "TIG / ROTATOR", FONT_XL, text);
   circle(overlay, 623, 39, 8, accent, 0);
-  auto status = ui_create_text(overlay, 647, 35, 113, "DISPLAY IDLE", FONT_TINY, muted);
+  auto status = ui_create_text(overlay, 647, 35, 113, "Display idle", FONT_TINY, muted);
   lv_obj_set_style_text_align(status, LV_TEXT_ALIGN_RIGHT, 0);
   box(overlay, 40, 79, 720, 1, lv_color_hex(0x303B3C));
 
@@ -64,13 +64,13 @@ void create() {
   circle(composition, 95, 90, 70, accent, 0);
   circle(composition, 114, 109, 32, background, 0);
   orbit = circle(composition, 122, 30, 16, text, 0);
-  ui_create_text(composition, 308, 29, 360, "01 / STANDBY", FONT_SUBTITLE, accent);
+  ui_create_text(composition, 308, 29, 360, "Standby", FONT_SUBTITLE, accent);
   ui_create_text(composition, 306, 72, 380, "Ready when", FONT_HUGE, text);
   ui_create_text(composition, 306, 121, 380, "you are.", FONT_HUGE, text);
   ui_create_text(composition, 308, 194, 360, "Welding positioner  /  Motor stopped", FONT_SUBTITLE, muted);
 
   box(overlay, 40, 399, 720, 1, lv_color_hex(0x303B3C));
-  auto wake = ui_create_text(overlay, 40, 429, 720, "TOUCH ANYWHERE TO WAKE", FONT_LARGE, text);
+  auto wake = ui_create_text(overlay, 40, 429, 720, "Touch anywhere to wake", FONT_LARGE, text);
   lv_obj_set_style_text_align(wake, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_hidden(overlay, true);
 }

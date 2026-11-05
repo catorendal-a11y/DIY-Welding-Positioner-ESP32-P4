@@ -41,7 +41,7 @@ static void update_toggle() {
     lv_obj_set_disabled(pedalToggle, true);
   else
     lv_obj_set_disabled(pedalToggle, false);
-  lv_label_set_text(pedalToggleLbl, enabled ? "ON" : "OFF");
+  lv_label_set_text(pedalToggleLbl, enabled ? "On" : "Off");
   lv_obj_set_style_text_color(pedalToggleLbl, enabled ? COL_GREEN : COL_TEXT_DIM, 0);
 }
 
@@ -63,11 +63,11 @@ static void pedal_toggle_cb(lv_event_t* e) {
 void screen_pedal_settings_create() {
   lv_obj_t* screen = screenRoots[SCREEN_PEDAL_SETTINGS];
   lv_obj_clean(screen);
-  ui_create_header(screen, "Foot pedal", "OPERATOR INPUT", nullptr);
+  ui_create_header(screen, "Foot pedal", "", nullptr);
   lv_obj_t* mode = ui_create_post_card(screen, 24, 94, 752, 76);
   ui_create_text(mode, 18, 24, 420, "Pedal start / stop control", FONT_LARGE, COL_TEXT);
   pedalToggle =
-      ui_create_btn(mode, 560, 10, 174, 56, "OFF", FONT_BTN, UI_BTN_NORMAL, pedal_toggle_cb, nullptr);
+      ui_create_btn(mode, 560, 10, 174, 56, "Off", FONT_BTN, UI_BTN_NORMAL, pedal_toggle_cb, nullptr);
   pedalToggleLbl = lv_obj_get_child(pedalToggle, 0);
   lv_obj_t* gpio = ui_create_post_card(screen, 24, 186, 752, 76);
   ui_create_text(gpio, 18, 24, 360, "Start switch / GPIO33", FONT_LARGE, COL_TEXT);
@@ -79,7 +79,7 @@ void screen_pedal_settings_create() {
   lv_obj_set_style_text_align(adsVal, LV_TEXT_ALIGN_RIGHT, 0);
   ui_create_text(screen, 24, 368, 752, "Release the pedal before enabling control.", FONT_SUBTITLE,
                  COL_TEXT_DIM);
-  ui_create_btn(screen, 24, 408, 152, 56, "<  BACK", FONT_BTN, UI_BTN_NORMAL, back_cb, nullptr);
+  ui_create_btn(screen, 24, 408, 152, 56, UI_LABEL_BACK, FONT_BTN, UI_BTN_NORMAL, back_cb, nullptr);
   screen_pedal_settings_update();
 }
 
@@ -96,12 +96,12 @@ void screen_pedal_settings_update() {
   update_toggle();
 
   const bool pressed = (digitalRead(PIN_PEDAL_SW) == LOW);
-  set_value(gpioVal, pressed ? "LOW PRESSED" : "HIGH OPEN", pressed ? COL_ACCENT : COL_GREEN);
+  set_value(gpioVal, pressed ? "Pressed" : "Open", pressed ? COL_TEXT : COL_GREEN);
 
   if (speed_get_pedal_enabled() && !speed_pedal_input_healthy()) {
-    set_value(adsVal, "INPUT FAULT / START BLOCKED", COL_RED);
+    set_value(adsVal, "Input fault, start blocked", COL_RED);
   } else if (speed_ads1115_pedal_present()) {
-    set_value(adsVal, speed_pedal_analog_available() ? "ACTIVE" : "PRESENT", COL_GREEN);
+    set_value(adsVal, speed_pedal_analog_available() ? "Active" : "Present", COL_GREEN);
   } else {
     set_value(adsVal, "ADS1115 not detected", COL_TEXT_DIM);
   }

@@ -64,7 +64,7 @@ inline const char* safety_fault_reason_message(FaultReason reason) {
     case FAULT_DRIVER_ALARM:
       return "DM542T driver alarm input is active";
     case FAULT_STORAGE_CORRUPT:
-      return "Saved data is invalid; motion disabled and data kept - reflash or erase";
+      return "Saved data is invalid; motion disabled. Hold the erase button to clear it, or reflash";
     case FAULT_WATCHDOG_RESET:
       return "Controller restarted after a crash, watchdog or brownout; see event log";
     default:

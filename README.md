@@ -4,6 +4,8 @@
 
 Touchscreen controller for a single-axis TIG/MIG welding rotator, built for the GUITION JC4880P443C 4.3" ESP32-P4 display board.
 
+<p align="center"><img src="https://img.shields.io/badge/speed-0.001--3.0%20RPM-ff6b38?style=flat-square" alt="speed: 0.001-3.0 RPM"> <img src="https://img.shields.io/badge/modes-Continuous%20·%20Jog%20·%20Pulse%20·%20Step-303b40?style=flat-square" alt="modes: Continuous · Jog · Pulse · Step"> <img src="https://img.shields.io/badge/programs-16-303b40?style=flat-square" alt="programs: 16"> <img src="https://img.shields.io/badge/driver-DM542T-303b40?style=flat-square" alt="driver: DM542T"> <img src="https://img.shields.io/badge/motor-NEMA%2023-303b40?style=flat-square" alt="motor: NEMA 23"> <img src="https://img.shields.io/badge/UI-LVGL%209.6-303b40?style=flat-square" alt="UI: LVGL 9.6"></p>
+
 <p align="center">
   <a href="https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml"><img src="https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/actions/workflows/pio-build.yml/badge.svg" alt="Build and tests"></a>
   <a href="https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/latest"><img src="https://img.shields.io/github/v/release/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4" alt="Latest release"></a>
@@ -20,11 +22,11 @@ Touchscreen controller for a single-axis TIG/MIG welding rotator, built for the 
 
 | You want to | Go to |
 |---|---|
-| **See the UI without hardware** | [Windows simulator](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.3.1/welding-positioner-v2.3.1-simulator-windows-x64.zip): extract all files, open **Start Simulator.cmd**. [Instructions](docs/releases/SIMULATOR.md) |
-| **Flash a controller** | [Firmware downloads](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.3.1) and [install firmware](#install-firmware) |
-| **Build one** | [Parts](#parts), [wiring](#wiring) and the [builder guide](docs/BUILDER_GUIDE.md) |
-| **See it run** | [Hardware demo](https://youtu.be/GygLl6XY-TM), which shows an earlier UI |
-| **Fix a problem** | [Troubleshooting](wiki/Troubleshooting.md) |
+| 🖥️ **See the UI without hardware** | [Windows simulator](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.3.1/welding-positioner-v2.3.1-simulator-windows-x64.zip): extract all files, open **Start Simulator.cmd**. [Instructions](docs/releases/SIMULATOR.md) |
+| ⚡ **Flash a controller** | [Firmware downloads](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.3.1) and [install firmware](#install-firmware) |
+| 🛠️ **Build one** | [Parts](#parts), [wiring](#wiring) and the [builder guide](docs/BUILDER_GUIDE.md) |
+| ▶️ **See it run** | [Hardware demo](https://youtu.be/GygLl6XY-TM), which shows an earlier UI |
+| 🩺 **Fix a problem** | [Troubleshooting](wiki/Troubleshooting.md) |
 
 ## Safety
 
@@ -56,14 +58,17 @@ Touchscreen controller for a single-axis TIG/MIG welding rotator, built for the 
 
 <sub>All screens are actual LVGL simulator captures at 800 x 480. <a href="docs/images/ui_runtime_v5/overview.png">See every screen</a>.</sub>
 
-- **Continuous, Jog, Pulse and Step** rotation, with an optional countdown before starting.
-- **0.001-3.0 RPM** at the workpiece, limited by geometry and calibration. The screen shows the effective range.
-- **16 saved programs**, with speed, direction, diameter and mode settings.
-- Panel potentiometer, direction switch and optional foot pedal.
-- E-STOP input, driver-alarm monitoring, UI and touch supervision. Resetting a fault never starts rotation.
-- Guided setup and calibration, diagnostics, USB-C live mirror and an [idle screen saver](docs/SCREEN_SAVER.md).
+| | Feature | Detail |
+|:-:|---|---|
+| 🔄 | **Continuous, Jog, Pulse, Step** | Optional countdown before starting |
+| 🎯 | **0.001-3.0 RPM** | At the workpiece, limited by geometry and calibration. The screen shows the effective range |
+| 💾 | **16 saved programs** | Speed, direction, diameter and mode settings |
+| 🎛️ | **Pot, switch, pedal** | Panel potentiometer, direction switch and optional foot pedal |
+| 🛑 | **Supervision** | E-STOP input, driver alarm, UI and touch watch. Resetting a fault never starts rotation |
+| 🧭 | **Guided setup** | Setup wizard, calibration, diagnostics, USB-C live mirror and an [idle screen saver](docs/SCREEN_SAVER.md) |
 
-Single axis with no encoder: RPM and progress are calculated, so calibration needs a real measurement.
+> [!TIP]
+> Single axis with no encoder: RPM and progress are calculated, so calibration needs a real measurement.
 
 ## Parts
 
@@ -77,7 +82,7 @@ Single axis with no encoder: RPM and progress are calculated, so calibration nee
 | Optional | Foot pedal with switch/potentiometer and ADS1115 ADC |
 | Enclosure | Grounded metal enclosure for TIG HF use |
 
-Match the driver's current and microstep switches to the touchscreen settings (1/4, 1/8, 1/16 or 1/32). Roller diameter and gear ratio are set in **Motor Config**.
+Match the driver's current and microstep switches to the touchscreen settings (1/4, 1/8, 1/16 or 1/32). Roller diameter and gear ratio are set in <kbd>Settings</kbd> › <kbd>Motor configuration</kbd>.
 
 <table>
 <tr>
@@ -95,16 +100,17 @@ Dashed blocks specify interface requirements, not verified installed circuitry. 
 
 ## TIG HF
 
-- Bond the enclosure to protective earth.
-- Separate motor and power wiring from GPIO, ADC, I2C, pedal and E-STOP cables.
-- Use shielded external cables, and add ferrites if interference remains.
-- Repeat the HF-start checks after changing firmware, wiring or the enclosure.
+- [ ] Controller, driver and motor PSU in **one grounded metal enclosure**
+- [ ] Enclosure **bonded to protective earth**
+- [ ] Motor and power wiring **apart from** GPIO, ADC, I2C, pedal and E-STOP cables
+- [ ] **Shielded** external cables, ferrites if interference remains
+- [ ] HF-start checks **repeated** after changing firmware, wiring or the enclosure
 
 TIG HF works on the owner's machine with the shared grounded enclosure (v2.3.0, reported 2026-11-04). Stop response has not been measured. [EMI guide](docs/EMI_MITIGATION.md)
 
 ## Install firmware
 
-Download a **release**, **debug** or **mirror** bundle and follow [FLASHING.md](docs/releases/FLASHING.md). Application images belong at **0x10000**, never zero. Check the SHA-256 checksums.
+Download a **release**, **debug** or **mirror** bundle and follow [FLASHING.md](docs/releases/FLASHING.md). Application images belong at `0x10000`, never `0x0`. Check the SHA-256 checksums.
 
 To build from source with PlatformIO:
 
@@ -117,12 +123,12 @@ pio run
 
 ## First run
 
-New installations open the **Setup Wizard**, and valid existing settings are kept. Run it again from **Settings > Setup wizard**.
+New installations open the **Setup Wizard**, and valid existing settings are kept. Run it again from <kbd>Settings</kbd> › <kbd>Setup wizard</kbd>.
 
-1. **Motor:** match driver timing and microsteps, set limits, then **Save & apply**.
-2. **Direction:** hold CW/CCW and check the workpiece.
-3. **Calibration:** complete **Move 360°**, measure, apply, complete **Verify 360°**, then save.
-4. **Function check:** press and release E-STOP, reset to idle, test Start and Stop.
+1. **Motor:** match driver timing and microsteps, set limits, then <kbd>Save & apply</kbd>.
+2. **Direction:** press <kbd>Hold CW</kbd> and <kbd>Hold CCW</kbd> and watch the workpiece.
+3. **Calibration:** complete <kbd>Move 360°</kbd>, measure, apply, complete <kbd>Verify 360°</kbd>, then save.
+4. **Function check:** press and release E-STOP, <kbd>RESET TO IDLE</kbd>, test <kbd>Test start</kbd> and <kbd>Stop</kbd>.
 
 <table>
 <tr>
@@ -136,6 +142,8 @@ New installations open the **Setup Wizard**, and valid existing settings are kep
 The wizard does not measure stop time or certify wiring. [Every wizard screen](docs/SETUP_WIZARD.md) · [Calibration](docs/CALIBRATION_WORKFLOW.md) · [Program editor](docs/PROGRAM_EDITOR.md)
 
 ## Validation
+
+<p><img src="https://img.shields.io/badge/native%20tests-489%20passing-2e7d32?style=flat-square" alt="native tests: 489 passing"> <img src="https://img.shields.io/badge/simulator-Linux%20%2B%20Windows-2e7d32?style=flat-square" alt="simulator: Linux + Windows"> <img src="https://img.shields.io/badge/layout%20audit-0%20failures-2e7d32?style=flat-square" alt="layout audit: 0 failures"> <img src="https://img.shields.io/badge/firmware%20builds-release%20·%20debug%20·%20mirror-2e7d32?style=flat-square" alt="firmware builds: release · debug · mirror"> <img src="https://img.shields.io/badge/owner%20tested-v2.3.1-ff6b38?style=flat-square" alt="owner tested: v2.3.1"> <img src="https://img.shields.io/badge/stop%20time-not%20measured-8a3b3b?style=flat-square" alt="stop time: not measured"></p>
 
 Every commit runs **489 native tests**, packaging tests, Linux and Windows simulator self-tests, a layout audit and three firmware builds. Release binaries come from the validated master commit. The owner reported v2.3.0 tested on the assembled machine on 2026-11-04. TIG HF works on the owner's machine. The owner reported the v2.3.1 build working on the same machine the same day. Stop time has not been measured. [v2.3.1 status](docs/releases/v2.3.1.md#validation-and-hardware-status) · [Changelog](CHANGELOG.md)
 

@@ -303,10 +303,10 @@ controlTask  (pri 3, 4 KB)
 ## Wiring Diagram
 
 <div align="center">
-  <img src="images/Wiring_diagram.v2.svg?rev=2.6" width="800" alt="Original project wiring diagram in the V5 UI design">
+  <img src="images/Wiring_diagram.v2.svg?rev=2.8" width="800" alt="Original project wiring diagram in the V5 UI design">
 </div>
 
-**Input contract:** Firmware expects GPIO34 HIGH when healthy and LOW when faulted. The original NC button is shown through a required input interface because a bare NC contact to GND produces the opposite behavior. Dashed boxes specify interface requirements, not verified installed circuitry. The original common-cathode driver routing is retained; confirm signal levels and ENA HIGH=disabled on the actual driver. Verify the assembled interface against [Hardware Setup](../docs/HARDWARE_SETUP.md). Revision 2.6 corrects DIP notes, input annotations and RPM limits and removes the unmeasured 0.5 ms claim.
+**Input contract:** Firmware expects GPIO34 HIGH when healthy and LOW when faulted. The original NC button is shown through a required input interface because a bare NC contact to GND produces the opposite behavior. Dashed boxes specify interface requirements, not verified installed circuitry. The original common-cathode driver routing is retained; confirm signal levels and ENA HIGH=disabled on the actual driver. Verify the assembled interface against [Hardware Setup](../docs/HARDWARE_SETUP.md). Revision 2.6 corrected DIP notes, input annotations and RPM limits and removed the unmeasured 0.5 ms claim. Revision 2.8 only improves legibility; every connection is unchanged.
 
 ### Pinout
 

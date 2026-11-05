@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Step has larger -/+ buttons, and the target angle can be changed by 5 degrees. DIA, RST and Part are spelled out.
 - Program rows use plain text, and Edit is a real button.
 - All screens use the same Back, Start and Stop words and icons, and larger -/+ buttons where they were small.
+- Wiring diagram rev 2.8: no text under wires, parallel runs at least 12 px apart, terminal names inside the driver and motor. Connections are unchanged.
 
 ### Removed
 

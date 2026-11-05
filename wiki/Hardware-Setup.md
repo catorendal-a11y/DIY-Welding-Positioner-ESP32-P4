@@ -41,9 +41,9 @@ Default firmware uses **1/16** (3200 pulses/rev with a 200-step motor). Motor Co
 
 ## Wiring Connections
 
-[![Reviewed wiring diagram in the V5 UI design](https://raw.githubusercontent.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/master/docs/images/Wiring_diagram.v2.svg?rev=2.6)](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/images/Wiring_diagram.v2.svg)
+[![Reviewed wiring diagram in the V5 UI design](https://raw.githubusercontent.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/master/docs/images/Wiring_diagram.v2.svg?rev=2.8)](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/images/Wiring_diagram.v2.svg)
 
-Revision 2.6 retains the original hardware layout, corrects pedal endpoints and pin labels, and uses the V5 graphite/orange design. Dashed blocks specify interface functions, not verified installed components. Open the SVG at full size for terminal details. See the [complete electrical guide](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/HARDWARE_SETUP.md) and [diagram review](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/WIRING_DIAGRAM_REVIEW.md).
+Revision 2.8 retains the original hardware layout and connections, corrects pedal endpoints and pin labels, and uses the V5 graphite/orange design. Dashed blocks specify interface functions, not verified installed components. Open the SVG at full size for terminal details. See the [complete electrical guide](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/HARDWARE_SETUP.md) and [diagram review](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/WIRING_DIAGRAM_REVIEW.md).
 
 ### ESP32-P4 to driver (signal wires)
 

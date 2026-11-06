@@ -2,9 +2,24 @@
 
 **ESP32-P4 / C6 GUITION JC4880P443C** | Open-source firmware for TIG/MIG welding rotators
 
+![V5 main screen](https://raw.githubusercontent.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/master/docs/images/ui_runtime_v5/01_MAIN.png)
+
+Actual LVGL simulator capture with example data. Main RPM +/− controls operate while idle; physical direction-switch priority and fault gates remain effective.
+
+## Start here
+
+| I want to... | Go to |
+|--------------|-------|
+| Build, flash and do the first run | [[Getting Started]] |
+| Wire the driver, pot, E-STOP and pedal | [[Hardware Setup]] |
+| Fix a problem | [[Troubleshooting]] |
+| Understand the firmware design | [[Architecture]] |
+| See what is done and what is next | [[Roadmap]] |
+
 ## Current Status: v2.3.1 - Operator feedback and test fixes
 
-Release **v2.3.1** is the current firmware identifier (**`FW_VERSION`**). It explains blocked program starts and REBOOT, keeps the Step keypad open on an invalid entry, stops Jog changing the manual direction and names every fault on the overlay. The owner reported them working on the assembled machine on 2026-11-04.
+> [!NOTE]
+> Release **v2.3.1** is the current firmware identifier (**`FW_VERSION`**). It explains blocked program starts and REBOOT, keeps the Step keypad open on an invalid entry, stops Jog changing the manual direction and names every fault on the overlay. The owner reported them working on the assembled machine on 2026-11-04.
 
 v2.3.0 adds UI, touch and pot supervision, visible crash and storage faults, per-diameter RPM limits and settings for roller diameter and gear ratio. The owner reported it tested on the assembled machine on 2026-11-04, including TIG HF.
 
@@ -12,13 +27,16 @@ Earlier releases include v2.0.8 version alignment and v2.0.7 dark/light mode. Se
 
 ## Current release and UI
 
-[Download v2.3.1](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.3.1) · [Flashing instructions](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/releases/FLASHING.md) · [Validation and improvements](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/FASTACCELSTEPPER_1_4_REAUDIT.md)
+| Link | Use |
+|------|-----|
+| [Download v2.3.1](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.3.1) | Prebuilt firmware |
+| [Flashing instructions](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/releases/FLASHING.md) | How to flash it |
+| [Validation and improvements](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/FASTACCELSTEPPER_1_4_REAUDIT.md) | Re-audit notes |
 
-![V5 main screen](https://raw.githubusercontent.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/master/docs/images/ui_runtime_v5/01_MAIN.png)
+> [!NOTE]
+> Latest update verified in native tests and simulator. Physical safety checks remain bench work.
 
-Actual LVGL simulator capture with example data. Main RPM +/− controls operate while idle; physical direction-switch priority and fault gates remain effective.
-
-Implemented features (latest update verified in native tests and simulator; physical safety checks remain bench work):
+Implemented features:
 
 - Motor rotation with live RPM adjustment (potentiometer + foot pedal; V5 main screen has idle RPM +/− controls)
 - 4 rotation modes (Continuous, Jog, Pulse, Step) and a start countdown
@@ -30,7 +48,7 @@ Implemented features (latest update verified in native tests and simulator; phys
 - USB-C live mirror for the real device UI, plus simulator screenshot export for all screens
 - Direction switch (GPIO29), foot pedal support
 - 8 accent color themes, dark or light UI mode (Display Appearance), brightness control and an idle screen saver with preview
-- TIG HF welding works when electronics are inside one grounded metal enclosure
+- TIG HF welding works when electronics are inside one grounded metal enclosure (see [[Hardware Setup]])
 
 ## Quick Links
 

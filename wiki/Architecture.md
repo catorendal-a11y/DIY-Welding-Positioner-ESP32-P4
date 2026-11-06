@@ -4,21 +4,31 @@
 
 The controller runs on ESP32-P4's dual-core RISC-V processor.
 
-```
-CORE 0 (Real-time)              CORE 1 (UI)
-========================         ========================
-safetyTask  (pri 5, 4KB)        lvglTask    (pri 2, 64KB)
-inputTask   (pri 4, 5KB)        storageTask (pri 1, 12KB)
-controlTask (pri 3, 4KB)
-```
+| Core | Role | Task | Priority | Stack |
+|------|------|------|----------|-------|
+| Core 0 | Real-time | `safetyTask` | 5 | 4KB |
+| Core 0 | Real-time | `inputTask` | 4 | 5KB |
+| Core 0 | Real-time | `controlTask` | 3 | 4KB |
+| Core 1 | UI | `lvglTask` | 2 | 64KB |
+| Core 1 | UI | `storageTask` | 1 | 12KB |
 
 Runtime FastAccelStepper calls have one owner: controlTask. inputTask publishes sampled inputs; the UI reads fresh coherent control snapshots. FastAccelStepper has its own priority-24 Core 0 task. A bounded boot task allocates the RMT channel on Core 0 because engine-task affinity alone does not place the IRQ. See the [1.4.0 re-audit](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/FASTACCELSTEPPER_1_4_REAUDIT.md).
 
-**Critical rule:** All `lv_*` calls must come from `lvglTask` on Core 1 only. Motor control functions on Core 0 must never call LVGL directly.
+> [!IMPORTANT]
+> All `lv_*` calls must come from `lvglTask` on Core 1 only. Motor control functions on Core 0 must never call LVGL directly.
 
-**WDT:** inputTask, controlTask, safetyTask are subscribed to TWDT. lvglTask and storageTask are NOT subscribed (they do blocking I/O that can exceed WDT timeout). safetyTask supervises the control, input and UI loops and touch reads, and latches a fault when one stalls.
+Watchdog (WDT) subscription:
 
-**Flash safety:** the flash cache is disabled during **NVS** writes, and the prebuilt Arduino framework has no IRAM-safe RMT/GPIO ISRs. Settings and presets are therefore saved only in IDLE or ESTOP. Settings/presets use NVS `putBytes`, not LittleFS `.tmp` + rename.
+| Task | Subscribed to TWDT | Why |
+|------|--------------------|-----|
+| `inputTask` | Yes | |
+| `controlTask` | Yes | |
+| `safetyTask` | Yes | Supervises the control, input and UI loops and touch reads, and latches a fault when one stalls |
+| `lvglTask` | No | Blocking I/O can exceed WDT timeout |
+| `storageTask` | No | Blocking I/O can exceed WDT timeout |
+
+> [!WARNING]
+> **Flash safety:** the flash cache is disabled during **NVS** writes, and the prebuilt Arduino framework has no IRAM-safe RMT/GPIO ISRs. Settings and presets are therefore saved only in IDLE or ESTOP. Settings/presets use NVS `putBytes`, not LittleFS `.tmp` + rename.
 
 ## State Machine
 
@@ -152,12 +162,11 @@ All shared flags (`g_estopPending`, `g_estopTriggerMs`, `g_uiResetPending`, `g_w
 
 **V5 layout:** Large main speed panel in the selected accent color with a native 104 px numeric font, idle RPM +/− controls, CW/CCW selection and wide START/STOP. Shared graphite styles apply across all registered screens. Calibration uses fixed Align → Measure → Verify → Save stages; New/Edit Program separates run mode, availability and full-screen name/RPM input. Setup Wizard adds four-stage commissioning.
 
-**USB mirror note:** mirror builds use LVGL partial rendering so `lvgl_hal.cpp`
-streams dirty RGB565 rectangles to the Windows viewer instead of repeatedly
-sending full 800x480 frames. PC input is registered as a second LVGL pointer
-device and is accepted only while **Settings > Display > USB remote control** is armed.
+> [!NOTE]
+> **USB mirror note:** mirror builds use LVGL partial rendering so `lvgl_hal.cpp` streams dirty RGB565 rectangles to the Windows viewer instead of repeatedly sending full 800x480 frames. PC input is registered as a second LVGL pointer device and is accepted only while <kbd>Settings</kbd> › <kbd>Display settings</kbd> › <kbd>USB remote control</kbd> is armed.
 
-**Calibration note:** measurements require completed moves. The correction is a runtime draft until verification passes 360 ± 0.5 degrees and its Save receipt succeeds; Restart restores the saved factor.
+> [!NOTE]
+> **Calibration note:** measurements require completed moves. The correction is a runtime draft until verification passes 360 ± 0.5 degrees and its Save receipt succeeds; Restart restores the saved factor.
 
 ## Display Pipeline
 
@@ -171,7 +180,8 @@ Rotation formula:
   portrait_y = 799 - landscape_x
 ```
 
-**Do NOT use `lv_display_set_rotation()`** — it crashes ESP32-P4.
+> [!CAUTION]
+> **Do NOT use `lv_display_set_rotation()`** — it crashes ESP32-P4.
 
 ## Task Communication
 
@@ -194,14 +204,17 @@ NVS commit / flash write  ──>  flash cache DISABLED  ──>  code in flash 
 ```
 
 Mitigations:
-1. **Writes only at rest** — storageTask waits for IDLE or ESTOP
-2. **Deferred UI saves** — UI sets pending flags; `storageTask` performs `putBytes` after debounce
-3. **storageTask not in WDT** — blocking I/O (flash) can exceed 5s timeout
-4. **`g_flashWriting`** — signals active NVS write so the display path can skip work during cache-off windows
+
+| Mitigation | What it does |
+|------------|--------------|
+| **Writes only at rest** | storageTask waits for IDLE or ESTOP |
+| **Deferred UI saves** | UI sets pending flags; `storageTask` performs `putBytes` after debounce |
+| **storageTask not in WDT** | Blocking I/O (flash) can exceed 5s timeout |
+| **`g_flashWriting`** | Signals active NVS write so the display path can skip work during cache-off windows |
 
 ## Timer Screen (Countdown)
 
-SCREEN_TIMER provides a visual countdown before rotation starts:
+SCREEN_TIMER (screen title "Countdown") provides a visual countdown before rotation starts:
 - Configurable 1-10s delay with progress ring, pulsing number, color transition
 - Starts continuous rotation at countdown zero
 - The setting is saved on START or screen exit, only if it changed

@@ -5,7 +5,10 @@ Reviewed for v2.3.0 on 2026-11-04. The owner reports that v2.3.0 works during TI
 High Frequency (HF) start on TIG welders emits massive amounts of Electromagnetic Interference (EMI).
 This EMI can easily reset microcontrollers, freeze I2C touch screens, or cause random stepper motor jitter.
 
-Real TIG welding validation has been completed with this controller. The system worked during welding after the ESP32-P4 screen, stepper driver, and motor PSU were installed inside the same grounded metal enclosure. Treat that enclosure as a required part of the build, not an optional accessory.
+Real TIG welding validation has been completed with this controller. The system worked during welding after the ESP32-P4 screen, stepper driver, and motor PSU were installed inside the same grounded metal enclosure.
+
+> [!IMPORTANT]
+> Treat that enclosure as a required part of the build, not an optional accessory.
 
 To ensure your ESP32-P4 positioner runs reliably in an industrial welding environment, implement these hardware isolation techniques:
 
@@ -19,11 +22,15 @@ To ensure your ESP32-P4 positioner runs reliably in an industrial welding enviro
 - Use **shielded cables** for the STEP, DIR, and ENA signal lines between the ESP32 and the stepper driver.
 - Use **shielded cables** for the stepper motor coils (A+, A-, B+, B-).
 - Use shielded cable for external E-STOP, foot pedal, potentiometer, and any I2C extension that leaves the enclosure.
-- Ground the shielding braided mesh on **ONE END ONLY** (typically at the controller enclosure side). Grounding both ends creates a ground loop antenna.
+
+> [!WARNING]
+> Ground the shielding braided mesh on **ONE END ONLY** (typically at the controller enclosure side). Grounding both ends creates a ground loop antenna.
 
 ## 3. Optoisolation
 Many stepper drivers have internal optocouplers separating the ESP32 3.3V logic circuit from the high-voltage motor supply (often **24–36 V DC** on `VM`; **36 V** is optimal for headroom where the hardware allows it).
-- Ensure you do not accidentally bridge the ESP32 ground and the motor power return. They should only interact through the optocouplers inside the driver.
+
+> [!WARNING]
+> Ensure you do not accidentally bridge the ESP32 ground and the motor power return. They should only interact through the optocouplers inside the driver.
 
 ## 4. Ferrite Chokes
 Snap-on ferrite bead chokes absorb high-frequency EMI spikes.

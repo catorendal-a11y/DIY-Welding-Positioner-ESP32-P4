@@ -1,5 +1,21 @@
 # Roadmap
 
+## Status at a glance
+
+| Release | Date | Summary | Status |
+|---------|------|---------|--------|
+| v2.3.1 | 2026-11-04 | Operator feedback and test fixes | Current release |
+| v2.3.0 | 2026-11-04 | Safety supervision and audit fixes | Released |
+| v2.2.0 | 2026-10-03 | Idle screen saver and UI refinements | Released |
+| v2.1.1 | 2026-10-03 | LVGL 9.6 and guided calibration | Released |
+| v2.1.0 | 2026-10-02 | V5 UI and input reliability | Released |
+| v2.0.9 | 2026-04-30 | Version sync, TIG enclosure documentation | Released |
+| v2.0.8 | 2026-04-29 | Version alignment | Released |
+| v2.0.7 | 2026-04-27 | Dark/light UI and header contrast | Released |
+| v2.0.0 to v2.0.6 | 2026-04-03 to 2026-04-26 | Stability, diagnostics, operator UX | Released |
+
+Open items are listed under [Next](#next).
+
 ## v2.3.1 - Current Release
 
 ### v2.3.1 (2026-11-04)
@@ -138,6 +154,9 @@ Historical release; v2.3.1 above is current.
 - [x] v1.3.0: Accent theme system, settings grid, motor tuning
 
 ## Next
+
+> [!NOTE]
+> These items are open (unchecked).
 
 - [ ] Wider tested RPM range with DM542T
 - [ ] Enclosure design files (3D printable)

@@ -4,19 +4,29 @@ The TIG Rotator Controller implements a multi-layer safety architecture to prote
 
 ## 1. Safety State Machine
 The system transitions through a rigorous state machine (defined in `control.h`) using compare-and-swap (CAS) for race-free transitions:
-- **STATE_IDLE:** Default state. Motor ENA is HIGH (Disabled).
-- **STATE_ENABLING:** An admitted start asserts ENA and waits 200 ms in DM542T mode before the first pulse. STOP cancels the start. Jog must keep receiving hold events throughout the wait. Step mode keeps ENA asserted during the dwell, so repeats do not wait again.
-- **STATE_RUNNING:** Continuous rotation. Acceleration ramps active.
-- **STATE_PULSE:** Pulse mode (ON/OFF cycles).
-- **STATE_STEP:** Step mode (exact angle rotation).
-- **STATE_JOG:** Touch-and-hold jog control.
-- **Countdown UI:** Countdown precedes an explicit continuous-mode request; it is not a separate control state. Program auto-stop is a separate setting.
-- **STATE_STOPPING:** Deceleration ramp before IDLE.
-- **STATE_ESTOP:** Latched fault. ENA is driven HIGH; mechanical stopping behavior depends on the driver and load.
+| State | Meaning |
+|-------|---------|
+| **STATE_IDLE** | Default state. Motor ENA is HIGH (Disabled). |
+| **STATE_ENABLING** | An admitted start asserts ENA and waits 200 ms in DM542T mode before the first pulse. STOP cancels the start. Jog must keep receiving hold events throughout the wait. Step mode keeps ENA asserted during the dwell, so repeats do not wait again. |
+| **STATE_RUNNING** | Continuous rotation. Acceleration ramps active. |
+| **STATE_PULSE** | Pulse mode (ON/OFF cycles). |
+| **STATE_STEP** | Step mode (exact angle rotation). |
+| **STATE_JOG** | Touch-and-hold jog control. |
+| **Countdown UI** | Countdown precedes an explicit continuous-mode request; it is not a separate control state. Program auto-stop is a separate setting. |
+| **STATE_STOPPING** | Deceleration ramp before IDLE. |
+| **STATE_ESTOP** | Latched fault. ENA is driven HIGH; mechanical stopping behavior depends on the driver and load. |
 
 ## 2. Emergency Stop (E-STOP)
+| E-STOP state | `GPIO34` level |
+|--------------|----------------|
+| Safe / released (healthy) | `HIGH` |
+| Pressed / fault | `LOW` |
+
+> [!CAUTION]
+> Wiring must match firmware: **safe / released = HIGH**, **pressed / fault = LOW** (same sense as `digitalRead(PIN_ESTOP)==LOW` meaning “active” in code). A bare NC contact to GND has the opposite logic.
+
 - **Hardware Interrupt:** GPIO 34 configured with interrupt (`FALLING` edge — transition **HIGH → LOW**).
-- **Active LOW on fault:** Wiring must match firmware: **safe / released = HIGH**, **pressed / fault = LOW** (same sense as `digitalRead(PIN_ESTOP)==LOW` meaning “active” in code).
+- **Active LOW on fault:** see the table above.
 - **ISR response (latency unmeasured):** Direct GPIO register write sets ENA HIGH (Disabled) + `g_estopPending.store(true, std::memory_order_release)` + `g_wakePending.store(true, ...)` so a dimmed panel is woken on the next `dim_update()` / overlay path. NO function calls in ISR (flash may be disabled during NVS or other flash writes).
 - **Scheduled state transition:** `safetyTask` (priority 5) checks the pending flag with debounce, stores `g_estopTriggerMs` on the debounced edge, and transitions to STATE_ESTOP via CAS.
 - **Final motion-start guard:** continuous/jog/step start paths check E-STOP/driver ALM before enabling ENA and again immediately after ENA is pulled LOW. If the input becomes unsafe in that final window, ENA is driven HIGH again before any run/move command.
@@ -79,4 +89,7 @@ The scheduled E-STOP level poll inhibits ENA on the first observed LOW, then use
 | Restart after a panic, watchdog or brownout | Latches **UNEXPECTED RESET** at boot. The event log survives these resets, but not power loss |
 | Invalid saved data at boot | Latches **STORAGE** with motion disabled and the data untouched. Only this fault offers **Hold 3 s to erase data** on the overlay |
 
-A floating pot wiper is not detected and the analog pedal is not jump-checked. An open E-STOP wire reads as healthy. E-STOP acts through the MCU and the driver ENA input; it does not disconnect motor power. [All fault names](../wiki/Troubleshooting.md#fault-names).
+> [!CAUTION]
+> A floating pot wiper is not detected and the analog pedal is not jump-checked. An open E-STOP wire reads as healthy. E-STOP acts through the MCU and the driver ENA input; it does not disconnect motor power.
+
+See [All fault names](../wiki/Troubleshooting.md#fault-names).

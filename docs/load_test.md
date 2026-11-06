@@ -4,17 +4,31 @@
 ## Firmware under test: [FILL IN version and exact commit before testing]
 ## Test Date: [FILL IN AFTER HARDWARE TEST]
 
+> [!NOTE]
+> This is a blank test sheet. Fill in the tables during the test. Nothing here is a measured result.
+
 ---
 
 ## Test Setup
 
-- **Workpiece:** 50 kg steel pipe
-- **Diameter:** 300 mm
-- **RPM:** 1.0 test setpoint; firmware absolute maximum is 3.0 RPM, subject to saved motor settings
-- **Duration:** 60 minutes continuous
-- **Ambient Temperature:** ___ C
-- **Motor:** NEMA 23 (3 Nm rated)
-- **Driver:** PUL/DIR (motor supply 24V or 36V; **36V** optimal)
+| Item | Value |
+|------|-------|
+| **Workpiece** | 50 kg steel pipe |
+| **Diameter** | 300 mm |
+| **RPM** | 1.0 test setpoint; firmware absolute maximum is 3.0 RPM, subject to saved motor settings |
+| **Duration** | 60 minutes continuous |
+| **Ambient Temperature** | ___ C |
+| **Motor** | NEMA 23 (3 Nm rated) |
+| **Driver** | PUL/DIR (motor supply 24V or 36V; **36V** optimal) |
+
+### Procedure
+
+1. **Mount** the 50 kg, 300 mm steel pipe and note the ambient temperature.
+2. **Record** the start temperature of the motor, the driver and the ESP32-P4 board.
+3. **Run** continuous rotation at 1.0 RPM for 60 minutes.
+4. **Check** step accuracy every 10 minutes.
+5. **Record** the temperatures again at 30 min and 60 min.
+6. **Record** idle, running and peak current draw.
 
 ---
 

@@ -8,9 +8,11 @@
 
 ## Hardware Configuration
 
-- **E-STOP pin**: GPIO 34 (`INPUT_PULLUP`, active **LOW** when faulted — must match wiring in `docs/HARDWARE_SETUP.md`).
-- **ENA pin**: GPIO 52 (output; **HIGH** = driver disabled for this firmware’s opto wiring).
-- **Pull-up**: Firmware enables `INPUT_PULLUP` on GPIO 34. For long/noisy leads, prefer an **external** pull-up and optional RC per [EMI_MITIGATION.md](EMI_MITIGATION.md) (see also `PIN_ESTOP` notes in `src/config.h`).
+| Signal | Pin | Notes |
+|--------|-----|-------|
+| **E-STOP pin** | `GPIO34` | `INPUT_PULLUP`, active **LOW** when faulted. Must match wiring in `docs/HARDWARE_SETUP.md`. |
+| **ENA pin** | `GPIO52` | Output. **HIGH** = driver disabled for this firmware’s opto wiring. |
+| **Pull-up** | `GPIO34` | Firmware enables `INPUT_PULLUP`. For long/noisy leads, prefer an **external** pull-up and optional RC per [EMI_MITIGATION.md](EMI_MITIGATION.md) (see also `PIN_ESTOP` notes in `src/config.h`). |
 
 **Firmware input contract (physical wiring still requires verification):**
 
@@ -21,11 +23,16 @@
 | E-STOP input cable broken | Must be mapped to LOW by external supervision | Same latched fault |
 | Controller power absent | External hardware must establish the driver-safe state | Software cannot guarantee outputs |
 
-A pull-up with a bare NC contact to GND produces LOW when healthy and HIGH
-when open. **That circuit is incompatible with the retained active-LOW firmware.**
+> [!CAUTION]
+> A pull-up with a bare NC contact to GND produces LOW when healthy and HIGH
+> when open. **That circuit is incompatible with the retained active-LOW firmware.**
+
 Use a verified, supervised interface that meets the table, or deliberately change
 the input contract and retest every safety path. Do not infer wiring from a pin name.
-ENA HIGH=disabled is an unverified assumption for the user's actual driver/opto wiring.
+
+> [!WARNING]
+> ENA HIGH=disabled is an unverified assumption for the user's actual driver/opto wiring.
+
 The former NC-to-GND example was removed because it contradicted the firmware.
 
 **Optional RC filter** (EMI-prone environments):
@@ -34,7 +41,8 @@ The former NC-to-GND example was removed because it contradicted the firmware.
   [GPIO 34]──[100 nF ceramic]──[GND]
 ```
 
-Flash writes defer this ISR because the prebuilt framework does not register the GPIO ISR service as IRAM-safe. Firmware therefore saves settings only at rest (IDLE/ESTOP). When measuring, include a press during a settings save at rest.
+> [!NOTE]
+> Flash writes defer this ISR because the prebuilt framework does not register the GPIO ISR service as IRAM-safe. Firmware therefore saves settings only at rest (IDLE/ESTOP). When measuring, include a press during a settings save at rest.
 
 The time constant depends on the actual pull resistance and wiring. Measure the resulting input delay and noise response on the assembled machine.
 
@@ -42,9 +50,9 @@ The time constant depends on the actual pull resistance and wiring. Measure the 
 
 ## Test setup
 
-- **Oscilloscope:** Channel 1 = GPIO 34 (ESTOP sense), Channel 2 = GPIO 52 (ENA).
-- **Sense:** Fault = GPIO 34 driven **LOW** (FALLING edge arms ISR after idle HIGH).
-- **Target:** GPIO 34 **falling** (fault) → GPIO 52 **rising** (motor disabled / ENA de-asserted) **< 1.0 ms**.
+1. **Connect** the oscilloscope: Channel 1 = GPIO 34 (ESTOP sense), Channel 2 = GPIO 52 (ENA).
+2. **Set** the sense: Fault = GPIO 34 driven **LOW** (FALLING edge arms ISR after idle HIGH).
+3. **Measure** against the target: GPIO 34 **falling** (fault) → GPIO 52 **rising** (motor disabled / ENA de-asserted) **< 1.0 ms**.
 
 ---
 
@@ -93,9 +101,11 @@ void IRAM_ATTR estopISR() {
 
 ### Worst-case latency
 
-- **Measured:** ___ µs
-- **Requirement:** < 1000 µs (1 ms)
-- **Result:** [PASS / FAIL]
+| Item | Value |
+|------|-------|
+| **Measured** | ___ µs |
+| **Requirement** | < 1000 µs (1 ms) |
+| **Result** | [PASS / FAIL] |
 
 ---
 

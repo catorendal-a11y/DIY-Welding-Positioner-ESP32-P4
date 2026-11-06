@@ -2,22 +2,29 @@
 
 ## Prerequisites
 
-- **PlatformIO** Core 6.x or newer (VS Code extension recommended)
-- **Python** PlatformIO managed runtime or Python 3.11 as used by CI
-- **GUITION JC4880P443C** ESP32-P4 4.3" Touch Display dev board
-- **USB-C cable** for power and serial
-- **Hardware:** Stepper driver, NEMA 23 motor, 24–36V motor PSU (**36V optimal**, **24V** works), 10k pot, NC E-STOP button
+| Need | Detail |
+|------|--------|
+| **PlatformIO** | Core 6.x or newer (VS Code extension recommended) |
+| **Python** | PlatformIO managed runtime or Python 3.11 as used by CI |
+| **Board** | GUITION JC4880P443C ESP32-P4 4.3" Touch Display dev board |
+| **USB-C cable** | For power and serial |
+| **Hardware** | Stepper driver, NEMA 23 motor, 24–36V motor PSU (**36V optimal**, **24V** works), 10k pot, NC E-STOP button |
 
 See [[Hardware Setup]] for full wiring details.
 
 ## 1. Clone and Open
 
-```bash
-git clone https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4.git
-cd DIY-Welding-Positioner-ESP32-P4
-```
+1. **Clone** the repository and enter the folder:
 
-Open the folder in VS Code with PlatformIO. Current release: **v2.3.1**. Prebuilt firmware and English flashing instructions are available on the repository Releases page. Linux/macOS/Git Bash users may run `./install.sh` for a project environment.
+   ```bash
+   git clone https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4.git
+   cd DIY-Welding-Positioner-ESP32-P4
+   ```
+
+2. **Open** the folder in VS Code with PlatformIO.
+
+> [!NOTE]
+> Current release: **v2.3.1**. Prebuilt firmware and English flashing instructions are available on the repository Releases page. Linux/macOS/Git Bash users may run `./install.sh` for a project environment.
 
 ## 2. Build
 
@@ -35,7 +42,9 @@ pio run -e esp32p4-debug
 pio run --target upload
 ```
 
-**Note:** If esptool crashes with Unicode encoding error on Windows, set `PYTHONUTF8=1`:
+> [!TIP]
+> If esptool crashes with a Unicode encoding error on Windows, set `PYTHONUTF8=1`:
+
 ```powershell
 $env:PYTHONUTF8='1'
 pio run -e esp32p4-release -t upload --upload-port COM3
@@ -47,7 +56,7 @@ pio run -e esp32p4-release -t upload --upload-port COM3
 pio device monitor
 ```
 
-Example debug boot output (release logging is intentionally quieter; confirm the actual version on About):
+Example debug boot output (release logging is intentionally quieter; confirm the actual version on <kbd>About</kbd>):
 ```
 [I] BOOT OK — ENA=HIGH (motor disabled)
 [I] TIG Rotator Controller v2.3.1
@@ -65,12 +74,17 @@ Example debug boot output (release logging is intentionally quieter; confirm the
 
 For the real device UI mirrored on Windows:
 
-```powershell
-pio run -e esp32p4-mirror --target upload
-.\simulator\run.ps1 -UsbMirror COM5 -Baud 4000000
-```
+1. **Flash** the mirror firmware and **start** the viewer:
 
-Then arm **Settings > Display > USB remote control** on the physical screen. PC clicks are ignored until armed, and E-STOP/driver faults still override all input.
+   ```powershell
+   pio run -e esp32p4-mirror --target upload
+   .\simulator\run.ps1 -UsbMirror COM5 -Baud 4000000
+   ```
+
+2. **Arm** USB remote control on the physical screen: <kbd>Settings</kbd> › <kbd>Display settings</kbd> › <kbd>USB remote control</kbd>.
+
+> [!IMPORTANT]
+> PC clicks are ignored until armed. E-STOP/driver faults still override all input.
 
 For simulator-only UI review:
 
@@ -81,18 +95,21 @@ For simulator-only UI review:
 
 ## 5. First Run Checklist
 
+> [!CAUTION]
+> Keep motor power off until the wiring is verified against the hardware guide. See the wiring notes below.
+
 - [ ] Display boots and shows main screen
 - [ ] Touch responds to taps
-- [ ] Press START — motor rotates at set RPM
+- [ ] Press <kbd>Start</kbd> — motor rotates at set RPM
 - [ ] Turn potentiometer — RPM changes during rotation
 - [ ] Test main RPM +/− while idle; confirm controls are blocked during motion
 - [ ] Check physical direction-switch priority and idle CW/CCW selection
-- [ ] Press STOP — motor decelerates and stops
+- [ ] Press <kbd>Stop</kbd> — motor decelerates and stops
 - [ ] Check E-STOP driver disable and red overlay; measure physical stopping response
-- [ ] Clear fault, press RESET TO IDLE, then use a separate START
-- [ ] Try each mode: JOG, PULSE, STEP, TIMER
-- [ ] Navigate to Settings > Motor Config — enable direction switch
-- [ ] Navigate to Settings > Display — adjust brightness, optional **Appearance** (dark/light), and accent theme
+- [ ] Clear fault, press <kbd>RESET TO IDLE</kbd>, then use a separate <kbd>Start</kbd>
+- [ ] Try each mode: Jog, Pulse, Step, Countdown
+- [ ] Navigate to <kbd>Settings</kbd> › <kbd>Motor configuration</kbd> — enable direction switch
+- [ ] Navigate to <kbd>Settings</kbd> › <kbd>Display settings</kbd> — adjust <kbd>Brightness</kbd>, optional <kbd>Appearance</kbd> (dark/light), and <kbd>Accent color</kbd>
 
 ## Configuration
 
@@ -106,7 +123,7 @@ All parameters are in `src/config.h`:
 // Default acceleration steps/s² is 7500 from factory SystemSettings (storage.cpp), editable in Motor Config (NVS)
 ```
 
-Settings can also be changed from the touchscreen via **Settings > Motor Config** and are persisted to **NVS** (namespace `wrot`, key `cfg`; see repository README *Persistence (NVS)*).
+Settings can also be changed from the touchscreen via <kbd>Settings</kbd> › <kbd>Motor configuration</kbd> and are persisted to **NVS** (namespace `wrot`, key `cfg`; see repository README *Persistence (NVS)*).
 
 ## Wiring Summary
 
@@ -122,8 +139,10 @@ Settings can also be changed from the touchscreen via **Settings > Motor Config*
 | GPIO 33 | PEDAL SW (Input) | Foot pedal switch (optional) |
 | I2C (GPIO 7/8) | ADS1115 | Pedal pot ADC, addr 0x48-0x4B |
 
-**Reserved:** GPIO 28, 14-19, and 54 may be routed to the ESP32-C6 on the PCB — do not use as application GPIO without the GUITION schematic. GPIO 32 is intentionally used by this firmware for DM542T alarm input. See `docs/HARDWARE_SETUP.md` §Reserved pins.
+> [!WARNING]
+> **Reserved:** GPIO 28, 14-19, and 54 may be routed to the ESP32-C6 on the PCB — do not use as application GPIO without the GUITION schematic. GPIO 32 is intentionally used by this firmware for DM542T alarm input. See `docs/HARDWARE_SETUP.md` §Reserved pins.
 
-Check the actual driver/opto voltage and ENA polarity before selecting common-anode/cathode wiring. A bare NC contact to GND is incompatible with GPIO34 LOW-on-fault behavior. Keep motor power off until verified against the hardware guide.
+> [!CAUTION]
+> Check the actual driver/opto voltage and ENA polarity before selecting common-anode/cathode wiring. A bare NC contact to GND is incompatible with GPIO34 LOW-on-fault behavior. Keep motor power off until verified against the hardware guide.
 
 See [[Hardware Setup]] for full details with diagrams.

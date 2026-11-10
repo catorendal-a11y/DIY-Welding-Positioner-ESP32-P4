@@ -8,9 +8,9 @@ The calibration workflow is included in v2.1.1 firmware and simulator. These cur
 ## Align
 
 1. **Open** <kbd>Settings</kbd> › <kbd>Calibration</kbd>.
-2. **Set** the outside diameter directly on this page.
+2. **Set** the outside diameter in the <kbd>Workpiece diameter</kbd> field on this page. It is part of the draft: leaving without saving restores the saved diameter.
 3. **Match** the drive's microstep switches to Motor Config beforehand.
-4. **Jog** with hold-to-run <kbd>Jog -</kbd> / <kbd>Jog +</kbd> until a clear reference mark is aligned.
+4. **Jog** with hold-to-run <kbd>Jog CCW</kbd> / <kbd>Jog CW</kbd> until a clear reference mark is aligned.
 5. **Select** <kbd>Move 360°</kbd>.
 
 The default test speed is 0.25 RPM, capped by the configured maximum. One revolution takes about four minutes at 0.25 RPM.
@@ -94,4 +94,4 @@ The page has no scrolling: four progress indicators, one instruction/input stage
 
 ## Regression evidence
 
-489 native/control/speed/storage/safety cases include the actual calibration module, session policy and production dispatcher. Cases cover interrupted/rejected moves, timeout and clock wrap, context changes, strict parsing, correction bounds and draft isolation. The actual LVGL self-test additionally checks interrupted motion, failed verification, successful verification, failed storage/retry and Stop during saving. The layout audit reports zero failures. Firmware builds pass for release, debug and mirror; the functional pre-release build was flash-verified. On 2026-10-05 the owner confirmed the assembled functions work, including the pedal/ADS1115 (detected at 0x48; owner-verified on hardware with the master pedal fix). Quantitative calibration and stop-time results were not supplied. On 2026-11-04 the owner reported v2.3.0 tested on the assembled machine; no measured calibration accuracy was supplied.
+492 native/control/speed/storage/safety cases include the actual calibration module, session policy and production dispatcher. Cases cover interrupted/rejected moves, timeout and clock wrap, context changes, strict parsing, correction bounds and draft isolation. The actual LVGL self-test additionally checks interrupted motion, failed verification, successful verification, failed storage/retry and Stop during saving. The layout audit reports zero failures. Firmware builds pass for release, debug and mirror; the functional pre-release build was flash-verified. On 2026-10-05 the owner confirmed the assembled functions work, including the pedal/ADS1115 (detected at 0x48; owner-verified on hardware with the master pedal fix). Quantitative calibration and stop-time results were not supplied. On 2026-11-04 the owner reported v2.3.0 tested on the assembled machine; no measured calibration accuracy was supplied.

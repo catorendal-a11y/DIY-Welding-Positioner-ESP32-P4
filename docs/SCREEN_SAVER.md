@@ -2,7 +2,7 @@
 
 ![Actual LVGL screen-saver capture](images/ui_runtime_v5/SCREEN_SAVER.png)
 
-The screen saver uses the V5 graphite palette with the selected accent color, in both color schemes, English labels and flat graphics without shadows. A marker moves around the rotator ring every four seconds; the central composition also shifts slightly. It does not display an invented clock or measured RPM.
+The screen saver uses the V5 graphite palette with the selected accent color, in both color schemes, English labels and flat graphics without shadows. A marker moves around the rotator ring every four seconds; the central composition also shifts slightly. It states "Motor stopped" and shows the set speed and direction. Both are settings, not measurements: the screen saver only appears while the motor is stopped. It does not display an invented clock.
 
 ## Settings and waking
 

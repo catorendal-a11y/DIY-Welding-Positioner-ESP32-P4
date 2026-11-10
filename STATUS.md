@@ -1,9 +1,10 @@
 # Project Status
 
-**Last Updated:** 2026-11-04
+**Last Updated:** 2026-11-10
 **Published firmware:** v2.3.1
 **Source:** master - operator feedback and test fixes (released as v2.3.1)
-**Build:** 484 native/control/speed/storage/safety test cases, packaging regressions, Linux/Windows simulator self-tests/layout audits and release/debug/mirror builds. **The owner reported v2.3.0 tested on the assembled machine on 2026-11-04.** TIG HF works on the owner's machine. The owner reported the v2.3.1 build working on the same machine the same day. Stop time and calibration accuracy have not been measured.
+**Build:** 492 native/control/speed/storage/safety test cases, packaging regressions, Linux/Windows simulator self-tests/layout audits and release/debug/mirror builds. **The owner reported v2.3.0 tested on the assembled machine on 2026-11-04.** TIG HF works on the owner's machine. The owner reported the v2.3.1 build working on the same machine the same day. Stop time and calibration accuracy have not been measured.
+**Unreleased (after v2.3.1):** a heartbeat timestamp race fix, eight screen-logic fixes and the reworked screens, fault overlay and screen saver. The owner flashed this build on 2026-11-10 and confirmed that it boots and that the new screens, the fault overlay and the screen saver display correctly. Motion, pedal and calibration were not re-tested on that build. See the [changelog](CHANGELOG.md).
 
 ---
 
@@ -18,7 +19,7 @@ Runtime stepper calls belong to controlTask; inputTask samples ADC/pedal separat
 - [x] **FastAccelStepper motor control** (hardware RMT pulses, v1.4.0, pinned upstream commit)
 - [x] **FreeRTOS dual-core architecture** (Core 0: Input/Control/Safety, Core 1: UI/Storage)
 - [x] **4 rotation modes:** Continuous, Jog, Pulse, Step, plus a start countdown
-- [x] **RPM adjustment** (live potentiometer input; idle main-screen +/−; Jog and program/edit controls)
+- [x] **RPM adjustment** (live potentiometer input; idle main-screen +/− beside the speed value, 0.001 RPM steps below 0.1 RPM; Jog and program/edit controls)
 - [x] **Thread-safe cross-core speed updates** (atomic + request flag pattern, FreeRTOS mutex for stepper)
 - [x] **`applySpeedAcceleration()`** for immediate speed changes during running
 - [x] **Linear acceleration phase** (resonance-zone traversal)
@@ -32,9 +33,9 @@ Runtime stepper calls belong to controlTask; inputTask samples ADC/pedal separat
 - [x] **Task Watchdog Timer** (input, control and safety tasks; checked setup/feed)
 - [x] **Boot-safe ENA pin** (motor disabled on startup)
 - [x] **CAS state transitions** (race-free between safetyTask and controlTask)
-- [x] **E-STOP UI overlay** (full-screen red, blocks all interaction)
+- [x] **Fault overlay** (full screen, blocks all interaction; states the next action and the cause; red while reset is blocked, amber when only the reset is missing)
 - [x] **UI reset from ESTOP** (via Core 0 pending flag pattern)
-- [x] **Task, UI and touch supervision** (CONTROL STALE, INPUT STALE, HMI STALE)
+- [x] **Task, UI and touch supervision** (CONTROL STALE, INPUT STALE, HMI STALE; a stamp written just after the checker read the clock counts as fresh)
 - [x] **Speed-pot break detection** (SPEED POT after three samples at the rail)
 - [x] **Visible crash and storage faults** (UNEXPECTED RESET, STORAGE)
 - [x] **Per-diameter RPM cap** (`MAX_STEP_HZ`, `MOTOR_RPM_LIMIT`)
@@ -55,7 +56,7 @@ v2.2.0 includes the [idle screen saver](docs/SCREEN_SAVER.md) and [LVGL UI refin
 - [x] **Motor Config** (driver type, microstepping, acceleration, max RPM, roller diameter, gear ratio, stop angle at max RPM, direction switch, pedal enable)
 - [x] **Guided calibration** (non-scrolling stages, same-page diameter, interrupted-move rejection, isolated draft, verification and storage receipt)
 - [x] **About screen** (firmware version, hardware info)
-- [x] **Program Edit** (fixed layout, explicit run/available modes, exact RPM, full-screen input and retained drafts)
+- [x] **Program Edit** (fixed layout, explicit run/available modes, exact RPM within the range for the program's diameter, full-screen input and retained drafts)
 - [x] **Guided setup** (motor, direction, verified calibration and physical E-STOP function check; compatible legacy settings)
 - [x] **Snapshot freshness** (40 ms UI updates, 100 ms stale motion blocking; STOP stays available)
 - [x] **Consistent footer navigation** and back buttons

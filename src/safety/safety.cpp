@@ -120,7 +120,7 @@ bool safety_is_driver_alarm_latched() { return s_driverAlarmLatched.load(std::me
 static constexpr uint32_t kUiHeartbeatDeadlineMs = 2000u;  // Far above a heavy LVGL frame.
 static bool ui_heartbeat_fresh(uint32_t now) {
   return (readyTasks.load(std::memory_order_acquire) & 8u) == 0u ||
-         now - g_uiHeartbeatMs.load(std::memory_order_acquire) <= kUiHeartbeatDeadlineMs;
+         timestamp_within(now, g_uiHeartbeatMs.load(std::memory_order_acquire), kUiHeartbeatDeadlineMs);
 }
 
 bool safety_inhibit_motion() {

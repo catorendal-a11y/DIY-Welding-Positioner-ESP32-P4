@@ -182,12 +182,12 @@ Details: [Setup Wizard](SETUP_WIZARD.md) · [Calibration workflow](CALIBRATION_W
 2. **Check** that the main screen appears, touch responds and E-STOP is released.
 3. **Match** driver current and microstep DIP switches to <kbd>Settings</kbd> › <kbd>Motor configuration</kbd>.
 4. **Switch on** the motor supply after STEP/DIR/ENA and E-STOP wiring are checked.
-5. **Set** RPM with the main pot or the idle-screen <kbd>+</kbd> / <kbd>−</kbd>, then press <kbd>Start</kbd>.
+5. **Set** RPM with the main pot or <kbd>+</kbd> / <kbd>−</kbd> beside the speed value, then press <kbd>Start</kbd>.
 6. **Pick a mode** from <kbd>Menu</kbd> › <kbd>Run modes</kbd>: Jog, Pulse, Step or Countdown.
 7. **Hit** E-STOP first when motion looks unsafe.
 
 > [!NOTE]
-> Speed and direction changes are blocked during motion. The physical direction switch keeps priority when enabled. The red fault overlay resets only after the physical fault is cleared, and reset never starts rotation.
+> Speed and direction changes are blocked during motion. The physical direction switch keeps priority when enabled. The fault overlay says what to do next. It resets only after the fault is cleared, when its banner turns from red to amber, and reset never starts rotation.
 
 <table>
 <tr>
@@ -197,6 +197,7 @@ Details: [Setup Wizard](SETUP_WIZARD.md) · [Calibration workflow](CALIBRATION_W
 </table>
 
 - **Program editor:** <kbd>Programs</kbd> › <kbd>+ New</kbd>. See [Program editor](PROGRAM_EDITOR.md). Up to 16 programs.
+- **Display settings:** brightness, appearance and accent are previewed at once. <kbd>Save</kbd> keeps them; <kbd>Back</kbd> without Save restores the saved values.
 - **Screen saver:** <kbd>Settings</kbd> › <kbd>Display settings</kbd> › <kbd>Screen saver after</kbd>. See [Screen saver](SCREEN_SAVER.md).
 - **USB-C live mirror:** flash `esp32p4-mirror`, then arm <kbd>Settings</kbd> › <kbd>Display settings</kbd> › <kbd>USB remote control</kbd> on the device. E-STOP and driver faults still override all UI input. See the [simulator README](../simulator/README.md#usb-c-live-mirror).
 
@@ -307,7 +308,7 @@ Real TIG welding validation was completed with the electronics in a shared groun
 
 | Local check | Result |
 |:---|:---|
-| Native suites | 489 / 489 passed (native/control/speed/storage/safety suites) |
+| Native suites | 492 / 492 passed (native/control/speed/storage/safety suites) |
 | Packaging tests | 10 / 10 passed |
 | LVGL self-test | Passed: navigation, program edits, RPM adjustment, fault reset, full setup/calibration workflows, save failure/retry and stale control |
 | Firmware builds | Release, debug and mirror passed |

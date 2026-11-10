@@ -12,6 +12,7 @@
 #include "../../config.h"
 #include <cstdio>
 #include <cmath>
+#include <cstring>
 
 static CalibrationSession session;
 static lv_obj_t *stageBtns[4]{}, *hint = nullptr, *title = nullptr;
@@ -36,6 +37,7 @@ static void enabled(lv_obj_t* obj, bool yes) {
   if (!obj || lv_obj_is_disabled(obj) == !yes) return;
   lv_obj_set_style_bg_color(obj, COL_BG_INPUT, LV_STATE_DISABLED);
   lv_obj_set_style_bg_opa(obj, LV_OPA_50, LV_STATE_DISABLED);
+  lv_obj_set_style_border_color(obj, COL_BORDER, LV_STATE_DISABLED);  // An accent frame reads as "press me".
   lv_obj_set_disabled(obj, !yes);
   auto text = lv_obj_get_child(obj, 0);
   if (text) lv_obj_set_style_text_color(text, yes ? ui_btn_label_color_post(obj == runBtn || obj == saveBtn || obj == applyBtn ? UI_BTN_ACCENT : UI_BTN_NORMAL) : COL_TEXT_VDIM, 0);
@@ -66,6 +68,11 @@ void screen_calibration_leave() {
   // MOVE 360 fixes the speed; the panel pot and pedal must work again afterwards.
   speed_set_slider_priority(false);
   close_entry(); control_stop(); calibration_discard_draft();
+  // The diameter typed here is part of the draft: only Save keeps it.
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  const float savedDiameter = g_settings.workpiece_diameter_mm;
+  xSemaphoreGive(g_settings_mutex);
+  speed_set_workpiece_diameter_mm(savedDiameter);
   session.abort("Calibration closed. Unsaved correction discarded.");
 }
 static void back_cb(lv_event_t*) {
@@ -163,14 +170,19 @@ void screen_calibration_create() {
     const char* names[] = {"1  Align", "2  Measure", "3  Verify", "4  Save"};
     stageBtns[i] = ui_create_btn(root, 20+i*193, 86, 181, 40, names[i], FONT_SUBTITLE, UI_BTN_NORMAL, nullptr, nullptr);
     lv_obj_set_clickable(stageBtns[i], false);
+    // Progress markers, not controls: flat, with an underline on the current step.
+    for (lv_state_t state : {(lv_state_t)LV_STATE_DEFAULT, (lv_state_t)LV_STATE_CHECKED}) lv_obj_set_style_bg_opa(stageBtns[i], LV_OPA_TRANSP, state);
+    lv_obj_set_style_radius(stageBtns[i], 0, 0);
+    lv_obj_set_style_border_side(stageBtns[i], LV_BORDER_SIDE_BOTTOM, 0);
+    lv_obj_set_style_border_width(stageBtns[i], 3, 0);
   }
   auto card = ui_create_post_card(root, 20, 140, 552, 188);
   title = label(card, 16, 12, 520, "Align the reference mark", FONT_XL, COL_TEXT);
   hint = label(card, 16, 48, 520, "", FONT_SUBTITLE, COL_TEXT_DIM); lv_label_set_max_lines(hint, 3);
-  measurementCaption = label(card, 16, 110, 220, "Actual angle (deg)", FONT_SUBTITLE, COL_TEXT_DIM);
+  measurementCaption = label(card, 16, 110, 260, "Actual angle (deg)", FONT_SUBTITLE, COL_TEXT_DIM);
   measurement = ui_create_btn(card, 16, 134, 226, 44, "---", FONT_XL, UI_BTN_NORMAL, open_entry, nullptr);
   applyBtn = ui_create_btn(card, 258, 134, 278, 44, "Apply measurement", FONT_SUBTITLE, UI_BTN_ACCENT, apply_cb, nullptr);
-  diameterBtn = ui_create_btn(card, 16, 122, 226, 54, "300 mm", FONT_XL, UI_BTN_NORMAL, open_entry, (void*)1);
+  diameterBtn = ui_create_btn(card, 16, 134, 226, 44, "300 mm", FONT_XL, UI_BTN_NORMAL, open_entry, (void*)1);
   progress = label(card, 16, 122, 520, "", FONT_XL, COL_TEXT);
   auto summary = ui_create_post_card(root, 588, 140, 192, 188);
   label(summary, 14, 12, 162, "Correction", FONT_SUBTITLE, COL_TEXT_DIM);
@@ -178,8 +190,8 @@ void screen_calibration_create() {
   context = label(summary, 14, 82, 164, "", FONT_SMALL, COL_TEXT_DIM); lv_label_set_max_lines(context, 4);
   runBtn = ui_create_btn(root, 20, 342, 460, 50, "Move 360\xC2\xB0", FONT_BTN, UI_BTN_ACCENT, move_cb, nullptr);
   stopBtn = ui_create_btn(root, 20, 342, 460, 50, UI_LABEL_STOP, FONT_BTN, UI_BTN_DANGER, stop_cb, nullptr);
-  jogMinus = ui_create_btn(root, 492, 342, 138, 50, "Jog -", FONT_SUBTITLE, UI_BTN_NORMAL, jog_cb, (void*)-1);
-  jogPlus = ui_create_btn(root, 642, 342, 138, 50, "Jog +", FONT_SUBTITLE, UI_BTN_NORMAL, jog_cb, (void*)1);
+  jogMinus = ui_create_btn(root, 492, 342, 138, 50, "Jog CCW", FONT_SUBTITLE, UI_BTN_NORMAL, jog_cb, (void*)-1);
+  jogPlus = ui_create_btn(root, 642, 342, 138, 50, "Jog CW", FONT_SUBTITLE, UI_BTN_NORMAL, jog_cb, (void*)1);
   // Bind hold direction explicitly; ui_create_btn user data belongs to its event.
   lv_obj_remove_event_cb(jogMinus, jog_cb); lv_obj_remove_event_cb(jogPlus, jog_cb);
   lv_obj_add_event_cb(jogMinus, jog_cb, LV_EVENT_ALL, (void*)-1); lv_obj_add_event_cb(jogPlus, jog_cb, LV_EVENT_ALL, (void*)1);
@@ -217,12 +229,9 @@ void screen_calibration_update() {
   const int stage = session.stage <= CalibrationSession::Moving ? 0 : session.stage == CalibrationSession::Measure ? 1 :
                     session.stage <= CalibrationSession::VerifyMeasure || (session.stage == CalibrationSession::Result && !session.passed()) ? 2 : 3;
   for (int i=0; i<4; ++i) {
-    const auto style = i == stage ? UI_BTN_ACCENT : UI_BTN_NORMAL;
-    ui_btn_style_post(stageBtns[i], style);
     lv_obj_set_checked(stageBtns[i], i == stage);
-    lv_obj_set_style_bg_color(stageBtns[i], COL_ACCENT, LV_STATE_CHECKED);
-    lv_obj_set_style_recolor_opa(stageBtns[i], LV_OPA_TRANSP, LV_STATE_CHECKED);
-    lv_obj_set_style_text_color(lv_obj_get_child(stageBtns[i], 0), ui_btn_label_color_post(style), 0);
+    lv_obj_set_style_border_color(stageBtns[i], i == stage ? COL_ACCENT : COL_BORDER, 0);
+    lv_obj_set_style_text_color(lv_obj_get_child(stageBtns[i], 0), i == stage ? COL_TEXT : COL_TEXT_DIM, 0);
   }
   const char* heading = "Align the reference mark";
   const char* instructions = "Set diameter below. Use Jog to align a clear mark. Then run one full workpiece revolution.";
@@ -236,15 +245,18 @@ void screen_calibration_update() {
   bindings.title.set(heading); bindings.hint.set(session.error ? session.error : instructions);
   lv_obj_set_style_text_color(hint, session.error ? COL_RED : COL_TEXT_DIM, 0);
   const bool measuring = session.stage == CalibrationSession::Measure || session.stage == CalibrationSession::VerifyMeasure;
-  lv_obj_set_hidden(measurement, !measuring); lv_obj_set_hidden(measurementCaption, !measuring);
+  const bool preparing = session.stage == CalibrationSession::Prepare;
+  lv_obj_set_hidden(measurement, !measuring); lv_obj_set_hidden(measurementCaption, !measuring && !preparing);
+  const char* caption = preparing ? "Workpiece diameter" : "Actual angle (deg)";
+  if (strcmp(lv_label_get_text(measurementCaption), caption) != 0) lv_label_set_text(measurementCaption, caption);
   lv_obj_set_hidden(applyBtn, session.stage != CalibrationSession::Measure);
-  lv_obj_set_hidden(diameterBtn, session.stage != CalibrationSession::Prepare);
+  lv_obj_set_hidden(diameterBtn, !preparing);
   lv_obj_set_hidden(progress, !session.moving() && session.stage != CalibrationSession::Result);
   char text[96];
   const float angle = session.stage == CalibrationSession::VerifyMeasure ? session.verified : session.measured;
   if (angle > 0) snprintf(text, sizeof(text), "%.2f", (double)angle); else snprintf(text, sizeof(text), "---");
   bindings.measurement.set(text);
-  snprintf(text, sizeof(text), "%.1f mm", (double)session.diameter); bindings.diameter.set(text);
+  snprintf(text, sizeof(text), "%.1f mm  " LV_SYMBOL_EDIT, (double)session.diameter); bindings.diameter.set(text);
   snprintf(text, sizeof(text), "%.4f", (double)session.factor); bindings.factor.set(text);
   snprintf(text, sizeof(text), "Dia %.1f mm\n%s / %.3f RPM\n~%.1f min / turn\nManual measurement", (double)session.diameter,
            speed_get_direction() == DIR_CW ? "CW" : "CCW", (double)constrain(0.25f, MIN_RPM, speed_get_rpm_max()),

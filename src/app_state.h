@@ -16,6 +16,7 @@
 #pragma once
 #include <atomic>
 #include <cstdint>
+#include "control/input_policy.h"  // timestamp_within
 
 // ───────────────────────────────────────────────────────────────────────────────
 // Safety (safetyTask on Core 0, ISR on Core 0, UI on Core 1)
@@ -40,7 +41,7 @@ inline bool input_task_heartbeat_fresh(uint32_t now, uint32_t deadline = 100u) {
   // Not yet valid counts as fresh: safetyTask arms the supervisor via
   // g_inputHeartbeatValid, and readyTasks already inhibits motion meanwhile.
   if (!g_inputHeartbeatValid.load(std::memory_order_acquire)) return true;
-  return now - g_inputHeartbeatMs.load(std::memory_order_acquire) <= deadline;
+  return timestamp_within(now, g_inputHeartbeatMs.load(std::memory_order_acquire), deadline);
 }
 
 // ───────────────────────────────────────────────────────────────────────────────

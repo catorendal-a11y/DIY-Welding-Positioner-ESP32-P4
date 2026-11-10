@@ -102,7 +102,7 @@ static void angle_adj_cb(lv_event_t* e) {
 static void rpm_adj_cb(lv_event_t* e) {
   float delta = (float)(intptr_t)lv_event_get_user_data(e) * ui_rpm_increment(editRpm);
   editRpm += delta;
-  if (editRpm < MIN_RPM) editRpm = MIN_RPM;
+  if (editRpm < speed_get_rpm_min_for_diameter(editDiameterMm)) editRpm = speed_get_rpm_min_for_diameter(editDiameterMm);
   const float rpmMax = speed_get_rpm_max_for_diameter(editDiameterMm);  // Diameter is edited on this screen.
   if (editRpm > rpmMax) editRpm = rpmMax;
   if (rpmLabel) ui_set_rpm_unit(rpmLabel, editRpm);
@@ -124,7 +124,7 @@ static void diameter_adj_cb(lv_event_t* e) {
   }
   if (editDiameterMm < 1.0f) editDiameterMm = 0.0f;
   if (editDiameterMm > 20000.0f) editDiameterMm = 20000.0f;
-  editRpm = constrain(editRpm, MIN_RPM, speed_get_rpm_max_for_diameter(editDiameterMm));
+  editRpm = constrain(editRpm, speed_get_rpm_min_for_diameter(editDiameterMm), speed_get_rpm_max_for_diameter(editDiameterMm));
   if (rpmLabel) ui_set_rpm_unit(rpmLabel, editRpm);
   update_diameter_label();
   update_computed();

@@ -25,7 +25,7 @@ The script configures CMake, builds `rotator_simulator.exe`, then starts the
 
 This creates every LVGL screen, runs update loops, clicks key navigation and
 machine-control UI buttons against fake simulator state, and exits non-zero on
-failure. The tests include main-screen RPM +/− and both blocked and available fault-reset states. Firmware and simulator share the V5 theme and numeric font.
+failure. The tests include main-screen RPM +/−, both blocked and available fault-reset states, Back without Save in Display settings, the calibration diameter draft and the program speed floor. Firmware and simulator share the V5 theme and numeric font.
 
 ## Screen Screenshot Dump
 
@@ -88,7 +88,7 @@ The simulator uses LVGL **9.6.0** with an explicit SDL software renderer. Window
 
 - CMake
 - Ninja
-- MSYS2 MinGW toolchain with SDL2, expected at `C:\msys64\mingw64`
+- MSYS2 MinGW toolchain with SDL2, expected at `C:\msys64\mingw64`. For SDL2 in another place, configure with `-DSIMULATOR_DEPENDENCY_ROOT=<directory with include, lib and bin>`
 - PlatformIO dependencies already installed, especially LVGL under `.pio/libdeps`
 
 If LVGL is missing, run the firmware build once first:

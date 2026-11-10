@@ -31,7 +31,7 @@ Commercial welding rotators cost $500-5000. This controller gives you profession
 - E-STOP ISR drives ENA HIGH; physical stop latency requires measurement
 - 16 program presets saved to flash storage
 - Dual-core FreeRTOS (real-time motor + UI)
-- 22 registered LVGL root screens + E-STOP overlay (settings, diagnostics, pedal settings, system info, calibration, etc.)
+- 23 registered LVGL root screens + E-STOP overlay (settings, diagnostics, pedal settings, system info, calibration, etc.)
 
 ### Demo Video
 

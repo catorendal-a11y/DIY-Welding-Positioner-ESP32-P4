@@ -39,13 +39,15 @@ Touchscreen controller for a single-axis TIG/MIG welding rotator, built for the 
 > - **HF-start TIG:** put the controller, driver and motor PSU in the same grounded metal enclosure. See [TIG HF](#tig-hf).
 
 > [!NOTE]
-> **Tested by the owner.** The owner reported on 2026-11-04 that everything works on the assembled v2.3.0 machine, including TIG HF. The owner reported the v2.3.1 build working on the same machine the same day. Stop time is unmeasured. [Checks to run on your own build](docs/releases/v2.3.1.md#validation-and-hardware-status)
+> **Tested by the owner.** The owner reported on 2026-11-04 that everything works on the assembled v2.3.0 machine, including TIG HF. The owner reported the v2.3.1 build working on the same machine the same day. Stop time is unmeasured.
+>
+> **Source is ahead of v2.3.1.** The screenshots below show the current source, which has reworked screens and fixes that are not released yet. See [What changed since v2.3.1](#what-changed-since-v231). The downloads are still v2.3.1. [Checks to run on your own build](docs/releases/v2.3.1.md#validation-and-hardware-status)
 
 ## What it does
 
 <table>
 <tr>
-<td width="33%" valign="top"><img src="docs/images/ui_runtime_v5/01_MAIN.png" alt="Continuous screen"><br><b>Continuous</b><br><sub>Set speed with the pot, pedal or -/+. One Start/Stop button.</sub></td>
+<td width="33%" valign="top"><img src="docs/images/ui_runtime_v5/01_MAIN.png" alt="Continuous screen"><br><b>Continuous</b><br><sub>Set speed with the pot, pedal or -/+ beside the value. One Start/Stop button.</sub></td>
 <td width="33%" valign="top"><img src="docs/images/ui_runtime_v5/03_PULSE.png" alt="Pulse screen"><br><b>Pulse</b><br><sub>Rotate, pause, repeat for tack welds. The preview tracks the live cycle.</sub></td>
 <td width="33%" valign="top"><img src="docs/images/ui_runtime_v5/04_STEP.png" alt="Step screen"><br><b>Step</b><br><sub>Index by an exact angle, 45 to 360 degrees or a custom value.</sub></td>
 </tr>
@@ -64,11 +66,36 @@ Touchscreen controller for a single-axis TIG/MIG welding rotator, built for the 
 | 🎯 | **0.001-3.0 RPM** | At the workpiece, limited by geometry and calibration. The screen shows the effective range |
 | 💾 | **16 saved programs** | Speed, direction, diameter and mode settings |
 | 🎛️ | **Pot, switch, pedal** | Panel potentiometer, direction switch and optional foot pedal |
-| 🛑 | **Supervision** | E-STOP input, driver alarm, UI and touch watch. Resetting a fault never starts rotation |
+| 🛑 | **Supervision** | E-STOP input, driver alarm, UI and touch watch. The fault screen says what to do next. Resetting a fault never starts rotation |
 | 🧭 | **Guided setup** | Setup wizard, calibration, diagnostics, USB-C live mirror and an [idle screen saver](docs/SCREEN_SAVER.md) |
 
 > [!TIP]
 > Single axis with no encoder: RPM and progress are calculated, so calibration needs a real measurement.
+
+## What changed since v2.3.1
+
+These changes are in the source and not in a release yet. Build from `master` to get them.
+
+| Area | Change |
+|---|---|
+| Supervision | A heartbeat stamped just after the supervisor read the clock no longer counts as 49 days old. This rare race could stop a weld with HMI STALE or PEDAL INPUT, or drop a held jog |
+| Fault screen | Leads with the next action, for example "Release the E-STOP button.", with the cause below. The banner is red while reset is blocked and amber when it is ready |
+| Main screen | - and + sit beside the speed value instead of next to Start. Steps are 0.001 RPM below 0.1 RPM |
+| Programs | The editors refuse a speed the motor cannot run at the program's diameter. The Available switches are full size |
+| Calibration | Named jog directions, a captioned diameter field, and an abandoned diameter no longer stays active |
+| Display settings | Back without Save restores brightness, appearance and accent |
+| Screen saver | States "Motor stopped" and shows the set speed and direction |
+| Status | The header status is a filled pill with larger text on every screen |
+
+<table>
+<tr>
+<td width="33%" valign="top"><img src="docs/images/ui_runtime_v5/ESTOP_ACTIVE.png" alt="Fault screen while E-STOP is pressed"><br><b>Fault, reset blocked</b><br><sub>Red banner and the next action.</sub></td>
+<td width="33%" valign="top"><img src="docs/images/ui_runtime_v5/ESTOP_RESET.png" alt="Fault screen after E-STOP is released"><br><b>Fault, ready to reset</b><br><sub>Amber banner once only the reset is missing.</sub></td>
+<td width="33%" valign="top"><img src="docs/images/ui_runtime_v5/SCREEN_SAVER.png" alt="Idle screen saver"><br><b>Screen saver</b><br><sub>Machine state and the set speed.</sub></td>
+</tr>
+</table>
+
+The owner flashed this source on 2026-11-10 and confirmed that it boots and that the new screens, the fault screen and the screen saver display correctly. Motion, pedal and calibration were not re-tested on it. [Full list](CHANGELOG.md)
 
 ## Parts
 
@@ -121,6 +148,8 @@ git checkout v2.3.1
 pio run
 ```
 
+Leave out `git checkout v2.3.1` to build the unreleased source. On Windows, run `pio` from PowerShell: in Git Bash the final image step can fail.
+
 ## First run
 
 New installations open the **Setup Wizard**, and valid existing settings are kept. Run it again from <kbd>Settings</kbd> › <kbd>Setup wizard</kbd>.
@@ -143,9 +172,9 @@ The wizard does not measure stop time or certify wiring. [Every wizard screen](d
 
 ## Validation
 
-<p><img src="https://img.shields.io/badge/native%20tests-489%20passing-2e7d32?style=flat-square" alt="native tests: 489 passing"> <img src="https://img.shields.io/badge/simulator-Linux%20%2B%20Windows-2e7d32?style=flat-square" alt="simulator: Linux + Windows"> <img src="https://img.shields.io/badge/layout%20audit-0%20failures-2e7d32?style=flat-square" alt="layout audit: 0 failures"> <img src="https://img.shields.io/badge/firmware%20builds-release%20·%20debug%20·%20mirror-2e7d32?style=flat-square" alt="firmware builds: release · debug · mirror"> <img src="https://img.shields.io/badge/owner%20tested-v2.3.1-ff6b38?style=flat-square" alt="owner tested: v2.3.1"> <img src="https://img.shields.io/badge/stop%20time-not%20measured-8a3b3b?style=flat-square" alt="stop time: not measured"></p>
+<p><img src="https://img.shields.io/badge/native%20tests-492%20passing-2e7d32?style=flat-square" alt="native tests: 492 passing"> <img src="https://img.shields.io/badge/simulator-Linux%20%2B%20Windows-2e7d32?style=flat-square" alt="simulator: Linux + Windows"> <img src="https://img.shields.io/badge/layout%20audit-0%20failures-2e7d32?style=flat-square" alt="layout audit: 0 failures"> <img src="https://img.shields.io/badge/firmware%20builds-release%20·%20debug%20·%20mirror-2e7d32?style=flat-square" alt="firmware builds: release · debug · mirror"> <img src="https://img.shields.io/badge/owner%20tested-v2.3.1-ff6b38?style=flat-square" alt="owner tested: v2.3.1"> <img src="https://img.shields.io/badge/stop%20time-not%20measured-8a3b3b?style=flat-square" alt="stop time: not measured"></p>
 
-Every commit runs **489 native tests**, packaging tests, Linux and Windows simulator self-tests, a layout audit and three firmware builds. Release binaries come from the validated master commit. The owner reported v2.3.0 tested on the assembled machine on 2026-11-04. TIG HF works on the owner's machine. The owner reported the v2.3.1 build working on the same machine the same day. Stop time has not been measured. [v2.3.1 status](docs/releases/v2.3.1.md#validation-and-hardware-status) · [Changelog](CHANGELOG.md)
+Every commit runs **492 native tests**, packaging tests, Linux and Windows simulator self-tests, a layout audit and three firmware builds. Release binaries come from the validated master commit. The owner reported v2.3.0 tested on the assembled machine on 2026-11-04. TIG HF works on the owner's machine. The owner reported the v2.3.1 build working on the same machine the same day. The unreleased source was flashed on 2026-11-10 and its screens were checked; motion was not re-tested on it. Stop time has not been measured. [v2.3.1 status](docs/releases/v2.3.1.md#validation-and-hardware-status) · [Changelog](CHANGELOG.md)
 
 ## Documentation and contributions
 

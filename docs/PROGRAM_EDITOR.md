@@ -7,7 +7,7 @@ The editor uses the existing V5 palette at 800×480, with no page scrolling. The
 1. **Open** <kbd>Programs</kbd> › <kbd>+ New</kbd>, or edit an existing slot with <kbd>Edit</kbd>.
 2. **Name** it: the top field opens the name keyboard.
 3. **Pick** the mode with <kbd>Run mode</kbd>: Continuous, Pulse or Step. Selecting the same mode again leaves it selected.
-4. **Choose** other modes with <kbd>Available</kbd>. They are offered for this preset. The active run mode is always included.
+4. **Choose** other modes with the <kbd>Available in this program</kbd> switches under the run mode. They are offered for this preset. The active run mode is always included.
 
 <table>
 <tr>
@@ -36,7 +36,7 @@ Tap the name, edit it, and use the keyboard's confirm key or the visible <kbd>Ca
 </tr>
 </table>
 
-Tap the RPM value to enter exact speed. Dot and comma decimal separators are accepted. The whole entry must be numeric and within `MIN_RPM` and the maximum for this program's diameter. Invalid input leaves the editor open and preserves the draft.
+Tap the RPM value to enter exact speed. Dot and comma decimal separators are accepted. The whole entry must be numeric and within the minimum and maximum for this program's diameter. The minimum is the slowest rate the motor can run at that diameter (`START_SPEED`), never below `MIN_RPM`. Invalid input leaves the editor open and preserves the draft.
 
 | Setting | Value |
 |---|---|
@@ -44,11 +44,12 @@ Tap the RPM value to enter exact speed. Dot and comma decimal separators are acc
 | Summary and mode-settings +/− step otherwise | **0.01 RPM** |
 | Display precision | Follows the same rule |
 | Maximum | Lower of the Max RPM setting and the per-diameter cap from `MAX_STEP_HZ` and `MOTOR_RPM_LIMIT` |
+| Minimum | The per-diameter floor from `START_SPEED`. A smaller diameter or coarser microstepping raises it |
 
-A larger diameter in the Step editor lowers RPM visibly.
+A larger diameter in the Step editor lowers RPM visibly, and a smaller one raises it to the minimum.
 
 > [!WARNING]
-> A saved program above the cap is blocked at start. If a start is blocked after you confirm it, <kbd>PROGRAM BLOCKED</kbd> shows the reason and returns to the list.
+> A saved program outside the range is blocked at start. This can happen when Max RPM, the calibration or the microstepping changed after it was saved. If a start is blocked after you confirm it, <kbd>PROGRAM BLOCKED</kbd> shows the reason and returns to the list.
 
 ![Invalid RPM](images/program_v2/04_rpm_validation.png)
 
@@ -60,7 +61,7 @@ A larger diameter in the Step editor lowers RPM visibly.
 4. **Wait** for the matching successful storage receipt. The button shows <kbd>Saving...</kbd> or <kbd>Save failed, retrying</kbd>, then the editor returns to Programs.
 
 > [!IMPORTANT]
-> Edits and Cancel stay locked while the write is pending.
+> Edits stay locked while the write is pending. <kbd>Cancel</kbd> still leaves the editor, but it does not undo the save: the program is already in the list.
 
 Before saving, <kbd>Cancel</kbd> discards the editor draft. Existing slots additionally offer <kbd>Delete</kbd> with confirmation.
 

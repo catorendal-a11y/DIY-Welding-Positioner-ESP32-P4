@@ -521,6 +521,13 @@ void test_input_deadline_and_wraparound() {
   TEST_ASSERT_FALSE(input_sample_fresh(true, 10, 161));
   TEST_ASSERT_TRUE(input_sample_fresh(true, UINT32_MAX - 5, 4));
 }
+void test_stamp_written_after_now_was_read_is_fresh() {
+  // The writer task can stamp between the reader's millis() and its load.
+  TEST_ASSERT_TRUE(input_sample_fresh(true, 21, 20));
+  TEST_ASSERT_TRUE(timestamp_within(UINT32_MAX, 2, 100));  // Same race across the wrap.
+  TEST_ASSERT_FALSE(timestamp_within(20, 26, 100));        // Further ahead is not a race.
+  TEST_ASSERT_FALSE(timestamp_within(20, 20 + 0x80000000u, 100));
+}
 void test_dim_timeout_storage_width_and_migration() {
   TEST_ASSERT_EQUAL(300, settings_dim_seconds(300));
   TEST_ASSERT_EQUAL(300, settings_dim_seconds(44));
@@ -703,6 +710,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_pedal_rearm_after_fault_and_disable);
   RUN_TEST(test_pedal_glitch_below_start_debounce_never_starts);
   RUN_TEST(test_input_deadline_and_wraparound);
+  RUN_TEST(test_stamp_written_after_now_was_read_is_fresh);
   RUN_TEST(test_dim_timeout_storage_width_and_migration);
   RUN_TEST(test_save_request_due_only_after_backoff_with_work);
   RUN_TEST(test_save_failure_retries_and_clears_error);

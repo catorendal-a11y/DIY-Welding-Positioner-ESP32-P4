@@ -37,7 +37,7 @@ python -m unittest discover -s test/tooling
 pio check -e static-analysis --severity=high --severity=medium
 ```
 
-Windows PowerShell: set `$env:PYTHONUTF8='1'` before upload if the terminal uses a legacy encoding. Detect the port with `pio device list`, then pass `--upload-port COM3` (example).
+Windows: run `pio` from PowerShell. In Git Bash the final image step can fail with `MSys/Mingw is not supported`, although compiling and linking succeed. Set `$env:PYTHONUTF8='1'` before upload if the terminal uses a legacy encoding. Detect the port with `pio device list`, then pass `--upload-port COM3` (example). Every Espressif USB device reports `VID:PID 303A:1001`, so with more than one connected, confirm the chip first with `python -m esptool --port COM3 flash-id` (ESP32-P4, 16MB).
 
 Run the actual LVGL simulator with `.\simulator\run.ps1 -SelfTest`. CI runs cppcheck, the six native environments, packaging tests, all three firmware variants and the simulator self-test and layout audit on Linux and Windows. Device tests require an isolated bench with motor power controlled; see [test/README.md](test/README.md).
 

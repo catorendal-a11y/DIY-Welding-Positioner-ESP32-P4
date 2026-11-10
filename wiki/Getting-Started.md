@@ -105,11 +105,11 @@ For simulator-only UI review:
 - [ ] Test main RPM +/− while idle; confirm controls are blocked during motion
 - [ ] Check physical direction-switch priority and idle CW/CCW selection
 - [ ] Press <kbd>Stop</kbd> — motor decelerates and stops
-- [ ] Check E-STOP driver disable and red overlay; measure physical stopping response
-- [ ] Clear fault, press <kbd>RESET TO IDLE</kbd>, then use a separate <kbd>Start</kbd>
+- [ ] Check E-STOP driver disable and the red fault screen with its "What to do" line; measure physical stopping response
+- [ ] Clear fault and watch the banner turn amber, press <kbd>RESET TO IDLE</kbd>, then use a separate <kbd>Start</kbd>
 - [ ] Try each mode: Jog, Pulse, Step, Countdown
 - [ ] Navigate to <kbd>Settings</kbd> › <kbd>Motor configuration</kbd> — enable direction switch
-- [ ] Navigate to <kbd>Settings</kbd> › <kbd>Display settings</kbd> — adjust <kbd>Brightness</kbd>, optional <kbd>Appearance</kbd> (dark/light), and <kbd>Accent color</kbd>
+- [ ] Navigate to <kbd>Settings</kbd> › <kbd>Display settings</kbd> — adjust <kbd>Brightness</kbd>, optional <kbd>Appearance</kbd> (dark/light), and <kbd>Accent color</kbd>, then <kbd>Save</kbd> (Back without Save restores the saved values)
 
 ## Configuration
 

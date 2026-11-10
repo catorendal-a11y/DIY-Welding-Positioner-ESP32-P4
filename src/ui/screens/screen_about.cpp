@@ -3,6 +3,8 @@
 #include "../screens.h"
 #include "../theme.h"
 #include "../../config.h"
+#include "../../storage/storage.h"
+#include <cstdio>
 
 static void back_cb(lv_event_t* e) { screens_show(SCREEN_SETTINGS); }
 
@@ -35,9 +37,13 @@ void screen_about_create() {
   ui_create_header(screen, "About this controller", "", nullptr);
   ui_create_text(screen, 24, 102, 752, "TIG / ROTATOR", FONT_HUGE, COL_TEXT);
   ui_create_text(screen, 24, 158, 752, "DIY welding positioner", FONT_XL, COL_TEXT_DIM);
+  char motion[40];  // The gear ratio is a setting, not a constant.
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  snprintf(motion, sizeof(motion), "NEMA 23 / %.4g:1 reduction", (double)g_settings.gear_ratio);
+  xSemaphoreGive(g_settings_mutex);
   const char* names[] = {"Firmware", "Controller", "Display", "Motion", "Software"};
   const char* values[] = {FW_VERSION " (" FW_BUILD_ID ")", "ESP32-P4 + ESP32-C6", "4.3 inch / 800 x 480",
-                          "NEMA 23 / 108:1 reduction", "LVGL 9 / FastAccelStepper"};
+                          motion, "LVGL 9 / FastAccelStepper"};
   for (int i = 0; i < 5; ++i) make_info_row(screen, 24, 208 + i * 34, 752, 32, names[i], values[i]);
   ui_create_btn(screen, 24, 408, 152, 56, UI_LABEL_BACK, FONT_BTN, UI_BTN_NORMAL, back_cb, nullptr);
 }

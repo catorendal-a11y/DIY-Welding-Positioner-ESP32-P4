@@ -84,7 +84,7 @@
 
 ### Fault names
 
-The red overlay names the first latched fault. Clear the cause, then press <kbd>RESET TO IDLE</kbd>, unless the table says to restart. Reset never starts motion.
+The overlay names the first latched fault, states the next action under **What to do** and gives the cause below it. The banner is red while something blocks the reset and amber with **READY TO RESET** when only the reset is missing. Clear the cause, then press <kbd>RESET TO IDLE</kbd>, unless the table says to restart. Reset never starts motion.
 
 | Fault | Meaning | What to do |
 |---|---|---|

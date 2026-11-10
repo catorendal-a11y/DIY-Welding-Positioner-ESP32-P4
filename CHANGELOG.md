@@ -16,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Step has larger -/+ buttons, and the target angle can be changed by 5 degrees. DIA, RST and Part are spelled out.
 - Program rows use plain text, and Edit is a real button.
 - All screens use the same Back, Start and Stop words and icons, and larger -/+ buttons where they were small.
+- The header status is a filled pill with larger text.
+- Main: - and + sit beside the speed value instead of next to Start, and Menu and Programs are wider.
+- Edit program: the Available switches are as tall as the Run mode buttons.
+- Calibration: a locked Save has a grey frame, the jog buttons are named Jog CCW and Jog CW, the step markers are flat, and the diameter field has a caption and an edit icon.
+- Countdown: the Safety hold card is coloured as a warning only while the countdown runs.
+- Step: the angle card is named Step angle, and the diameter row shows an edit icon.
+- Diagnostics: larger text with right-aligned values.
+- Fault overlay: the next action leads ("Release the E-STOP button."), with the cause below it and no repeated text. The banner turns amber and reads "READY TO RESET" once only the reset is missing, and an E-STOP that has been released is titled E-STOP RELEASED.
+- Screen saver: states "Motor stopped" and shows the set speed and direction instead of a slogan. The idle label is larger.
 - Wiring diagram rev 2.8: no text under wires, parallel runs at least 12 px apart, terminal names inside the driver and motor. Connections are unchanged.
 
 ### Removed
@@ -28,6 +37,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The speed pot or pedal no longer overrides a speed set on the screen until it is moved or reaches that speed.
 - Programs are limited to the firmware speed range when loaded, not to the current Max RPM, so lowering Max RPM cannot rewrite a saved program. The editor shows the limit.
 - Manual direction, pulse times, step angle and jog speed survive a restart.
+- The program editors no longer accept a speed below what the motor can run at the program's diameter. Such a program could be saved but never started.
+- Countdown: "Start blocked" stays on screen when the start is refused after the countdown.
+- Step: changing the diameter re-limits the speed at once, and - no longer raises a typed angle below 5 degrees.
+- Main: - and + use 0.001 RPM steps below 0.1 RPM, like the other screens.
+- Display settings: Back without Save restores brightness, appearance and accent. A timeout draft survives a theme change on a second visit.
+- Calibration: a diameter entered and then abandoned no longer stays active.
+- Motor configuration: the stop angle follows an edited roller diameter and gear ratio.
+- About shows the configured gear ratio.
+- A heartbeat, pedal sample or jog renewal stamped by another task a moment after the checking task read the clock no longer counts as 49 days old. This rare race could stop a weld with HMI STALE or PEDAL INPUT, or drop a held jog.
 - A corrupt storage fault can be cleared on the machine: hold for 3 seconds to erase the data and restart. Other faults do not offer this.
 - Settings on Pulse, Step and Countdown are locked while the machine moves.
 - A save requested during flush is no longer lost.

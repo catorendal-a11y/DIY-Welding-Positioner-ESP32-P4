@@ -89,8 +89,15 @@ class PotBreakDetector {
 constexpr int kAdsMinValid = -64, kAdsMaxValid = 28000, kAdsInvalidLimit = 3;
 inline bool ads_code_in_range(int code) { return code >= kAdsMinValid && code <= kAdsMaxValid; }
 
+// Another task can stamp between the reader's millis() and its load, leaving the stamp a
+// few ms ahead of `now`. Unsigned subtraction reads that as 49 days old: a live task as dead.
+inline bool timestamp_within(uint32_t now, uint32_t stamp, uint32_t deadline) {
+  const int32_t age = static_cast<int32_t>(now - stamp);
+  return age >= -5 && age <= static_cast<int32_t>(deadline);
+}
+
 inline bool input_sample_fresh(bool valid, uint32_t sample, uint32_t now, uint32_t deadline = 150u) {
-  return valid && now - sample <= deadline;
+  return valid && timestamp_within(now, sample, deadline);
 }
 
 // An enabled pedal is healthy when no ADS1115 was detected at boot (GPIO33

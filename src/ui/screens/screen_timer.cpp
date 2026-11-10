@@ -36,6 +36,8 @@ static lv_obj_t* bigNumberLabel = nullptr;
 static lv_obj_t* startAfterValLbl = nullptr;
 static lv_obj_t* rpmValLbl = nullptr;
 static lv_obj_t* warnDetailLbl = nullptr;
+static lv_obj_t* warnCard = nullptr;
+static int warnShown = -1;
 static lv_obj_t* timerStartBtn = nullptr;
 static lv_obj_t* timerStopBtn = nullptr;
 static lv_obj_t* secMinusBtn = nullptr;
@@ -73,6 +75,15 @@ static void save_countdown_setting() {
   xSemaphoreGive(g_settings_mutex);
   // START and screen-exit both land here on every use; flash only real edits.
   if (changed) storage_save_settings();
+}
+
+// A warning that is always lit gets ignored: colour the card only while the countdown runs.
+static void set_safety_card(bool warn) {
+  if (!warnCard || warnShown == (int)warn) return;
+  warnShown = warn;
+  lv_obj_set_style_bg_color(warnCard, warn ? COL_BG_WARN_PANEL : COL_BG_CARD, 0);
+  lv_obj_set_style_border_color(warnCard, warn ? COL_BORDER_WARN : COL_BORDER, 0);
+  lv_obj_set_style_text_color(lv_obj_get_child(warnCard, 0), warn ? COL_YELLOW : COL_TEXT_DIM, 0);
 }
 
 static lv_color_t countdown_color(int remaining, int total) {
@@ -230,7 +241,8 @@ void screen_timer_create() {
   lv_obj_set_style_text_color(rpmValLbl, COL_TEXT, 0);
   lv_obj_set_pos(rpmValLbl, 16, 40);
 
-  lv_obj_t* warnCard = timer_make_info_card(screen, 294, "Safety hold", true);
+  warnCard = timer_make_info_card(screen, 294, "Safety hold", false);
+  warnShown = -1;
   warnDetailLbl = lv_label_create(warnCard);
   lv_label_set_text(warnDetailLbl, countdownCancelled ? "Cancelled - press Start again" : "Motor remains disabled until zero");
   lv_obj_set_style_text_font(warnDetailLbl, FONT_SUBTITLE, 0);
@@ -256,6 +268,7 @@ void screen_timer_invalidate_widgets() {
   startAfterValLbl = nullptr;
   rpmValLbl = nullptr;
   warnDetailLbl = nullptr;
+  warnCard = nullptr;
   timerStartBtn = nullptr;
   timerStopBtn = nullptr;
   secMinusBtn = nullptr;
@@ -285,6 +298,7 @@ void screen_timer_update() {
   lv_obj_set_disabled(timerStartBtn, blocked);
   lv_obj_set_disabled(secMinusBtn, showStop);
   lv_obj_set_disabled(secPlusBtn, showStop);
+  set_safety_card(countingDown.load() || startPending.load());
 
   if ((countingDown.load() || startPending.load()) && !control_deferred_start_valid(countdownGeneration)) {
     screen_timer_leave(); countdownCancelled = true;
@@ -304,6 +318,7 @@ void screen_timer_update() {
     startPending.store(false, std::memory_order_release);
     countingDown.store(false, std::memory_order_release);
     if (safety_inhibit_motion() || ui_control_state() != STATE_IDLE) {
+      countdownCancelled = true;  // The idle refresh must not restore the normal hint.
       if (warnDetailLbl) {
         lv_label_set_text(warnDetailLbl, "Start blocked");
         lv_obj_set_style_text_color(warnDetailLbl, COL_RED, 0);
@@ -312,9 +327,12 @@ void screen_timer_update() {
     }
     if (control_start_deferred_continuous(countdownGeneration)) {
       screens_request_show(SCREEN_MAIN);
-    } else if (warnDetailLbl) {
-      lv_label_set_text(warnDetailLbl, "Start blocked");
-      lv_obj_set_style_text_color(warnDetailLbl, COL_RED, 0);
+    } else {
+      countdownCancelled = true;
+      if (warnDetailLbl) {
+        lv_label_set_text(warnDetailLbl, "Start blocked");
+        lv_obj_set_style_text_color(warnDetailLbl, COL_RED, 0);
+      }
     }
     return;
   }

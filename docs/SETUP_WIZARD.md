@@ -48,8 +48,8 @@ Navigation never initiates a calibration movement.
 
 ## 4. Function check
 
-1. **Press** the physical E-STOP switch. The fault overlay blocks operation.
-2. **Release** the switch and inspect the machine.
+1. **Press** the physical E-STOP switch. The red fault overlay blocks operation and reads <kbd>Release the E-STOP button.</kbd>
+2. **Release** the switch and inspect the machine. The banner turns amber and reads <kbd>READY TO RESET</kbd>.
 3. **Select** <kbd>RESET TO IDLE</kbd>. Reset does not start movement.
 4. **Select** <kbd>Test start</kbd> explicitly and observe rotation.
 5. **Select** <kbd>Stop</kbd>.

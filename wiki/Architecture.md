@@ -130,7 +130,7 @@ Preset vector access protected by `g_presets_mutex` semaphore. Copy-based API: `
 Layered ESTOP and fault architecture:
 1. **ISR layer (latency unmeasured):** GPIO 34 interrupt sets ENA HIGH via direct register write + sets `g_estopPending.store(true, std::memory_order_release)` + `g_wakePending.store(true, ...)` (NO function calls — flash may be disabled during NVS writes)
 2. **Task layer:** `safetyTask` debounces and transitions to STATE_ESTOP; stores `g_estopTriggerMs` on the debounced fault edge
-3. **UI layer:** `lvglTask` shows/hides red overlay based on current state
+3. **UI layer:** `lvglTask` shows/hides the fault overlay based on current state. The overlay is red while reset is blocked and amber when ready to reset
 4. **Reset:** UI sets `g_uiResetPending.store(true, ...)`, Core 0 processes via `controlTask`
 5. **Boot sampling:** `safety_init()` takes 3 samples of `PIN_ESTOP` with 500 µs spacing after `INPUT_PULLUP` + 2 ms settle, requires ≥2/3 LOW before treating ESTOP as pressed (startup sampling does not verify wiring continuity)
 

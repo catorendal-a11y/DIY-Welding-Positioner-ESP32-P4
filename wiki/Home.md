@@ -4,7 +4,7 @@
 
 ![V5 main screen](https://raw.githubusercontent.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/master/docs/images/ui_runtime_v5/01_MAIN.png)
 
-Actual LVGL simulator capture with example data. Main RPM +/− controls operate while idle; physical direction-switch priority and fault gates remain effective.
+Actual LVGL simulator capture with example data. Main RPM +/− controls sit beside the speed value and operate while idle; physical direction-switch priority and fault gates remain effective.
 
 ## Start here
 

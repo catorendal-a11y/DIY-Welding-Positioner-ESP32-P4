@@ -8,7 +8,7 @@ The calibration workflow is included in v2.1.1 firmware and simulator. These cur
 ## Align
 
 1. **Open** <kbd>Settings</kbd> › <kbd>Calibration</kbd>.
-2. **Set** the outside diameter directly on this page.
+2. **Set** the outside diameter in the <kbd>Workpiece diameter</kbd> field on this page. It is part of the draft: leaving without saving restores the saved diameter.
 3. **Match** the drive's microstep switches to Motor Config beforehand.
 4. **Jog** with hold-to-run <kbd>Jog CCW</kbd> / <kbd>Jog CW</kbd> until a clear reference mark is aligned.
 5. **Select** <kbd>Move 360°</kbd>.

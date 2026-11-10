@@ -31,7 +31,7 @@ The system transitions through a rigorous state machine (defined in `control.h`)
 - **Scheduled state transition:** `safetyTask` (priority 5) checks the pending flag with debounce, stores `g_estopTriggerMs` on the debounced edge, and transitions to STATE_ESTOP via CAS.
 - **Final motion-start guard:** continuous/jog/step start paths check E-STOP/driver ALM before enabling ENA and again immediately after ENA is pulled LOW. If the input becomes unsafe in that final window, ENA is driven HIGH again before any run/move command.
 - **Boot-time sampling:** `safety_init()` samples `PIN_ESTOP` 3× with 500 µs spacing after `INPUT_PULLUP` + 2 ms settle; requires ≥2/3 LOW to treat ESTOP as pressed. startup sampling does not verify wiring continuity, so this mitigates false ESTOPs from a floating line at power-on.
-- **UI Overlay:** `lvglTask` detects STATE_ESTOP and shows full-screen red overlay on any active screen.
+- **UI Overlay:** `lvglTask` detects STATE_ESTOP and shows the full-screen fault overlay on any active screen. It states the next action first and the cause below it. The banner is red while something blocks the reset and amber with **READY TO RESET** when only the reset is missing.
 - **ESTOP Reset:** UI sets `g_uiResetPending.store(true, std::memory_order_release)`. `controlTask` on Core 0 calls `safety_check_ui_reset()` and transitions to STATE_IDLE. Overlay auto-hides.
 - **Single source of truth:** `g_estopPending`, `g_estopTriggerMs`, `g_uiResetPending`, `g_wakePending` are declared in `src/app_state.h` / defined in `src/app_state.cpp` (all `std::atomic` with explicit memory ordering).
 
@@ -80,6 +80,10 @@ The scheduled E-STOP level poll inhibits ENA on the first observed LOW, then use
 ## 7. Runtime supervision
 
 `safetyTask` writes ENA HIGH directly for stale tasks, because a stop request would wait on the task that hung. The first latched reason is kept until reset. Every latched fault disarms the USB mirror.
+
+Freshness checks compare a timestamp written by one task with the clock read by another. A task can stamp just after the checker read the clock, so the stamp is a millisecond ahead. `timestamp_within()` treats a stamp up to 5 ms ahead as fresh. Without that, unsigned subtraction read it as 49 days old and a live task could be latched as stale. The input and UI heartbeats, the ADS1115 pedal sample and the Jog lease use it.
+
+Boot halts with ENA inhibited when the LVGL tick timer cannot start, because the UI heartbeat would keep running without touch input.
 
 | Condition | Response |
 | --- | --- |

@@ -88,10 +88,10 @@ static void refresh_diameter_summary() {
   if (!diameterSummaryLabel) return;
   float mm = speed_get_workpiece_diameter_mm();
   if (mm < 1.0f) {
-    lv_label_set_text_fmt(diameterSummaryLabel, "Diameter %.0f mm (default)", (double)(D_EMNE * 1000.0f));
+    lv_label_set_text_fmt(diameterSummaryLabel, "Diameter %.0f mm (default)  " LV_SYMBOL_EDIT, (double)(D_EMNE * 1000.0f));
   } else {
     char buf[56];
-    snprintf(buf, sizeof(buf), "Diameter %.0f mm", (double)mm);
+    snprintf(buf, sizeof(buf), "Diameter %.0f mm  " LV_SYMBOL_EDIT, (double)mm);
     lv_label_set_text(diameterSummaryLabel, buf);
   }
 }
@@ -185,7 +185,7 @@ static void preset_cb(lv_event_t* e) {
 static void adjust_angle(float delta) {
   if (ui_control_state() != STATE_IDLE) return;
   float angle = currentAngle + delta;
-  if (angle < kAngleAdjustDeg) angle = kAngleAdjustDeg;
+  if (angle < kAngleAdjustDeg) angle = currentAngle < kAngleAdjustDeg ? currentAngle : kAngleAdjustDeg;  // "-" never raises a small typed angle.
   if (angle > 3600.0f) angle = 3600.0f;
   control_reset_step_accumulator();
   currentAngle = angle;
@@ -247,6 +247,7 @@ static void diameter_keyboard_cb(lv_event_t* e) {
         xSemaphoreGive(g_settings_mutex);
         storage_request_settings_save();
         refresh_diameter_summary();
+        step_push_rpm_to_speed_and_label();  // A new diameter moves the speed range.
         update_info_panel();
       }
     }
@@ -438,7 +439,7 @@ void screen_step_create() {
   lv_obj_center(angleArcLabel);
   angleArcText.bind(angleArcLabel);
 
-  lv_obj_t* targetCard = create_value_card(screen, 96, "Target (calc.)", &angleLabel, angle_minus_cb, angle_plus_cb);
+  lv_obj_t* targetCard = create_value_card(screen, 96, "Step angle", &angleLabel, angle_minus_cb, angle_plus_cb);
   lv_obj_set_clickable(targetCard, true);
   lv_obj_add_event_cb(targetCard, target_card_cb, LV_EVENT_CLICKED, nullptr);
   angleText.bind(angleLabel);

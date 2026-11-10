@@ -221,6 +221,7 @@ void ui_style_slider(lv_obj_t* slider);
 
 void screens_set_edit_slot(int slot);                        // Set slot for SCREEN_PROGRAM_EDIT creation
 float screen_program_edit_rpm_max();  // Ceiling for the draft's own diameter
+float screen_program_edit_rpm_min();  // Floor for it: a slower program can be saved but never starts
 Preset* screen_program_edit_get_preset();                    // Get current preset being edited
 void screen_program_edit_update_ui();                        // Update UI with current preset values
 void screen_program_edit_poll_keyboard();  // Deferred keyboard close (call each LVGL tick while on edit

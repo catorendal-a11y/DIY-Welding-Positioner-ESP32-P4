@@ -345,9 +345,9 @@ int run_calibration_test(const char* directory) {
   simulator_set_scenario("none"); safety_reset_estop(); control_stop(); sim_pump(100);
   screens_show(SCREEN_MAIN); sim_pump(50); g_settings.calibration_factor = 1;
   simulator_fast_motion(true); screens_show(SCREEN_CALIBRATION); sim_pump(50);
-  if (!sim_hold_label("Jog +", 260)) return 18;
+  if (!sim_hold_label("Jog CW", 260)) return 18;
   if (!sim_expect(control_get_state() == STATE_JOG, "calibration jog failed across enable settle")) return 18;
-  if (!sim_send_label_event("Jog +", LV_EVENT_RELEASED)) return 18;
+  if (!sim_send_label_event("Jog CW", LV_EVENT_RELEASED)) return 18;
   if (!sim_expect(control_get_state() == STATE_IDLE, "calibration jog release failed to stop")) return 18;
   capture("01_align.bmp");
   if (!sim_click_label("Move 360\xC2\xB0")) return 1;

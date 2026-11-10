@@ -72,9 +72,10 @@ static void update_computed_info() {
   }
   if (rpmBar) {
     float mx = screen_program_edit_rpm_max();
-    float span = mx - MIN_RPM;
+    const float mn = screen_program_edit_rpm_min();
+    float span = mx - mn;
     if (span < 1e-6f) span = 1e-6f;
-    int pct = (int)((editRpm - MIN_RPM) * 100.0f / span + 0.5f);
+    int pct = (int)((editRpm - mn) * 100.0f / span + 0.5f);
     if (pct < 0) pct = 0;
     if (pct > 100) pct = 100;
     lv_bar_set_value(rpmBar, pct, LV_ANIM_OFF);
@@ -117,9 +118,9 @@ static void rpm_adj_cb(lv_event_t* e) {
   int delta = (int)(intptr_t)lv_event_get_user_data(e);
   if (delta > 0)
     editRpm += ui_rpm_increment(editRpm);
-  else if (editRpm > MIN_RPM)
+  else
     editRpm -= ui_rpm_increment(editRpm);
-  if (editRpm < MIN_RPM) editRpm = MIN_RPM;
+  if (editRpm < screen_program_edit_rpm_min()) editRpm = screen_program_edit_rpm_min();
   if (editRpm > screen_program_edit_rpm_max()) editRpm = screen_program_edit_rpm_max();
   ui_set_rpm_unit(rpmLabel, editRpm);
   update_computed_info();

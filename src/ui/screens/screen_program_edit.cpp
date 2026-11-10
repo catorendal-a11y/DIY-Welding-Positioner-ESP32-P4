@@ -35,6 +35,7 @@ static lv_obj_t* text(lv_obj_t* parent, int x, int y, int width, const char* val
   lv_label_set_text(obj,value); lv_label_set_long_mode(obj,LV_LABEL_LONG_MODE_WRAP);
   lv_obj_set_style_text_font(obj,font,0); lv_obj_set_style_text_color(obj,color,0); return obj;
 }
+float screen_program_edit_rpm_min() { return speed_get_rpm_min_for_diameter(editPreset.workpiece_diameter_mm); }
 float screen_program_edit_rpm_max() { return speed_get_rpm_max_for_diameter(editPreset.workpiece_diameter_mm); }
 static void do_cleanup_kb() { entry.close(); kbClosePending = false; }
 void screen_program_edit_leave() { do_cleanup_kb(); }
@@ -58,9 +59,9 @@ static void input_cb(lv_event_t* e) {
   const char* value = entry.text();
   if (entryRpm) {
     float rpm = 0;
-    if (!parse_float_entry(value,rpm) || rpm < MIN_RPM || rpm > screen_program_edit_rpm_max()) {
+    if (!parse_float_entry(value,rpm) || rpm < screen_program_edit_rpm_min() || rpm > screen_program_edit_rpm_max()) {
       char error[96], minimum[16], maximum[16];
-      ui_format_rpm(minimum,sizeof(minimum),MIN_RPM); ui_format_rpm(maximum,sizeof(maximum),screen_program_edit_rpm_max());
+      ui_format_rpm(minimum,sizeof(minimum),screen_program_edit_rpm_min()); ui_format_rpm(maximum,sizeof(maximum),screen_program_edit_rpm_max());
       snprintf(error,sizeof(error),"Enter a speed from %s to %s RPM.",minimum,maximum); entry.error(error); return;
     }
     editPreset.rpm = rpm;
@@ -100,7 +101,7 @@ static void available_cb(lv_event_t* e) {
 static void rpm_adjust_cb(lv_event_t* e) {
   if (savePending) return;
   const float increment = ui_rpm_increment(editPreset.rpm);
-  editPreset.rpm = constrain(editPreset.rpm + ((intptr_t)lv_event_get_user_data(e) < 0 ? -increment : increment),MIN_RPM,screen_program_edit_rpm_max());
+  editPreset.rpm = constrain(editPreset.rpm + ((intptr_t)lv_event_get_user_data(e) < 0 ? -increment : increment),screen_program_edit_rpm_min(),screen_program_edit_rpm_max());
   screen_program_edit_update_ui();
 }
 static void mode_settings_cb(lv_event_t*) {
@@ -140,7 +141,7 @@ static void delete_preset_prompt_cb(lv_event_t* e) {
 static void save_preset_cb(lv_event_t*) {
   if (savePending || entry.active()) return;
   preset_clamp_mode_to_mask(&editPreset);
-  editPreset.rpm = constrain(editPreset.rpm,MIN_RPM,screen_program_edit_rpm_max());
+  editPreset.rpm = constrain(editPreset.rpm,screen_program_edit_rpm_min(),screen_program_edit_rpm_max());
   xSemaphoreTake(g_presets_mutex,portMAX_DELAY);
   if (editSlot >= 0 && editSlot < (int)g_presets.size()) {
     editPreset.id = editSlot+1; g_presets[editSlot] = editPreset;
@@ -202,32 +203,32 @@ void screen_program_edit_create(int slot) {
 
   renderedValid = false;
   if (!std::isfinite(editPreset.rpm)) editPreset.rpm = MIN_RPM;
-  editPreset.rpm = constrain(editPreset.rpm,MIN_RPM,screen_program_edit_rpm_max());
+  editPreset.rpm = constrain(editPreset.rpm,screen_program_edit_rpm_min(),screen_program_edit_rpm_max());
   ui_create_header(root,editSlot >= 0 ? "Edit program" : "New program","",nullptr);
-  nameButton = ui_create_btn(root,20,90,760,56,editPreset.name,FONT_XL,UI_BTN_NORMAL,open_input_cb,nullptr);
+  nameButton = ui_create_btn(root,20,88,760,48,editPreset.name,FONT_XL,UI_BTN_NORMAL,open_input_cb,nullptr);
   auto name = lv_obj_get_child(nameButton,0); lv_obj_set_width(name,660); lv_obj_set_style_text_align(name,LV_TEXT_ALIGN_LEFT,0);
   lv_label_set_long_mode(name,LV_LABEL_LONG_MODE_WRAP); lv_label_set_max_lines(name,1); lv_obj_align(name,LV_ALIGN_LEFT_MID,16,0);
-  text(nameButton,684,18,64,"Edit",FONT_SUBTITLE,COL_TEXT_DIM);
-  text(root,20,154,200,"Run mode",FONT_SUBTITLE,COL_TEXT_DIM);
-  text(root,400,154,380,"One mode runs at a time",FONT_SUBTITLE,COL_TEXT_DIM);
+  text(nameButton,684,14,64,"Edit",FONT_SUBTITLE,COL_TEXT_DIM);
+  text(root,20,142,200,"Run mode",FONT_SUBTITLE,COL_TEXT_DIM);
+  text(root,400,142,380,"One mode runs at a time",FONT_SUBTITLE,COL_TEXT_DIM);
   lv_style_transition_dsc_init(&instantTransition,transitionProps,lv_anim_path_linear,0,0,nullptr);
   for (int i=0;i<3;++i) {
-    runButtons[i] = ui_create_btn(root,20+i*257,178,246,48,modeNames[i],FONT_BTN,UI_BTN_NORMAL,mode_select_cb,(void*)(intptr_t)i);
-    availableButtons[i] = ui_create_btn(root,166+i*207,238,200,36,"",FONT_SMALL,UI_BTN_NORMAL,available_cb,(void*)(intptr_t)i);
+    runButtons[i] = ui_create_btn(root,20+i*257,162,246,48,modeNames[i],FONT_BTN,UI_BTN_NORMAL,mode_select_cb,(void*)(intptr_t)i);
+    availableButtons[i] = ui_create_btn(root,20+i*257,236,246,48,"",FONT_BTN,UI_BTN_NORMAL,available_cb,(void*)(intptr_t)i);
     for (auto button : {runButtons[i],availableButtons[i]}) {
       lv_obj_set_style_transition(button,&instantTransition,0);
       lv_obj_set_style_transition(button,&instantTransition,LV_STATE_CHECKED);
       lv_obj_set_style_transition(button,&instantTransition,LV_STATE_DISABLED);
     }
   }
-  text(root,20,247,138,"Available",FONT_SMALL,COL_TEXT_DIM);
-  auto speed = ui_create_post_card(root,20,288,368,100);
+  text(root,20,216,400,"Available in this program",FONT_SMALL,COL_TEXT_DIM);
+  auto speed = ui_create_post_card(root,20,294,368,100);
   text(speed,14,10,220,"Target speed (RPM)",FONT_SMALL,COL_TEXT_DIM);
   rpmButton = ui_create_btn(speed,14,31,170,56,"",FONT_HUGE,UI_BTN_NORMAL,open_input_cb,(void*)1);
   lv_obj_set_style_border_width(rpmButton,0,0); lv_obj_set_style_bg_opa(rpmButton,LV_OPA_TRANSP,0);
   ui_create_btn(speed,194,35,70,52,"-",FONT_XL,UI_BTN_NORMAL,rpm_adjust_cb,(void*)-1);
   ui_create_btn(speed,274,35,78,52,"+",FONT_XL,UI_BTN_NORMAL,rpm_adjust_cb,(void*)1);
-  modeSettingsBtn = ui_create_btn(root,404,288,376,100,"Mode settings " LV_SYMBOL_RIGHT,FONT_BTN,UI_BTN_NORMAL,mode_settings_cb,nullptr);
+  modeSettingsBtn = ui_create_btn(root,404,294,376,100,"Mode settings " LV_SYMBOL_RIGHT,FONT_BTN,UI_BTN_NORMAL,mode_settings_cb,nullptr);
   auto settingsTitle = lv_obj_get_child(modeSettingsBtn,0); lv_obj_align(settingsTitle,LV_ALIGN_TOP_LEFT,14,12);
   detailLabel = text(modeSettingsBtn,14,43,344,"",FONT_SMALL,COL_TEXT_DIM); lv_label_set_max_lines(detailLabel,3);
   if (editSlot >= 0) {
@@ -244,7 +245,7 @@ void screen_program_edit_create(int slot) {
 }
 void screen_program_edit_update_ui() {
   // Shown before saving, so Save can never lower the speed unseen.
-  editPreset.rpm = constrain(editPreset.rpm,MIN_RPM,screen_program_edit_rpm_max());
+  editPreset.rpm = constrain(editPreset.rpm,screen_program_edit_rpm_min(),screen_program_edit_rpm_max());
   screen_program_edit_poll_keyboard();
   if (!nameButton) return;
   // Avoid 25 Hz label allocations/style invalidations when the draft is unchanged.

@@ -40,7 +40,11 @@ static void changed() { saveFeedback.set("Unsaved changes"); }
 static void sync_stop_angle() {
   // Stop distance does not depend on microstepping: both rate and setting are per 1/16.
   const float rpm = motorMaxRpmMilliUi / 1000.0f;
-  const float hzAt16 = rpmToStepHz(rpm) * 16.0f / (microstep_get_steps_per_rev() / 200.0f);
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  // rpmToStepHz uses the active mechanics; rescale it to the roller and gear being edited.
+  const float mechanics = (motorGearUi / g_settings.gear_ratio) * (g_settings.roller_mm / motorRollerUi);
+  xSemaphoreGive(g_settings_mutex);
+  const float hzAt16 = rpmToStepHz(rpm) * mechanics * 16.0f / (microstep_get_steps_per_rev() / 200.0f);
   char text[48];
   snprintf(text, sizeof(text), "Stop %.0f\xC2\xB0 at max", (double)motion_stop_angle_deg(rpm, hzAt16, motorAccelUi));
   stopAngleValue.set(text);
@@ -49,6 +53,7 @@ static void sync_mechanics() {
   char text[24];
   snprintf(text, sizeof(text), "Roller %.1f mm", (double)motorRollerUi); rollerValue.set(text);
   snprintf(text, sizeof(text), "Gear %.1f:1", (double)motorGearUi); gearValue.set(text);
+  sync_stop_angle();
 }
 static void sync_acceleration(int value) {
   motorAccelUi = constrain(value, kAccelMin, kAccelMax);

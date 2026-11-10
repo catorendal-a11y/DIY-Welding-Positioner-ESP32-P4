@@ -37,18 +37,19 @@ static void back_cb(lv_event_t* e) {
 static lv_obj_t* add_gpio_row(lv_obj_t* panel, int y, const char* key) {
   lv_obj_t* keyLbl = lv_label_create(panel);
   lv_label_set_text(keyLbl, key);
-  lv_obj_set_style_text_font(keyLbl, FONT_NORMAL, 0);
+  lv_obj_set_style_text_font(keyLbl, FONT_BTN, 0);  // Read at arm's length while probing wiring.
   lv_obj_set_style_text_color(keyLbl, COL_TEXT_DIM, 0);
   lv_obj_set_pos(keyLbl, 12, y);
-  lv_obj_set_width(keyLbl, 200);
+  lv_obj_set_width(keyLbl, 170);
   lv_label_set_long_mode(keyLbl, LV_LABEL_LONG_MODE_CLIP);
 
   lv_obj_t* valueLbl = lv_label_create(panel);
   lv_label_set_text(valueLbl, "-");
-  lv_obj_set_style_text_font(valueLbl, FONT_NORMAL, 0);
+  lv_obj_set_style_text_font(valueLbl, FONT_BTN, 0);
   lv_obj_set_style_text_color(valueLbl, COL_TEXT, 0);
-  lv_obj_set_pos(valueLbl, 204, y);
-  lv_obj_set_width(valueLbl, 144);
+  lv_obj_set_style_text_align(valueLbl, LV_TEXT_ALIGN_RIGHT, 0);
+  lv_obj_set_pos(valueLbl, 184, y);
+  lv_obj_set_width(valueLbl, 172);
   lv_label_set_long_mode(valueLbl, LV_LABEL_LONG_MODE_CLIP);
   return valueLbl;
 }
@@ -85,11 +86,11 @@ void screen_diagnostics_create() {
 
   lv_obj_t* gpioTitle = lv_label_create(gpioPanel);
   lv_label_set_text(gpioTitle, "GPIO inputs");
-  lv_obj_set_style_text_font(gpioTitle, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_font(gpioTitle, FONT_LARGE, 0);
   lv_obj_set_style_text_color(gpioTitle, COL_TEXT, 0);
   lv_obj_set_pos(gpioTitle, 12, 10);
 
-  int gy = 38;
+  int gy = 44;
   estopVal = add_gpio_row(gpioPanel, gy, "E-STOP");
   gy += 32;
   almVal = add_gpio_row(gpioPanel, gy, "Driver alarm");
@@ -103,11 +104,11 @@ void screen_diagnostics_create() {
 
   lv_obj_t* rtTitle = lv_label_create(rtPanel);
   lv_label_set_text(rtTitle, "Runtime status");
-  lv_obj_set_style_text_font(rtTitle, FONT_SUBTITLE, 0);
+  lv_obj_set_style_text_font(rtTitle, FONT_LARGE, 0);
   lv_obj_set_style_text_color(rtTitle, COL_TEXT, 0);
   lv_obj_set_pos(rtTitle, 12, 10);
 
-  int ry = 38;
+  int ry = 44;
   stateVal = add_rt_row(rtPanel, ry, "State");
   ry += 32;
   targetRpmVal = add_rt_row(rtPanel, ry, "Target RPM");
@@ -117,7 +118,7 @@ void screen_diagnostics_create() {
   enaVal = add_rt_row(rtPanel, ry, "Enable output");
 
   driverInfoLabel = lv_label_create(rtPanel);
-  lv_obj_set_pos(driverInfoLabel, 12, 180); lv_obj_set_width(driverInfoLabel, 344);
+  lv_obj_set_pos(driverInfoLabel, 12, 190); lv_obj_set_width(driverInfoLabel, 344);
   lv_obj_set_style_text_font(driverInfoLabel, FONT_SMALL, 0);
   lv_obj_set_style_text_color(driverInfoLabel, COL_TEXT_DIM, 0);
   lv_label_set_long_mode(driverInfoLabel, LV_LABEL_LONG_MODE_DOTS);

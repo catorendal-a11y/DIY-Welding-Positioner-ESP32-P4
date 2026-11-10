@@ -427,7 +427,7 @@ static bool sim_test_countdown_cancellation_and_direction() {
   speed_set_workpiece_diameter_mm(300); speed_slider_set(0.02f);
   screens_show(SCREEN_STEP); sim_pump(40);
   auto speedCard=lv_obj_get_parent(sim_label_object(screenRoots[SCREEN_STEP],"Speed"));
-  auto targetCard=lv_obj_get_parent(sim_label_object(screenRoots[SCREEN_STEP],"Target (calc.)"));
+  auto targetCard=lv_obj_get_parent(sim_label_object(screenRoots[SCREEN_STEP],"Step angle"));
   lv_obj_send_event(sim_find_label_target(speedCard,"-",false,true),LV_EVENT_SHORT_CLICKED,nullptr); sim_pump(60);
   if (!sim_expect(fabs(speed_get_target_rpm()-0.019f)<0.00001f,"Step fine adjustment failed")) return false;
   if (!sim_click_label("90\xC2\xB0")) return false;
@@ -438,7 +438,7 @@ static bool sim_test_countdown_cancellation_and_direction() {
   // Boundary geometry must produce an explanation, never a narrowed/reversed move.
   g_settings.microstep=32; g_settings.calibration_factor=1.5f;
   speed_set_workpiece_diameter_mm(20000);
-  if (!sim_click_label("Target (calc.)")) return false;
+  if (!sim_click_label("Step angle")) return false;
   auto field=sim_find_type(screenRoots[SCREEN_STEP],&lv_textarea_class);
   auto keyboard=sim_find_type(screenRoots[SCREEN_STEP],&lv_keyboard_class);
   if (!sim_expect(field && keyboard,"custom Step input missing")) return false;
@@ -549,7 +549,7 @@ static bool sim_test_operator_feedback() {
   // Invalid Step entries keep the keypad open and explain the limit.
   speed_set_workpiece_diameter_mm(300);
   screens_show(SCREEN_STEP); sim_pump(40);
-  if (!sim_click_label("Target (calc.)")) return false;
+  if (!sim_click_label("Step angle")) return false;
   auto field = sim_find_type(screenRoots[SCREEN_STEP], &lv_textarea_class);
   auto keyboard = sim_find_type(screenRoots[SCREEN_STEP], &lv_keyboard_class);
   if (!sim_expect(field && keyboard, "Step keypad missing")) return false;
@@ -577,6 +577,39 @@ static bool sim_test_operator_feedback() {
   const bool follows = standby && lv_color_eq(lv_obj_get_style_text_color(standby, LV_PART_MAIN), theme_accent_on_dark());
   screen_saver_destroy(); theme_set_color(previousAccent); sim_pump(40);
   return sim_expect(follows, "screen saver ignored the accent");
+}
+
+// Regressions for defects found by the function review.
+static bool sim_test_review_fixes() {
+  // A diameter typed during calibration belongs to the draft: leaving restores the saved one.
+  g_settings.workpiece_diameter_mm = 300; speed_set_workpiece_diameter_mm(300);
+  screens_show(SCREEN_CALIBRATION); sim_pump(40);
+  speed_set_workpiece_diameter_mm(500);
+  screens_show(SCREEN_SETTINGS); sim_pump(40);
+  if (!sim_expect(speed_get_workpiece_diameter_mm() == 300, "calibration diameter leaked after leaving")) return false;
+  // Display: brightness is previewed live, and Back without Save returns to the saved value.
+  screens_show(SCREEN_DISPLAY); sim_pump(40);
+  const uint8_t brightness = g_settings.brightness;
+  auto slider = sim_find_type(screenRoots[SCREEN_DISPLAY], &lv_slider_class);
+  if (!sim_expect(slider != nullptr, "brightness slider missing")) return false;
+  lv_slider_set_value(slider, 20, LV_ANIM_OFF); lv_obj_send_event(slider, LV_EVENT_VALUE_CHANGED, nullptr); sim_pump(40);
+  if (!sim_expect(g_settings.brightness != brightness, "brightness preview did not apply")) return false;
+  if (!sim_click_back_to(SCREEN_SETTINGS)) return false;
+  if (!sim_expect(g_settings.brightness == brightness, "Back kept an unsaved brightness")) return false;
+  // Main +/- uses the fine step below 0.1 RPM, like the other screens.
+  screens_show(SCREEN_MAIN); sim_pump(40); speed_slider_set(0.05f); sim_pump(40);
+  if (!sim_click_label("+")) return false;
+  if (!sim_expect(fabs(speed_get_target_rpm() - 0.051f) < 0.00001f, "Main + skipped the fine step")) return false;
+  // A program cannot be saved slower than the motor can run at its own diameter.
+  screens_set_edit_slot(-1); screens_show(SCREEN_PROGRAM_EDIT); sim_pump(40);
+  Preset* draft = screen_program_edit_get_preset();
+  draft->workpiece_diameter_mm = 50; draft->rpm = MIN_RPM;
+  screen_program_edit_update_ui();
+  if (!sim_expect(screen_program_edit_rpm_min() > MIN_RPM && draft->rpm >= screen_program_edit_rpm_min(),
+                  "program speed below the motor range was accepted")) return false;
+  if (!sim_expect(control_program_feasible(*draft), "clamped program still cannot start")) return false;
+  screens_show(SCREEN_MAIN); sim_pump(40); speed_slider_set(0.5f);
+  return true;
 }
 
 int run_self_test() {
@@ -608,6 +641,8 @@ int run_self_test() {
   if (!sim_test_v23_fault_scenarios()) return 20;
   std::puts("SIM SELFTEST: HMI/pot/storage/reset fault scenarios ok");
   if (!sim_test_operator_feedback()) return 21;
+  if (!sim_test_review_fixes()) return 25;
+  std::puts("SIM SELFTEST: calibration diameter, display Back, fine step, program speed floor ok");
   std::puts("SIM SELFTEST: blocked program/REBOOT, Step entry, Jog direction, saver accent ok");
   simulator_set_scenario("nvs-failure");
   const uint32_t ticket = storage_request_settings_save();

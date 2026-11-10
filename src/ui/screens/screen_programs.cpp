@@ -44,7 +44,7 @@ static void load_preset_cb(lv_event_t* e) {
   char details[320], timing[80];
   const Preset& p = reviewedPreset;
   if (!control_program_feasible(p)) {
-    screen_confirm_create("PROGRAM BLOCKED", "Speed or angle exceeds the current motor range.\nAdjust RPM, part diameter or angle in the editor.", nullptr, nullptr, SCREEN_PROGRAMS);
+    screen_confirm_create("PROGRAM BLOCKED", "Speed or angle is outside the current motor range.\nAdjust RPM, part diameter or angle in the editor.", nullptr, nullptr, SCREEN_PROGRAMS);
     return;
   }
   const char* mode = p.mode == STATE_PULSE ? "Pulse" : p.mode == STATE_STEP ? "Step" : "Continuous";

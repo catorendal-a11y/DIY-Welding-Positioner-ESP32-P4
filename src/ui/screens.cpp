@@ -77,7 +77,7 @@ static const char* motion_status_name(SystemState state) {
   }
 }
 
-static constexpr int kStatusDot = 12;
+static constexpr int kStatusDot = 12, kStatusPad = 14;
 static constexpr uint8_t kLiveHeaderFlag = 1;  // Header shows the live machine status.
 
 static void set_motion_status(lv_obj_t* label, bool blocked) {
@@ -91,6 +91,16 @@ static void set_motion_status(lv_obj_t* label, bool blocked) {
   // The dot sits left of the right-aligned text. Text fonts only have a tiny bullet glyph.
   auto* dot = static_cast<lv_obj_t*>(lv_obj_get_user_data(label));
   if (!dot) {
+    // The status is the first thing read from a distance: a filled pill, not a caption.
+    lv_obj_set_width(label, LV_SIZE_CONTENT);
+    lv_obj_set_style_text_font(label, FONT_LARGE, 0);
+    lv_obj_set_style_pad_left(label, kStatusPad + kStatusDot + 10, 0);
+    lv_obj_set_style_pad_right(label, kStatusPad, 0);
+    lv_obj_set_style_pad_ver(label, 8, 0);
+    lv_obj_set_style_radius(label, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_opa(label, LV_OPA_20, 0);
+    lv_obj_set_style_border_width(label, 2, 0);
+    lv_obj_align(label, LV_ALIGN_RIGHT_MID, -24, 0);
     dot = lv_obj_create(lv_obj_get_parent(label));
     lv_obj_remove_style_all(dot);
     lv_obj_set_size(dot, kStatusDot, kStatusDot);
@@ -101,8 +111,10 @@ static void set_motion_status(lv_obj_t* label, bool blocked) {
   }
   lv_point_t size;
   lv_text_get_size(&size, status, lv_obj_get_style_text_font(label, LV_PART_MAIN), 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
-  lv_obj_set_pos(dot, SCREEN_W - 24 - size.x - 10 - kStatusDot, (HEADER_H - kStatusDot) / 2);
+  lv_obj_set_pos(dot, SCREEN_W - 24 - kStatusPad - size.x - 10 - kStatusDot, (HEADER_H - kStatusDot) / 2);
   lv_obj_set_style_bg_color(dot, color, 0);
+  lv_obj_set_style_bg_color(label, color, 0);
+  lv_obj_set_style_border_color(label, color, 0);
 }
 
 static void update_header_status(lv_obj_t* root) {
@@ -548,7 +560,7 @@ lv_obj_t* ui_create_header(lv_obj_t* parent, const char* title, const char* righ
   lv_label_set_text(heading, title);
   lv_obj_set_style_text_font(heading, FONT_XXL, 0);
   lv_obj_set_style_text_color(heading, lv_color_hex(0xF5F5F0), 0);
-  lv_obj_set_width(heading, 530);
+  lv_obj_set_width(heading, 500);  // Leaves room for the widest status pill.
   lv_label_set_long_mode(heading, LV_LABEL_LONG_MODE_DOTS);
   lv_obj_set_pos(heading, 24, 22);
   lv_obj_t* status = lv_label_create(header);

@@ -10,7 +10,7 @@ The calibration workflow is included in v2.1.1 firmware and simulator. These cur
 1. **Open** <kbd>Settings</kbd> › <kbd>Calibration</kbd>.
 2. **Set** the outside diameter directly on this page.
 3. **Match** the drive's microstep switches to Motor Config beforehand.
-4. **Jog** with hold-to-run <kbd>Jog -</kbd> / <kbd>Jog +</kbd> until a clear reference mark is aligned.
+4. **Jog** with hold-to-run <kbd>Jog CCW</kbd> / <kbd>Jog CW</kbd> until a clear reference mark is aligned.
 5. **Select** <kbd>Move 360°</kbd>.
 
 The default test speed is 0.25 RPM, capped by the configured maximum. One revolution takes about four minutes at 0.25 RPM.

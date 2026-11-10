@@ -31,6 +31,8 @@ static const int dimCount = 5;
 static int currentDimIdx = 0;
 static bool dimDraftLoaded = false;
 static uint32_t displaySaveTicket = 0;
+// What Back returns to: brightness and theme are previewed live but belong to Save.
+static uint8_t savedBrightness = 150, savedAccent = 0, savedScheme = 0;
 static lv_obj_t* displaySaveButton = nullptr;
 static lv_obj_t* previewButton = nullptr;
 
@@ -41,7 +43,6 @@ static void update_info_text();
 static void update_mirror_label();
 #endif
 
-void screen_display_mark_dirty() { displayScreenActive = true; }
 
 static void update_slider_from_settings() {
   if (!brightnessSlider || !brightnessValueLabel) return;
@@ -66,7 +67,14 @@ static void display_changed() {
 
 static void back_cb(lv_event_t* e) {
   dimDraftLoaded = false;
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  const bool themeChanged = g_settings.accent_color != savedAccent || g_settings.color_scheme != savedScheme;
+  g_settings.brightness = savedBrightness;
+  xSemaphoreGive(g_settings_mutex);
+  display_set_brightness(savedBrightness);
+  if (themeChanged) { theme_set_color(savedAccent); theme_set_scheme(savedScheme); }
   screens_show(SCREEN_SETTINGS);
+  if (themeChanged) screens_request_theme_reinit();
 }
 
 static void brightness_slider_cb(lv_event_t* e) {
@@ -127,6 +135,7 @@ static void scheme_cycle_cb(lv_event_t* e) {
 static void save_cb(lv_event_t* e) {
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   g_settings.dim_timeout = dimTimeouts[currentDimIdx];
+  savedBrightness = g_settings.brightness; savedAccent = g_settings.accent_color; savedScheme = g_settings.color_scheme;
   xSemaphoreGive(g_settings_mutex);
   displaySaveTicket = storage_request_settings_save();
 }
@@ -167,21 +176,29 @@ static void update_info_text() {
 
 // Uses shared ui_style_slider() from screens.cpp.
 
+// On entry, not on every rebuild: a theme change rebuilds this screen and must keep the draft.
+static void load_saved_state() {
+  if (dimDraftLoaded) return;
+  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
+  const uint16_t seconds = g_settings.dim_timeout;
+  savedBrightness = g_settings.brightness; savedAccent = g_settings.accent_color; savedScheme = g_settings.color_scheme;
+  xSemaphoreGive(g_settings_mutex);
+  currentDimIdx = 0;
+  for (int i = 0; i < dimCount; ++i) if (dimTimeouts[i] == seconds) currentDimIdx = i;
+  dimDraftLoaded = true;
+  if (dimBtnLabel) { lv_label_set_text(dimBtnLabel, dimStrings[currentDimIdx]); update_info_text(); }
+}
+void screen_display_mark_dirty() { load_saved_state(); displayScreenActive = true; }
+
 void screen_display_create() {
   lv_obj_t* screen = screenRoots[SCREEN_DISPLAY];
+  load_saved_state();  // Before the old widgets go: it may refresh the timeout label.
   lv_obj_clean(screen);
-  uint16_t dimSec;
   uint8_t scheme, accent;
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  dimSec = g_settings.dim_timeout;
   scheme = g_settings.color_scheme;
   accent = g_settings.accent_color;
   xSemaphoreGive(g_settings_mutex);
-  if (!dimDraftLoaded) {
-    currentDimIdx = 0;
-    for (int i = 0; i < dimCount; ++i) if (dimTimeouts[i] == dimSec) currentDimIdx = i;
-    dimDraftLoaded = true;
-  }
   ui_create_header(screen, "Display settings", "", nullptr);
   ui_create_text(screen, 24, 94, 400, "Brightness", FONT_SUBTITLE, COL_TEXT_DIM);
   brightnessValueLabel = ui_create_text(screen, 656, 94, 120, "", FONT_LARGE, COL_TEXT);

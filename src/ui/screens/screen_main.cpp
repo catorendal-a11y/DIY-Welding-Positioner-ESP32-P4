@@ -65,7 +65,7 @@ static void programs_cb(lv_event_t*) {
   screens_show(SCREEN_PROGRAMS);
 }
 static void adjust_cb(lv_event_t* e) {
-  if (can_edit()) speed_slider_set(speed_get_target_rpm() + (int)(intptr_t)lv_event_get_user_data(e) * 0.01f);
+  if (can_edit()) speed_slider_set(speed_get_target_rpm() + (int)(intptr_t)lv_event_get_user_data(e) * ui_rpm_increment(speed_get_target_rpm()));
 }
 static void direction_cb(lv_event_t* e) {
   if (!can_edit() || g_dir_switch_cache.load()) return;
@@ -94,7 +94,11 @@ static void create_hero(lv_obj_t* s) {
   lv_obj_set_height(rpmLabel, rpmFont.get()->line_height);
   lv_obj_set_style_transform_pivot_x(rpmLabel, 0, 0);
   lv_obj_set_style_transform_pivot_y(rpmLabel, 0, 0);
-  ui_create_text(hero, 360, 124, 78, "RPM", FONT_XL, COL_TEXT_DIM);
+  lv_obj_t* unit = ui_create_text(hero, 250, 16, 90, "RPM", FONT_LARGE, COL_TEXT_DIM);
+  lv_obj_set_style_text_align(unit, LV_TEXT_ALIGN_RIGHT, 0);
+  // Beside the value they change, and away from Start: a gloved miss must not start rotation.
+  plusBtn = ui_create_btn(hero, 356, 14, 88, 80, "+", FONT_HUGE, UI_BTN_NORMAL, adjust_cb, (void*)(intptr_t)1);
+  minusBtn = ui_create_btn(hero, 356, 102, 88, 80, "-", FONT_HUGE, UI_BTN_NORMAL, adjust_cb, (void*)(intptr_t)-1);
   for (int i = 0; i <= kScaleTicks; i++) {
     lv_obj_t* tick = lv_obj_create(hero);
     lv_obj_remove_style_all(tick);
@@ -157,10 +161,8 @@ void screen_main_create() {
   modeTitle = lv_obj_get_child(h, 0);
   create_hero(s);
   create_readouts(s);
-  menuBtn = ui_create_btn(s, 24, 408, 84, 56, "Menu", FONT_SUBTITLE, UI_BTN_NORMAL, menu_cb, nullptr);
-  programsBtn = ui_create_btn(s, 116, 408, 112, 56, "Programs", FONT_SUBTITLE, UI_BTN_NORMAL, programs_cb, nullptr);
-  minusBtn = ui_create_btn(s, 236, 408, 80, 56, "-", FONT_XL, UI_BTN_NORMAL, adjust_cb, (void*)(intptr_t)-1);
-  plusBtn = ui_create_btn(s, 324, 408, 80, 56, "+", FONT_XL, UI_BTN_NORMAL, adjust_cb, (void*)(intptr_t)1);
+  menuBtn = ui_create_btn(s, 24, 408, 184, 56, "Menu", FONT_BTN, UI_BTN_NORMAL, menu_cb, nullptr);
+  programsBtn = ui_create_btn(s, 216, 408, 184, 56, "Programs", FONT_BTN, UI_BTN_NORMAL, programs_cb, nullptr);
   startBtn = ui_create_btn(s, 416, 408, 360, 56, UI_LABEL_START, FONT_LARGE, UI_BTN_ACCENT, start_cb, nullptr);
   stopBtn = ui_create_btn(s, 416, 408, 360, 56, UI_LABEL_STOP, FONT_LARGE, UI_BTN_DANGER, stop_cb, nullptr);
   lv_obj_set_user_data(startBtn, (void*)(uintptr_t)UI_ACTION_START);

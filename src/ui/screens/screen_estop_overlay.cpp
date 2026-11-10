@@ -6,11 +6,14 @@
 #include "../lvgl_hal.h"
 #include "../../config.h"
 #include "../../safety/safety.h"
+#include <cstdio>
 
 static lv_obj_t *overlay = nullptr, *title = nullptr, *reasonLabel = nullptr, *inputLabel = nullptr;
 static lv_obj_t *driverLabel = nullptr, *instruction = nullptr, *resetBtn = nullptr;
 static lv_obj_t* eraseBtn = nullptr;
 static lv_obj_t* resetHint = nullptr;
+static lv_obj_t *banner = nullptr, *bannerCaption = nullptr, *bang = nullptr, *inputDot = nullptr, *driverDot = nullptr;
+static constexpr uint32_t kBlockedRed = 0xB52C35, kReadyAmber = 0x9A5B00;
 static uint32_t erasePressMs = 0;
 static constexpr uint32_t kEraseHoldMs = 3000;
 static bool visible = false;
@@ -35,24 +38,35 @@ void estop_overlay_create() {
   lv_obj_set_scrollable(overlay, false);
   lv_obj_set_clickable(overlay, true);
   lv_obj_set_hidden(overlay, true);
-  lv_obj_t* banner = panel(overlay, 0, 0, 800, 106, 0xB52C35);
+  banner = panel(overlay, 0, 0, 800, 106, kBlockedRed);
   lv_obj_set_style_radius(banner, 0, 0);
   lv_obj_t* icon = panel(banner, 24, 22, 62, 62, 0xFFFFFF);
-  lv_obj_t* bang = ui_create_text(icon, 0, 8, 62, "!", FONT_HUGE, lv_color_hex(0xB52C35));
+  bang = ui_create_text(icon, 0, 8, 62, "!", FONT_HUGE, lv_color_hex(kBlockedRed));
   lv_obj_set_style_text_align(bang, LV_TEXT_ALIGN_CENTER, 0);
-  ui_create_text(banner, 108, 19, 660, "MOTION LOCKED", FONT_NORMAL, lv_color_hex(0xFFFFFF));
+  bannerCaption = ui_create_text(banner, 108, 19, 660, "MOTION LOCKED", FONT_SUBTITLE, lv_color_hex(0xFFFFFF));
   title = ui_create_text(banner, 108, 48, 668, "EMERGENCY STOP", FONT_XXL, lv_color_hex(0xFFFFFF));
-  ui_create_text(overlay, 24, 126, 752, "MOTOR OUTPUT DISABLED", FONT_XL, lv_color_hex(0xFFFFFF));
-  reasonLabel = ui_create_text(overlay, 24, 166, 752, "", FONT_SUBTITLE, lv_color_hex(0xE3CBCD));
-  lv_obj_t* input = panel(overlay, 24, 204, 752, 60, 0x342328);
-  ui_create_text(input, 18, 18, 340, "Physical E-STOP", FONT_LARGE, lv_color_hex(0xFFFFFF));
-  inputLabel = ui_create_text(input, 392, 18, 338, "", FONT_LARGE, lv_color_hex(0xFFACAF));
+  // The next action leads and the cause explains it: one statement each, never repeated.
+  ui_create_text(overlay, 24, 118, 300, "What to do", FONT_NORMAL, lv_color_hex(0xE3CBCD));
+  instruction = ui_create_text(overlay, 24, 140, 752, "", FONT_XL, lv_color_hex(0xFFFFFF));
+  reasonLabel = ui_create_text(overlay, 24, 178, 752, "", FONT_SUBTITLE, lv_color_hex(0xE3CBCD));
+  lv_label_set_long_mode(reasonLabel, LV_LABEL_LONG_MODE_WRAP);
+  auto dot = [](lv_obj_t* row) {
+    lv_obj_t* o = lv_obj_create(row);
+    lv_obj_remove_style_all(o);
+    lv_obj_set_size(o, 14, 14); lv_obj_set_pos(o, 18, 21);
+    lv_obj_set_style_radius(o, LV_RADIUS_CIRCLE, 0); lv_obj_set_style_bg_opa(o, LV_OPA_COVER, 0);
+    return o;
+  };
+  lv_obj_t* input = panel(overlay, 24, 228, 752, 56, 0x342328);
+  inputDot = dot(input);
+  ui_create_text(input, 46, 16, 320, "Physical E-STOP", FONT_LARGE, lv_color_hex(0xFFFFFF));
+  inputLabel = ui_create_text(input, 392, 16, 338, "", FONT_LARGE, lv_color_hex(0xFFACAF));
   lv_obj_set_style_text_align(inputLabel, LV_TEXT_ALIGN_RIGHT, 0);
-  lv_obj_t* driver = panel(overlay, 24, 276, 752, 60, 0x342328);
-  ui_create_text(driver, 18, 18, 340, "Driver alarm", FONT_LARGE, lv_color_hex(0xFFFFFF));
-  driverLabel = ui_create_text(driver, 392, 18, 338, "", FONT_LARGE, COL_GREEN);
+  lv_obj_t* driver = panel(overlay, 24, 294, 752, 56, 0x342328);
+  driverDot = dot(driver);
+  ui_create_text(driver, 46, 16, 320, "Driver alarm", FONT_LARGE, lv_color_hex(0xFFFFFF));
+  driverLabel = ui_create_text(driver, 392, 16, 338, "", FONT_LARGE, COL_GREEN);
   lv_obj_set_style_text_align(driverLabel, LV_TEXT_ALIGN_RIGHT, 0);
-  instruction = ui_create_text(overlay, 24, 351, 752, "", FONT_SUBTITLE, lv_color_hex(0xF4DCDD));
   resetHint = ui_create_text(overlay, 24, 438, 242, "Reset never starts motion.", FONT_NORMAL, lv_color_hex(0xE3CBCD));
   eraseBtn = ui_create_btn(overlay, 24, 408, 248, 56, "Hold 3 s to erase data", FONT_SUBTITLE, UI_BTN_DANGER, nullptr, nullptr);
   for (auto code : {LV_EVENT_PRESSED, LV_EVENT_PRESSING, LV_EVENT_RELEASED, LV_EVENT_PRESS_LOST})
@@ -93,6 +107,7 @@ bool estop_overlay_visible() { return visible; }
 void estop_overlay_destroy() {
   if (overlay) lv_obj_delete(overlay);
   overlay = title = reasonLabel = inputLabel = driverLabel = instruction = resetBtn = eraseBtn = resetHint = nullptr;
+  banner = bannerCaption = bang = inputDot = driverDot = nullptr;
   erasePressMs = 0;
   visible = false;
 }
@@ -100,14 +115,27 @@ void estop_overlay_update() {
   if (!visible || millis() - lastUpdate < 250) return;
   lastUpdate = millis();
   const FaultReason reason = safety_get_fault_reason();
-  lv_label_set_text(title, reason == FAULT_ESTOP_PRESSED || reason == FAULT_ESTOP_GLITCH ? "E-STOP ACTIVE" :
+  const bool physical = safety_is_estop_active(), driver = safety_is_driver_alarm_latched();
+  const bool ready = safety_can_reset_from_overlay();
+  const bool estop = reason == FAULT_ESTOP_PRESSED || reason == FAULT_ESTOP_GLITCH;
+  // Red: something still blocks the reset. Amber: only the reset itself is missing.
+  const lv_color_t tone = lv_color_hex(ready ? kReadyAmber : kBlockedRed);
+  lv_obj_set_style_bg_color(banner, tone, 0);
+  lv_obj_set_style_text_color(bang, tone, 0);
+  lv_label_set_text(bannerCaption, ready ? "MOTION LOCKED - READY TO RESET" : "MOTION LOCKED");
+  lv_label_set_text(title, estop ? (physical ? "E-STOP ACTIVE" : "E-STOP RELEASED") :
                            reason == FAULT_PEDAL_INPUT ? "PEDAL INPUT FAULT" :
                            reason == FAULT_DRIVER_ALARM ? "DRIVER ALARM" :
                            reason == FAULT_MOTOR_COMMAND ? "MOTOR COMMAND FAULT" :
                            reason == FAULT_MOTOR_TIMEOUT ? "MOTOR TIMEOUT" :
                            reason == FAULT_NONE ? "MOTION LOCKED" : safety_fault_reason_name(reason));
-  lv_label_set_text(reasonLabel, safety_fault_reason_message(reason));
-  const bool physical = safety_is_estop_active(), driver = safety_is_driver_alarm_latched();
+  char cause[160];
+  snprintf(cause, sizeof(cause), "Cause: %s", reason == FAULT_ESTOP_PRESSED && !physical
+                                                  ? "Physical E-STOP was pressed and is now released"
+                                                  : safety_fault_reason_message(reason));
+  lv_label_set_text(reasonLabel, cause);
+  lv_obj_set_style_bg_color(inputDot, lv_color_hex(physical ? 0xFFACAF : 0xB9F278), 0);
+  lv_obj_set_style_bg_color(driverDot, lv_color_hex(driver ? 0xFFACAF : 0xB9F278), 0);
   lv_label_set_text(inputLabel, physical ? "ACTIVE" : "RELEASED");
   lv_label_set_text(driverLabel, driver ? "ACTIVE" : "CLEAR");
   lv_obj_set_style_text_color(inputLabel, physical ? lv_color_hex(0xFFACAF) : lv_color_hex(0xB9F278), 0);
@@ -115,11 +143,16 @@ void estop_overlay_update() {
   const bool corrupt = reason == FAULT_STORAGE_CORRUPT;
   lv_obj_set_hidden(eraseBtn, !corrupt);
   lv_obj_set_hidden(resetHint, corrupt);
-  const bool ready = safety_can_reset_from_overlay();
-  lv_label_set_text(instruction, ready ? "Check the machine. Reset returns to idle; a new Start is required."
-                                 : reason == FAULT_PEDAL_INPUT
-                                     ? "Release the pedal and restore its input before resetting."
-                                     : safety_fault_reason_message(reason));
+  const bool restart = reason == FAULT_CONTROL_STALE || reason == FAULT_INPUT_STALE || reason == FAULT_HMI_STALE ||
+                       g_restartRequired.load(std::memory_order_acquire);
+  lv_label_set_text(instruction, ready      ? "Check the machine, then reset."
+                                 : physical ? "Release the E-STOP button."
+                                 : driver   ? "Clear the driver alarm."
+                                 : corrupt  ? "Hold the erase button, or reflash."
+                                 : restart  ? "Restart the controller."
+                                 : reason == FAULT_PEDAL_INPUT ? "Release the pedal and restore its input."
+                                 : reason == FAULT_POT_INPUT   ? "Check the speed pot, then turn the knob up."
+                                                               : "Wait - the controller is not ready to reset.");
   lv_obj_t* label = lv_obj_get_child(resetBtn, 0);
   lv_label_set_text(label, ready ? "RESET TO IDLE" : "RESET BLOCKED");
   if (ready)

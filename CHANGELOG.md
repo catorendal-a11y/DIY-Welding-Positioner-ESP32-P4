@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Countdown: the Safety hold card is coloured as a warning only while the countdown runs.
 - Step: the angle card is named Step angle, and the diameter row shows an edit icon.
 - Diagnostics: larger text with right-aligned values.
+- Fault overlay: the next action leads ("Release the E-STOP button."), with the cause below it and no repeated text. The banner turns amber and reads "READY TO RESET" once only the reset is missing, and an E-STOP that has been released is titled E-STOP RELEASED.
+- Screen saver: states "Motor stopped" and shows the set speed and direction instead of a slogan. The idle label is larger.
 - Wiring diagram rev 2.8: no text under wires, parallel runs at least 12 px apart, terminal names inside the driver and motor. Connections are unchanged.
 
 ### Removed

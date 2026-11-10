@@ -3,12 +3,16 @@
 #include "../theme.h"
 #include "../display.h"
 #include "../../safety/safety.h"
+#include "../value_format.h"
 #include <cmath>
+#include <cstdio>
+#include <cstring>
 
 namespace {
 lv_obj_t* overlay = nullptr;
 lv_obj_t* composition = nullptr;
 lv_obj_t* orbit = nullptr;
+lv_obj_t* setting = nullptr;
 uint32_t lastActivity = 0, lastFrame = 0;
 unsigned heldInputs = 0, frame = 0;
 bool visible = false, previewRequested = false, preview = false;
@@ -41,8 +45,8 @@ void create() {
   // A complete input shield; input filtering consumes the wake press as well.
   lv_obj_set_clickable(overlay, true);
   ui_create_text(overlay, 40, 34, 360, "TIG / ROTATOR", FONT_XL, text);
-  circle(overlay, 623, 39, 8, accent, 0);
-  auto status = ui_create_text(overlay, 647, 35, 113, "Display idle", FONT_TINY, muted);
+  circle(overlay, 634, 37, 10, accent, 0);
+  auto status = ui_create_text(overlay, 600, 33, 160, "Display idle", FONT_SUBTITLE, muted);
   lv_obj_set_style_text_align(status, LV_TEXT_ALIGN_RIGHT, 0);
   box(overlay, 40, 79, 720, 1, lv_color_hex(0x303B3C));
 
@@ -65,9 +69,10 @@ void create() {
   circle(composition, 114, 109, 32, background, 0);
   orbit = circle(composition, 122, 30, 16, text, 0);
   ui_create_text(composition, 308, 29, 360, "Standby", FONT_SUBTITLE, accent);
-  ui_create_text(composition, 306, 72, 380, "Ready when", FONT_HUGE, text);
-  ui_create_text(composition, 306, 121, 380, "you are.", FONT_HUGE, text);
-  ui_create_text(composition, 308, 194, 360, "Welding positioner  /  Motor stopped", FONT_SUBTITLE, muted);
+  // Read from across the shop: the machine state first, then what Start would do.
+  ui_create_text(composition, 306, 66, 400, "Motor stopped", FONT_HUGE, text);
+  ui_create_text(composition, 308, 136, 360, "Set speed", FONT_SUBTITLE, muted);
+  setting = ui_create_text(composition, 308, 162, 400, "", FONT_XXL, text);
 
   box(overlay, 40, 399, 720, 1, lv_color_hex(0x303B3C));
   auto wake = ui_create_text(overlay, 40, 429, 720, "Touch anywhere to wake", FONT_LARGE, text);
@@ -93,6 +98,13 @@ bool allowed() {
     if (child != overlay && !lv_obj_is_hidden(child)) return false;
   }
   return true;
+}
+// Settings, not measurements: the motor is stopped whenever this screen may show.
+void show_setting() {
+  char rpm[16], line[40];
+  ui_format_rpm(rpm, sizeof(rpm), ui_control_view().target_rpm);
+  snprintf(line, sizeof(line), "%s RPM  %s", rpm, ui_control_view().direction == DIR_CW ? "CW" : "CCW");
+  if (strcmp(lv_label_get_text(setting), line) != 0) lv_label_set_text(setting, line);
 }
 void restore_brightness() {
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
@@ -120,7 +132,7 @@ void dim_reset_activity() {
 void screen_saver_destroy() {
   dim_reset_activity();
   if (overlay) lv_obj_delete(overlay);
-  overlay = composition = orbit = nullptr;
+  overlay = composition = orbit = setting = nullptr;
 }
 void screen_saver_request_preview() { previewRequested = true; }
 
@@ -162,11 +174,13 @@ void screen_saver_update(uint32_t now) {
     lv_obj_move_foreground(overlay); lv_obj_set_hidden(overlay, false);
     visible = true; frame = 0; lastFrame = now;
     lv_obj_set_pos(composition, 42, 117); lv_obj_set_pos(orbit, 122, 30);
+    show_setting();
     // Preview retains brightness so the design can be inspected.
     if (!preview) display_set_brightness(38);
   }
   if (visible && now - lastFrame >= 4000) {
     lastFrame = now; frame = (frame + 1) % 72;
+    show_setting();
     const float angle = float(frame) * 0.08726646f;
     lv_obj_set_pos(orbit, 122 + int(87 * std::sin(angle)), 117 - int(87 * std::cos(angle)));
     lv_obj_set_pos(composition, 42 + int(8 * std::sin(angle)), 117 + int(6 * std::cos(angle)));

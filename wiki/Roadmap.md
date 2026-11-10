@@ -4,6 +4,7 @@
 
 | Release | Date | Summary | Status |
 |---------|------|---------|--------|
+| Unreleased | - | Timestamp race fix, screen-logic fixes, reworked screens, fault screen and screen saver | In source |
 | v2.3.1 | 2026-11-04 | Operator feedback and test fixes | Current release |
 | v2.3.0 | 2026-11-04 | Safety supervision and audit fixes | Released |
 | v2.2.0 | 2026-10-03 | Idle screen saver and UI refinements | Released |
@@ -15,6 +16,23 @@
 | v2.0.0 to v2.0.6 | 2026-04-03 to 2026-04-26 | Stability, diagnostics, operator UX | Released |
 
 Open items are listed under [Next](#next).
+
+## Unreleased
+
+In the source after v2.3.1, not in a release yet.
+
+- [x] Heartbeat, pedal-sample and jog-lease checks accept a stamp written just after the clock was read
+- [x] Boot halts when the LVGL tick timer cannot start
+- [x] Fault screen leads with the next action; red while reset is blocked, amber when ready
+- [x] Screen saver states "Motor stopped" and shows the set speed and direction
+- [x] Header status pill, main - / + beside the speed, full-size Available switches
+- [x] Program editors enforce the minimum speed for the program's diameter
+- [x] Calibration: named jog directions, captioned diameter field, diameter draft restored on leave
+- [x] Display settings: Back without Save restores brightness, appearance and accent
+- [ ] Pulse screen reads the machine target speed when opened
+- [ ] Direction control in the Pulse program editor
+- [ ] Cancel during a pending program save
+- [ ] Motion, pedal and calibration re-tested on the machine with this source
 
 ## v2.3.1 - Current Release
 

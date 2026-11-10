@@ -20,6 +20,8 @@ Actual LVGL simulator capture with example data. Main RPM +/− controls sit bes
 
 > [!NOTE]
 > Release **v2.3.1** is the current firmware identifier (**`FW_VERSION`**). It explains blocked program starts and REBOOT, keeps the Step keypad open on an invalid entry, stops Jog changing the manual direction and names every fault on the overlay. The owner reported them working on the assembled machine on 2026-11-04.
+>
+> The source is ahead of v2.3.1: reworked screens, a fault screen that leads with the next action, a screen saver that shows the machine state, and a heartbeat timestamp fix. The capture above shows that source. See the repository changelog under Unreleased.
 
 v2.3.0 adds UI, touch and pot supervision, visible crash and storage faults, per-diameter RPM limits and settings for roller diameter and gear ratio. The owner reported it tested on the assembled machine on 2026-11-04, including TIG HF.
 

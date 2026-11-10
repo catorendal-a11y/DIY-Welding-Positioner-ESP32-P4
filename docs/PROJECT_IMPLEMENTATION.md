@@ -3,7 +3,7 @@
 **Board**: GUITION JC4880P443C ESP32-P4 4.3" Touch Display (with ESP32-C6 co-processor)
 **Display**: ST7701S 480x800 MIPI-DSI (rotated to 800x480 landscape)
 **Touch**: GT911 capacitive touch controller
-**Source**: v2.3.1 (`FW_VERSION` in `src/config.h`), the published firmware. The owner reported v2.3.0 tested on the assembled machine on 2026-11-04, including TIG HF. The owner reported the v2.3.1 build working on the same machine the same day.
+**Source**: v2.4.0 (`FW_VERSION` in `src/config.h`), the published firmware. The owner reported v2.3.0 tested on the assembled machine on 2026-11-04, including TIG HF. The owner reported the v2.3.1 build working on the same machine the same day. The owner flashed the v2.4.0 code on 2026-11-10 and confirmed that it boots and that the reworked screens, the fault screen and the screen saver display correctly. Motion, pedal and calibration were not re-tested on it.
 
 See [control/setup implementation and validation](CONTROL_SETUP_IMPLEMENTATION.md) for the single-owner executor, coherent snapshots and guided commissioning.
 

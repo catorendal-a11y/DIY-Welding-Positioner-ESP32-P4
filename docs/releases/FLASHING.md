@@ -1,4 +1,4 @@
-# Flashing v2.3.1
+# Flashing v2.4.0
 
 Target: GUITION JC4880P443C ESP32-P4, 16 MB flash, 800 × 480 landscape display.
 
@@ -7,7 +7,7 @@ Target: GUITION JC4880P443C ESP32-P4, 16 MB flash, 800 × 480 landscape display.
 
 ## Recommended: build from the release source
 
-Install PlatformIO, clone the project, check out `v2.3.1`, then run:
+Install PlatformIO, clone the project, check out `v2.4.0`, then run:
 
 ```sh
 pio device list
@@ -74,7 +74,7 @@ The ZIP also includes the bootloader, partition table, OTA initialization image,
 
 ## After flashing
 
-Confirm v2.3.1 appears on the About screen. Then work through the checklist before enabling motor power.
+Confirm v2.4.0 appears on the About screen. Then work through the checklist before enabling motor power.
 
 - [ ] Display and touch work
 - [ ] GPIO34 `HIGH` is healthy, `LOW` is fault

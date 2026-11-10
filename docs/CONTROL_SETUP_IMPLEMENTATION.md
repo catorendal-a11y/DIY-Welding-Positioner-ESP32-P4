@@ -1,6 +1,6 @@
 # Control ownership and guided setup
 
-Introduced in v2.1.1 and current through v2.3.1. The owner reported v2.3.0 tested on the assembled machine on 2026-11-04, including TIG HF. The owner reported the v2.3.1 build working on the same machine the same day. The design keeps the V5 UI and the physical E-STOP input.
+Introduced in v2.1.1 and current through v2.4.0. The owner reported v2.3.0 tested on the assembled machine on 2026-11-04, including TIG HF. The owner reported the v2.3.1 build working on the same machine the same day. The owner flashed the v2.4.0 code on 2026-11-10 and confirmed that it boots and that the reworked screens, the fault screen and the screen saver display correctly. Motion, pedal and calibration were not re-tested on it. The design keeps the V5 UI and the physical E-STOP input.
 
 ## Control and safety boundaries
 

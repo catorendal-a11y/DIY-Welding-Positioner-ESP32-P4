@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-11-10
+
 ### Changed
 
 - Every screen is rebuilt for gloved, at-a-glance use. Orange marks choices and actions only, labels use plain sentence-case words, and alarms stay in capitals. The selected direction is filled with an arrow, and the speed scale has a pointer.

@@ -391,7 +391,7 @@ static void process_pending_requests() {
     return;
   }
   if ((cur == STATE_JOG || (cur == STATE_ENABLING && s_enablingCmd.type == MOTION_CMD_START_JOG)) &&
-      millis() - jogRenewedMs.load() > 150u) {
+      !timestamp_within(millis(), jogRenewedMs.load(), 150u)) {
     control_stop();
     stop_active_mode(cur);
     return;

@@ -476,6 +476,14 @@ void test_motor_entry_points_cannot_bypass_enable_settle() {
   TEST_ASSERT_EQUAL(0, testStepper.starts); TEST_ASSERT_EQUAL(0, testStepper.moves);
   TEST_ASSERT_EQUAL(HIGH, simTestPins[PIN_ENA]);
 }
+void test_jog_lease_renewed_after_now_was_read_keeps_jogging() {
+  // The UI (Core 1) can renew between controlTask's millis() and its load.
+  TEST_ASSERT_TRUE(control_start_jog_cw()); control_run_cycle();
+  TEST_ASSERT_EQUAL(STATE_JOG, control_get_state());
+  jogRenewedMs.store(simTestMillis + 1); control_run_cycle();
+  TEST_ASSERT_EQUAL(STATE_JOG, control_get_state());
+  control_stop(); control_run_cycle();
+}
 void test_jog_lease_expires_while_driver_is_enabling() {
   motor_disable();
   TEST_ASSERT_TRUE(control_start_jog_cw()); control_run_cycle();
@@ -593,6 +601,7 @@ int main() {
   RUN_TEST(test_dm542t_start_waits_out_ena_settle_before_pulses);
   RUN_TEST(test_driver_change_rearms_enable_settle);
   RUN_TEST(test_motor_entry_points_cannot_bypass_enable_settle);
+  RUN_TEST(test_jog_lease_renewed_after_now_was_read_keeps_jogging);
   RUN_TEST(test_jog_lease_expires_while_driver_is_enabling);
   RUN_TEST(test_step_dwell_holds_torque_and_repeats_after_dwell_time);
   RUN_TEST(test_acceleration_setting_is_physical_across_microsteps);

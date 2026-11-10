@@ -54,6 +54,15 @@ void test_frozen_ui_stops_active_motion_and_blocks_starts() {
   TEST_ASSERT_EQUAL(HIGH, simTestPins[PIN_ENA]);
   TEST_ASSERT_TRUE(safety_inhibit_motion());
 }
+void test_heartbeat_stamped_after_now_was_read_is_not_a_dead_task() {
+  // lvglTask (Core 1) and inputTask can stamp between safetyTask's millis() and its load.
+  testState = STATE_RUNNING;
+  g_uiHeartbeatMs.store(simTestMillis + 1); g_inputHeartbeatMs.store(simTestMillis + 1);
+  safety_run_cycle();
+  TEST_ASSERT_EQUAL(FAULT_NONE, safety_get_fault_reason());
+  TEST_ASSERT_EQUAL(STATE_RUNNING, testState);
+  TEST_ASSERT_FALSE(safety_inhibit_motion());
+}
 void test_touch_loss_at_rest_blocks_starts_without_latching() {
   testTouchHealthy = false;
   safety_run_cycle();
@@ -177,6 +186,7 @@ void test_alarm_release_does_not_reset_fault_automatically() {
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_frozen_ui_stops_active_motion_and_blocks_starts);
+  RUN_TEST(test_heartbeat_stamped_after_now_was_read_is_not_a_dead_task);
   RUN_TEST(test_touch_loss_at_rest_blocks_starts_without_latching);
   RUN_TEST(test_touch_loss_during_motion_latches);
   RUN_TEST(test_flash_stall_is_not_a_dead_task);

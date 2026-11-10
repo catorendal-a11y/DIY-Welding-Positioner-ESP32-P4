@@ -274,8 +274,10 @@ void lvgl_hal_init() {
                                                    .dispatch_method = esp_timer_dispatch_t::ESP_TIMER_TASK,
                                                    .name = "lvgl_tick"};
 
-  esp_timer_create(&tick_timer_args, &lvgl_tick_timer);
-  esp_timer_start_periodic(lvgl_tick_timer, 1000);  // 1ms = 1000us
+  // Without the tick LVGL never reads touch, yet the UI heartbeat would keep running.
+  if (esp_timer_create(&tick_timer_args, &lvgl_tick_timer) != ESP_OK ||
+      esp_timer_start_periodic(lvgl_tick_timer, 1000) != ESP_OK)  // 1ms = 1000us
+    fatal_halt("lvgl tick timer failed");
 
   LOG_I("LVGL tick timer started (1ms)");
   LOG_I("LVGL HAL init complete");

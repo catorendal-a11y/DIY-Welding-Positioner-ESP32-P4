@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The speed pot or pedal no longer overrides a speed set on the screen until it is moved or reaches that speed.
 - Programs are limited to the firmware speed range when loaded, not to the current Max RPM, so lowering Max RPM cannot rewrite a saved program. The editor shows the limit.
 - Manual direction, pulse times, step angle and jog speed survive a restart.
+- A heartbeat, pedal sample or jog renewal stamped by another task a moment after the checking task read the clock no longer counts as 49 days old. This rare race could stop a weld with HMI STALE or PEDAL INPUT, or drop a held jog.
 - A corrupt storage fault can be cleared on the machine: hold for 3 seconds to erase the data and restart. Other faults do not offer this.
 - Settings on Pulse, Step and Countdown are locked while the machine moves.
 - A save requested during flush is no longer lost.

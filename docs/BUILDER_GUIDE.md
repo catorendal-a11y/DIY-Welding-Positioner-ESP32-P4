@@ -307,7 +307,7 @@ Real TIG welding validation was completed with the electronics in a shared groun
 
 | Local check | Result |
 |:---|:---|
-| Native suites | 489 / 489 passed (native/control/speed/storage/safety suites) |
+| Native suites | 492 / 492 passed (native/control/speed/storage/safety suites) |
 | Packaging tests | 10 / 10 passed |
 | LVGL self-test | Passed: navigation, program edits, RPM adjustment, fault reset, full setup/calibration workflows, save failure/retry and stale control |
 | Firmware builds | Release, debug and mirror passed |

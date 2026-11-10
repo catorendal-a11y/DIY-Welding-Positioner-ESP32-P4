@@ -3,7 +3,7 @@
 **Last Updated:** 2026-11-04
 **Published firmware:** v2.3.1
 **Source:** master - operator feedback and test fixes (released as v2.3.1)
-**Build:** 484 native/control/speed/storage/safety test cases, packaging regressions, Linux/Windows simulator self-tests/layout audits and release/debug/mirror builds. **The owner reported v2.3.0 tested on the assembled machine on 2026-11-04.** TIG HF works on the owner's machine. The owner reported the v2.3.1 build working on the same machine the same day. Stop time and calibration accuracy have not been measured.
+**Build:** 492 native/control/speed/storage/safety test cases, packaging regressions, Linux/Windows simulator self-tests/layout audits and release/debug/mirror builds. **The owner reported v2.3.0 tested on the assembled machine on 2026-11-04.** TIG HF works on the owner's machine. The owner reported the v2.3.1 build working on the same machine the same day. Stop time and calibration accuracy have not been measured.
 
 ---
 

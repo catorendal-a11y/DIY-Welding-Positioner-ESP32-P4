@@ -4,8 +4,8 @@
 
 | Release | Date | Summary | Status |
 |---------|------|---------|--------|
-| Unreleased | - | Timestamp race fix, screen-logic fixes, reworked screens, fault screen and screen saver | In source |
-| v2.3.1 | 2026-11-04 | Operator feedback and test fixes | Current release |
+| v2.4.0 | 2026-11-10 | Reworked screens, fault screen, screen saver, timestamp race and screen-logic fixes | Current release |
+| v2.3.1 | 2026-11-04 | Operator feedback and test fixes | Released |
 | v2.3.0 | 2026-11-04 | Safety supervision and audit fixes | Released |
 | v2.2.0 | 2026-10-03 | Idle screen saver and UI refinements | Released |
 | v2.1.1 | 2026-10-03 | LVGL 9.6 and guided calibration | Released |
@@ -17,9 +17,11 @@
 
 Open items are listed under [Next](#next).
 
-## Unreleased
+## v2.4.0 - Current Release
 
-In the source after v2.3.1, not in a release yet.
+### v2.4.0 (2026-11-10)
+
+See the [release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/v2.4.0/docs/releases/v2.4.0.md). Unchecked items are open.
 
 - [x] Heartbeat, pedal-sample and jog-lease checks accept a stamp written just after the clock was read
 - [x] Boot halts when the LVGL tick timer cannot start
@@ -34,7 +36,7 @@ In the source after v2.3.1, not in a release yet.
 - [ ] Cancel during a pending program save
 - [ ] Motion, pedal and calibration re-tested on the machine with this source
 
-## v2.3.1 - Current Release
+## v2.3.1
 
 ### v2.3.1 (2026-11-04)
 
@@ -82,7 +84,7 @@ Safety supervision and audit fixes. See the [release notes](https://github.com/c
 
 ## v2.0.8 - version alignment
 
-Historical release; v2.3.1 above is current.
+Historical release; v2.4.0 above is current.
 
 ### v2.0.8 (2026-04-29)
 - [x] **`FW_VERSION` v2.0.8** — README, STATUS, wiki, implementation docs, UI SVGs, issue templates synced to canonical release tag

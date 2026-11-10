@@ -24,7 +24,7 @@ See [[Hardware Setup]] for full wiring details.
 2. **Open** the folder in VS Code with PlatformIO.
 
 > [!NOTE]
-> Current release: **v2.3.1**. Prebuilt firmware and English flashing instructions are available on the repository Releases page. Linux/macOS/Git Bash users may run `./install.sh` for a project environment.
+> Current release: **v2.4.0**. Prebuilt firmware and English flashing instructions are available on the repository Releases page. Linux/macOS/Git Bash users may run `./install.sh` for a project environment.
 
 ## 2. Build
 
@@ -59,7 +59,7 @@ pio device monitor
 Example debug boot output (release logging is intentionally quieter; confirm the actual version on <kbd>About</kbd>):
 ```
 [I] BOOT OK — ENA=HIGH (motor disabled)
-[I] TIG Rotator Controller v2.3.1
+[I] TIG Rotator Controller v2.4.0
 [I] Hardware: ESP32-P4 4.3" Touch Display (Waveshare/Guition)
 [I] Safety init: ESTOP=OK
 [I] Speed control init: pot=3327 (pin=49)

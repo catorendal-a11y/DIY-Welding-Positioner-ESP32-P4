@@ -2,7 +2,7 @@
 // TIG Welding Rotator Controller - Hardware Configuration
 // Waveshare/Guition ESP32-P4 4.3" Touch Display Dev Board
 
-#define FW_VERSION "v2.3.1"
+#define FW_VERSION "v2.4.0"
 #ifndef FW_BUILD_ID
 #define FW_BUILD_ID "local"  // Firmware builds get the commit from scripts/pio_pre_unique_bin.py
 #endif

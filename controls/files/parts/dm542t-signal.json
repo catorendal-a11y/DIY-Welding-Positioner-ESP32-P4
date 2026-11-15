@@ -1,0 +1,121 @@
+{
+  "id": "dm542t-signal",
+  "name": "DM542T stepper driver, signal terminal block (PUL/DIR/ENA/ALM)",
+  "kind": "actuator",
+  "blurb": "The stepper driver that turns step pulses into motor current. Only its 8-way signal terminal is wired from the controller; motor and 24-36 V power are separate.",
+  "body": {
+    "w": 44,
+    "d": 8,
+    "h": 12
+  },
+  "maxHeight": 12,
+  "pins": [
+    {
+      "name": "PUL+",
+      "x": 4.0,
+      "y": 4,
+      "role": "io",
+      "dir": "in",
+      "minHighVolts": 4.0,
+      "maxVolts": 5.5,
+      "note": "Opto LED anode (Style 1 wiring: driven from the controller, matching minus pin to GND). With the driver's signal selector at 5 V, the opto needs about 4 V or more for a guaranteed ON; a 3.3 V GPIO is marginal. HARDWARE_SETUP.md: use a suitable 3.3 V-to-driver interface where the manual requires it.",
+      "screw": true
+    },
+    {
+      "name": "PUL-",
+      "x": 9.08,
+      "y": 4,
+      "role": "gnd",
+      "note": "Opto return. Style 1: tie to controller GND.",
+      "screw": true
+    },
+    {
+      "name": "DIR+",
+      "x": 14.16,
+      "y": 4,
+      "role": "io",
+      "dir": "in",
+      "minHighVolts": 4.0,
+      "maxVolts": 5.5,
+      "note": "Opto LED anode (Style 1 wiring: driven from the controller, matching minus pin to GND). With the driver's signal selector at 5 V, the opto needs about 4 V or more for a guaranteed ON; a 3.3 V GPIO is marginal. HARDWARE_SETUP.md: use a suitable 3.3 V-to-driver interface where the manual requires it.",
+      "screw": true
+    },
+    {
+      "name": "DIR-",
+      "x": 19.240000000000002,
+      "y": 4,
+      "role": "gnd",
+      "note": "Opto return. Style 1: tie to controller GND.",
+      "screw": true
+    },
+    {
+      "name": "ENA+",
+      "x": 24.32,
+      "y": 4,
+      "role": "io",
+      "dir": "in",
+      "minHighVolts": 4.0,
+      "maxVolts": 5.5,
+      "idle": "high",
+      "note": "Opto LED anode (Style 1 wiring: driven from the controller, matching minus pin to GND). With the driver's signal selector at 5 V, the opto needs about 4 V or more for a guaranteed ON; a 3.3 V GPIO is marginal. HARDWARE_SETUP.md: use a suitable 3.3 V-to-driver interface where the manual requires it.",
+      "screw": true
+    },
+    {
+      "name": "ENA-",
+      "x": 29.4,
+      "y": 4,
+      "role": "gnd",
+      "note": "Opto return. Style 1: tie to controller GND.",
+      "screw": true
+    },
+    {
+      "name": "ALM+",
+      "x": 34.480000000000004,
+      "y": 4,
+      "role": "io",
+      "dir": "out",
+      "volts": 3.3,
+      "note": "Alarm opto transistor collector (open collector). Pulled up by the controller's INPUT_PULLUP; LOW = driver alarm.",
+      "screw": true
+    },
+    {
+      "name": "ALM-",
+      "x": 39.56,
+      "y": 4,
+      "role": "gnd",
+      "note": "Opto return. Style 1: tie to controller GND.",
+      "screw": true
+    }
+  ],
+  "electrical": {
+    "logicVolts": 5,
+    "currentMa": {
+      "typical": 0,
+      "peak": 0
+    }
+  },
+  "footprint": {
+    "mount": "wire"
+  },
+  "sourcing": {
+    "search": [
+      "STEPPERONLINE DM542T",
+      "DM542T digital stepper driver"
+    ],
+    "priceUsd": 35
+  },
+  "verify": "Terminal order and pitch drawn for recognition only. Check the label on your driver. The driver body (motor terminals, heatsink, mounting) is outside this package and lives in the grounded metal enclosure.",
+  "sources": [
+    "repo docs/HARDWARE_SETUP.md (DM542T checklist, Style 1/Style 2 wiring)"
+  ],
+  "confidence": "typical",
+  "geometryEvidence": {
+    "status": "unresolved",
+    "reason": "Only the signal terminal is modelled, from no drawing.",
+    "unknown": [
+      "terminal pitch",
+      "body outline",
+      "mounting holes"
+    ]
+  }
+}

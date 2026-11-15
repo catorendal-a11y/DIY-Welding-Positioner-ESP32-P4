@@ -1,0 +1,697 @@
+{
+  "id": "jc4880p443-jp1",
+  "name": "GUITION JC4880P443C ESP32-P4 4.3\" display board (JC-ESP32P4-M3 core, JP1 2x13 header)",
+  "kind": "board",
+  "blurb": "The controller: a 4.3 inch touch screen in a metal frame with the ESP32-P4 board on its back. Every wire in this build lands on its 2x13 JP1 header near the right edge.",
+  "body": {
+    "w": 117.01,
+    "d": 69.41,
+    "h": 4.0
+  },
+  "maxHeight": 14.1,
+  "shapes": [
+    {
+      "kind": "box",
+      "x": 13.8,
+      "y": 1.7,
+      "z": 0,
+      "w": 98.2,
+      "d": 66.9,
+      "h": 1.6,
+      "tag": "pcb",
+      "decals": [
+        {
+          "kind": "text",
+          "face": "top",
+          "x": 1.0,
+          "y": 33.45,
+          "text": "JC4880P443",
+          "size": 3
+        }
+      ]
+    },
+    {
+      "kind": "box",
+      "x": 0.6,
+      "y": 20.0,
+      "z": 0,
+      "w": 20.0,
+      "d": 38.0,
+      "h": 0.3,
+      "tag": "flex",
+      "decals": [
+        {
+          "kind": "text",
+          "face": "top",
+          "x": 1.0,
+          "y": 19.0,
+          "text": "LCD FPC",
+          "size": 2.2
+        }
+      ]
+    },
+    {
+      "kind": "box",
+      "x": 33.5,
+      "y": 20.8,
+      "z": 1.6,
+      "w": 27.0,
+      "d": 27.0,
+      "h": 3.4,
+      "tag": "module",
+      "decals": [
+        {
+          "kind": "text",
+          "face": "top",
+          "x": 1.0,
+          "y": 13.5,
+          "text": "JC-ESP32P4-M3",
+          "size": 2.6
+        }
+      ]
+    },
+    {
+      "kind": "box",
+      "x": 21.0,
+      "y": 22.5,
+      "z": 1.6,
+      "w": 5.0,
+      "d": 20.5,
+      "h": 2.0,
+      "tag": "fpc"
+    },
+    {
+      "kind": "box",
+      "x": 62.6,
+      "y": 2.6,
+      "z": 1.6,
+      "w": 16.0,
+      "d": 15.6,
+      "h": 1.8,
+      "tag": "sd",
+      "decals": [
+        {
+          "kind": "text",
+          "face": "top",
+          "x": 1.0,
+          "y": 7.8,
+          "text": "TF",
+          "size": 2
+        }
+      ]
+    },
+    {
+      "kind": "box",
+      "x": 103.96,
+      "y": 16.8,
+      "z": 1.6,
+      "w": 5.08,
+      "d": 33.02,
+      "h": 8.5,
+      "tag": "header",
+      "decals": [
+        {
+          "kind": "text",
+          "face": "top",
+          "x": 1.0,
+          "y": 16.51,
+          "text": "JP1",
+          "size": 2
+        }
+      ]
+    },
+    {
+      "kind": "box",
+      "x": 98.2,
+      "y": 20.1,
+      "z": 1.6,
+      "w": 3.6,
+      "d": 9.0,
+      "h": 6.5,
+      "tag": "usb",
+      "decals": [
+        {
+          "kind": "text",
+          "face": "top",
+          "x": 1.0,
+          "y": 4.5,
+          "text": "FS",
+          "size": 1.6
+        }
+      ]
+    },
+    {
+      "kind": "box",
+      "x": 98.2,
+      "y": 32.2,
+      "z": 1.6,
+      "w": 3.6,
+      "d": 9.0,
+      "h": 6.5,
+      "tag": "usb",
+      "decals": [
+        {
+          "kind": "text",
+          "face": "top",
+          "x": 1.0,
+          "y": 4.5,
+          "text": "HS",
+          "size": 1.6
+        }
+      ]
+    },
+    {
+      "kind": "box",
+      "x": 45.8,
+      "y": 1.5,
+      "z": 1.6,
+      "w": 5.5,
+      "d": 4.4,
+      "h": 4.0,
+      "tag": "conn",
+      "decals": [
+        {
+          "kind": "text",
+          "face": "top",
+          "x": 1.0,
+          "y": 2.2,
+          "text": "SPK",
+          "size": 1.4
+        }
+      ]
+    },
+    {
+      "kind": "box",
+      "x": 88.1,
+      "y": 2.1,
+      "z": 1.6,
+      "w": 5.5,
+      "d": 4.4,
+      "h": 4.0,
+      "tag": "conn",
+      "decals": [
+        {
+          "kind": "text",
+          "face": "top",
+          "x": 1.0,
+          "y": 2.2,
+          "text": "BAT",
+          "size": 1.4
+        }
+      ]
+    },
+    {
+      "kind": "box",
+      "x": 36.3,
+      "y": 61.5,
+      "z": 1.6,
+      "w": 5.9,
+      "d": 4.3,
+      "h": 4.0,
+      "tag": "conn",
+      "decals": [
+        {
+          "kind": "text",
+          "face": "top",
+          "x": 1.0,
+          "y": 2.15,
+          "text": "I2C",
+          "size": 1.4
+        }
+      ]
+    },
+    {
+      "kind": "box",
+      "x": 52.8,
+      "y": 61.5,
+      "z": 1.6,
+      "w": 7.9,
+      "d": 4.4,
+      "h": 4.0,
+      "tag": "conn",
+      "decals": [
+        {
+          "kind": "text",
+          "face": "top",
+          "x": 1.0,
+          "y": 2.2,
+          "text": "485",
+          "size": 1.4
+        }
+      ]
+    },
+    {
+      "kind": "box",
+      "x": 68.8,
+      "y": 61.5,
+      "z": 1.6,
+      "w": 7.9,
+      "d": 4.4,
+      "h": 4.0,
+      "tag": "conn",
+      "decals": [
+        {
+          "kind": "text",
+          "face": "top",
+          "x": 1.0,
+          "y": 2.2,
+          "text": "UART",
+          "size": 1.4
+        }
+      ]
+    },
+    {
+      "kind": "box",
+      "x": 97.5,
+      "y": 45.6,
+      "z": 1.6,
+      "w": 4.4,
+      "d": 7.9,
+      "h": 4.0,
+      "tag": "conn",
+      "decals": [
+        {
+          "kind": "text",
+          "face": "top",
+          "x": 1.0,
+          "y": 3.95,
+          "text": "U0",
+          "size": 1.4
+        }
+      ]
+    }
+  ],
+  "ports": [
+    {
+      "name": "USB-C full speed (programming / 5 V in)",
+      "faces": "up",
+      "x": 100.0,
+      "y": 24.6,
+      "w": 3.3,
+      "h": 8.9,
+      "shape": "rect",
+      "margin": 3
+    },
+    {
+      "name": "USB-C high speed",
+      "faces": "up",
+      "x": 100.0,
+      "y": 36.7,
+      "w": 3.3,
+      "h": 8.9,
+      "shape": "rect",
+      "margin": 3
+    }
+  ],
+  "pins": [
+    {
+      "name": "3V3",
+      "aliases": [
+        "JP1-1"
+      ],
+      "x": 105.23,
+      "y": 18.07,
+      "role": "power-out",
+      "volts": 3.3,
+      "supplyMa": 300,
+      "note": "3.3 V rail on JP1. Supply capacity to external loads is not published; 300 mA is an assumption for the budget check."
+    },
+    {
+      "name": "3V3_2",
+      "aliases": [
+        "JP1-3"
+      ],
+      "x": 105.23,
+      "y": 20.61,
+      "role": "power-out",
+      "volts": 3.3,
+      "supplyMa": 300,
+      "note": "3.3 V rail on JP1. Supply capacity to external loads is not published; 300 mA is an assumption for the budget check."
+    },
+    {
+      "name": "GND",
+      "aliases": [
+        "JP1-5"
+      ],
+      "x": 105.23,
+      "y": 23.15,
+      "role": "gnd"
+    },
+    {
+      "name": "GPIO52",
+      "aliases": [
+        "JP1-7",
+        "52"
+      ],
+      "x": 105.23,
+      "y": 25.69,
+      "role": "io",
+      "volts": 3.3,
+      "gpio": 52,
+      "caps": [
+        "pwm"
+      ],
+      "note": "Firmware: PIN_ENA (LOW=enabled, HIGH=inhibit; held HIGH at boot)."
+    },
+    {
+      "name": "GPIO51",
+      "aliases": [
+        "JP1-9",
+        "51"
+      ],
+      "x": 105.23,
+      "y": 28.23,
+      "role": "io",
+      "volts": 3.3,
+      "gpio": 51,
+      "caps": [
+        "pwm"
+      ],
+      "note": "Firmware: PIN_DIR (CW=HIGH)."
+    },
+    {
+      "name": "GPIO50",
+      "aliases": [
+        "JP1-11",
+        "50"
+      ],
+      "x": 105.23,
+      "y": 30.77,
+      "role": "io",
+      "volts": 3.3,
+      "gpio": 50,
+      "caps": [
+        "pwm"
+      ],
+      "note": "Firmware: PIN_STEP (FastAccelStepper RMT step pulses)."
+    },
+    {
+      "name": "GPIO49",
+      "aliases": [
+        "JP1-13",
+        "49"
+      ],
+      "x": 105.23,
+      "y": 33.31,
+      "role": "io",
+      "volts": 3.3,
+      "gpio": 49,
+      "caps": [
+        "adc",
+        "pwm"
+      ],
+      "note": "ADC2_CH0. Firmware: PIN_POT (speed potentiometer wiper)."
+    },
+    {
+      "name": "GPIO35",
+      "aliases": [
+        "JP1-15",
+        "35"
+      ],
+      "x": 105.23,
+      "y": 35.85,
+      "role": "io",
+      "volts": 3.3,
+      "gpio": 35,
+      "caps": [
+        "strapping"
+      ],
+      "note": "ESP32-P4 strapping pin (GPIO34-38 are sampled at reset; Espressif P4 EV board schematics label it GPIO3x_BOOTMODE). An external circuit that holds it at the wrong level during power-up can change the boot mode. Boot-mode select (download mode when low at reset)."
+    },
+    {
+      "name": "GPIO34",
+      "aliases": [
+        "JP1-17",
+        "34"
+      ],
+      "x": 105.23,
+      "y": 38.39,
+      "role": "io",
+      "volts": 3.3,
+      "gpio": 34,
+      "caps": [
+        "strapping"
+      ],
+      "note": "Firmware: PIN_ESTOP, conditioned input HIGH=healthy, LOW=fault, FALLING interrupt. ESP32-P4 strapping pin (GPIO34-38 are sampled at reset; Espressif P4 EV board schematics label it GPIO3x_BOOTMODE). An external circuit that holds it at the wrong level during power-up can change the boot mode."
+    },
+    {
+      "name": "GPIO32",
+      "aliases": [
+        "JP1-19",
+        "32"
+      ],
+      "x": 105.23,
+      "y": 40.93,
+      "role": "io",
+      "volts": 3.3,
+      "gpio": 32,
+      "caps": [],
+      "note": "Firmware: PIN_DRIVER_ALM (INPUT_PULLUP, LOW=driver alarm). Do not reuse."
+    },
+    {
+      "name": "GPIO28",
+      "aliases": [
+        "JP1-21",
+        "28"
+      ],
+      "x": 105.23,
+      "y": 43.47,
+      "role": "io",
+      "volts": 3.3,
+      "gpio": 28,
+      "caps": [],
+      "note": "May be routed toward the ESP32-C6 co-processor; treat as reserved unless the Guition schematic says otherwise."
+    },
+    {
+      "name": "I2C_SDA",
+      "aliases": [
+        "JP1-23",
+        "GPIO7"
+      ],
+      "x": 105.23,
+      "y": 46.01,
+      "role": "io",
+      "volts": 3.3,
+      "gpio": 7,
+      "caps": [
+        "i2c"
+      ],
+      "note": "Touch I2C bus (GT911 0x5D, ES8311 0x18). Board pull-ups present. Optional ADS1115 pedal ADC joins here."
+    },
+    {
+      "name": "I2C_SCL",
+      "aliases": [
+        "JP1-25",
+        "GPIO8"
+      ],
+      "x": 105.23,
+      "y": 48.55,
+      "role": "io",
+      "volts": 3.3,
+      "gpio": 8,
+      "caps": [
+        "i2c"
+      ],
+      "note": "Touch I2C bus clock."
+    },
+    {
+      "name": "5V",
+      "aliases": [
+        "JP1-2"
+      ],
+      "x": 107.77,
+      "y": 18.07,
+      "role": "power-out",
+      "volts": 5,
+      "supplyMa": 1500,
+      "backfeed": {
+        "minVolts": 4.75,
+        "maxVolts": 5.25
+      },
+      "note": "5 V rail. Fed from USB-C, or feed 5 V in here from the 24/36 V -> 5 V buck (2 A) when running without USB. Never both at once."
+    },
+    {
+      "name": "5V_2",
+      "aliases": [
+        "JP1-4"
+      ],
+      "x": 107.77,
+      "y": 20.61,
+      "role": "power-out",
+      "volts": 5,
+      "supplyMa": 1500,
+      "backfeed": {
+        "minVolts": 4.75,
+        "maxVolts": 5.25
+      },
+      "note": "5 V rail. Fed from USB-C, or feed 5 V in here from the 24/36 V -> 5 V buck (2 A) when running without USB. Never both at once."
+    },
+    {
+      "name": "GND_2",
+      "aliases": [
+        "JP1-6"
+      ],
+      "x": 107.77,
+      "y": 23.15,
+      "role": "gnd"
+    },
+    {
+      "name": "GPIO33",
+      "aliases": [
+        "JP1-8",
+        "33"
+      ],
+      "x": 107.77,
+      "y": 25.69,
+      "role": "io",
+      "volts": 3.3,
+      "gpio": 33,
+      "caps": [],
+      "note": "Firmware: PIN_PEDAL_SW (INPUT_PULLUP, LOW=pressed)."
+    },
+    {
+      "name": "GPIO31",
+      "aliases": [
+        "JP1-10",
+        "31"
+      ],
+      "x": 107.77,
+      "y": 28.23,
+      "role": "io",
+      "volts": 3.3,
+      "gpio": 31,
+      "caps": [],
+      "note": "Free in this firmware."
+    },
+    {
+      "name": "GPIO30",
+      "aliases": [
+        "JP1-12",
+        "30"
+      ],
+      "x": 107.77,
+      "y": 30.77,
+      "role": "io",
+      "volts": 3.3,
+      "gpio": 30,
+      "caps": [],
+      "note": "Free in this firmware."
+    },
+    {
+      "name": "GPIO29",
+      "aliases": [
+        "JP1-14",
+        "29"
+      ],
+      "x": 107.77,
+      "y": 33.31,
+      "role": "io",
+      "volts": 3.3,
+      "gpio": 29,
+      "caps": [],
+      "note": "Firmware: PIN_DIR_SWITCH (INPUT_PULLUP, LOW=CCW)."
+    },
+    {
+      "name": "GND_3",
+      "aliases": [
+        "JP1-16"
+      ],
+      "x": 107.77,
+      "y": 35.85,
+      "role": "gnd"
+    },
+    {
+      "name": "ESP_3V3",
+      "aliases": [
+        "JP1-18"
+      ],
+      "x": 107.77,
+      "y": 38.39,
+      "role": "nc",
+      "note": "C6 co-processor rail; do not load."
+    },
+    {
+      "name": "C6_U0RXD",
+      "aliases": [
+        "JP1-20"
+      ],
+      "x": 107.77,
+      "y": 40.93,
+      "role": "nc",
+      "note": "ESP32-C6 co-processor net (pins 20-26). Not a free P4 GPIO; do not wire."
+    },
+    {
+      "name": "C6_U0TXD",
+      "aliases": [
+        "JP1-22"
+      ],
+      "x": 107.77,
+      "y": 43.47,
+      "role": "nc",
+      "note": "ESP32-C6 co-processor net (pins 20-26). Not a free P4 GPIO; do not wire."
+    },
+    {
+      "name": "C6_IO9",
+      "aliases": [
+        "JP1-24"
+      ],
+      "x": 107.77,
+      "y": 46.01,
+      "role": "nc",
+      "note": "ESP32-C6 co-processor net (pins 20-26). Not a free P4 GPIO; do not wire."
+    },
+    {
+      "name": "C6_CHIP_PU",
+      "aliases": [
+        "JP1-26"
+      ],
+      "x": 107.77,
+      "y": 48.55,
+      "role": "nc",
+      "note": "ESP32-C6 co-processor net (pins 20-26). Not a free P4 GPIO; do not wire."
+    }
+  ],
+  "electrical": {
+    "logicVolts": 3.3,
+    "fiveVoltTolerant": false,
+    "currentMa": {
+      "typical": 320,
+      "peak": 900
+    },
+    "i2cAddresses": [],
+    "i2cPullups": true
+  },
+  "footprint": {
+    "mount": "header",
+    "pitch": 2.54
+  },
+  "sourcing": {
+    "search": [
+      "GUITION JC4880P443C ESP32-P4 4.3 inch",
+      "JC4880P443 ESP32-P4 display"
+    ],
+    "priceUsd": 45
+  },
+  "verify": "Drawn from the back (component side up, screen face down). Outline 117.01 x 69.41 mm and active area 93.60 x 56.16 mm are Guition's published figures. Positions of JP1, the two USB-C sockets, the core module, the TF slot and the MX/SH connectors are ESTIMATES from Guition's interfaces photo scaled to that outline (about +-1.5 mm). Frame/panel thickness (4 mm here), connector heights and USB-C socket height are assumed. Pin ORDER is from the maker's pin-definition graphic (docs/images/pinout.jpg): pin 1 (3V3) top, odd pins on the column nearer the board centre, even pins (5V...) nearer the right edge. Check pin 1 against the silkscreen before soldering. Measure with calipers before any case, bracket or panel cut depends on these numbers.",
+  "sources": [
+    "https://www.guition.com/esp32p4-display-module/esp32p4-display (JC4880P443C_I_W: module 117.01 x 69.41 mm, active area 93.60 x 56.16 mm, 5 V ~320 mA)",
+    "repo docs/images/interfaces.jpg (Guition back-view photo, numbered interfaces 1-12)",
+    "https://www.cnx-software.com/ (JC4880P433 sibling; JC-ESP32P4-M3 core 27 x 27 x 3.4 mm)",
+    "repo docs/images/pinout.jpg (Guition JC4880P443 pin definitions)",
+    "repo src/config.h (firmware pin map)",
+    "repo docs/HARDWARE_SETUP.md",
+    "https://dl.espressif.com/dl/schematics/esp32-p4-function-ev-board-schematics_v1.5.2.pdf (GPIO34-38 BOOTMODE labels)"
+  ],
+  "confidence": "typical",
+  "geometryEvidence": {
+    "status": "unresolved",
+    "reason": "Outline is the maker's published figure, but no mechanical drawing exists for the parts on the back: JP1, USB-C and connector positions are scaled from a product photo, which is not a valid source for a case or bracket.",
+    "unknown": [
+      "JP1 position (+-1.5 mm)",
+      "USB-C positions and height",
+      "frame/panel thickness",
+      "mounting points on the frame",
+      "supply current under load"
+    ]
+  }
+}

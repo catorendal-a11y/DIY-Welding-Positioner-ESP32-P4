@@ -1,0 +1,171 @@
+{
+  "id": "ads1115-adafruit",
+  "name": "ADS1115 16-Bit ADC - 4 Channel with Programmable Gain Amplifier",
+  "kind": "sensor",
+  "blurb": "Draft from the maker's CAD pads for ADS1115 16-Bit ADC - 4 Channel with Programmable Gain Amplifier: pad positions only, everything else still to fill in.",
+  "body": {
+    "w": 27.94,
+    "d": 17.145,
+    "h": 1.57
+  },
+  "maxHeight": 4.53,
+  "pins": [
+    {
+      "name": "AIN3",
+      "role": "passive",
+      "x": 25.4,
+      "y": 15.24,
+      "aliases": [
+        "A3"
+      ],
+      "maxVolts": 3.6,
+      "note": "Analogue input; keep within GND..VDD."
+    },
+    {
+      "name": "AIN2",
+      "role": "passive",
+      "x": 22.86,
+      "y": 15.24,
+      "aliases": [
+        "A2"
+      ],
+      "maxVolts": 3.6,
+      "note": "Analogue input; keep within GND..VDD."
+    },
+    {
+      "name": "AIN1",
+      "role": "passive",
+      "x": 20.32,
+      "y": 15.24,
+      "aliases": [
+        "A1"
+      ],
+      "maxVolts": 3.6,
+      "note": "Analogue input; keep within GND..VDD."
+    },
+    {
+      "name": "AIN0",
+      "role": "passive",
+      "x": 17.78,
+      "y": 15.24,
+      "aliases": [
+        "A0"
+      ],
+      "maxVolts": 3.6,
+      "note": "Analogue input; keep within GND..VDD."
+    },
+    {
+      "name": "ALERT",
+      "role": "io",
+      "x": 15.24,
+      "y": 15.24,
+      "aliases": [
+        "ALRT"
+      ],
+      "dir": "out",
+      "note": "Not used by the firmware; leave unconnected."
+    },
+    {
+      "name": "ADDR",
+      "role": "passive",
+      "x": 12.7,
+      "y": 15.24,
+      "aliases": [
+        "JP1.6"
+      ],
+      "note": "Tie to GND for address 0x48 (firmware ADS1115_ADDR). Floating ADDR gives no ACK."
+    },
+    {
+      "name": "SDA",
+      "role": "io",
+      "x": 10.16,
+      "y": 15.24,
+      "aliases": [
+        "JP1.7"
+      ],
+      "note": "I2C; module has 10k pull-ups to VDD."
+    },
+    {
+      "name": "SCL",
+      "role": "io",
+      "x": 7.62,
+      "y": 15.24,
+      "aliases": [
+        "JP1.8"
+      ],
+      "note": "I2C; module has 10k pull-ups to VDD."
+    },
+    {
+      "name": "GND",
+      "role": "gnd",
+      "x": 5.08,
+      "y": 15.24,
+      "aliases": [
+        "JP1.9"
+      ]
+    },
+    {
+      "name": "VDD",
+      "role": "power-in",
+      "x": 2.54,
+      "y": 15.24,
+      "aliases": [
+        "JP1.10"
+      ],
+      "minVolts": 2.0,
+      "maxVolts": 5.5,
+      "note": "Silkscreen VDD (first pad). Feed 3.3 V so SDA/SCL stay at 3.3 V logic."
+    }
+  ],
+  "electrical": {
+    "logicVolts": 3.3,
+    "currentMa": {
+      "typical": 1,
+      "peak": 1
+    },
+    "i2cAddresses": [
+      72,
+      73,
+      74,
+      75
+    ],
+    "i2cPullups": true
+  },
+  "sourcing": {
+    "search": [
+      "ADS1115 16-Bit ADC - 4 Channel with Programmable Gain Amplifier"
+    ],
+    "priceUsd": 15
+  },
+  "verify": "Pad positions and board outline are parsed from the maker's CAD file (https://raw.githubusercontent.com/adafruit/ADS1X15-Breakout-Board-PCBs/5aa7dbfdd92692a7751740b0f622606c2ff9ca55/Adafruit_ADS1115_16Bit_I2C_ADC.brd, revision 5aa7dbfdd92692a7751740b0f622606c2ff9ca55:Adafruit_ADS1115_16Bit_I2C_ADC.brd, source_sha256 e19603443535fb9a989f4caa97034500353cf259599081b7bb3c008128a8e6fa; catalog validation status: parser_derived_native_pad_centers_with_explicit_skips_not_physical_fit_verified), not measured on a bought board. Board size is the bounds of the outline geometry in the same file (geometry 216, centre lines, native_outline_geometry_union; the catalog does not guarantee it is the outer edge). Frame: CAD frame X right, Y up converted to origin at the top-left of the outline dataset seen from above, x right, y down; rotation 0 degrees clockwise. Check that the USB connector is at y = 0 and the pins match the silkscreen before relying on it. Only 10 of 40 pads were imported (JP1; these pad groups were taken by default, as the card generator's classification (the import report gives the basis of each), and --header overrides them). Shapes, ports and electrical values are not in the catalog. Roles: only gnd is set, on pins whose published name or source type says ground, or whose pad has no published row and sits on a CAD net named GND (importedFrom on the pin says which); every other pin is \"io\", supply pins included, because the catalog does not say input or output or the volts. gpio is set only where the published pin text names exactly one GPIOn (or GPn, IOn); a pad number is not a GPIO number, so every other pin has none. Fill roles, voltages, gpio and caps in by hand from the pinout, and set electrical.logicVolts, sourcing.priceUsd. maxHeight 4.53 mm is the 1.57 mm PCB plus the tallest point of the maker's 3D model (2.96 mm above the PCB, catalog 3D-model geometry 1542 (nominal_STEP_assembly_geometry_not_physical_measurement; https://raw.githubusercontent.com/adafruit/Adafruit_CAD_Parts/9f2a89f3d5c3491886d58cb7fe83385417563cf4/1085%20ADS1115%20ADC/1085%20ADS1115%20ADC.step)). It is a nominal model figure, not a measurement, and counts only what is modelled: headers that ship loose or anything fitted later are not in it. Measure the part you have before printing a case. Pads and outline are Adafruit 1085 (non-STEMMA) from the maker CAD. The owner's module is a generic 10-pin clone (HARDWARE_SETUP.md): same pin order is typical, but outline and pad positions of a clone are NOT established by this file.",
+  "sources": [
+    "https://raw.githubusercontent.com/adafruit/ADS1X15-Breakout-Board-PCBs/5aa7dbfdd92692a7751740b0f622606c2ff9ca55/Adafruit_ADS1115_16Bit_I2C_ADC.brd (maker catalog geometry 215, revision 5aa7dbfdd92692a7751740b0f622606c2ff9ca55:Adafruit_ADS1115_16Bit_I2C_ADC.brd; source_sha256 e19603443535fb9a989f4caa97034500353cf259599081b7bb3c008128a8e6fa)"
+  ],
+  "confidence": "typical",
+  "imported": {
+    "catalogPart": "adafruit:1085",
+    "geometry": {
+      "pads": 215,
+      "padsKind": "pcb_pad_centers",
+      "outline": 216
+    },
+    "outlineFrom": "outline dataset",
+    "sourceSha256": {
+      "pads": "e19603443535fb9a989f4caa97034500353cf259599081b7bb3c008128a8e6fa",
+      "outline": "e19603443535fb9a989f4caa97034500353cf259599081b7bb3c008128a8e6fa"
+    },
+    "geometrySha256": "5eb5bdbab11e7485c5265f8424a6b1b93ef954403ddfb4f5415ef7751dfd5945",
+    "fields": [
+      {
+        "field": "maxHeight",
+        "value": 4.53,
+        "from": "1.57 mm PCB + 2.96 mm tallest modelled point above it, catalog 3D-model geometry 1542 (nominal_STEP_assembly_geometry_not_physical_measurement; https://raw.githubusercontent.com/adafruit/Adafruit_CAD_Parts/9f2a89f3d5c3491886d58cb7fe83385417563cf4/1085%20ADS1115%20ADC/1085%20ADS1115%20ADC.step)"
+      },
+      {
+        "field": "body.h",
+        "value": 1.57,
+        "from": "PCB thickness in catalog 3D-model geometry 1542 (nominal_STEP_assembly_geometry_not_physical_measurement; https://raw.githubusercontent.com/adafruit/Adafruit_CAD_Parts/9f2a89f3d5c3491886d58cb7fe83385417563cf4/1085%20ADS1115%20ADC/1085%20ADS1115%20ADC.step)"
+      }
+    ]
+  }
+}

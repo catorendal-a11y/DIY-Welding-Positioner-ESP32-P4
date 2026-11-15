@@ -1,0 +1,37 @@
+# Bill of materials: TIG Rotator Controls
+
+Build path: wire, solder joints, with 16 wire ends clamped under a screw instead. Prices are rough single-unit street prices in USD, estimated from typical prices, not sourced.
+
+## Parts
+
+| Refs | Qty | Part | Value | What it does | Search term | Est. unit USD | Line USD |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| drv | 1 | DM542T stepper driver, signal terminal block (PUL/DIR/ENA/ALM) |  | Already owned. The stepper driver that turns step pulses into motor current. Only its 8-way signal terminal is wired from the controller; motor and 24-36 V power are separate. | STEPPERONLINE DM542T | 0.00 | 0.00 |
+| pot | 1 | 16 mm panel potentiometer with solder lugs (Alpha RV16AF-10 type, 6 mm shaft) | 10k linear | The ordinary round panel potentiometer: it is fixed in a hole with a nut, a knob goes on the shaft, and three wires are soldered to its lugs. The value (10 k linear is usual) is set per project. | Alpha RV16AF-10 B10K potentiometer | 1.50 | 1.50 |
+| dirsw | 1 | MTS-102 miniature toggle switch (SPDT, ON-ON, 6 mm bushing, solder lugs) |  | A small panel toggle switch with a metal lever and two positions; it connects the middle lug to one of the two outer lugs, so it works as an on/off or a changeover switch. | MTS-102 toggle switch SPDT ON-ON 3 pin | 1.00 | 1.00 |
+| estop | 1 | Screw terminal block, 3-way, 5 mm pitch (KF301-3P, sold as 5.0 or 5.08 mm) |  | The blue three-way PCB screw terminal: an outside wire is clamped under each screw, so it can be taken off again with a screwdriver. Blocks slide together side by side for longer rows. | KF301-3P screw terminal block 5mm | 0.40 | 0.40 |
+| pedal | 1 | GX12 4-pin panel socket (aviation connector), solder cups |  | A small round metal socket with four pins that is fixed in a hole in the case with a nut; a cable with the matching screw-on plug connects a sensor or motor outside the case. | GX12 4 pin aviation connector panel socket and plug | 2.00 | 2.00 |
+| ads | 1 | ADS1115 16-Bit ADC - 4 Channel with Programmable Gain Amplifier |  | Draft from the maker's CAD pads for ADS1115 16-Bit ADC - 4 Channel with Programmable Gain Amplifier: pad positions only, everything else still to fill in. | ADS1115 16-Bit ADC - 4 Channel with Programmable Gain Amplifier | 15.00 | 15.00 |
+| mcu | 1 | GUITION JC4880P443C ESP32-P4 4.3" display board (JC-ESP32P4-M3 core, JP1 2x13 header) |  | Already owned. The controller: a 4.3 inch touch screen in a metal frame with the ESP32-P4 board on its back. Every wire in this build lands on its 2x13 JP1 header near the right edge. | GUITION JC4880P443C ESP32-P4 4.3 inch | 0.00 | 0.00 |
+
+## Consumables
+
+| Refs | Qty | Part | Value | What it does | Search term | Est. unit USD | Line USD |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+|  | 10 | Hook-up wire, black | 120 mm each | 10 wires x 120 mm = 1200 mm in total (suggested length; trim to fit). | 22 AWG silicone hook-up wire kit 6 colours | 0.07 | 0.72 |
+|  | 2 | Hook-up wire, blue | 120 mm each | 2 wires x 120 mm = 240 mm in total (suggested length; trim to fit). | 22 AWG silicone hook-up wire kit 6 colours | 0.07 | 0.14 |
+|  | 1 | Hook-up wire, brown | 120 mm each | 1 wire x 120 mm = 120 mm in total (suggested length; trim to fit). | 22 AWG silicone hook-up wire kit 6 colours | 0.07 | 0.07 |
+|  | 2 | Hook-up wire, green | 120 mm each | 2 wires x 120 mm = 240 mm in total (suggested length; trim to fit). | 22 AWG silicone hook-up wire kit 6 colours | 0.07 | 0.14 |
+|  | 1 | Hook-up wire, orange | 120 mm each | 1 wire x 120 mm = 120 mm in total (suggested length; trim to fit). | 22 AWG silicone hook-up wire kit 6 colours | 0.07 | 0.07 |
+|  | 1 | Hook-up wire, purple | 120 mm each | 1 wire x 120 mm = 120 mm in total (suggested length; trim to fit). | 22 AWG silicone hook-up wire kit 6 colours | 0.07 | 0.07 |
+|  | 4 | Hook-up wire, red | 120 mm each | 4 wires x 120 mm = 480 mm in total (suggested length; trim to fit). | 22 AWG silicone hook-up wire kit 6 colours | 0.07 | 0.29 |
+|  | 2 | Hook-up wire, white | 120 mm each | 2 wires x 120 mm = 240 mm in total (suggested length; trim to fit). | 22 AWG silicone hook-up wire kit 6 colours | 0.07 | 0.14 |
+|  | 2 | Hook-up wire, yellow | 120 mm each | 2 wires x 120 mm = 240 mm in total (suggested length; trim to fit). | 22 AWG silicone hook-up wire kit 6 colours | 0.07 | 0.14 |
+|  | 1 | Solder | 60/40 or lead-free, 0.8 mm | Joins the parts. One small reel is plenty for this build. | solder wire 0.8 mm rosin core | 4.00 | 4.00 |
+|  | 1 | Heat-shrink tubing | assorted 1-3 mm | Insulates soldered joints so bare metal cannot touch and short. | heat shrink tubing assortment | 3.00 | 3.00 |
+
+## Totals
+
+- Parts: about 19.90 USD
+- Consumables: about 8.80 USD
+- Estimated total: about 28.70 USD, estimated from typical prices, not sourced

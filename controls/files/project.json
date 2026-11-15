@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "slug": "tig-rotator-controls",
+  "name": "TIG Rotator Controls",
+  "tagline": "Low-voltage control wiring for the ESP32-P4 TIG welding rotator",
+  "summary": "The low-voltage controller subsystem of the DIY TIG welding positioner: the GUITION JC4880P443C ESP32-P4 touch board, its speed pot, direction switch, foot pedal (switch plus ADS1115 pot), conditioned E-STOP input and the DM542T signal terminal. Motor power, the stepper, gearbox and the grounded metal enclosure are outside this package.",
+  "build": { "path": "wire", "joint": "solder", "difficulty": 3, "minutes": 150 },
+  "power": { "source": "usb", "volts": 5, "budgetMa": 2000, "entry": "mcu.5V" },
+  "parts": [
+    { "ref": "mcu", "part": "jc4880p443-jp1", "label": "ESP32-P4 touch board (JP1)", "owned": true },
+    { "ref": "drv", "part": "dm542t-signal", "label": "DM542T signal terminal", "owned": true },
+    { "ref": "pot", "part": "potentiometer-16mm-panel", "label": "Speed pot", "value": "10k linear" },
+    { "ref": "dirsw", "part": "toggle-switch-mts102", "label": "Direction switch CW/CCW" },
+    { "ref": "estop", "part": "screw-terminal-kf301-3p", "label": "E-STOP interface input (3V3 / SIG / GND)" },
+    { "ref": "pedal", "part": "gx12-4pin-panel", "label": "Foot pedal socket" },
+    { "ref": "ads", "part": "ads1115-adafruit", "label": "Pedal ADC (ADS1115)" }
+  ],
+  "connections": [
+    { "from": "mcu.GPIO50", "to": "drv.PUL+", "net": "STEP", "color": "yellow", "why": "Step pulses to the driver" },
+    { "from": "mcu.GPIO51", "to": "drv.DIR+", "net": "DIR", "color": "orange", "why": "Rotation direction" },
+    { "from": "mcu.GPIO52", "to": "drv.ENA+", "net": "ENA", "color": "purple", "why": "Enable; HIGH inhibits motion" },
+    { "from": "mcu.GPIO32", "to": "drv.ALM+", "net": "DRIVER_ALM", "color": "white", "why": "Driver alarm back to the controller" },
+    { "from": "drv.PUL-", "to": "drv.DIR-", "color": "black", "why": "Opto returns joined" },
+    { "from": "drv.DIR-", "to": "drv.ENA-", "color": "black", "why": "Opto returns joined" },
+    { "from": "drv.ENA-", "to": "drv.ALM-", "color": "black", "why": "Alarm return on the same ground" },
+    { "from": "drv.ALM-", "to": "mcu.GND", "color": "black", "why": "Common ground with the driver logic" },
+
+    { "from": "mcu.3V3", "to": "pot.3", "color": "red", "why": "ADC reference to the pot" },
+    { "from": "pot.1", "to": "mcu.GND_2", "color": "black", "why": "Pot low end to ground" },
+    { "from": "mcu.GPIO49", "to": "pot.2", "net": "POT", "color": "green", "why": "Wiper sets the speed" },
+
+    { "from": "mcu.GPIO29", "to": "dirsw.COM", "net": "DIR_SWITCH", "color": "blue", "why": "Direction switch input" },
+    { "from": "dirsw.1", "to": "pot.1", "color": "black", "why": "Switch pulls the input to ground" },
+
+    { "from": "mcu.3V3_2", "to": "estop.1", "color": "red", "why": "Power for the E-STOP interface" },
+    { "from": "estop.2", "to": "mcu.GPIO34", "net": "ESTOP", "color": "brown", "why": "E-STOP: HIGH healthy, LOW fault" },
+    { "from": "estop.3", "to": "mcu.GND_3", "color": "black", "why": "E-STOP interface ground" },
+
+    { "from": "estop.1", "to": "ads.VDD", "color": "red", "why": "Power for the pedal ADC" },
+    { "from": "estop.3", "to": "ads.GND", "color": "black", "why": "Ground for the pedal ADC" },
+    { "from": "ads.GND", "to": "ads.ADDR", "color": "black", "why": "ADDR to ground selects 0x48" },
+    { "from": "mcu.I2C_SDA", "to": "ads.SDA", "net": "I2C_SDA", "color": "blue", "why": "Shares the touch I2C data line" },
+    { "from": "mcu.I2C_SCL", "to": "ads.SCL", "net": "I2C_SCL", "color": "yellow", "why": "Shares the touch I2C clock line" },
+
+    { "from": "ads.VDD", "to": "pedal.1", "color": "red", "why": "3.3 V to the pedal pot" },
+    { "from": "pedal.2", "to": "ads.AIN0", "net": "PEDAL_POT", "color": "green", "why": "Pedal pot wiper to the ADC" },
+    { "from": "pedal.3", "to": "ads.ADDR", "color": "black", "why": "Pedal ground" },
+    { "from": "mcu.GPIO33", "to": "pedal.4", "net": "PEDAL_SW", "color": "white", "why": "Pedal start switch, LOW pressed" }
+  ],
+  "firmware": {
+    "framework": "arduino",
+    "board": "esp32-p4",
+    "libs": ["gin66/FastAccelStepper"],
+    "behaviour": "Bring-up only for this test. The real firmware is the repository's src/ tree (FreeRTOS, LVGL 9, FastAccelStepper on RMT, E-STOP ISR on PIN_ESTOP FALLING). ENA must stay HIGH (inhibit) at boot; never pulse STEP from a bring-up test."
+  },
+  "showcase": {
+    "headline": "Steady rotation for one-handed TIG welds.",
+    "subhead": "The control box wiring for an ESP32-P4 welding rotator: speed pot, direction switch, foot pedal and a supervised E-STOP input, generated from one project file.",
+    "howItWorks": [
+      { "title": "Set the speed", "body": "Turn the pot or tap the touch screen. The rotator holds the surface speed you chose." },
+      { "title": "Start with your foot", "body": "Press the pedal to start and let go to stop, so both hands stay on the torch and filler." },
+      { "title": "Stop through the driver", "body": "The E-STOP input and the driver alarm make the firmware stop pulses and inhibit ENA, and need a reset before it runs again. This path goes through the controller and does not disconnect motor power." }
+    ],
+    "features": [
+      { "title": "One pin map", "body": "The wiring guide and the firmware pin header come from the same file, so GPIO numbers cannot drift apart." },
+      { "title": "Driver alarm wired", "body": "The DM542T alarm output is read back, so a driver that reports a fault (over-current, over-voltage) stops the job. It cannot see a stall without an encoder." },
+      { "title": "Pedal on its own ADC", "body": "An ADS1115 on the touch I2C bus reads the pedal pot, leaving the board ADC for the panel pot." },
+      { "title": "Built for HF", "body": "Everything lives in one grounded metal enclosure with the driver and PSU, which TIG HF start requires." }
+    ],
+    "stats": [
+      { "value": "0.001", "unit": "rpm", "label": "slowest workpiece speed" },
+      { "value": "3", "unit": "rpm", "label": "fastest workpiece speed" },
+      { "value": "25", "label": "wires in this package" },
+      { "value": "1", "label": "project file" }
+    ],
+    "faq": [
+      { "q": "Can I print a plastic case for this?", "a": "No. TIG HF start needs the controller, driver and PSU in one grounded metal enclosure. This package leaves the enclosure out on purpose." },
+      { "q": "Is the E-STOP a safety circuit?", "a": "No. It is a supervised input on GPIO34 that the firmware acts on through ENA. It is not independent of the controller and does not cut motor power. Verify pressed, released, broken wire and power loss against docs/estop_timing.md before use." },
+      { "q": "Has this wiring been built?", "a": "The firmware and pin map have run on the owner's machine (v2.3.1). This generated guide has not been followed by anyone yet; check each step against HARDWARE_SETUP.md." },
+      { "q": "Can the ESP32-P4 drive the DM542T directly?", "a": "Only if your driver's input specification allows 3.3 V drive. The checker flags it as marginal; use a level interface if the manual asks for 5 V signals." }
+    ],
+    "theme": { "mood": "stage-dark", "accent": "#3aa0ff", "display": "Inter Tight", "text": "Inter" },
+    "license": "Project licence (see repository)"
+  }
+}

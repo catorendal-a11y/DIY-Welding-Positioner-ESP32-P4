@@ -21,6 +21,10 @@ static std::atomic<uint32_t> readyTasks{0};
 void safety_task_ready(uint32_t bit) { readyTasks.fetch_or(bit); }
 
 static std::atomic<uint8_t> s_faultReason{FAULT_NONE};
+// Bumped by every latch before it locks, so a UI reset can detect a fault
+// that latched while it was running and must not erase it.
+static std::atomic<uint32_t> s_faultGeneration{0};
+static std::atomic<uint8_t> s_lastLatchedReason{FAULT_NONE};
 // Any latched fault also disarms the USB mirror: a previously authorized PC
 // must not be able to drive the UI (including RESET TO IDLE) after a fault.
 // Fault policy: the FIRST latched reason is retained until RESET — later
@@ -28,6 +32,8 @@ static std::atomic<uint8_t> s_faultReason{FAULT_NONE};
 static void safety_latch_fault(FaultReason reason) {
   digitalWrite(PIN_ENA, HIGH);
   usb_mirror_set_armed(false);
+  s_lastLatchedReason.store(static_cast<uint8_t>(reason));
+  s_faultGeneration.fetch_add(1);
   estopLocked.store(true);
   uint8_t expected = FAULT_NONE;
   s_faultReason.compare_exchange_strong(expected, static_cast<uint8_t>(reason),
@@ -156,10 +162,20 @@ FaultReason safety_get_fault_reason() {
 }
 
 bool safety_check_ui_reset() {
-  if (g_uiResetPending.load(std::memory_order_acquire) && safety_can_reset_from_overlay()) {
+  // safetyTask (or another core) can latch between the check and the clears.
+  // Such a fault bumps the generation and must survive this reset.
+  const uint32_t generation = s_faultGeneration.load();
+  if (g_uiResetPending.load(std::memory_order_acquire) && safety_can_reset_from_overlay() &&
+      s_faultGeneration.load() == generation) {
     g_uiResetPending.store(false, std::memory_order_release);
-    estopLocked.store(false, std::memory_order_release);
-    safety_set_fault_reason(FAULT_NONE);
+    estopLocked.store(false);
+    s_faultReason.store(FAULT_NONE);
+    if (s_faultGeneration.load() != generation) {
+      safety_latch_fault(static_cast<FaultReason>(s_lastLatchedReason.load()));
+      // controlTask stays in ESTOP with its cleanup done, so it never logs this new cause.
+      event_log_addf("FAULT %s", safety_fault_reason_name(safety_get_fault_reason()));
+      return false;
+    }
     event_log_add("FAULT RESET");
     return true;
   }

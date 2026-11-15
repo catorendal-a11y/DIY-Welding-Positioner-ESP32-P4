@@ -12,6 +12,11 @@ class UiInputPanel {
   UiInputPanel(const UiInputPanel&) = delete;
   UiInputPanel& operator=(const UiInputPanel&) = delete;
   bool active() const { return root_ != nullptr; }
+  // Cancels the open editor (as if Cancel was tapped) so the screen's own Stop
+  // button is visible again; used when the control snapshot goes stale.
+  static void cancel_open() {
+    if (open_ && open_->keyboard_) lv_obj_send_event(open_->keyboard_, LV_EVENT_CANCEL, nullptr);
+  }
   const char* text() const { return field_ ? lv_textarea_get_text(field_) : ""; }
   void error(const char* message) { errorBinding_.set(message); }
   void open(const char* title, const char* hint, const char* initial,
@@ -59,6 +64,7 @@ class UiInputPanel {
     lv_keyboard_set_textarea(keyboard_, field_);
     lv_obj_add_event_cb(keyboard_, callback, LV_EVENT_READY, nullptr);
     lv_obj_add_event_cb(keyboard_, callback, LV_EVENT_CANCEL, nullptr);
+    open_ = this;
   }
   void close() {
     if (!root_) return;
@@ -69,8 +75,10 @@ class UiInputPanel {
     lv_obj_set_hidden(root_, true);
     lv_obj_delete_async(root_);
     root_ = field_ = keyboard_ = nullptr;
+    if (open_ == this) open_ = nullptr;
   }
  private:
+  static inline UiInputPanel* open_ = nullptr;
   lv_obj_t *root_ = nullptr, *field_ = nullptr, *keyboard_ = nullptr;
   UiTextBinding<192> errorBinding_;
   static void cancel(lv_event_t* event) {
@@ -81,5 +89,6 @@ class UiInputPanel {
     auto panel = static_cast<UiInputPanel*>(lv_event_get_user_data(event));
     panel->errorBinding_.reset();
     panel->root_ = panel->field_ = panel->keyboard_ = nullptr;
+    if (open_ == panel) open_ = nullptr;
   }
 };

@@ -21,7 +21,8 @@ void usb_mirror_begin();
 void usbMirrorTask(void* pvParameters);
 
 bool usb_mirror_enqueue_rect(const lv_area_t* area, const uint8_t* px_map);
-void usb_mirror_read_pointer(lv_indev_data_t* data);
+// An aborted remote press reaches LVGL as PRESS_LOST via lv_indev_wait_release(indev), never CLICKED.
+void usb_mirror_read_pointer(lv_indev_t* indev, lv_indev_data_t* data);
 
 bool usb_mirror_is_armed();
 void usb_mirror_set_armed(bool armed);

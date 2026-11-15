@@ -10,6 +10,7 @@
 #include <cstring>
 
 #include "esp_heap_caps.h"
+#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
@@ -40,10 +41,25 @@ static std::atomic<uint32_t> g_dropCount{0};
 static std::atomic<int> g_pointerX{0};
 static std::atomic<int> g_pointerY{0};
 static std::atomic<int> g_pointerState{USB_MIRROR_POINTER_RELEASED};
+static std::atomic<uint32_t> g_pointerRenewedMs{0};
+// Set when a held press is aborted; PRESSED renewals are ignored until the host sends RELEASE.
+static std::atomic<bool> g_pressLatched{false};
+static std::atomic<bool> g_abortPending{false};  // Consumed by usb_mirror_read_pointer.
+static std::atomic<bool> g_helloReplyPending{false};
+static std::atomic<uint32_t> g_redrawRequestMs{0};
 
+// Every release except the host's own RELEASE aborts the press: LVGL sees
+// PRESS_LOST (no CLICKED), and a renewal cannot start a new press on whatever
+// is now under the pointer. Store order: abort flag, latch, state (seq_cst);
+// usb_mirror_read_pointer loads them in reverse.
 static void pointer_release() {
-  g_pointerState.store(USB_MIRROR_POINTER_RELEASED, std::memory_order_release);
+  if (g_pointerState.load() != USB_MIRROR_POINTER_PRESSED) return;
+  g_abortPending.store(true);
+  g_pressLatched.store(true);
+  g_pointerState.store(USB_MIRROR_POINTER_RELEASED);
 }
+
+static void parse_serial_input();
 
 static bool keepalive_fresh_now() {
   uint32_t last = g_lastKeepaliveMs.load(std::memory_order_acquire);
@@ -57,13 +73,17 @@ static bool serial_write_all(const uint8_t* data, size_t len) {
   while (len > 0) {
     if (millis() - started > 100u || !Serial) return false;
     const int available = Serial.availableForWrite();
+    // Keep reading pointer renewals while a video chunk waits for TX room.
+    // Safe to nest: handle_packet never writes (the HELLO reply is deferred).
     if (available <= 0) {
+      parse_serial_input();
       vTaskDelay(pdMS_TO_TICKS(1));
       continue;
     }
     const size_t chunk = len < (size_t)available ? len : (size_t)available;
     size_t written = Serial.write(data, chunk);
     if (written == 0) {
+      parse_serial_input();
       vTaskDelay(pdMS_TO_TICKS(1));
       continue;
     }
@@ -163,8 +183,18 @@ static void handle_packet(const UsbMirrorHeader& h, const uint8_t* payload) {
     g_connected.store(true, std::memory_order_release);
     g_lastKeepaliveMs.store(now, std::memory_order_release);
     pointer_release();
-    send_packet(USB_MIRROR_PACKET_HELLO, nullptr, 0);
+    g_helloReplyPending.store(true, std::memory_order_release);  // Sent by usbMirrorTask, never mid-frame.
     g_screenRedraw.store(true, std::memory_order_release);
+    return;
+  }
+
+  // The host lost a frame (CRC or sequence gap); stale pixels must not show old state.
+  if (h.type == USB_MIRROR_PACKET_REDRAW) {
+    g_lastKeepaliveMs.store(now, std::memory_order_release);
+    if (now - g_redrawRequestMs.load() >= USB_MIRROR_REDRAW_MIN_INTERVAL_MS) {
+      g_redrawRequestMs.store(now);
+      g_screenRedraw.store(true, std::memory_order_release);
+    }
     return;
   }
 
@@ -184,13 +214,26 @@ static void handle_packet(const UsbMirrorHeader& h, const uint8_t* payload) {
       return;
     }
 
-    if (!g_armed.load(std::memory_order_acquire)) {
+    if (p.state != USB_MIRROR_POINTER_PRESSED) {
+      // Only the host's own RELEASE ends an aborted press. State before latch:
+      // a stale PRESSED must never be visible with the latch cleared.
+      if (g_armed.load(std::memory_order_acquire)) {
+        g_pointerX.store(p.x, std::memory_order_release);
+        g_pointerY.store(p.y, std::memory_order_release);
+      }
+      g_pointerState.store(USB_MIRROR_POINTER_RELEASED);
+      g_pressLatched.store(false);
+      return;
+    }
+
+    if (!g_armed.load(std::memory_order_acquire) || g_pressLatched.load()) {
       pointer_release();
       return;
     }
 
     g_pointerX.store(p.x, std::memory_order_release);
     g_pointerY.store(p.y, std::memory_order_release);
+    g_pointerRenewedMs.store(now, std::memory_order_release);
     g_pointerState.store(p.state, std::memory_order_release);
     return;
   }
@@ -280,6 +323,15 @@ static void parse_serial_input() {
   }
 }
 
+// ESP-IDF logs (e.g. GT911 "I2C read error!" under TIG HF) reach the same
+// USB-Serial-JTAG port as a secondary console, bypassing LOG_PRINT. Drop them
+// while a host is connected so no text lands inside a binary frame.
+static vprintf_like_t g_prevLogVprintf = nullptr;
+static int mirror_log_vprintf(const char* fmt, va_list args) {
+  if (g_connected.load(std::memory_order_acquire)) return 0;
+  return g_prevLogVprintf ? g_prevLogVprintf(fmt, args) : vprintf(fmt, args);
+}
+
 void usb_mirror_begin() {
   if (g_ready.load(std::memory_order_acquire)) return;
 
@@ -309,6 +361,7 @@ void usb_mirror_begin() {
     xQueueSend(g_freeQueue, &i, 0);
   }
 
+  g_prevLogVprintf = esp_log_set_vprintf(mirror_log_vprintf);
   g_ready.store(true, std::memory_order_release);
   LOG_I("USB mirror ready: %u chunks x %u bytes", MIRROR_CHUNK_COUNT, (unsigned)USB_MIRROR_MAX_CHUNK_PAYLOAD);
 }
@@ -325,6 +378,7 @@ void usbMirrorTask(void* pvParameters) {
       pointer_release();
     }
 
+    if (g_helloReplyPending.exchange(false)) send_packet(USB_MIRROR_PACKET_HELLO, nullptr, 0);
     drain_ready_queue_once();
     static uint32_t lastResync = 0, seenDrops = 0;
     const uint32_t drops = g_dropCount.load();
@@ -393,21 +447,28 @@ bool usb_mirror_enqueue_rect(const lv_area_t* area, const uint8_t* px_map) {
   return queuedAny;
 }
 
-void usb_mirror_read_pointer(lv_indev_data_t* data) {
+void usb_mirror_read_pointer(lv_indev_t* indev, lv_indev_data_t* data) {
   if (!data) return;
 
-  if (!g_armed.load(std::memory_order_acquire) || !g_connected.load(std::memory_order_acquire) ||
-      !keepalive_fresh_now()) {
-    data->state = LV_INDEV_STATE_RELEASED;
+  const bool live = g_armed.load(std::memory_order_acquire) && g_connected.load(std::memory_order_acquire) &&
+                    keepalive_fresh_now();
+  // A press the host stopped renewing is aborted, so a stalled host cannot keep
+  // renewing the jog deadman from stale data. State before age: a fresh PRESSED
+  // is always seen with its own renewal time.
+  if (g_pointerState.load() == USB_MIRROR_POINTER_PRESSED &&
+      (!live || millis() - g_pointerRenewedMs.load() >= USB_MIRROR_PRESS_TIMEOUT_MS)) {
     pointer_release();
-    return;
   }
+
+  // Load order matters: state, then latch, then the abort flag (see pointer_release).
+  const bool pressed = g_pointerState.load() == USB_MIRROR_POINTER_PRESSED && !g_pressLatched.load();
+  const bool aborted = g_abortPending.exchange(false);
+  // PRESS_LOST instead of RELEASED: no CLICKED fires on the held object.
+  if (aborted && indev) lv_indev_wait_release(indev);
 
   data->point.x = (lv_coord_t)g_pointerX.load(std::memory_order_acquire);
   data->point.y = (lv_coord_t)g_pointerY.load(std::memory_order_acquire);
-  data->state = (g_pointerState.load(std::memory_order_acquire) == USB_MIRROR_POINTER_PRESSED)
-                    ? LV_INDEV_STATE_PRESSED
-                    : LV_INDEV_STATE_RELEASED;
+  data->state = (live && pressed && !aborted) ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
 }
 
 bool usb_mirror_is_armed() { return g_armed.load(std::memory_order_acquire); }
@@ -423,6 +484,9 @@ bool usb_mirror_is_connected() {
 
 uint32_t usb_mirror_drop_count() { return g_dropCount.load(std::memory_order_acquire); }
 
+// The mirror task is the only CDC writer while a host is connected (see LOG_E).
+bool usb_mirror_owns_serial() { return g_connected.load(std::memory_order_acquire); }
+
 #else
 
 void usb_mirror_begin() {}
@@ -430,7 +494,7 @@ void usbMirrorTask(void*) {}
 
 bool usb_mirror_enqueue_rect(const lv_area_t*, const uint8_t*) { return false; }
 
-void usb_mirror_read_pointer(lv_indev_data_t* data) {
+void usb_mirror_read_pointer(lv_indev_t*, lv_indev_data_t* data) {
   if (data) data->state = LV_INDEV_STATE_RELEASED;
 }
 

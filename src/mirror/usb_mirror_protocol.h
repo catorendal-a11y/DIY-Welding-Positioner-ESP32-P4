@@ -7,9 +7,14 @@
 static constexpr uint16_t USB_MIRROR_WIDTH = 800;
 static constexpr uint16_t USB_MIRROR_HEIGHT = 480;
 static constexpr uint16_t USB_MIRROR_KEEPALIVE_TIMEOUT_MS = 1500;
+// A remote PRESSED expires unless the host renews it; matches the jog deadman.
+static constexpr uint16_t USB_MIRROR_PRESS_TIMEOUT_MS = 150;
+static constexpr uint16_t USB_MIRROR_PRESS_RENEW_MS = 50;
+static constexpr uint16_t USB_MIRROR_REDRAW_MIN_INTERVAL_MS = 1000;
 
 static constexpr uint32_t USB_MIRROR_MAGIC = 0x31524D52u;  // "RMR1" little-endian
-static constexpr uint8_t USB_MIRROR_VERSION = 1;
+// v2: hosts must renew PRESSED and may send REDRAW; v1 hosts are rejected.
+static constexpr uint8_t USB_MIRROR_VERSION = 2;
 static constexpr uint32_t USB_MIRROR_DEFAULT_BAUD = 4000000u;
 static constexpr size_t USB_MIRROR_HEADER_SIZE = 20;
 static constexpr uint16_t USB_MIRROR_CHUNK_ROWS = 16;
@@ -26,6 +31,7 @@ enum UsbMirrorPacketType : uint8_t {
   USB_MIRROR_PACKET_ARM = 5,
   USB_MIRROR_PACKET_STATS = 6,
   USB_MIRROR_PACKET_ERROR = 7,
+  USB_MIRROR_PACKET_REDRAW = 8,  // Host -> device: frame lost, send a full redraw.
 };
 
 enum UsbMirrorPointerState : uint8_t {

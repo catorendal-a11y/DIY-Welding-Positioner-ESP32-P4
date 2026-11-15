@@ -11,6 +11,7 @@
 
 // Pull in testable pure-logic headers (no Arduino/LVGL/FreeRTOS deps)
 #include "../support/logic_under_test.h"
+#include "../../src/ui/test_hal_logic.h"
 
 // Unity requires these even if empty
 void setUp(void) {}
@@ -1054,8 +1055,19 @@ void test_milli_hz_accepts_floor_and_above() {
   TEST_ASSERT_EQUAL_UINT32(1234500u, motion_milli_hz(1234.5, 20u));
 }
 
+// SECTION 16c: TOUCH READ FAILURE. A brief failed read keeps a held press (no
+// synthetic CLICKED); a long run of failures releases it so jog cannot run on.
+void test_touch_failed_read_holds_press_briefly() {
+  TEST_ASSERT_TRUE(touch_hold_press_on_failed_read(true, 1033u, 1000u));
+  TEST_ASSERT_TRUE(touch_hold_press_on_failed_read(true, 1000u + TOUCH_FAIL_HOLD_MS, 1000u));
+  TEST_ASSERT_FALSE(touch_hold_press_on_failed_read(true, 1001u + TOUCH_FAIL_HOLD_MS, 1000u));
+  TEST_ASSERT_FALSE(touch_hold_press_on_failed_read(false, 1033u, 1000u));
+  TEST_ASSERT_TRUE(touch_hold_press_on_failed_read(true, 20u, 0xFFFFFFF0u));  // millis() wrap
+}
+
 int main(int argc, char** argv) {
   UNITY_BEGIN();
+  RUN_TEST(test_touch_failed_read_holds_press_briefly);
 
   RUN_TEST(test_trans_enabling_matrix);
   RUN_TEST(test_state_name_enabling);

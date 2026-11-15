@@ -5,9 +5,11 @@
 
 #include "lvgl_hal.h"
 #include "rgb565_rotation.h"
+#include "test_hal_logic.h"
 #include <Arduino.h>
 #include <atomic>
 #include "../config.h"
+static_assert(DISPLAY_H_RES == 800 && DISPLAY_V_RES == 480, "test_hal_logic.h assumes an 800x480 landscape UI");
 #include "../app_state.h"
 #include "../mirror/usb_mirror.h"
 #include "display.h"
@@ -80,6 +82,8 @@ void lvgl_flush_cb(lv_display_t* disp, const lv_area_t* area, uint8_t* px_map) {
   }
 
   if (g_flashWriting.load(std::memory_order_acquire)) {
+    // LVGL counts this strip as drawn; repaint once the main loop resumes after the write.
+    g_screenRedraw.store(true, std::memory_order_release);
     lv_display_flush_ready(disp);
     return;
   }
@@ -142,10 +146,8 @@ void lvgl_flush_cb(lv_display_t* disp, const lv_area_t* area, uint8_t* px_map) {
   if (!rotated) rotate_rgb565_to_portrait(src, rot_buf, W, H);
 
   // Portrait rectangle coordinates
-  int px1 = y1;        // portrait x start
-  int py1 = DISPLAY_H_RES - 1 - x2;  // portrait y start
-  int px2 = y2;        // portrait x end
-  int py2 = DISPLAY_H_RES - 1 - x1;  // portrait y end
+  int px1, py1, px2, py2;
+  flush_portrait_rect(x1, y1, x2, y2, &px1, &py1, &px2, &py2);
 
   // use_dma2d stays disabled: draw_bitmap copies synchronously before reuse.
   const esp_err_t result = esp_lcd_panel_draw_bitmap(display_panel, px1, py1, px2 + 1, py2 + 1, rot_buf);
@@ -164,10 +166,34 @@ void lvgl_touchpad_read_cb(lv_indev_t* indev_drv, lv_indev_data_t* data) {
     return;
   }
 
+  // Last state/point reported to LVGL (after the screen-saver filter).
+  static lv_indev_state_t lastState = LV_INDEV_STATE_RELEASED;
+  static lv_point_t lastPoint{};
+  static uint32_t lastGoodMs = 0;
+  // Set when a held press was aborted by a long read outage (TIG HF); cleared
+  // only by a good read with no finger, so a finger still on the glass cannot
+  // become a new press on whatever replaced the held button (STOP -> START).
+  static bool awaitLift = false;
+  const auto reportFailedRead = [&]() {
+    data->point = lastPoint;
+    const bool wasPressed = lastState == LV_INDEV_STATE_PRESSED;
+    if (touch_hold_press_on_failed_read(wasPressed, millis(), lastGoodMs)) {
+      data->state = LV_INDEV_STATE_PRESSED;
+      return;
+    }
+    if (wasPressed) {
+      // PRESS_LOST instead of RELEASED: jog stops, but no CLICKED fires.
+      lv_indev_wait_release(indev_drv);
+      awaitLift = true;
+      lastState = LV_INDEV_STATE_RELEASED;
+    }
+    data->state = LV_INDEV_STATE_RELEASED;
+  };
+
   const bool readOk = esp_lcd_touch_read_data(display_touch) == ESP_OK;
   display_touch_report_read(readOk);
   if (!readOk) {
-    data->state = LV_INDEV_STATE_RELEASED;
+    reportFailedRead();
     return;
   }
 
@@ -176,16 +202,18 @@ void lvgl_touchpad_read_cb(lv_indev_t* indev_drv, lv_indev_data_t* data) {
   const esp_err_t result = esp_lcd_touch_get_data(display_touch, &point, &touch_cnt, 1);
   if (result != ESP_OK) {
     // A failed read is not proof that the wake finger was lifted.
-    data->state = LV_INDEV_STATE_RELEASED;
+    reportFailedRead();
     return;
   }
+  lastGoodMs = millis();
+  if (awaitLift && touch_cnt == 0) awaitLift = false;
 
-  if (touch_cnt == 1) {
+  if (touch_cnt == 1 && !awaitLift) {
     uint16_t px = point.x;
     uint16_t py = point.y;
 
-    int32_t lx = 799 - (int32_t)py;  // landscape x = 799 - portrait y
-    int32_t ly = (int32_t)px;        // landscape y = portrait x
+    int32_t lx = touch_portrait_to_landscape_x(py);
+    int32_t ly = touch_portrait_to_landscape_y(px);
     if (lx < 0) lx = 0;
     if (lx > 799) lx = 799;
     if (ly < 0) ly = 0;
@@ -198,12 +226,14 @@ void lvgl_touchpad_read_cb(lv_indev_t* indev_drv, lv_indev_data_t* data) {
   }
   static ScreenSaverInput input;
   screen_saver_filter_input(data, input);
+  lastState = data->state;
+  lastPoint = data->point;
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
 #if ENABLE_USB_UI_MIRROR
-static void lvgl_usb_mirror_read_cb(lv_indev_t*, lv_indev_data_t* data) {
-  usb_mirror_read_pointer(data);
+static void lvgl_usb_mirror_read_cb(lv_indev_t* indev, lv_indev_data_t* data) {
+  usb_mirror_read_pointer(indev, data);
   static ScreenSaverInput input;
   screen_saver_filter_input(data, input);
 }

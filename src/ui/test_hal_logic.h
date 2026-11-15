@@ -1,5 +1,5 @@
-// TIG Rotator Controller - Pure HAL Logic for Testing
-// Extracted from lvgl_hal.cpp for native unit testing (no hardware dependencies)
+// TIG Rotator Controller - Pure HAL Logic
+// Called by lvgl_hal.cpp and tested natively (no hardware dependencies).
 
 #pragma once
 #include <cstdint>
@@ -7,7 +7,7 @@
 // ───────────────────────────────────────────────────────────────────────────────
 // TOUCH COORDINATE TRANSFORM
 // Portrait (px, py) → landscape (799 - py, px)
-// Mirrors lvgl_touchpad_read_cb() in lvgl_hal.cpp
+// Used by lvgl_touchpad_read_cb() in lvgl_hal.cpp
 // ───────────────────────────────────────────────────────────────────────────────
 
 inline int touch_portrait_to_landscape_x(int portrait_y) {
@@ -19,21 +19,21 @@ inline int touch_portrait_to_landscape_y(int portrait_x) {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// FLUSH ROTATION — 90 CW landscape→portrait buffer index
-// Mirrors the rotation loop in lvgl_flush_cb() in lvgl_hal.cpp:
-//   rot_buf[(x2 - lx) * H + r] = src[r * W + c]
-// Given landscape coordinates (lx, ly), area bounds (x1, x2, y1), and area H:
-//   row in portrait buffer = x2 - lx
-//   col in portrait buffer = ly - y1
-//   linear index = row * H + col
+// TOUCH READ FAILURE HOLD — used by lvgl_touchpad_read_cb() in lvgl_hal.cpp
+// A failed GT911 read (HF/I2C noise) is not a lift: reporting RELEASED would make
+// LVGL fire CLICKED and re-hit-test the next good read. A held press is kept only
+// briefly after the last good read, so a lost release cannot keep a jog running.
 // ───────────────────────────────────────────────────────────────────────────────
 
-inline int flush_rotate_index(int lx, int ly, int x2, int y1, int area_H) {
-  int row = x2 - lx;
-  int col = ly - y1;
-  return row * area_H + col;
+static constexpr uint32_t TOUCH_FAIL_HOLD_MS = 150u;
+
+inline bool touch_hold_press_on_failed_read(bool lastPressed, uint32_t nowMs, uint32_t lastGoodMs) {
+  return lastPressed && (uint32_t)(nowMs - lastGoodMs) <= TOUCH_FAIL_HOLD_MS;
 }
 
+// ───────────────────────────────────────────────────────────────────────────────
+// FLUSH RECTANGLE — used by lvgl_flush_cb(); the pixel rotation itself is
+// rotate_rgb565_to_portrait() in rgb565_rotation.h.
 // Portrait rectangle from landscape area bounds
 // landscape area: x1..x2, y1..y2 -> portrait: px1=y1, py1=799-x2, px2=y2, py2=799-x1
 inline void flush_portrait_rect(int x1, int y1, int x2, int y2,

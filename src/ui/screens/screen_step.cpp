@@ -504,6 +504,11 @@ void screen_step_invalidate_widgets() {
 
 void screen_step_update() {
   ui_mark_motion_callback(screenRoots[SCREEN_STEP], step_event_cb);
+  // Like UiInputPanel::cancel_open(): an open keypad covers Stop, so close it while status is stale.
+  if (!ui_control_fresh()) {
+    if (customNumpad) numpadClosePending = true;
+    if (diaKb) diaClosePending = true;
+  }
   if (numpadClosePending) {
     if (customNumpad) {
       lv_obj_t* old = customNumpad;

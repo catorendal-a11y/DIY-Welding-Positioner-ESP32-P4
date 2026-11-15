@@ -27,7 +27,8 @@ static float testRpm = 0.5f;
 [[noreturn]] void fatal_halt(const char*) { std::abort(); }
 void safety_report_motor_fault(FaultReason reason) { testFault = reason; control_transition_to(STATE_ESTOP); }
 bool safety_inhibit_motion() { return testFault != FAULT_NONE; }
-bool safety_check_ui_reset() { return false; }
+static bool testUiReset = false;
+bool safety_check_ui_reset() { const bool reset = testUiReset; testUiReset = false; return reset; }
 void safety_register_watchdog() {}
 void safety_feed_watchdog() {}
 void safety_task_ready(uint32_t) {}
@@ -61,7 +62,7 @@ void setUp() {
   control_set_calibration_active(false);
   simTestMillis = 100;
   testStepper = FastAccelStepper{};
-  testFault = FAULT_NONE;
+  testFault = FAULT_NONE; testUiReset = false; g_flashWriting.store(false);
   testDirection = DIR_CW;
   testRpm = 0.5f;
   if (!g_settings_mutex) g_settings_mutex = xSemaphoreCreateMutex();
@@ -561,6 +562,31 @@ void test_deferred_start_never_survives_fault_reset_or_stop() {
   simTestMillis += 201; control_run_cycle();  // prior halt in this test re-armed the settle
   TEST_ASSERT_EQUAL(STATE_RUNNING, control_get_state());
 }
+void test_flash_stall_does_not_cancel_a_waiting_start() {
+  const uint32_t ticket = control_motion_generation();
+  g_flashWriting.store(true); simTestMillis += 101;  // safetyTask runs first after the stall.
+  control_check_stop_deadline(simTestMillis);
+  g_flashWriting.store(false); control_run_cycle();
+  TEST_ASSERT_TRUE(control_deferred_start_valid(ticket));
+  simTestMillis += 101; control_check_stop_deadline(simTestMillis);  // A real stall still cancels.
+  control_run_cycle();
+  TEST_ASSERT_FALSE(control_deferred_start_valid(ticket));
+}
+void test_fault_right_after_reset_gets_its_own_cleanup() {
+  safety_report_motor_fault(FAULT_MOTOR_COMMAND); control_run_cycle();
+  testFault = FAULT_NONE; testUiReset = true; control_run_cycle();
+  TEST_ASSERT_EQUAL(STATE_IDLE, control_get_state());
+  safety_report_motor_fault(FAULT_MOTOR_TIMEOUT);  // Latched before the next control cycle.
+  control_run_cycle();
+  TEST_ASSERT_EQUAL(STATE_ESTOP, control_get_state());
+  char expected[EVENT_LOG_TEXT_LEN];
+  snprintf(expected, sizeof(expected), "FAULT %s", safety_fault_reason_name(FAULT_MOTOR_TIMEOUT));
+  EventLogEntry entries[EVENT_LOG_CAPACITY];
+  const size_t count = event_log_snapshot(entries, EVENT_LOG_CAPACITY);
+  bool logged = false;
+  for (size_t i = 0; i < count; ++i) logged = logged || strcmp(entries[i].text, expected) == 0;
+  TEST_ASSERT_TRUE(logged);
+}
 void test_finite_move_deadline_and_completed_move_cancellation() {
   step_execute(90); TEST_ASSERT_EQUAL(STATE_STEP,control_get_state());
   simTestMillis += motionDeadlineBudget.load(); control_check_stop_deadline(simTestMillis);
@@ -593,6 +619,8 @@ void test_below_floor_rate_is_rejected_without_silent_speedup() {
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_deferred_start_never_survives_fault_reset_or_stop);
+  RUN_TEST(test_flash_stall_does_not_cancel_a_waiting_start);
+  RUN_TEST(test_fault_right_after_reset_gets_its_own_cleanup);
   RUN_TEST(test_finite_move_deadline_and_completed_move_cancellation);
   RUN_TEST(test_motion_checked_range_and_invalid_commands);
   RUN_TEST(test_below_floor_rate_is_rejected_without_silent_speedup);

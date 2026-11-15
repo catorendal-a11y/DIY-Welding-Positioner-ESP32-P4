@@ -40,8 +40,13 @@ static bool reboot_allowed_or_explain() {
     screen_confirm_create("RESTART NOT POSSIBLE", "The machine is not idle.\nStop it first, then try again.", nullptr, nullptr);
     return false;
   }
-  if (storage_status() == STORAGE_PENDING) {
-    screen_confirm_create("RESTART NOT POSSIBLE", "Settings are still being saved.\nWait a moment, then try again.", nullptr, nullptr);
+  // A failed write keeps its request queued for retry: the data is still unsaved.
+  const StorageStatus storage = storage_status();
+  if (storage != STORAGE_SAVED) {
+    screen_confirm_create("RESTART NOT POSSIBLE",
+                          storage == STORAGE_ERROR ? "Saving settings failed and is retrying.\nWait for it to finish, then try again."
+                                                   : "Settings are still being saved.\nWait a moment, then try again.",
+                          nullptr, nullptr);
     return false;
   }
   return true;

@@ -174,6 +174,8 @@ static std::atomic<float> lastPotAdc{2047.5f};
 static std::atomic<bool> baselinePedal{false};
 static std::atomic<bool> pedalEnabled{false};
 static std::atomic<bool> pedalApplyPending{false};
+// Set by a pedal settings tick; cleared only once a fresh ADS sample re-baselines the pedal.
+static bool pedalBaselinePending = false;
 static std::atomic<float> pedalFiltered{2047.5f};
 static std::atomic<float> cachedTargetRpm{MIN_RPM};
 static std::atomic<bool> sliderPriorityOverride{false};
@@ -241,10 +243,11 @@ float speed_get_workpiece_diameter_mm(void) { return g_workpiece_od_mm.load(std:
 // Forward Hz: rpm_workpiece * steps_per_workpiece_rev / 60. Inverse: speed_get_actual_rpm.
 float speed_steps_per_gear_output_rev(void) { return (float)microstep_get_steps_per_rev() * machine_gear_ratio(); }
 
-float rpmToStepHz(float rpm_workpiece) {
-  const float d_m = effective_emne_d_m();
+static float rpm_to_step_hz_at(float rpm_workpiece, float d_m) {
   return rpm_workpiece * motion_steps_per_workpiece_rev(speed_steps_per_gear_output_rev(), d_m, machine_roller_m()) / 60.0f;
 }
+
+float rpmToStepHz(float rpm_workpiece) { return rpm_to_step_hz_at(rpm_workpiece, effective_emne_d_m()); }
 
 // Command-side calibration (same factor intent as calibration_apply_steps on angleToSteps).
 float rpmToStepHzCalibrated(float rpm_command) { return rpmToStepHz(rpm_command * calibration_get_factor()); }
@@ -377,7 +380,10 @@ float speed_get_rpm_min_for_diameter(float mm) {
   const float hz = speed_steps_per_gear_output_rev() * diameter_mm_to_m(mm) / machine_roller_m() * calibration_get_factor() / 60.0f;
   if (!std::isfinite(hz) || hz <= 0) return MAX_RPM + 1;
   // Round upwards to the UI's 0.001 RPM precision, never hide a rate increase.
-  return std::max(MIN_RPM, std::ceil(START_SPEED / hz * 1000.0f) / 1000.0f);
+  float rpm = std::max(MIN_RPM, std::ceil(START_SPEED / hz * 1000.0f) / 1000.0f);
+  // Float rounding can leave k/1000 a hair under START_SPEED on the real conversion path.
+  if (rpm_to_step_hz_at(rpm * calibration_get_factor(), diameter_mm_to_m(mm)) < START_SPEED) rpm += 0.001f;
+  return rpm;
 }
 float speed_clamp_rpm(float rpm) {
   const float minimum = speed_get_rpm_min(), maximum = speed_get_rpm_max();
@@ -398,6 +404,7 @@ void speed_update_adc() {
   bool pedalSettingsTick = pedalApplyPending.exchange(false, std::memory_order_acq_rel);
   if (pedalSettingsTick) {
     buttonsActive.store(false, std::memory_order_release);
+    pedalBaselinePending = true;
   }
 
   float raw = (float)analogRead(PIN_POT);
@@ -416,7 +423,8 @@ void speed_update_adc() {
     int16_t adsVal = 0;
     const bool fresh = ads_poll_and_start(&adsVal);
     float pedalAdc = (float)adsVal * ADS1115_TO_ADC_SCALE;
-    if (fresh && pedalSettingsTick) {
+    if (fresh && pedalBaselinePending) {
+      pedalBaselinePending = false;
       pedalFiltered = pedalAdc;
       lastPotAdc.store(pedalAdc, std::memory_order_release);
       baselinePedal.store(true);
@@ -539,6 +547,8 @@ void speed_apply() {
   if (!motorRunning) return;
 
   uint32_t mhz = motor_milli_hz_for_rpm_calibrated(cachedTargetRpm.load(std::memory_order_relaxed));
+  // Never hand the driver 0 mHz; an infeasible target still stops via the same fault.
+  if (!mhz) { motor_command_failed(); return; }
   motor_set_target_milli_hz(mhz);
 }
 

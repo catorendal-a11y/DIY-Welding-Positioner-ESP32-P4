@@ -2,7 +2,7 @@
 // TIG Welding Rotator Controller - Hardware Configuration
 // Waveshare/Guition ESP32-P4 4.3" Touch Display Dev Board
 
-#define FW_VERSION "v2.4.0"
+#define FW_VERSION "v2.4.1"
 #ifndef FW_BUILD_ID
 #define FW_BUILD_ID "local"  // Firmware builds get the commit from scripts/pio_pre_unique_bin.py
 #endif
@@ -127,11 +127,23 @@
 // ───────────────────────────────────────────────────────────────────────────────
 // LOG_E is always compiled in — errors must be diagnosable in the field.
 // LOG_W/I/D are debug-only for quiet production serial output.
-#define LOG_E(f, ...) Serial.printf("[E] " f "\n", ##__VA_ARGS__)
+// The USB mirror shares the CDC port: logs are dropped while it is connected so
+// text never lands inside a binary mirror frame.
+#if ENABLE_USB_UI_MIRROR
+bool usb_mirror_owns_serial();
+#define LOG_SERIAL_FREE() (!usb_mirror_owns_serial())
+#else
+#define LOG_SERIAL_FREE() true
+#endif
+#define LOG_PRINT(f, ...)                                     \
+  do {                                                        \
+    if (LOG_SERIAL_FREE()) Serial.printf(f, ##__VA_ARGS__);   \
+  } while (0)
+#define LOG_E(f, ...) LOG_PRINT("[E] " f "\n", ##__VA_ARGS__)
 #if DEBUG_BUILD
-#define LOG_D(f, ...) Serial.printf("[D] " f "\n", ##__VA_ARGS__)
-#define LOG_I(f, ...) Serial.printf("[I] " f "\n", ##__VA_ARGS__)
-#define LOG_W(f, ...) Serial.printf("[W] " f "\n", ##__VA_ARGS__)
+#define LOG_D(f, ...) LOG_PRINT("[D] " f "\n", ##__VA_ARGS__)
+#define LOG_I(f, ...) LOG_PRINT("[I] " f "\n", ##__VA_ARGS__)
+#define LOG_W(f, ...) LOG_PRINT("[W] " f "\n", ##__VA_ARGS__)
 #else
 #define LOG_D(...) \
   do {             \
@@ -147,12 +159,7 @@
 // ───────────────────────────────────────────────────────────────────────────────
 // ASCII SANITIZATION — LVGL Montserrat fonts only cover 0x20-0x7E
 // ───────────────────────────────────────────────────────────────────────────────
-#include <cstddef>
-inline void sanitize_ascii(char* buf, unsigned int len) {
-  for (unsigned int i = 0; i < len && buf[i]; i++) {
-    if (buf[i] < 0x20 || buf[i] > 0x7E) buf[i] = '?';
-  }
-}
+#include "storage/test_storage_logic.h"  // The NVS clamps
 
 // Cross-core atomic flags (g_wakePending etc.) live in src/app_state.h.
 // Files that need them should include "app_state.h" directly.

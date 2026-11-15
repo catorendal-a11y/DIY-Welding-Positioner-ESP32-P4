@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Strips skipped during a flash write are redrawn.
 - USB mirror frames are no longer interleaved with logs, and the viewer requests a redraw after a damaged frame.
 - Main shows fault and range reasons before storage messages; the stale banner draws above input panels.
-- Pulse re-limits its speed; the Display preview is not saved by an unrelated save; REBOOT waits for a failed save to retry; the setup wizard keeps its motor-saved credit; About shows the current gear ratio.
+- Pulse re-limits its speed; the Display preview is not saved by an unrelated save; REBOOT warns while a failed save is retrying; the setup wizard keeps its motor-saved credit; About shows the current gear ratio.
 - On-device storage tests restore and flush the user's settings and programs and expect the 0x5000 NVS partition.
 - Native tests exercise the production clamp and touch-mapping code.
 

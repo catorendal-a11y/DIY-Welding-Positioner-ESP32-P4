@@ -19,7 +19,7 @@ Actual LVGL simulator capture with example data. Main RPM +/− controls sit bes
 ## Current Status: v2.4.1 - Audit fixes
 
 > [!NOTE]
-> Release **v2.4.1** is the current firmware identifier (**`FW_VERSION`**). It fixes 22 defects from a code audit, among them touch read errors during a held press, STOP acting on touch-down, a fault reset race and USB mirror press expiry. It has not been tested on the machine; bench-test it before welding.
+> Release **v2.4.1** is the current firmware identifier (**`FW_VERSION`**). It fixes 22 defects from a code audit, among them touch read errors during a held press, STOP acting on touch-down, a fault reset race and USB mirror press expiry. The owner flashed it on 2026-11-15 and confirmed that it runs on the machine; bench-test your own build before welding.
 >
 > v2.4.0 reworks every screen for gloved use, makes the fault screen lead with the next action, shows the machine state on the screen saver and fixes a heartbeat timestamp race and eight screen-logic defects. The owner flashed the v2.4.0 code on 2026-11-10 and confirmed that it boots and that the reworked screens, the fault screen and the screen saver display correctly. Motion, pedal and calibration were not re-tested on it.
 

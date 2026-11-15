@@ -4,7 +4,7 @@
 **Published firmware:** v2.4.1
 **Source:** master - fixes for 22 audit findings (released as v2.4.1)
 **Build:** 480 native/control/speed/storage/safety test cases, packaging regressions, Linux/Windows simulator self-tests/layout audits and release/debug/mirror builds. **The owner reported v2.3.0 tested on the assembled machine on 2026-11-04.** TIG HF works on the owner's machine. The owner reported the v2.3.1 build working on the same machine the same day. Stop time and calibration accuracy have not been measured.
-**v2.4.1:** fixes for 22 defects from a code audit: touch read errors during a held press, STOP on touch-down, a fault reset race, the lowest-speed rounding fault, legacy file removal on erase, unlatched reset reasons, event log drops and USB mirror press expiry and framing. **Not tested on the machine.** See the [release notes](docs/releases/v2.4.1.md).
+**v2.4.1:** fixes for 22 defects from a code audit: touch read errors during a held press, STOP on touch-down, a fault reset race, the lowest-speed rounding fault, legacy file removal on erase, unlatched reset reasons, event log drops and USB mirror press expiry and framing. The owner flashed it on 2026-11-15 and confirmed that it runs on the machine. See the [release notes](docs/releases/v2.4.1.md).
 **v2.4.0:** a heartbeat timestamp race fix, eight screen-logic fixes and the reworked screens, fault overlay and screen saver. The owner flashed the v2.4.0 code on 2026-11-10 and confirmed that it boots and that the reworked screens, the fault screen and the screen saver display correctly. Motion, pedal and calibration were not re-tested on it. See the [release notes](docs/releases/v2.4.0.md).
 
 ---

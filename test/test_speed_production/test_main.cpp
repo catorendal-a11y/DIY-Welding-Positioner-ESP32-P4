@@ -58,6 +58,27 @@ void test_floor_is_visible_and_never_silently_raises_driver_rate() {
   TEST_ASSERT_FLOAT_WITHIN(0.000001f,0.004f,speed_get_target_rpm());
   TEST_ASSERT_EQUAL_UINT32(21600,motor_milli_hz_for_rpm_calibrated(speed_get_target_rpm()));
 }
+void test_reported_floor_always_converts_to_start_speed() {
+  // 1/4 step, 45 mm roller, 25 mm OD used to report 0.025 RPM = 19.999998 Hz (rejected).
+  g_settings.microstep=4; g_settings.roller_mm=45; speed_set_workpiece_diameter_mm(25);
+  TEST_ASSERT_TRUE(motor_milli_hz_for_rpm_calibrated(speed_clamp_rpm(0)) >= START_SPEED * 1000u);
+  static const uint16_t steps[] = {4, 8, 16, 32};
+  for (uint16_t ms : steps) {
+    g_settings.microstep = ms;
+    for (int roller = 30; roller <= 160; ++roller) {
+      g_settings.roller_mm = (float)roller;
+      for (int od = 1; od <= 300; ++od) {
+        speed_set_workpiece_diameter_mm((float)od);
+        if (speed_get_rpm_min() > speed_get_rpm_max()) continue;
+        if (motor_milli_hz_for_rpm_calibrated(speed_get_rpm_min()) == 0) {
+          char msg[64]; snprintf(msg, sizeof(msg), "ms=%u roller=%d od=%d", (unsigned)ms, roller, od);
+          TEST_FAIL_MESSAGE(msg);
+        }
+      }
+    }
+  }
+  g_settings.roller_mm = D_RULLE * 1000.0f;
+}
 void test_geometry_with_no_feasible_range_cannot_command_motor() {
   g_settings.microstep=4; speed_set_workpiece_diameter_mm(1); g_settings.max_rpm=0.1f;
   speed_sync_rpm_limits_from_settings(); speed_slider_set(0.1f);
@@ -189,6 +210,7 @@ int main() {
   UNITY_BEGIN();
   RUN_TEST(test_real_geometry_rejects_overflow_and_nonfinite);
   RUN_TEST(test_floor_is_visible_and_never_silently_raises_driver_rate);
+  RUN_TEST(test_reported_floor_always_converts_to_start_speed);
   RUN_TEST(test_geometry_with_no_feasible_range_cannot_command_motor);
   RUN_TEST(test_pedal_takes_over_only_when_it_reaches_the_ui_speed);
   RUN_TEST(test_source_change_rebases_instead_of_simulating_movement);

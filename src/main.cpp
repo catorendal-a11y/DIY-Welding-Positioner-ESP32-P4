@@ -307,8 +307,11 @@ void setup() {
   if (storage_boot_corrupt()) safety_report_boot_fault(FAULT_STORAGE_CORRUPT);
 
   const esp_reset_reason_t resetReason = esp_reset_reason();
-  if (resetReason == ESP_RST_PANIC || resetReason == ESP_RST_INT_WDT || resetReason == ESP_RST_TASK_WDT ||
-      resetReason == ESP_RST_WDT || resetReason == ESP_RST_BROWNOUT) {
+  // Latch every reset except deliberate ones, so new causes (PWR_GLITCH, CPU_LOCKUP, ...) fail safe.
+  const bool deliberateReset = resetReason == ESP_RST_POWERON || resetReason == ESP_RST_EXT ||
+                               resetReason == ESP_RST_SW || resetReason == ESP_RST_DEEPSLEEP ||
+                               resetReason == ESP_RST_USB || resetReason == ESP_RST_JTAG;
+  if (!deliberateReset) {
     event_log_addf("RESET CAUSE %d", static_cast<int>(resetReason));
     safety_report_boot_fault(FAULT_WATCHDOG_RESET);
   }

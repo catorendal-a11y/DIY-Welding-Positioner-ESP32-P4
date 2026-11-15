@@ -138,6 +138,8 @@ struct Parser {
   uint8_t headerBuf[USB_MIRROR_HEADER_SIZE] = {};
   UsbMirrorHeader header{};
   std::vector<uint8_t> payload;
+  uint32_t nextSequence = 0;
+  bool frameLost = false;  // CRC error or sequence gap: ask the device for a redraw.
 };
 
 static void parser_reset(Parser& p) {
@@ -232,12 +234,24 @@ static void handle_packet(const UsbMirrorHeader& h, const std::vector<uint8_t>& 
   }
 }
 
+// Marks a lost frame so stale pixels get repainted (device text or USB loss).
+static void check_packet_intact(Parser& p) {
+  if (p.nextSequence != 0 && p.header.sequence != p.nextSequence) p.frameLost = true;
+  p.nextSequence = p.header.sequence + 1;
+  if (p.header.payload_len > 0 && usb_mirror_crc32(p.payload.data(), p.payload.size()) != p.header.payload_crc) {
+    p.frameLost = true;
+  }
+}
+
 static void parse_bytes(Parser& p, const uint8_t* data, int len,
                         std::vector<uint16_t>& framebuffer, SDL_Texture* texture,
                         uint32_t& lastVideoMs, bool& helloSeen) {
   static const uint8_t magicBytes[4] = {'R', 'M', 'R', '1'};
 
-  if ((p.magicPos || p.headerPos || p.payloadPos) && now_ms() - p.lastByteAt > 250u) parser_reset(p);
+  if ((p.magicPos || p.headerPos || p.payloadPos) && now_ms() - p.lastByteAt > 250u) {
+    if (p.headerPos) p.frameLost = true;
+    parser_reset(p);
+  }
   for (int i = 0; i < len; i++) {
     p.lastByteAt = now_ms();
     uint8_t b = data[i];
@@ -261,12 +275,14 @@ static void parse_bytes(Parser& p, const uint8_t* data, int len,
       if (p.headerPos == USB_MIRROR_HEADER_SIZE) {
         if (!usb_mirror_read_header(p.headerBuf, sizeof(p.headerBuf), p.header) ||
             p.header.payload_len > (USB_MIRROR_VIDEO_RECT_SIZE + USB_MIRROR_MAX_CHUNK_PAYLOAD)) {
+          p.frameLost = true;
           parser_reset(p);
           continue;
         }
         p.payload.assign(p.header.payload_len, 0);
         p.payloadPos = 0;
         if (p.header.payload_len == 0) {
+          check_packet_intact(p);
           handle_packet(p.header, p.payload, framebuffer, texture, lastVideoMs, helloSeen);
           parser_reset(p);
         }
@@ -277,6 +293,7 @@ static void parse_bytes(Parser& p, const uint8_t* data, int len,
     if (p.payloadPos < p.payload.size()) {
       p.payload[p.payloadPos++] = b;
       if (p.payloadPos == p.payload.size()) {
+        check_packet_intact(p);
         handle_packet(p.header, p.payload, framebuffer, texture, lastVideoMs, helloSeen);
         parser_reset(p);
       }
@@ -333,6 +350,9 @@ int main(int argc, char** argv) {
   uint32_t lastVideoMs = 0;
   bool helloSeen = false;
   bool mouseDown = false;
+  int pressX = 0, pressY = 0;
+  uint32_t lastPressMs = 0;
+  uint32_t lastRedrawMs = 0;
   Parser parser;
 
   bool running = true;
@@ -348,8 +368,10 @@ int main(int argc, char** argv) {
         int ww = 0, wh = 0;
         SDL_GetWindowSize(window, &ww, &wh);
         mouseDown = true;
-        send_pointer(serial, map_coord(ev.button.x, ww, USB_MIRROR_WIDTH),
-                     map_coord(ev.button.y, wh, USB_MIRROR_HEIGHT), true, txSequence);
+        pressX = map_coord(ev.button.x, ww, USB_MIRROR_WIDTH);
+        pressY = map_coord(ev.button.y, wh, USB_MIRROR_HEIGHT);
+        lastPressMs = now_ms();
+        send_pointer(serial, pressX, pressY, true, txSequence);
       } else if (ev.type == SDL_MOUSEBUTTONUP && ev.button.button == SDL_BUTTON_LEFT) {
         int ww = 0, wh = 0;
         SDL_GetWindowSize(window, &ww, &wh);
@@ -359,15 +381,27 @@ int main(int argc, char** argv) {
       } else if (ev.type == SDL_MOUSEMOTION && mouseDown) {
         int ww = 0, wh = 0;
         SDL_GetWindowSize(window, &ww, &wh);
-        send_pointer(serial, map_coord(ev.motion.x, ww, USB_MIRROR_WIDTH),
-                     map_coord(ev.motion.y, wh, USB_MIRROR_HEIGHT), true, txSequence);
+        pressX = map_coord(ev.motion.x, ww, USB_MIRROR_WIDTH);
+        pressY = map_coord(ev.motion.y, wh, USB_MIRROR_HEIGHT);
+        lastPressMs = now_ms();
+        send_pointer(serial, pressX, pressY, true, txSequence);
       }
     }
 
     uint32_t now = now_ms();
+    // The device drops a press after USB_MIRROR_PRESS_TIMEOUT_MS; renew while held.
+    if (mouseDown && now - lastPressMs >= USB_MIRROR_PRESS_RENEW_MS) {
+      send_pointer(serial, pressX, pressY, true, txSequence);
+      lastPressMs = now;
+    }
     if (!helloSeen && now - lastHelloMs >= 500) {
       send_packet(serial, USB_MIRROR_PACKET_HELLO, nullptr, 0, txSequence);
       lastHelloMs = now;
+    }
+    if (helloSeen && parser.frameLost && now - lastRedrawMs >= USB_MIRROR_REDRAW_MIN_INTERVAL_MS) {
+      send_packet(serial, USB_MIRROR_PACKET_REDRAW, nullptr, 0, txSequence);
+      parser.frameLost = false;
+      lastRedrawMs = now;
     }
     if (now - lastKeepaliveMs >= 400) {
       send_packet(serial, USB_MIRROR_PACKET_KEEPALIVE, nullptr, 0, txSequence);

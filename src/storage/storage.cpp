@@ -56,11 +56,11 @@ static Preferences g_prefs;
 static bool g_prefs_open = false;
 
 static bool storage_migrate_littlefs_to_nvs();
+static bool storage_remove_legacy_files();
 static std::atomic<bool> s_bootCorrupt{false};
 bool storage_boot_corrupt() { return s_bootCorrupt.load(); }
 static bool storage_apply_settings_doc(JsonObjectConst doc);
 static bool storage_parse_presets_buffer(const uint8_t* data, size_t len);
-static int storage_sanitize_microstep(int value);
 static bool storage_decode_settings_doc(JsonObjectConst doc, SystemSettings& decoded);
 static bool storage_decode_presets_buffer(const uint8_t* data, size_t len, std::vector<Preset>& loaded);
 
@@ -130,7 +130,19 @@ static bool storage_migrate_littlefs_to_nvs() {
     valid = cfgWritten && prsWritten;
   }
   LittleFS.end();
+  if (valid && !storage_remove_legacy_files()) LOG_W("Legacy LittleFS files not removed");
   return valid;  // On failure the original files are retained.
+}
+
+// Legacy files are read whenever an NVS key is empty, so once NVS owns the data
+// (or an erase empties it) they must go, or they come back on the next boot.
+static bool storage_remove_legacy_files() {
+  if (!LittleFS.begin(false)) return true;
+  bool removed = true;
+  for (const char* path : {SETTINGS_FILE, PRESETS_FILE})
+    if (LittleFS.exists(path) && !LittleFS.remove(path)) removed = false;
+  LittleFS.end();
+  return removed;
 }
 
 bool storage_load_presets() {
@@ -210,14 +222,12 @@ static bool storage_decode_presets_buffer(const uint8_t* data, size_t len, std::
     p.step_dwell_sec = constrain(p.step_dwell_sec, 0.0f, 30.0f);
     p.direction = p.direction == DIR_CCW ? DIR_CCW : DIR_CW;
     // Only the absolute range: a lowered Max RPM blocks the program at start and never rewrites it.
-    p.rpm = constrain(p.rpm, MIN_RPM, MAX_RPM);
-    p.pulse_on_ms = constrain(p.pulse_on_ms, (uint32_t)PULSE_MS_MIN, (uint32_t)PULSE_MS_MAX);
-    p.pulse_off_ms = constrain(p.pulse_off_ms, (uint32_t)PULSE_MS_MIN, (uint32_t)PULSE_MS_MAX);
-    p.step_angle = constrain(p.step_angle, 0.1f, 360.0f);
-    if (p.workpiece_diameter_mm < 1.0f || p.workpiece_diameter_mm > 20000.0f) {
-      p.workpiece_diameter_mm = 0.0f;
-    }
-    p.timer_ms = constrain(p.timer_ms, (uint32_t)1, (uint32_t)3600000);
+    p.rpm = preset_constrain_rpm(p.rpm, MIN_RPM, MAX_RPM);
+    p.pulse_on_ms = preset_constrain_pulse_on(p.pulse_on_ms);
+    p.pulse_off_ms = preset_constrain_pulse_off(p.pulse_off_ms);
+    p.step_angle = preset_constrain_step_angle(p.step_angle);
+    p.workpiece_diameter_mm = preset_constrain_workpiece_diameter_mm(p.workpiece_diameter_mm);
+    p.timer_ms = preset_constrain_timer_ms(p.timer_ms);
 
     loaded.push_back(p);
   }
@@ -317,34 +327,26 @@ bool storage_load_settings() {
   return true;
 }
 
-static int storage_sanitize_microstep(int value) {
-  if (value == 4 || value == 8 || value == 16 || value == 32) {
-    return value;
-  }
-  return 16;
-}
-
 static bool storage_decode_settings_doc(JsonObjectConst doc, SystemSettings& decoded) {
   if (!std::isfinite(doc["max_rpm"] | MAX_RPM) || !std::isfinite(doc["calibration_factor"] | 1.0f))
     return false;
   if (!doc["setup_completed"].isNull() && !doc["setup_completed"].is<bool>()) return false;
-  decoded.acceleration =
-      constrain(doc["acceleration"] | default_settings().acceleration, (int)1000, (int)30000);
-  decoded.microstep = storage_sanitize_microstep(doc["microstep"] | 16);
+  decoded.acceleration = settings_constrain_acceleration(doc["acceleration"] | default_settings().acceleration);
+  decoded.microstep = settings_constrain_microstep(doc["microstep"] | 16);
   {
     float mx = doc["max_rpm"] | MAX_RPM;
     if (mx < MIN_RPM) mx = MIN_RPM;
     if (mx > MAX_RPM) mx = MAX_RPM;
     decoded.max_rpm = mx;
   }
-  decoded.calibration_factor = constrain(doc["calibration_factor"] | 1.0f, 0.5f, 1.5f);
-  decoded.brightness = constrain(doc["brightness"] | 150, 10, 255);
+  decoded.calibration_factor = settings_constrain_calibration(doc["calibration_factor"] | 1.0f);
+  decoded.brightness = settings_constrain_brightness(doc["brightness"] | 150);
   decoded.dim_timeout = settings_dim_seconds(doc["dim_timeout"] | 60);
   decoded.dir_switch_enabled = doc["dir_switch_enabled"] | true;
   decoded.invert_direction = doc["invert_direction"] | false;
-  decoded.accent_color = constrain(doc["accent_color"] | 0, 0, 7);
+  decoded.accent_color = settings_constrain_accent(doc["accent_color"] | 0);
   decoded.color_scheme = constrain(doc["color_scheme"] | 0, 0, 1);
-  decoded.countdown_seconds = constrain(doc["countdown_seconds"] | 3, 1, 10);
+  decoded.countdown_seconds = settings_constrain_countdown(doc["countdown_seconds"] | 3);
   // Missing JSON key: keep project default DM542T timing for older NVS blobs.
   decoded.stepper_driver = constrain(doc["stepper_driver"] | (int)STEPPER_DRIVER_DM542T, 0, 1);
   decoded.pedal_enabled = doc["pedal_enabled"] | false;
@@ -510,9 +512,14 @@ bool storage_format() {
   if (!g_storageFormatting.compare_exchange_strong(inactive, true, std::memory_order_acq_rel)) return false;
   control_stop(); digitalWrite(PIN_ENA, HIGH);
   g_flashWriting.store(true);
+  bool legacyRemoved = storage_remove_legacy_files();
   xSemaphoreTake(g_nvs_mutex, portMAX_DELAY);
+  // A legacy file that cannot be removed must not block the only on-device way
+  // out of corrupt NVS; at worst its old settings are imported again on boot.
   const bool cleared = g_prefs_open && g_prefs.clear();
   xSemaphoreGive(g_nvs_mutex);
+  if (cleared && !legacyRemoved) legacyRemoved = storage_remove_legacy_files();
+  if (!legacyRemoved) LOG_E("Erase: legacy settings files remain and may be imported again");
   vTaskDelay(pdMS_TO_TICKS(10));
   g_flashWriting.store(false);
   if (!cleared) {

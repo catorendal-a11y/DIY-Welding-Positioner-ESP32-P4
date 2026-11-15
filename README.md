@@ -22,8 +22,8 @@ Touchscreen controller for a single-axis TIG/MIG welding rotator, built for the 
 
 | You want to | Go to |
 |---|---|
-| 🖥️ **See the UI without hardware** | [Windows simulator](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.4.0/welding-positioner-v2.4.0-simulator-windows-x64.zip): extract all files, open **Start Simulator.cmd**. [Instructions](docs/releases/SIMULATOR.md) |
-| ⚡ **Flash a controller** | [Firmware downloads](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.4.0) and [install firmware](#install-firmware) |
+| 🖥️ **See the UI without hardware** | [Windows simulator](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/download/v2.4.1/welding-positioner-v2.4.1-simulator-windows-x64.zip): extract all files, open **Start Simulator.cmd**. [Instructions](docs/releases/SIMULATOR.md) |
+| ⚡ **Flash a controller** | [Firmware downloads](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.4.1) and [install firmware](#install-firmware) |
 | 🛠️ **Build one** | [Parts](#parts), [wiring](#wiring) and the [builder guide](docs/BUILDER_GUIDE.md) |
 | ▶️ **See it run** | [Hardware demo](https://youtu.be/GygLl6XY-TM), which shows an earlier UI |
 | 🩺 **Fix a problem** | [Troubleshooting](wiki/Troubleshooting.md) |
@@ -40,6 +40,8 @@ Touchscreen controller for a single-axis TIG/MIG welding rotator, built for the 
 
 > [!NOTE]
 > **Tested by the owner.** The owner reported on 2026-11-04 that everything works on the assembled v2.3.0 machine, including TIG HF, and that v2.3.1 works on the same machine. Stop time is unmeasured.
+>
+> **v2.4.1 is not tested on the machine.** It fixes 22 defects found in a code audit, several of them in touch input, fault reset and the USB mirror. Native tests and firmware builds pass. Bench-test it before welding: [checks to run](docs/releases/v2.4.1.md#validation-and-hardware-status)
 >
 > **v2.4.0 is checked on screen only.** The owner flashed the v2.4.0 code on 2026-11-10 and confirmed that it boots and that the reworked screens, the fault screen and the screen saver display correctly. Motion, pedal and calibration were not re-tested on it. [Checks to run on your own build](docs/releases/v2.4.0.md#validation-and-hardware-status)
 
@@ -71,6 +73,19 @@ Touchscreen controller for a single-axis TIG/MIG welding rotator, built for the 
 
 > [!TIP]
 > Single axis with no encoder: RPM and progress are calculated, so calibration needs a real measurement.
+
+## New in v2.4.1
+
+| Area | Change |
+|---|---|
+| Touch | A touch read error during a held press no longer acts as a release. STOP now acts on touch-down, so an HF burst can neither drop a stop nor turn it into a START |
+| Fault reset | A fault that latches while RESET TO IDLE is processed is no longer erased |
+| Speed | The lowest pot or pedal speed no longer raises FAULT MOTOR COMMAND on some roller and diameter combinations |
+| Storage | Erase data also removes old LittleFS files, so a corrupt legacy file can no longer bring the boot lockout back |
+| Restart | Power glitch and CPU lockup resets show the UNEXPECTED RESET screen |
+| USB mirror | A held remote press expires after 150 ms without renewal, and logs no longer corrupt mirror frames. Protocol v2: rebuild the viewer |
+
+[Release notes](docs/releases/v2.4.1.md)
 
 ## New in v2.4.0
 
@@ -142,7 +157,7 @@ To build from source with PlatformIO:
 ```sh
 git clone https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4.git
 cd DIY-Welding-Positioner-ESP32-P4
-git checkout v2.4.0
+git checkout v2.4.1
 pio run
 ```
 
@@ -170,9 +185,9 @@ The wizard does not measure stop time or certify wiring. [Every wizard screen](d
 
 ## Validation
 
-<p><img src="https://img.shields.io/badge/native%20tests-492%20passing-2e7d32?style=flat-square" alt="native tests: 492 passing"> <img src="https://img.shields.io/badge/simulator-Linux%20%2B%20Windows-2e7d32?style=flat-square" alt="simulator: Linux + Windows"> <img src="https://img.shields.io/badge/layout%20audit-0%20failures-2e7d32?style=flat-square" alt="layout audit: 0 failures"> <img src="https://img.shields.io/badge/firmware%20builds-release%20·%20debug%20·%20mirror-2e7d32?style=flat-square" alt="firmware builds: release · debug · mirror"> <img src="https://img.shields.io/badge/owner%20tested-v2.3.1-ff6b38?style=flat-square" alt="owner tested: v2.3.1"> <img src="https://img.shields.io/badge/stop%20time-not%20measured-8a3b3b?style=flat-square" alt="stop time: not measured"></p>
+<p><img src="https://img.shields.io/badge/native%20tests-480%20passing-2e7d32?style=flat-square" alt="native tests: 480 passing"> <img src="https://img.shields.io/badge/simulator-Linux%20%2B%20Windows-2e7d32?style=flat-square" alt="simulator: Linux + Windows"> <img src="https://img.shields.io/badge/layout%20audit-0%20failures-2e7d32?style=flat-square" alt="layout audit: 0 failures"> <img src="https://img.shields.io/badge/firmware%20builds-release%20·%20debug%20·%20mirror-2e7d32?style=flat-square" alt="firmware builds: release · debug · mirror"> <img src="https://img.shields.io/badge/owner%20tested-v2.3.1-ff6b38?style=flat-square" alt="owner tested: v2.3.1"> <img src="https://img.shields.io/badge/stop%20time-not%20measured-8a3b3b?style=flat-square" alt="stop time: not measured"></p>
 
-Every commit runs **492 native tests**, packaging tests, Linux and Windows simulator self-tests, a layout audit and three firmware builds. Release binaries come from the validated master commit. The owner reported v2.3.0 tested on the assembled machine on 2026-11-04. TIG HF works on the owner's machine. The owner reported the v2.3.1 build working on the same machine the same day. The v2.4.0 code was flashed on 2026-11-10 and its screens were checked; motion was not re-tested on it. Stop time has not been measured. [v2.4.0 status](docs/releases/v2.4.0.md#validation-and-hardware-status) · [Changelog](CHANGELOG.md)
+Every commit runs **480 native tests**, packaging tests, Linux and Windows simulator self-tests, a layout audit and three firmware builds. Release binaries come from the validated master commit. The owner reported v2.3.0 tested on the assembled machine on 2026-11-04. TIG HF works on the owner's machine. The owner reported the v2.3.1 build working on the same machine the same day. The v2.4.0 code was flashed on 2026-11-10 and its screens were checked; motion was not re-tested on it. v2.4.1 has not been run on the machine. Stop time has not been measured. [v2.4.1 status](docs/releases/v2.4.1.md#validation-and-hardware-status) · [Changelog](CHANGELOG.md)
 
 ## Documentation and contributions
 

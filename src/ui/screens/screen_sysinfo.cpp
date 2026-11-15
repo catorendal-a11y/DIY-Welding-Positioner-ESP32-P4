@@ -49,8 +49,11 @@ static bool reboot_allowed_or_explain() {
 
 static void reboot_cb(lv_event_t* e) {
   if (!reboot_allowed_or_explain()) return;
+  // A save that keeps failing must not lock the restart, but its data is still unsaved: say so.
   screen_confirm_create(
-      "REBOOT DEVICE", "Are you sure? All unsaved data will be lost.",
+      "REBOOT DEVICE",
+      storage_status() == STORAGE_ERROR ? "Saving settings failed.\nRestarting loses unsaved settings."
+                                        : "Are you sure? All unsaved data will be lost.",
       []() {
         if (reboot_allowed_or_explain()) {
           motor_disable();

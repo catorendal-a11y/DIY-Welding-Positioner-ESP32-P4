@@ -4,16 +4,21 @@
 // These tests exercise storage_init(), storage_load/save_settings(),
 // and storage_load/save_presets() against NVS on flash.
 //
-// IMPORTANT: Tests modify g_settings and g_presets, then restore defaults.
+// IMPORTANT: Tests overwrite and erase the production NVS namespace ("wrot").
+// setup() copies the raw "cfg"/"prs" blobs first and writes them back (committed)
+// after the suite. A reset or crash mid-suite still loses them.
 
 #include <Arduino.h>
 #include <unity.h>
 #include <cstring>
+#include <vector>
 #include <nvs.h>
 #include "../../src/storage/storage.h"
 #include "../../src/config.h"
 
-static SystemSettings s_defaultSettings;
+static const char* const kUserBlobKeys[] = {"cfg", "prs"};
+static std::vector<uint8_t> s_userBlobs[2];
+static bool s_hadUserBlob[2] = {};
 static bool s_storageInited = false;
 
 static void ensure_storage_init() {
@@ -46,6 +51,47 @@ static void test_nvs_put_prs_blob(const char* json, size_t len) {
   nvs_close(h);
 }
 
+// Runs outside Unity (before UNITY_BEGIN / after UNITY_END), so it reports instead of asserting.
+// Returns false when a blob exists but could not be read: the suite must then
+// not touch NVS, or restore_user_blobs() would overwrite the user's data.
+static bool backup_user_blobs() {
+  nvs_handle_t h;
+  if (nvs_open("wrot", NVS_READONLY, &h) != ESP_OK) return true;  // Namespace absent: nothing to keep.
+  bool ok = true;
+  for (size_t i = 0; i < 2; ++i) {
+    size_t len = 0;
+    s_hadUserBlob[i] = nvs_get_blob(h, kUserBlobKeys[i], nullptr, &len) == ESP_OK;
+    s_userBlobs[i].resize(len);
+    if (s_hadUserBlob[i] && nvs_get_blob(h, kUserBlobKeys[i], s_userBlobs[i].data(), &len) != ESP_OK) {
+      Serial.printf("ERROR: could not back up NVS key %s\n", kUserBlobKeys[i]);
+      ok = false;
+    }
+  }
+  nvs_close(h);
+  return ok;
+}
+
+static void test_user_nvs_backup_succeeded(void) {
+  TEST_FAIL_MESSAGE("Could not back up user NVS; suite aborted before touching NVS");
+}
+
+static void restore_user_blobs() {
+  nvs_handle_t h;
+  bool ok = nvs_open("wrot", NVS_READWRITE, &h) == ESP_OK;
+  if (ok) {
+    for (size_t i = 0; i < 2; ++i) {
+      const esp_err_t err = s_hadUserBlob[i]
+          ? nvs_set_blob(h, kUserBlobKeys[i], s_userBlobs[i].data(), s_userBlobs[i].size())
+          : nvs_erase_key(h, kUserBlobKeys[i]);
+      ok = ok && (err == ESP_OK || err == ESP_ERR_NVS_NOT_FOUND);
+    }
+    ok = nvs_commit(h) == ESP_OK && ok;
+    nvs_close(h);
+  }
+  Serial.println(ok ? "User NVS settings and programs restored"
+                    : "WARNING: user NVS settings/programs NOT restored");
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // NVS USAGE
 // ────────────────────────────────────────────────────────────────────────────
@@ -59,7 +105,7 @@ void test_nvs_storage_reports_partition(void) {
 void test_nvs_total_matches_partition_table(void) {
   size_t used = 0, total = 0;
   storage_get_usage(&used, &total);
-  TEST_ASSERT_EQUAL(0x6000, total);
+  TEST_ASSERT_EQUAL(0x5000, total);  // default_16MB.csv: nvs size
 }
 
 void test_nvs_used_not_greater_than_total(void) {
@@ -538,9 +584,12 @@ void test_nvs_mutex_exists(void) {
 void setup() {
   delay(2000);
   ensure_storage_init();
-  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  s_defaultSettings = g_settings;
-  xSemaphoreGive(g_settings_mutex);
+  if (!backup_user_blobs()) {
+    UNITY_BEGIN();
+    RUN_TEST(test_user_nvs_backup_succeeded);
+    UNITY_END();
+    return;
+  }
 
   UNITY_BEGIN();
 
@@ -582,12 +631,8 @@ void setup() {
   RUN_TEST(test_presets_mutex_exists);
   RUN_TEST(test_nvs_mutex_exists);
 
+  restore_user_blobs();  // Before UNITY_END so the result is printed before the runner exits.
   UNITY_END();
-
-  xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
-  g_settings = s_defaultSettings;
-  xSemaphoreGive(g_settings_mutex);
-  storage_save_settings();
 }
 
 void loop() {

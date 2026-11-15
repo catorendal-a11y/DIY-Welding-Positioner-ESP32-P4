@@ -103,14 +103,14 @@ bool control_deferred_start_valid(uint32_t generation) {
          control_timestamp_fresh(millis(), lastCycleAt.load(), cyclePublished.load());
 }
 void control_check_stop_deadline(uint32_t now) {
-  const bool stale = cyclePublished.load() && !control_timestamp_fresh(now, lastCycleAt.load(), true);
+  const bool flashing = g_flashWriting.load(std::memory_order_acquire);  // A flash write stalls controlTask too.
+  const bool stale = !flashing && cyclePublished.load() && !control_timestamp_fresh(now, lastCycleAt.load(), true);
   if (stale && !staleInvalidated) motionGate.stop();
   staleInvalidated = stale;
   const SystemState deadlineState = motionDeadlineState.load(std::memory_order_acquire);
   const uint32_t motionAge = now - motionDeadlineAt.load();
   const uint32_t requested = stopRequestedAt.load();
   const uint32_t stopping = stoppingAt.load();
-  const bool flashing = g_flashWriting.load(std::memory_order_acquire);  // A flash write stalls controlTask too.
   if ((requested && !flashing && static_cast<int32_t>(now - (requested - 1u)) >= 50) ||
       (deadlineState != STATE_IDLE && control_get_state() == deadlineState &&
        motionAge <= INT32_MAX && motionAge >= motionDeadlineBudget.load()) ||
@@ -498,8 +498,8 @@ void control_run_cycle() {
         event_log_addf("FAULT %s", safety_fault_reason_name(safety_get_fault_reason()));
         faultCleaned = true;
       }
-      if (safety_check_ui_reset()) {
-        control_transition_to(STATE_IDLE);
+      if (safety_check_ui_reset() && control_transition_to(STATE_IDLE)) {
+        faultCleaned = false;  // A fault before the next cycle needs its own cleanup.
       }
     }
 

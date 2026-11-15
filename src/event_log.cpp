@@ -28,7 +28,7 @@ static std::atomic<uint32_t> s_version{0};
 static std::atomic<uint32_t> s_dropped{0};
 uint32_t event_log_dropped() { return s_dropped.load(); }
 
-static bool event_log_lock() { return s_mutex != nullptr && xSemaphoreTake(s_mutex, 0) == pdTRUE; }
+static bool event_log_lock() { return s_mutex != nullptr && xSemaphoreTake(s_mutex, pdMS_TO_TICKS(2)) == pdTRUE; }
 
 static void event_log_unlock() {
   if (s_mutex) {

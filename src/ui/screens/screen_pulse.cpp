@@ -155,6 +155,7 @@ void screen_pulse_create() {
     pulseOnMs = motion_pulse_clamp_ms(g_settings.pulse_on_ms);
     pulseOffMs = motion_pulse_clamp_ms(g_settings.pulse_off_ms);
     xSemaphoreGive(g_settings_mutex);
+    targetRpm = speed_get_target_rpm();
   }
   adjustEditable = -1;
   ui_create_header(screen, "Pulse rotation", "", nullptr);
@@ -244,6 +245,13 @@ void screen_pulse_update() {
   if (!startBtn) return;
 
   const SystemState state = ui_control_state();
+  if (state == STATE_IDLE) {  // The diameter moves the limits: show what Start will command.
+    const float clamped = speed_clamp_rpm(targetRpm);
+    if (clamped != targetRpm) {
+      targetRpm = clamped;
+      show_rpm();
+    }
+  }
   const bool moving = state != STATE_IDLE && state != STATE_ESTOP;
   const bool showStop = moving || !ui_control_fresh();
   const bool inhibited = !ui_control_fresh() || safety_inhibit_motion() || safety_is_estop_locked() || state == STATE_ESTOP;

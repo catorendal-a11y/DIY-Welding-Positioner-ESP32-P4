@@ -207,11 +207,12 @@ static void update_direction(const ControlSnapshot& view, bool moving, bool bloc
 }
 static void update_detail(bool moving, bool blocked, bool rangeBlocked) {
   const StorageStatus storage = storage_status();
-  const char* message = storage == STORAGE_ERROR ? "Save failed, retry pending"
-                        : storage != STORAGE_SAVED ? "Saving changes..."
-                        : rangeBlocked ? "Speed outside motor range"
+  // Why Start is blocked, and motion warnings, come before storage progress.
+  const char* message = rangeBlocked ? "Speed outside motor range"
                         : blocked ? "Clear fault before restart"
-                        : moving && ui_direction_switch_differs() ? "Direction switch changed; applies at next start" : nullptr;
+                        : moving && ui_direction_switch_differs() ? "Direction switch changed; applies at next start"
+                        : storage == STORAGE_ERROR ? "Save failed, retry pending"
+                        : storage != STORAGE_SAVED ? "Saving changes..." : nullptr;
   bindings.detailRowHidden.set(message != nullptr);
   bindings.detailValueHidden.set(message != nullptr);
   bindings.detailMessageHidden.set(message == nullptr);

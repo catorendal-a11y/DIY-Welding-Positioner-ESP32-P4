@@ -17,6 +17,7 @@ class File {
 struct TestLittleFS {
  bool begin(bool) { return !testLegacy.empty(); }
  bool exists(const char* path) { return testLegacy.count(path)>0; }
+ bool remove(const char* path) { return testLegacy.erase(path)>0; }
  File open(const char* path,const char*) { return File(path); }
  void end() {}
 };

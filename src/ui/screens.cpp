@@ -6,10 +6,12 @@
 #include "theme.h"
 #include "text_metrics.h"
 #include "screen_saver.h"
+#include "input_panel.h"
 #include "../config.h"
 #include "../motor/speed.h"
 #include "../safety/safety.h"
 #include <cmath>
+#include <cstring>
 #include <cstdio>
 #include <cstring>
 
@@ -218,7 +220,7 @@ static int pendingEditSlot = -2;
 
 static bool screen_needs_rebuild(ScreenId id) {
   return id == SCREEN_SETUP || id == SCREEN_PROGRAM_EDIT || id == SCREEN_EDIT_CONT || id == SCREEN_EDIT_PULSE ||
-         id == SCREEN_EDIT_STEP || id == SCREEN_STEP || id == SCREEN_MOTOR_CONFIG;
+         id == SCREEN_EDIT_STEP || id == SCREEN_STEP || id == SCREEN_MOTOR_CONFIG || id == SCREEN_ABOUT;
 }
 
 static void create_screen(ScreenId id) {
@@ -538,8 +540,12 @@ void screens_update_current() {
   const bool stale = !ui_control_fresh() && currentScreen != SCREEN_BOOT && currentScreen != SCREEN_NONE;
   stale_controls(screenRoots[currentScreen], stale);
   if (staleBanner) {
-    if (stale && !safety_is_estop_locked()) lv_obj_set_hidden(staleBanner, false);
-    else lv_obj_set_hidden(staleBanner, true);
+    const bool showBanner = stale && !safety_is_estop_locked();
+    // An open editor hides the screen's Stop and has none itself; cancel it.
+    if (stale) UiInputPanel::cancel_open();
+    // Keep the E-stop overlay above the banner.
+    if (showBanner && !estop_overlay_visible()) lv_obj_move_foreground(staleBanner);
+    lv_obj_set_hidden(staleBanner, !showBanner);
   }
 }
 
@@ -689,6 +695,8 @@ lv_obj_t* ui_create_btn(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t
   ui_btn_style_post(btn, style);
   if (cb) {
     lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, user_data);
+    // STOP also fires on touch-down: a held press that is lost to touch read errors (HF) must still stop.
+    if (strcmp(text, UI_LABEL_STOP) == 0) lv_obj_add_event_cb(btn, cb, LV_EVENT_PRESSED, user_data);
   }
   lv_obj_t* lbl = lv_label_create(btn);
   lv_label_set_text(lbl, text);

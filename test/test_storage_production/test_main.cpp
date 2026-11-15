@@ -57,6 +57,13 @@ void test_storage_migration_validates_both_before_either_write() {
   TEST_ASSERT_FALSE(storage_migrate_littlefs_to_nvs()); TEST_ASSERT_EQUAL(0,g_prefs.getBytesLength("cfg"));
   TEST_ASSERT_EQUAL(2,testLegacy.size());
 }
+void test_storage_legacy_files_removed_after_migration_and_format() {
+  testLegacy[SETTINGS_FILE]={'{','}'};
+  TEST_ASSERT_TRUE(storage_migrate_littlefs_to_nvs()); TEST_ASSERT_TRUE(testLegacy.empty());
+  testLegacy[PRESETS_FILE]={'['};
+  TEST_ASSERT_TRUE(storage_format()); TEST_ASSERT_TRUE(testLegacy.empty());
+  TEST_ASSERT_TRUE(storage_migrate_littlefs_to_nvs());
+}
 void test_storage_preset_receipt_is_not_success_before_exact_commit() {
   const uint32_t ticket=storage_request_presets_save();
   TEST_ASSERT_EQUAL(STORAGE_PENDING,storage_presets_save_status(ticket));
@@ -111,6 +118,7 @@ int main() {
  RUN_TEST(test_storage_normalizes_duplicate_and_missing_ids);
  RUN_TEST(test_storage_bounds_blob_and_requires_exact_read_write);
  RUN_TEST(test_storage_migration_validates_both_before_either_write);
+ RUN_TEST(test_storage_legacy_files_removed_after_migration_and_format);
  RUN_TEST(test_storage_preset_receipt_is_not_success_before_exact_commit);
  RUN_TEST(test_storage_erase_failure_preserves_ram);
  RUN_TEST(test_format_inhibits_motion_before_entering_flash_erase);

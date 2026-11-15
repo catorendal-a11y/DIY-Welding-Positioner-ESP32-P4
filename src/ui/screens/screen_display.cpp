@@ -69,10 +69,13 @@ static void back_cb(lv_event_t* e) {
   dimDraftLoaded = false;
   xSemaphoreTake(g_settings_mutex, portMAX_DELAY);
   const bool themeChanged = g_settings.accent_color != savedAccent || g_settings.color_scheme != savedScheme;
+  const bool previewed = themeChanged || g_settings.brightness != savedBrightness;
   g_settings.brightness = savedBrightness;
   xSemaphoreGive(g_settings_mutex);
   display_set_brightness(savedBrightness);
   if (themeChanged) { theme_set_color(savedAccent); theme_set_scheme(savedScheme); }
+  // Another pending save may have flushed the preview: store the restored values again.
+  if (previewed) storage_save_settings();
   screens_show(SCREEN_SETTINGS);
   if (themeChanged) screens_request_theme_reinit();
 }

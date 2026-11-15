@@ -74,7 +74,11 @@ static void sync_toggles() {
   lv_obj_set_checked(dirToggle, dirSwitchEnabled);
   invertValue.set(invertDir ? "On" : "Off"); dirValue.set(dirSwitchEnabled ? "On" : "Off");
 }
-static void back_cb(lv_event_t*) { screen_setup_return(); }
+static void back_cb(lv_event_t*) {
+  // Only this screen credits the setup wizard, so wait for the save; a failing write keeps Back open.
+  if (saveRequested && storage_settings_save_status(control_config_save_ticket()) != STORAGE_ERROR) return;
+  screen_setup_return();
+}
 static void micro_cb(lv_event_t* event) {
   if (!can_edit()) return;
   selectedMicro = (intptr_t)lv_event_get_user_data(event);

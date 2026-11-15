@@ -1,23 +1,14 @@
-// TIG Rotator Controller - Pure Storage/Config Logic for Testing
-// Extracted from storage.cpp and config.h for native unit testing
+// TIG Rotator Controller - Pure Storage/Config Logic
+// The clamps storage.cpp applies to NVS data. storage.cpp calls these functions and
+// test/test_utils tests them, so a change here is a change to both.
 
 #pragma once
 #include <cstdint>
 #include <cstring>
+#include "../control/motion_policy.h"  // PULSE_MS_MIN, PULSE_MS_MAX
 
 // ───────────────────────────────────────────────────────────────────────────────
-// SANITIZE ASCII — replace non-printable chars with '?'
-// Mirrors sanitize_ascii() in config.h
-// ───────────────────────────────────────────────────────────────────────────────
-
-inline void sanitize_ascii_testable(char* buf, unsigned int len) {
-  for (unsigned int i = 0; i < len && buf[i]; i++) {
-    if (buf[i] < 0x20 || buf[i] > 0x7E) buf[i] = '?';
-  }
-}
-
-// ───────────────────────────────────────────────────────────────────────────────
-// SETTINGS CONSTRAIN — mirrors storage_load_settings() clamp logic
+// SETTINGS CONSTRAIN — used by storage_decode_settings_doc()
 // ───────────────────────────────────────────────────────────────────────────────
 
 inline int settings_constrain_acceleration(int val) {
@@ -31,19 +22,20 @@ inline int settings_constrain_microstep(int val) {
   return 16;
 }
 
-inline uint8_t settings_constrain_brightness(uint8_t val) {
+inline int settings_constrain_brightness(int val) {
   if (val < 10) return 10;
   if (val > 255) return 255;
   return val;
 }
 
-inline uint8_t settings_constrain_countdown(uint8_t val) {
+inline int settings_constrain_countdown(int val) {
   if (val < 1) return 1;
   if (val > 10) return 10;
   return val;
 }
 
-inline uint8_t settings_constrain_accent(uint8_t val) {
+inline int settings_constrain_accent(int val) {
+  if (val < 0) return 0;
   if (val > 7) return 7;
   return val;
 }
@@ -55,7 +47,7 @@ inline float settings_constrain_calibration(float val) {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// PRESET CONSTRAIN — mirrors storage_load_presets() clamp logic
+// PRESET CONSTRAIN — used by storage_decode_presets_buffer()
 // ───────────────────────────────────────────────────────────────────────────────
 
 inline float preset_constrain_rpm(float val, float min_rpm, float max_rpm) {
@@ -65,14 +57,14 @@ inline float preset_constrain_rpm(float val, float min_rpm, float max_rpm) {
 }
 
 inline uint32_t preset_constrain_pulse_on(uint32_t val) {
-  if (val < 100) return 100;
-  if (val > 10000) return 10000;
+  if (val < PULSE_MS_MIN) return PULSE_MS_MIN;
+  if (val > PULSE_MS_MAX) return PULSE_MS_MAX;
   return val;
 }
 
 inline uint32_t preset_constrain_pulse_off(uint32_t val) {
-  if (val < 100) return 100;
-  if (val > 10000) return 10000;
+  if (val < PULSE_MS_MIN) return PULSE_MS_MIN;
+  if (val > PULSE_MS_MAX) return PULSE_MS_MAX;
   return val;
 }
 
@@ -91,17 +83,4 @@ inline uint32_t preset_constrain_timer_ms(uint32_t val) {
   if (val < 1) return 1;
   if (val > 3600000) return 3600000;
   return val;
-}
-
-// ───────────────────────────────────────────────────────────────────────────────
-// Exponential reconnect / retry interval (generic helper for tests)
-// ───────────────────────────────────────────────────────────────────────────────
-
-inline uint32_t reconnect_backoff_interval(uint32_t current) {
-  if (current < 300000) return current * 2;
-  return 300000;
-}
-
-inline uint32_t reconnect_backoff_reset() {
-  return 30000;
 }

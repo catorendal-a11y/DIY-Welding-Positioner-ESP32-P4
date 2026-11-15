@@ -18,10 +18,17 @@ std::atomic<bool> g_flashWriting{false};
 static SystemState testState = STATE_IDLE;
 static bool testControlStale = false, testCleanup = false, testPedalHealthy = true, testTouchHealthy = true;
 static bool testMirrorArmed = true;
+static void (*testLatchDuringResetCheck)() = nullptr;  // Models safetyTask preempting the reset.
 [[noreturn]] void fatal_halt(const char*) { std::abort(); }
 void event_log_add(const char*) {}
+void event_log_addf(const char*, ...) {}
 bool motor_cleanup_pending() { return testCleanup; }
-bool speed_pedal_input_healthy() { return testPedalHealthy; }
+bool speed_pedal_input_healthy() {
+  void (*latch)() = testLatchDuringResetCheck;
+  testLatchDuringResetCheck = nullptr;
+  if (latch) latch();
+  return testPedalHealthy;
+}
 bool display_touch_operational() { return testTouchHealthy; }
 void usb_mirror_set_armed(bool armed) { testMirrorArmed = armed; }
 bool control_heartbeat_stale(uint32_t) { return testControlStale; }
@@ -34,7 +41,7 @@ void setUp() {
   simTestPins[PIN_ESTOP] = simTestPins[PIN_DRIVER_ALM] = HIGH;
   simTestPins[PIN_ENA] = LOW;
   testState = STATE_IDLE; testControlStale = testCleanup = false;
-  testPedalHealthy = testTouchHealthy = testMirrorArmed = true;
+  testPedalHealthy = testTouchHealthy = testMirrorArmed = true; testLatchDuringResetCheck = nullptr;
   readyTasks.store(15u); estopLocked.store(false); s_faultReason.store(FAULT_NONE);
   s_driverAlarmLatched.store(false); s_almHighMs = 0;
   g_estopPending.store(false); g_estopTriggerMs.store(0); g_uiResetPending.store(false);
@@ -117,6 +124,18 @@ void test_new_estop_edge_cannot_be_cleared_by_ui_reset() {
   TEST_ASSERT_TRUE(g_estopPending.load());
   TEST_ASSERT_TRUE(safety_is_estop_locked());
 }
+void test_fault_latched_during_ui_reset_is_not_erased() {
+  safety_report_motor_fault(FAULT_MOTOR_COMMAND);
+  testLatchDuringResetCheck = [] { safety_report_input_fault(); };
+  g_uiResetPending.store(true);
+  TEST_ASSERT_FALSE(safety_check_ui_reset());
+  TEST_ASSERT_TRUE(safety_is_estop_locked());
+  TEST_ASSERT_EQUAL(FAULT_MOTOR_COMMAND, safety_get_fault_reason());
+  TEST_ASSERT_EQUAL(STATE_ESTOP, testState);
+  g_uiResetPending.store(true);  // The operator acknowledges again.
+  TEST_ASSERT_TRUE(safety_check_ui_reset());
+  TEST_ASSERT_EQUAL(FAULT_NONE, safety_get_fault_reason());
+}
 void test_restart_and_hmi_failure_block_reset() {
   g_restartRequired.store(true); TEST_ASSERT_FALSE(safety_can_reset_from_overlay());
   g_restartRequired.store(false); testTouchHealthy = false;
@@ -196,6 +215,7 @@ int main() {
   RUN_TEST(test_short_alarm_does_not_leave_controller_running_with_driver_disabled);
   RUN_TEST(test_alarm_reset_requires_healthy_raw_input);
   RUN_TEST(test_new_estop_edge_cannot_be_cleared_by_ui_reset);
+  RUN_TEST(test_fault_latched_during_ui_reset_is_not_erased);
   RUN_TEST(test_restart_and_hmi_failure_block_reset);
   RUN_TEST(test_formatting_blocks_motion_and_reset_without_clearing_fatal_inhibit);
   RUN_TEST(test_first_fault_is_retained_and_mirror_is_disarmed);

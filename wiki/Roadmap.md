@@ -22,7 +22,7 @@ Open items are listed under [Next](#next).
 
 ### v2.4.1 (2026-11-15)
 
-See the [release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/v2.4.1/docs/releases/v2.4.1.md). Not tested on the machine.
+See the [release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/v2.4.1/docs/releases/v2.4.1.md). The owner flashed it on 2026-11-15 and tested it on the machine: motion, pedal, E-STOP and TIG HF work.
 
 - [x] A touch read error during a held press no longer acts as a release; STOP acts on touch-down
 - [x] A fault latched during RESET TO IDLE is no longer erased

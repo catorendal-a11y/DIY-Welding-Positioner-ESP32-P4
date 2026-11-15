@@ -16,10 +16,12 @@ Actual LVGL simulator capture with example data. Main RPM +/− controls sit bes
 | Understand the firmware design | [[Architecture]] |
 | See what is done and what is next | [[Roadmap]] |
 
-## Current Status: v2.4.0 - Reworked screens and logic fixes
+## Current Status: v2.4.1 - Audit fixes
 
 > [!NOTE]
-> Release **v2.4.0** is the current firmware identifier (**`FW_VERSION`**). It reworks every screen for gloved use, makes the fault screen lead with the next action, shows the machine state on the screen saver and fixes a heartbeat timestamp race and eight screen-logic defects. The owner flashed the v2.4.0 code on 2026-11-10 and confirmed that it boots and that the reworked screens, the fault screen and the screen saver display correctly. Motion, pedal and calibration were not re-tested on it.
+> Release **v2.4.1** is the current firmware identifier (**`FW_VERSION`**). It fixes 22 defects from a code audit, among them touch read errors during a held press, STOP acting on touch-down, a fault reset race and USB mirror press expiry. It has not been tested on the machine; bench-test it before welding.
+>
+> v2.4.0 reworks every screen for gloved use, makes the fault screen lead with the next action, shows the machine state on the screen saver and fixes a heartbeat timestamp race and eight screen-logic defects. The owner flashed the v2.4.0 code on 2026-11-10 and confirmed that it boots and that the reworked screens, the fault screen and the screen saver display correctly. Motion, pedal and calibration were not re-tested on it.
 
 v2.3.1 explains blocked program starts and REBOOT, keeps the Step keypad open on an invalid entry, stops Jog changing the manual direction and names every fault on the overlay. The owner reported it working on the assembled machine on 2026-11-04.
 
@@ -31,7 +33,7 @@ Earlier releases include v2.0.8 version alignment and v2.0.7 dark/light mode. Se
 
 | Link | Use |
 |------|-----|
-| [Download v2.4.0](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.4.0) | Prebuilt firmware |
+| [Download v2.4.1](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/releases/tag/v2.4.1) | Prebuilt firmware |
 | [Flashing instructions](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/releases/FLASHING.md) | How to flash it |
 | [Validation and improvements](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/master/docs/FASTACCELSTEPPER_1_4_REAUDIT.md) | Re-audit notes |
 

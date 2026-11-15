@@ -4,7 +4,8 @@
 
 | Release | Date | Summary | Status |
 |---------|------|---------|--------|
-| v2.4.0 | 2026-11-10 | Reworked screens, fault screen, screen saver, timestamp race and screen-logic fixes | Current release |
+| v2.4.1 | 2026-11-15 | Fixes for 22 code audit findings (touch, fault reset, speed floor, storage, USB mirror) | Current release |
+| v2.4.0 | 2026-11-10 | Reworked screens, fault screen, screen saver, timestamp race and screen-logic fixes | Released |
 | v2.3.1 | 2026-11-04 | Operator feedback and test fixes | Released |
 | v2.3.0 | 2026-11-04 | Safety supervision and audit fixes | Released |
 | v2.2.0 | 2026-10-03 | Idle screen saver and UI refinements | Released |
@@ -17,7 +18,21 @@
 
 Open items are listed under [Next](#next).
 
-## v2.4.0 - Current Release
+## v2.4.1 - Current Release
+
+### v2.4.1 (2026-11-15)
+
+See the [release notes](https://github.com/catorendal-a11y/DIY-Welding-Positioner-ESP32-P4/blob/v2.4.1/docs/releases/v2.4.1.md). Not tested on the machine.
+
+- [x] A touch read error during a held press no longer acts as a release; STOP acts on touch-down
+- [x] A fault latched during RESET TO IDLE is no longer erased
+- [x] The lowest pot or pedal speed always converts to at least the start speed
+- [x] Erase data removes legacy LittleFS files
+- [x] Power glitch and CPU lockup resets are latched
+- [x] USB mirror: remote press expires without renewal, logs kept out of frames (protocol v2)
+- [ ] Bench test on the assembled machine, including TIG HF
+
+## v2.4.0
 
 ### v2.4.0 (2026-11-10)
 
@@ -84,7 +99,7 @@ Safety supervision and audit fixes. See the [release notes](https://github.com/c
 
 ## v2.0.8 - version alignment
 
-Historical release; v2.4.0 above is current.
+Historical release; v2.4.1 above is current.
 
 ### v2.0.8 (2026-04-29)
 - [x] **`FW_VERSION` v2.0.8** — README, STATUS, wiki, implementation docs, UI SVGs, issue templates synced to canonical release tag

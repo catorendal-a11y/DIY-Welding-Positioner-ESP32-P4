@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.1] - 2026-11-15
+
+### Changed
+
+- Every Stop button also fires on touch-down, so a press lost to touch read errors still stops.
+- Open input panels and the Step keypads close while the control status is stale, so Stop is visible.
+- USB mirror protocol v2: a held remote press must be renewed and expires after 150 ms. Older viewers are refused.
+
+### Fixed
+
+- A touch read error during a held press no longer reports a release, a click and a new hit-test.
+- A fault latched during RESET TO IDLE is no longer erased by the reset; the next fault after a reset gets its own cleanup and log entry.
+- A flash save no longer cancels a start waiting on the heartbeat gate.
+- The lowest pot or pedal speed always converts to at least the start speed, and 0 mHz is never sent to the driver.
+- Re-enabling the pedal takes a fresh baseline.
+- Erase data removes legacy LittleFS files, so a corrupt legacy file cannot bring the boot lockout back.
+- Power glitch and CPU lockup resets are latched as unexpected resets.
+- The event log no longer drops entries under cross-core contention.
+- Strips skipped during a flash write are redrawn.
+- USB mirror frames are no longer interleaved with logs, and the viewer requests a redraw after a damaged frame.
+- Main shows fault and range reasons before storage messages; the stale banner draws above input panels.
+- Pulse re-limits its speed; the Display preview is not saved by an unrelated save; REBOOT waits for a failed save to retry; the setup wizard keeps its motor-saved credit; About shows the current gear ratio.
+- On-device storage tests restore and flush the user's settings and programs and expect the 0x5000 NVS partition.
+- Native tests exercise the production clamp and touch-mapping code.
+
 ## [2.4.0] - 2026-11-10
 
 ### Changed

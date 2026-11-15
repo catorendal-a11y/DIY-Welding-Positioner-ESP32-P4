@@ -161,7 +161,7 @@ footer a{color:var(--muted)}
     <span class="chip">v2.4.1</span>
     <span class="chip">MIT licence</span>
     <span class="chip">ESP32-P4 · LVGL 9</span>
-    <span class="chip warn">v2.4.1 not yet run on the machine</span>
+    <span class="chip">v2.4.1 runs on the machine</span>
   </div>
 </section>
 
@@ -271,7 +271,7 @@ Start Simulator.cmd</pre>
   <div class="faq">
     <details><summary>Is the E-STOP a safety circuit?</summary><p>No. It acts through the GPIO34 input, the firmware and the driver ENA input. It does not disconnect motor power, an open wire can read as healthy, and the physical stop time has not been measured. With the controller unpowered, software cannot set the driver's state, so external hardware must make it safe. The input expects a conditioned signal, HIGH when healthy and LOW on fault. Test pressed, released, broken wire and power loss before you rely on it.</p></details>
     <details><summary>Can I use it with HF-start TIG?</summary><p>Only with the controller, driver and motor PSU in one grounded metal enclosure bonded to protective earth. Without it HF start can reset the controller, freeze touch or create false inputs. The owner reports TIG HF works on one machine built that way, on v2.3.0. Repeat your HF checks after changing firmware, wiring or the enclosure.</p></details>
-    <details><summary>What has actually been tested?</summary><p>The owner reported v2.3.0 working on the assembled machine on 2026-11-04, including TIG HF, and v2.3.1 on the same machine. v2.4.0 was flashed and its screens checked, but motion was not re-tested. v2.4.1 has not been run on the machine: bench-test it before welding. Stop time and calibration accuracy have not been measured. Each commit runs the native test suite, simulator self-tests and three firmware builds.</p></details>
+    <details><summary>What has actually been tested?</summary><p>The owner reported v2.3.0 working on the assembled machine on 2026-11-04, including TIG HF, and v2.3.1 on the same machine. v2.4.0 was flashed and its screens checked, but motion was not re-tested. The owner flashed v2.4.1 on 2026-11-15 and confirmed that it runs on the machine. Bench-test your own build before welding. Stop time and calibration accuracy have not been measured. Each commit runs the native test suite, simulator self-tests and three firmware builds.</p></details>
     <details><summary>What do I need?</summary><p>A GUITION JC4880P443C board, a NEMA 23 stepper (about 3 Nm), a DM542T or other PUL/DIR driver, an NMRV030 worm gearbox with a 72/40 spur stage, a 24 to 36 V DC supply of at least 5 A, a 10k speed pot, a direction switch, an E-STOP interface and a grounded metal enclosure. Optional: a foot pedal with an ADS1115. A 5 V buck converter powers the board when you do not use USB-C.</p></details>
     <details><summary>Will it drive my driver directly from 3.3 V?</summary><p>Only if your driver's input specification allows it. ESP32 GPIO is 3.3 V logic and not 5 V tolerant. Use a suitable signal interface when the driver needs 5 V, and never connect motor supply voltage to the opto inputs or the board.</p></details>
     <details><summary>Does it have an encoder?</summary><p>No. It is single axis without closed-loop feedback, so speed and position are calculated from kinematics, calibration and step timing. That is why the calibration step matters.</p></details>
@@ -280,7 +280,7 @@ Start Simulator.cmd</pre>
 </section>
 
 <div class="wrap">
-  <p class="status"><b>Status.</b> v2.4.1 fixes 22 audit findings and has not yet been run on the machine. Every build runs automated tests, but stop time has not been measured and the E-STOP is not independent of the controller. Treat a new build as a prototype: bench-test motion, E-STOP and alarm handling before you weld.</p>
+  <p class="status"><b>Status.</b> v2.4.1 fixes 22 audit findings and runs on the owner's machine since 2026-11-15. Every build runs automated tests, but stop time has not been measured and the E-STOP is not independent of the controller. Treat a new build as a prototype: bench-test motion, E-STOP and alarm handling before you weld.</p>
 </div>
 </main>
 
